@@ -1,0 +1,40 @@
+{
+  "name": "gxuoa_front_ui",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.8.4",
+    "bootstrap": "^5.3.6",
+    "bootstrap-icons": "^1.13.1",
+    "chart.js": "^3.9.1",
+    "core-js": "^3.8.3",
+    "element-plus": "^2.9.9",
+    "jsencrypt": "^3.3.2",
+    "pinia": "^2.1.7",
+    "pinia-plugin-persistedstate": "^3.1.0",
+    "pinyin": "^2.11.2",
+    "qrcode": "^1.5.4",
+    "qs": "^6.11.2",
+    "sortablejs": "^1.15.6",
+    "vue": "^3.2.13",
+    "vue-i18n": "^11.1.5",
+    "vue-router": "^4.0.3",
+    "vue-types": "^4.1.1",
+    "vuedraggable": "^4.1.0",
+    "web-storage-cache": "^1.1.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.4",
+    "eslint": "^7.32.0",
+    "@purge-icons/generated": "^0.9.0",
+    "eslint-plugin-vue": "^8.0.3",
+    "sass-embedded": "^1.89.0",
+    "unplugin-auto-import": "^0.17.4",
+    "unplugin-vue-components": "^0.25.1",
+    "vite": "^5.0.0"
+  }
+}

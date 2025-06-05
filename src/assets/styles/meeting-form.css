@@ -1,0 +1,166 @@
+/* 会议表单容器 */
+.meeting-form-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* 顶部标题栏 */
+.meeting-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.meeting-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #343a40;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* 会议表单 */
+.meeting-form {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.meeting-info {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* 议题列表 */
+.topic-list {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.topic-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #dee2e6;
+  font-weight: 600;
+}
+
+/* 议题项 */
+.topic-item {
+  margin-bottom: 10px;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  background-color: #fff;
+}
+
+.topic-main {
+  border-left: 4px solid #007bff;
+}
+
+.topic-sub {
+  margin-left: 30px;
+  border-left: 4px solid #6c757d;
+}
+
+.topic-main-content, .topic-sub-content {
+  display: flex;
+  align-items: center;
+  padding: 10px 15px;
+  background-color: #f8f9fa;
+}
+
+.topic-drag-handle {
+  cursor: move;
+  color: #adb5bd;
+  margin-right: 10px;
+}
+
+.topic-number {
+  margin-right: 10px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.topic-content-wrapper {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.topic-content {
+  padding: 5px 0;
+  min-height: 24px;
+}
+
+.topic-content:focus {
+  outline: none;
+  border-bottom: 1px dashed #007bff;
+  padding-bottom: 4px;
+}
+
+.topic-actions {
+  display: flex;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.topic-meta {
+  padding: 10px 15px;
+  border-top: 1px solid #dee2e6;
+}
+
+.topic-explainer, .topic-attendee {
+  display: flex;
+  margin-bottom: 5px;
+}
+
+.meta-label {
+  font-weight: 600;
+  margin-right: 10px;
+  color: #495057;
+  min-width: 70px;
+}
+
+.meta-content {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+}
+
+.editable-content {
+  flex-grow: 1;
+  min-height: 24px;
+  padding: 2px 0;
+}
+
+.editable-content:focus {
+  outline: none;
+  border-bottom: 1px dashed #007bff;
+  padding-bottom: 1px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .topic-sub {
+    margin-left: 15px;
+  }
+
+  .topic-actions {
+    flex-wrap: wrap;
+  }
+}

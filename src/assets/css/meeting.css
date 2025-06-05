@@ -1,0 +1,198 @@
+/* 会议管理模块样式 */
+
+/* 通用样式 */
+.meeting-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* 表单样式 */
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-label {
+  font-weight: 500;
+  margin-bottom: 5px;
+  display: block;
+}
+
+/* 会议列表样式 */
+.meeting-list {
+  background-color: #fff;
+  border-radius: 5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.meeting-item {
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.meeting-item:last-child {
+  border-bottom: none;
+}
+
+/* 会议编辑页面样式 */
+.meeting-edit-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.meeting-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.meeting-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.meeting-form {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.meeting-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+/* 议题相关样式 */
+.topic-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+.topic-list {
+  background-color: #fff;
+  border-radius: 5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 15px;
+}
+
+.topic-item {
+  margin-bottom: 10px;
+  padding: 10px;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+  position: relative;
+}
+
+.topic-main {
+  border-left: 3px solid #2c6aa0;
+}
+
+.topic-sub {
+  margin-left: 30px;
+  border-left: 3px solid #6c757d;
+  display: flex;
+  align-items: center;
+}
+
+.topic-main-content {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.topic-drag-handle {
+  cursor: move;
+  margin-right: 10px;
+  color: #999;
+}
+
+.topic-add-same, .topic-add-sub {
+  cursor: pointer;
+  margin: 0 5px;
+  color: #28a745;
+}
+
+.topic-content {
+  flex-grow: 1;
+  padding: 5px 10px;
+  min-height: 30px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+}
+
+.topic-content:focus {
+  outline: none;
+  border-color: #80bdff;
+  background-color: #fff;
+}
+
+.topic-title {
+  width: 100px;
+  margin-right: 10px;
+}
+
+.topic-upload-btn {
+  background-color: transparent;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 2px 8px;
+  font-size: 0.8rem;
+  margin: 0 5px;
+}
+
+.topic-attachments {
+  margin-top: 10px;
+  padding: 5px;
+  background-color: #f0f0f0;
+  border-radius: 3px;
+}
+
+.attachment-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.attachment-item {
+  display: flex;
+  align-items: center;
+  background-color: #fff;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 0.8rem;
+}
+
+.attachment-item i {
+  margin-right: 5px;
+}
+
+.remove-attachment {
+  margin-left: 5px;
+  cursor: pointer;
+  color: #dc3545;
+}
+
+.sortable-ghost {
+  opacity: 0.5;
+  background-color: #e9ecef;
+}
+
+.sortable-chosen {
+  background-color: #e9ecef;
+}
+
+.dragging {
+  cursor: grabbing;
+}
