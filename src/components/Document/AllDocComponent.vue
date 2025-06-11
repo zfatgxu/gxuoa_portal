@@ -1,14 +1,23 @@
 <template>
   <div class="content-section">
     <NavBar :modelValue="currentComponent" @update:modelValue="handleComponentChange" />
-
-    <div class="content-body">
-      <h3 class="component-title">全部公文</h3>
+    
+    <!-- 根据当前选中的组件显示不同的内容 -->
+    <div v-if="currentComponent === 'AllDocComponent'" class="content-body">
+     
       
       <!-- 搜索组件 -->
-      <SearchBar @search="handleSearch" @reset="handleReset" />
+      <SearchBar @search="handleSearch" @reset="handleReset" :loading="loading" />
+
+      <!-- 搜索后无结果时显示提示 -->
+      <div v-if="hasSearched && allDocs.length === 0 && !loading" class="no-result">
+        <el-empty description="暂无匹配的搜索结果" />
+      </div>
       
-      <el-empty description="暂无公文数据" v-if="allDocs.length === 0" />
+      <!-- 未搜索但公文列表为空 -->
+      <el-empty description="暂无公文数据" v-else-if="!hasSearched && allDocs.length === 0" />
+      
+      <!-- 有公文数据时显示列表 -->
       <div v-else>
         <el-table :data="allDocs" style="width: 100%" border stripe>
           <el-table-column type="index" label="序号" width="60" align="center">
@@ -16,23 +25,36 @@
               {{ (pagination.currentPage - 1) * pagination.pageSize + scope.$index + 1 }}
             </template>
           </el-table-column>
-          <el-table-column prop="documentName" label="文件名称" min-width="200" show-overflow-tooltip />
-          <el-table-column prop="typeName" label="文件类型" width="120" align="center" show-overflow-tooltip />
-          <el-table-column prop="deptName" label="来源单位" width="120" align="center" />
-          <el-table-column label="联系人" width="120" align="center">
+          <el-table-column label="文件名称" min-width="200" show-overflow-tooltip>
             <template #default="scope">
-              {{ scope.row.userName || '暂无' }}
-            </template>
-          </el-table-column>
-          <el-table-column label="联系电话" width="120" align="center">
-            <template #default="scope">
-              {{ scope.row.mobile || '暂无' }}
+              <span 
+                style="cursor: pointer; color: #409EFF; text-decoration: underline;" 
+                @click="handleView(scope.row)"
+              >
+                {{ scope.row.documentName }}
+              </span>
             </template>
           </el-table-column>
           
-          <el-table-column label="提交时间" width="160" align="center">
+          <el-table-column prop="deptName" label="来源单位" width="120" align="center" />
+          <el-table-column prop="typeName" label="流转状态" width="150" align="center">
             <template #default="scope">
-              {{ formatDate(scope.row.startTime) }}
+              <span 
+                style="cursor: pointer; color: #409EFF; text-decoration: underline;" 
+                @click="viewCirculationHistory(scope.row)"
+              >
+                {{ scope.row.typeName || '无' }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column label="联系人" width="120" align="center">
+            <template #default="scope">
+              {{ scope.row.userName || '无' }}
+            </template>
+          </el-table-column>
+          <el-table-column label="电话" width="120" align="center">
+            <template #default="scope">
+              {{ scope.row.mobile || '无' }}
             </template>
           </el-table-column>
           <el-table-column label="操作" width="120" align="center" fixed="right">
@@ -52,20 +74,124 @@
             :total="pagination.total"
             @size-change="handleSizeChange"
             @current-change="handleCurrentChange"
+            :pager-count="5"
           />
         </div>
       </div>
     </div>
-  </div>
+    
+    <!-- 其他组件的占位内容 -->
+    <div v-else class="content-body">
+      <h3 class="component-title">{{ getComponentTitle() }}</h3>
+      <el-empty :description="`暂无${getComponentTitle()}数据`" />
+    </div>
+  </div>  
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import NavBar from './NavBar.vue'
 import SearchBar from './SearchBar.vue'
 import circulationApi from '@/api/circulation'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 
+// 当前选中的组件
 const currentComponent = ref('AllDocComponent')
+
+// 处理组件切换
+const handleComponentChange = (componentName: string) => {
+  currentComponent.value = componentName
+}
+
+// 获取组件标题
+const getComponentTitle = () => {
+  switch (currentComponent.value) {
+    case 'AllDocComponent':
+      return '全部公文'
+    case 'DraftComponent':
+      return '草稿箱'
+    case 'DoneComponent':
+      return '已办公文'
+    case 'SendComponent':
+      return '发文管理'
+    default:
+      return '公文'
+  }
+}
+
+const router = useRouter()
+
+// 处理查看文件
+// 查看文件详情
+const handleView = (doc: any) => {
+  console.log('查看文件：', doc)
+  
+  // 构建完整路径
+  const fullPath = router.resolve({
+    name: 'documentApproval',
+    query: { id: doc.id }
+  }).href
+  
+  try {
+    console.log('尝试打开路径:', fullPath)
+    
+    // 在新窗口打开
+    const newWindow = window.open(
+      fullPath, 
+      '_blank',
+      'width=1200,height=800,left=100,top=100,resizable=yes,scrollbars=yes'
+    )
+    
+    // 检查是否成功打开新窗口
+    if (!newWindow) {
+      ElMessage.warning('请允许弹出窗口或检查浏览器设置')
+      // 备选方案：在当前窗口打开
+      router.push({ name: 'documentApproval', query: { id: doc.id } })
+    }
+  } catch (error) {
+    console.error('打开失败:', error)
+    ElMessage.error('打开失败，请重试')
+  }
+}
+
+// 查看流转历史记录
+const viewCirculationHistory = (row: any) => {
+  console.log('查看流转历史:', row)
+  
+  try {
+    // 根据路由配置生成完整路径
+    const fullPath = router.resolve({
+      path: '/document/circulation/history',
+      query: { 
+        documentId: row.id,
+        circulationId: row.circulationId
+      }
+    }).href
+    
+    // 在新窗口打开流转历史页面
+    const newWindow = window.open(
+      fullPath, 
+      '_blank',
+      'width=1000,height=700,left=150,top=150,resizable=yes,scrollbars=yes'
+    )
+    
+    if (!newWindow) {
+      ElMessage.warning('请允许弹出窗口或检查浏览器设置')
+      // 备选方案：在当前窗口打开
+      router.push({ 
+        path: '/document/circulation/history',
+        query: { 
+          documentId: row.id,
+          circulationId: row.circulationId
+        }
+      })
+    }
+  } catch (error) {
+    console.error('打开流转历史页面失败:', error)
+    ElMessage.error('打开流转历史页面失败，请重试')
+  }
+}
 
 // 分页相关状态
 const pagination = ref({
@@ -73,6 +199,27 @@ const pagination = ref({
   pageSize: 10,
   total: 0
 })
+
+// 搜索参数
+const searchParams = ref({
+  fileName: '',
+  sourceUnit: '',
+  contact: '',
+  phone: '',
+  searchType: 'fuzzy' // 默认为模糊搜索
+})
+
+// 标记是否已经搜索过
+const hasSearched = ref(false)
+
+// 是否正在加载
+const loading = ref(false)
+
+// 原始数据列表（从后端获取的完整数据）
+const originalAllDocs = ref([])
+
+// 显示的数据列表（经过过滤的数据）
+const allDocs = ref([])
 
 // 处理页码变化
 const handleCurrentChange = (newPage: number) => {
@@ -87,168 +234,81 @@ const handleSizeChange = (newSize: number) => {
   loadAllDocs()
 }
 
-// 处理组件切换
-const handleComponentChange = (componentName: string) => {
-  console.log('切换到组件：', componentName)
-  currentComponent.value = componentName
-}
-
-// 获取状态类型
-const getStatusType = (status: number) => {
-  // 根据状态值返回对应的样式类型
-  const typeMap: Record<number, string> = {
-    0: 'warning', // 待处理
-    1: 'success', // 已处理
-    2: 'danger',  // 已拒绍
-    3: 'info'     // 已撤回
-  }
-  return typeMap[status] || 'info'
-}
-
-// 获取状态文本
-const getStatusText = (status: number) => {
-  // 根据状态值返回对应的文本
-  const textMap: Record<number, string> = {
-    0: '待处理',
-    1: '已处理',
-    2: '已拒绍',
-    3: '已撤回'
-  }
-  return textMap[status] || '未知状态'
-}
-
-// 日期格式化函数
-const formatDate = (timestamp: number) => {
-  if (!timestamp) return '暂无'
-  
-  const date = new Date(timestamp)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  
-  return `${year}-${month}-${day} ${hours}:${minutes}`
-}
-
-// 查看文件详情
-const handleView = (doc: any) => {
-  console.log('查看文件详情：', doc)
-  // TODO: 实现查看文件详情功能
-}
-
-const allDocs = ref<any[]>([])
-
-// 所有公文数据
-const allDocsData = [
-  {
-    fileName: '关于2025学年第一学期教学工作安排的通知',
-    docType: '学校发文',
-    flowPath: '教务处 ➝ 各学院',
-    sourceUnit: '教务处',
-    status: '已处理',
-    submitTime: '2025-05-20 10:30'
-  },
-  {
-    fileName: '关于开展2025年度教师评优活动的通知',
-    docType: '校内文件',
-    flowPath: '人事处 ➝ 各学院',
-    sourceUnit: '人事处',
-    status: '待处理',
-    submitTime: '2025-05-18 09:15'
-  },
-  {
-    fileName: '关于组织参加第十二届大学生创新创业大赛的通知',
-    docType: '校外文件',
-    flowPath: '团委 ➝ 各学院',
-    sourceUnit: '团委',
-    status: '待处理',
-    submitTime: '2025-05-25 10:20'
-  },
-  {
-    fileName: '王明-事假申请',
-    docType: '请假文件',
-    flowPath: '学生 ➝ 辅导员 ➝ 院长',
-    sourceUnit: '计算机学院',
-    status: '已处理',
-    submitTime: '2025-05-25 10:30'
-  },
-  {
-    fileName: '关于加强实验室安全管理的规定',
-    docType: '学校发文',
-    flowPath: '实验室管理处 ➝ 各学院',
-    sourceUnit: '实验室管理处',
-    status: '已处理',
-    submitTime: '2025-05-15 11:45'
-  },
-  {
-    fileName: '关于组织开展2025年春季运动会的通知',
-    docType: '学校发文',
-    flowPath: '体育部 ➝ 各学院及部门',
-    sourceUnit: '体育部',
-    status: '已处理',
-    submitTime: '2025-05-12 16:30'
-  },
-  {
-    fileName: '关于开展大学生心理健康教育的通知',
-    docType: '学校发文',
-    flowPath: '学生处 ➝ 各学院',
-    sourceUnit: '学生处',
-    status: '待处理',
-    submitTime: '2025-05-10 09:20'
-  },
-  {
-    fileName: '张华-病假申请',
-    docType: '请假文件',
-    flowPath: '学生 ➝ 辅导员 ➝ 院长',
-    sourceUnit: '物理学院',
-    status: '待处理',
-    submitTime: '2025-05-27 14:15'
-  }
-]
-
-// 搜索参数
-const searchParams = ref({
-  fileName: '',
-  sourceUnit: '',
-  contact: '',
-  phone: ''
-})
-
 // 处理搜索
 const handleSearch = (params: any) => {
   console.log('搜索参数:', params)
-  searchParams.value = params
-  pagination.value.currentPage = 1 // 搜索时重置到第一页
+  
+  // 更新搜索参数
+  searchParams.value = { ...params }
+  
+  // 标记已经搜索过
+  hasSearched.value = true
+  
+  // 重置分页到第一页
+  pagination.value.currentPage = 1
+  
+  // 加载数据（会带上搜索参数）
   loadAllDocs()
 }
 
 // 处理重置
 const handleReset = () => {
+  console.log('重置搜索')
+  
+  // 重置搜索参数
   searchParams.value = {
     fileName: '',
     sourceUnit: '',
     contact: '',
-    phone: ''
+    phone: '',
+    searchType: 'fuzzy'
   }
+  
+  // 重置搜索状态
+  hasSearched.value = false
+  
+  // 重置分页
+  pagination.value.currentPage = 1
+  
+  // 重新加载数据
   loadAllDocs()
 }
 
 // 加载全部公文数据
 const loadAllDocs = async () => {
+  loading.value = true // 开始加载
   try {
     const { currentPage, pageSize } = pagination.value
-    const { fileName, sourceUnit, contact, phone } = searchParams.value
     
-    // 使用API请求获取数据
-    const params = {
+    // 构建API请求参数
+    const params: any = {
       pageNo: currentPage,
-      pageSize: pageSize,
-      title: fileName, // 文件名称对应后端的title字段
-      sourceUnit: sourceUnit, // 来源单位
-      contactPerson: contact, // 联系人
-      contactPhone: phone // 联系电话
+      pageSize: pageSize
     }
+    
+    // 添加搜索参数（如果有）
+    if (searchParams.value.fileName) {
+      params.documentName = searchParams.value.fileName
+    }
+    
+    if (searchParams.value.sourceUnit) {
+      params.deptName = searchParams.value.sourceUnit
+    }
+    
+    if (searchParams.value.contact) {
+      params.userName = searchParams.value.contact
+    }
+    
+    if (searchParams.value.phone) {
+      params.mobile = searchParams.value.phone
+    }
+    
+    // // 如果需要，可以添加搜索类型参数
+    // if (searchParams.value.searchType) {
+    //   params.type = searchParams.value.searchType === 'exact' ? 3 : 1
+    // }
+    
+    console.log('发送请求参数:', params)
     
     // 调用获取全部公文的API
     const res = await circulationApi.getAllSchoolDocuments(params)
@@ -258,28 +318,65 @@ const loadAllDocs = async () => {
       // 更新数据列表和总数
       allDocs.value = res.data.list || []
       pagination.value.total = res.data.total || 0
+      
+      console.log('获取到的公文列表：', allDocs.value)
     } else {
       // 如果请求成功但没有数据或者请求失败
       console.error('获取全部公文失败:', res.msg || '服务器响应异常')
       allDocs.value = []
       pagination.value.total = 0
+      
+      // 显示错误消息
+      ElMessage.error(res.msg || '获取公文列表失败')
     }
   } catch (error) {
     // 处理异常情况
     console.error('获取全部公文失败:', error)
     allDocs.value = []
     pagination.value.total = 0
+    
+    // 显示错误消息
+    ElMessage.error('获取公文列表失败，请稍后重试')
+  } finally {
+    loading.value = false // 结束加载
   }
 }
 
 onMounted(() => {
   loadAllDocs()
+  
+  // 添加消息监听，用于接收子窗口的刷新请求
+  window.addEventListener('message', handleWindowMessage)
 })
+
+// 组件卸载时移除事件监听
+onUnmounted(() => {
+  window.removeEventListener('message', handleWindowMessage)
+})
+
+// 处理窗口消息
+const handleWindowMessage = (event) => {
+  console.log('收到窗口消息:', event.data)
+  
+  // 检查消息类型
+  if (event.data && event.data.type === 'refreshAllDocList') {
+    console.log('收到刷新公文列表的请求，正在刷新...')
+    // 刷新公文列表
+    loadAllDocs()
+  }
+}
 </script>
 
 <style scoped>
 .content-section {
-  margin-top: 20px;
+  margin-top: 3px;
+}
+
+.content-title {
+  margin-bottom: 20px;
+  color: #303133;
+  font-size: 20px;
+  font-weight: 500;
 }
 
 .content-body {
@@ -289,12 +386,6 @@ onMounted(() => {
   box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
 }
 
-.pagination-container {
-  margin-top: 20px;
-  display: flex;
-  justify-content: flex-end;
-}
-
 .component-title {
   margin-bottom: 20px;
   font-size: 18px;
@@ -302,5 +393,16 @@ onMounted(() => {
   color: #303133;
   border-left: 4px solid #409EFF;
   padding-left: 10px;
+}
+
+.pagination-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.no-result {
+  margin: 20px 0;
+  text-align: center;
 }
 </style>

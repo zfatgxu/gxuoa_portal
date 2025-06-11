@@ -31,7 +31,7 @@
   }
   
   const navItems = [
-    { name: 'TodoComponent', label: '我的代办' },
+    { name: 'TodoComponent', label: '我的待办' },
     //{ name: 'MeetingDocComponent', label: '拟上会文件' },
     { name: 'InternalDocComponent', label: '已签校内文件' },
     { name: 'ExternalDocComponent', label: '已签校外文件' },

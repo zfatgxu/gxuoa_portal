@@ -24,14 +24,15 @@
                 </div>
               </div>
             </template>
-            <div class="flex justify-between items-start mb-4">
-              <div class="text-gray-700 flex-grow">
-                处理意见：{{ item.message }}
+            <div class="record-content">
+              <div class="opinion-section">
+                <div class="opinion-label">处理意见：</div>
+                <div class="opinion-text">{{ item.message || '无' }}</div>
               </div>
-              <div class="text-gray-500 text-sm text-left ml-4">
-                <div>到达时间：{{ formatTime(item.createTime) }}</div>
-                <div>打开时间：{{ formatTime(item.openTime) }}</div>
-                <div>处理时间：{{ formatTime(item.createTime) }}</div>
+              <div class="time-section">
+                <div class="time-item"><span class="time-label">到达时间：</span><span class="time-value">{{ formatTime(item.createTime) || '无' }}</span></div>
+                <div class="time-item"><span class="time-label">打开时间：</span><span class="time-value">{{ formatTime(item.openTime) || '无' }}</span></div>
+                <div class="time-item"><span class="time-label">处理时间：</span><span class="time-value">{{ formatTime(item.createTime) || '无' }}</span></div>
               </div>
             </div>
           </el-card>
@@ -82,12 +83,7 @@ const getStatusStyle = (status: number | null) => {
   return styles[status] || {}
 }
 
-
-
-
-
-
-
+// 获取流转记录列表
 const getList = async () => {
   try {
     const id = Number(route.query.documentId)
@@ -119,12 +115,13 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
+<style>
 .app-container {
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   padding: 20px;
+  overflow: auto; /* 修改为auto，允许整体滚动 */
 }
 
 .title {
@@ -136,12 +133,12 @@ onMounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible; /* 修改为visible，允许内容溢出 */
 }
 
 .box-card :deep(.el-card__body) {
   flex: 1;
-  overflow: hidden;
+  overflow: visible; /* 修改为visible，允许内容溢出 */
   display: flex;
   flex-direction: column;
   padding: 20px;
@@ -149,7 +146,67 @@ onMounted(() => {
 
 .timeline-container {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: visible; /* 修改为visible，允许内容溢出 */
   padding-right: 5px;
+}
+
+/* 新增样式 */
+.record-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.opinion-section {
+  flex: 1;
+  padding-right: 20px;
+  text-align: left;
+}
+
+.opinion-label {
+  font-weight: 500;
+  margin-bottom: 5px;
+  color: #606266;
+}
+
+.opinion-text {
+  color: #303133;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+.time-section {
+  width: 220px; /* 固定宽度 */
+  text-align: right;
+  color: #909399;
+  font-size: 14px;
+}
+
+.time-item {
+  margin-bottom: 5px;
+  display: flex;
+  justify-content: flex-end; /* 确保文本靠右对齐 */
+}
+
+.time-label {
+  white-space: nowrap; /* 防止标签换行 */
+}
+
+.time-value {
+  min-width: 140px; /* 为值设置最小宽度 */
+  text-align: right; /* 确保值靠右对齐 */
+}
+
+/* 修复卡片样式 */
+.el-timeline-item .el-card {
+  margin-bottom: 15px;
+}
+
+/* 确保时间线可以滚动 */
+.el-timeline {
+  padding-right: 10px;
+  max-height: none; /* 移除最大高度限制 */
+  overflow: visible; /* 允许内容溢出 */
 }
 </style>

@@ -127,6 +127,10 @@ textarea.el-textarea__inner {
   font-family: "楷体", KaiTi, "Microsoft YaHei", sans-serif !important;
 }
 
+.center-option .el-select-dropdown__item {
+  text-align: center;
+}
+
 textarea.el-textarea__inner:not([disabled]) {
   background-color: #fffbe6 !important; /* 淡黄色背景 */
 }
@@ -190,20 +194,4 @@ pre {
 .document-component-wrapper :deep(.document-component) {
   width: 100%;
   display: block;
-}
-
-.floating-fab {
-  position: fixed;
-  top: 20px;      /* 距离顶部 20px */
-  left: 100px;     /* 距离左边 60px，可按需调整 */
-  z-index: 1000;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-  transition: transform 0.2s ease;
-  background-color: red;
-  color: white; /* 添加文字颜色 */
-}
-
-.floating-fab:hover {
-  transform: scale(1.1);
-  color: white;
 }

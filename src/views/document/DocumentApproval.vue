@@ -1,15 +1,12 @@
 <template>
-  <div class="document-approval" style="overflow-y: auto; height: 100vh;">
-    <el-button
-      :type="isFavorite ? 'danger' : 'primary'"
-      size="default"
-      @click="toggleFavorite"
-      :title="isFavorite ? '取消收藏' : '收藏文档'"
-      class="floating-fab"
-    >
-      {{ isFavorite ? '取消收藏' : '收藏' }}
-    </el-button>
-
+  <div class="document-approval">
+    <!-- 调试信息 -->
+<!--    <div v-if="true" style="background-color: #f0f0f0; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc;">-->
+<!--      <h3>调试信息</h3>-->
+<!--      <p>当前type: {{ formData.type }}</p>-->
+<!--      <p>messages对象: <pre>{{ JSON.stringify(formData.messages, null, 2) }}</pre></p>-->
+<!--    </div>-->
+    <el-button class="favorite-btn" @click="toggleFavorite">{{isFavorite?'取消收藏':'收藏'}}</el-button>
     <el-card class="box-card">
       <h1 class="table-title">{{ getDictLabel(DICT_TYPE.CIRCULATION_TEMPLATE_TYPE, formData.circulationTemplateType) }}</h1>
       <div class="document-table-container">
@@ -107,6 +104,42 @@
             </td>
           </tr>
 
+            <!-- 提交校办秘书岗 -->
+            <tr v-if="formData.type === 9 || formData.messages.secretarySubmission">
+              <td colspan="4" class="table2">党办、校办拟办意见:
+                <div class="document-input-container">
+                  <pre v-if="formData.messages.secretarySubmission && formData.type === 9" class="document-preview-text">{{ formData.messages.secretarySubmission }}</pre>
+                  <el-input
+                    class="document-textarea"
+                    v-model="secretarySubmissionValue"
+                    type="textarea"
+                    autosize="{ minRows: 3 }"
+                    resize="none"
+                    placeholder="输入党办、校办拟办意见"
+                    :disabled="formData.type !== 9"
+                  />
+                </div>
+              </td>
+            </tr>
+
+            <!-- 党办、校办拟办意见 -->
+            <tr v-if="formData.type === 1 || formData.messages.schoolUnitApproval">
+              <td colspan="4" class="table2">党办、校办拟办意见:
+                <div class="document-input-container">
+                  <pre v-if="formData.messages.schoolUnitApproval && formData.type === 1" class="document-preview-text">{{ formData.messages.schoolUnitApproval }}</pre>
+                  <el-input
+                    class="document-textarea"
+                    v-model="schoolUnitApprovalValue"
+                    type="textarea"
+                    autosize="{ minRows: 3 }"
+                    resize="none"
+                    placeholder="输入党办、校办拟办意见"
+                    :disabled="formData.type !== 1"
+                  />
+                </div>
+              </td>
+            </tr>
+
           <tr>
             <td colspan="4" class="table2">党办、校办办文情况:
               <div class="document-input-container" v-if="formData.type === 2 || formData.messages.documentHandling">
@@ -194,8 +227,8 @@
             </tr>
           <tr>
             <td colspan="4" class="table2">办公室拟办意见:
-              <div class="document-input-container" v-if="formData.type === 1 || formData.messages.officeOpinion">
-                <pre v-if="formData.messages.officeOpinion && formData.type === 1" class="document-preview-text">{{ formData.messages.officeOpinion }}</pre>
+              <div class="document-input-container" v-if="formData.type === 99 || formData.messages.officeOpinion">
+                <pre v-if="formData.messages.officeOpinion && formData.type === 99" class="document-preview-text">{{ formData.messages.officeOpinion }}</pre>
                 <el-input
                   class="document-textarea"
                   v-model="officeOpinionValue"
@@ -203,7 +236,7 @@
                   autosize="{ minRows: 3 }"
                   resize="none"
                   placeholder="输入办公室拟办意见"
-                  :disabled="formData.type !== 1"
+                  :disabled="formData.type !== 99"
                 />
               </div>
             </td>
@@ -227,24 +260,6 @@
               </td>
             </tr>
 
-
-            <!-- 提交校办秘书岗 -->
-            <tr v-if="formData.type === 9 || formData.messages.secretarySubmission">
-              <td colspan="4" class="table2">提交校办秘书岗:
-                <div class="document-input-container">
-                  <pre v-if="formData.messages.secretarySubmission && formData.type === 9" class="document-preview-text">{{ formData.messages.secretarySubmission }}</pre>
-                  <el-input
-                  class="document-textarea"
-                    v-model="secretarySubmissionValue"
-                    type="textarea"
-                    autosize="{ minRows: 3 }"
-                  resize="none"
-                    placeholder="输入提交校办秘书岗意见"
-                    :disabled="formData.type !== 9"
-                  />
-                </div>
-              </td>
-            </tr>
 
             <!-- 鉴印 -->
             <tr v-if="formData.type === 10 || formData.messages.seal">
@@ -285,16 +300,15 @@
             <!-- 退回修改 -->
             <tr>
               <td colspan="4" class="table2">退回修改:
-                <div class="document-input-container" v-if="formData.type === 12 || formData.messages.returnModify">
+                <div class="document-input-container">
                   <pre v-if="formData.messages.returnModify && formData.type === 12" class="document-preview-text">{{ formData.messages.returnModify }}</pre>
                   <el-input
                   class="document-textarea"
                     v-model="returnModifyValue"
                     type="textarea"
                     autosize="{ minRows: 3 }"
-                  resize="none"
+                    resize="none"
                     placeholder="输入退回修改意见"
-                    :disabled="formData.type !== 12"
                   />
                 </div>
               </td>
@@ -489,7 +503,7 @@
 
             <!-- 提交校办秘书岗 -->
             <tr v-if="formData.type === 9 || formData.messages.secretarySubmission">
-              <td colspan="4" class="table2">提交校办秘书岗:
+              <td colspan="4" class="table2">党办、校办拟办意见:
                 <div class="document-input-container">
                   <pre v-if="formData.messages.secretarySubmission && formData.type === 9" class="document-preview-text">{{ formData.messages.secretarySubmission }}</pre>
                   <el-input
@@ -498,7 +512,7 @@
                     type="textarea"
                     autosize="{ minRows: 3 }"
                   resize="none"
-                    placeholder="输入提交校办秘书岗意见"
+                    placeholder="输入党办、校办拟办意见"
                     :disabled="formData.type !== 9"
                   />
                 </div>
@@ -743,66 +757,79 @@
             </tr>
           </template>
 
-          <!-- 显示当前界面二维码 -->
-          <!-- <tr>
-            <td colspan="4" class="table2">扫描查看：</td>
-          </tr>
-          <tr>
-            <td colspan="4" class="text-center py-4">
-              <div class="flex justify-center items-center">
-                <Qrcode :text="currentPageUrl" :width="200" />
-              </div>
-              <div class="mt-2 text-gray-500 text-sm">扫描二维码查看当前文档</div>
-            </td>
-          </tr> -->
-
-          <tr>
+          <tr v-if="!formData.isCompleted" class="no-print">
             <td colspan="4">
-              <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 20px;">
-                <div style="display: flex; align-items: center; margin-right: 10px;">
-                  <span style="margin-right: 10px;">下一步：</span>
-                  <el-select v-model="formData.nextType" placeholder="请选择下一步操作" style="width: 180px;">
-                    <el-option
-                      v-for="item in getFilteredOptions()"
-                      :key="item.value"
-                      :label="item.label"
-                      :value="item.value"
-                    />
-                  </el-select>
+  <div class="flex justify-center w-full py-2"> <!-- 上下内边距调小 -->
+    <div class="flex justify-center items-center gap-2">
+      <el-button size="default" style="width: 100px;" type="primary" @click="handleSave" v-hasPermi="['document:circulation:saveMessage']">保存</el-button>
+      <el-button size="default" style="width: 100px;" @click="handleCancel">取消</el-button>
+    </div>
+  </div>
+
+  <div v-if="formData.nextCheck" class="flex justify-center w-full py-2"> <!-- 上下内边距 -->
+    <div class="flex justify-center items-center flex-wrap gap-2" style="max-width: 800px;">
+      <el-form-item label="下一步" prop="nextType" class="pt-0 mr-2 mb-0">
+        <el-select v-model="formData.nextType" placeholder="请选择" style="width: 160px;" size="small" popper-class="center-option">
+          <el-option
+            v-for="item in getFilteredOptions()"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
+        </el-select>
+      </el-form-item>
+
+      <el-form-item
+        v-if="![11].includes(formData.nextType)"
+        label="签办人"
+        prop="approvalUserIds"
+        class="mb-0 pt-0"
+      >
+        <div class="flex flex-wrap gap-1">
+          <div
+            v-for="user in selectedApprovalUsers"
+            :key="user.id"
+            class="bg-gray-100 rounded-2xl flex items-center pr-2 pl-1"
+            style="height: 28px;"
+          >
+            <el-avatar class="!m-0" :size="20" v-if="user.avatar" :src="user.avatar" />
+            <el-avatar class="!m-0" :size="20" v-else>
+              {{ user.nickname.substring(0, 1) }}
+            </el-avatar>
+            <span class="text-sm ml-1">{{ user.nickname }}</span>
+            <Icon
+              icon="ep:close"
+              class="ml-1 cursor-pointer hover:text-red-500"
+              @click="handleRemoveApprovalUser(user)"
+            />
+          </div>
+          <el-button type="primary" size="small" link @click="openApprovalUserSelect">
+            <Icon icon="ep:plus" />选择人员
+          </el-button>
+        </div>
+      </el-form-item>
+
+      <el-button type="primary" size="default" style="width: 100px;" @click="handleSubmit" v-hasPermi="['document:circulation:submit']">提交</el-button>
+    </div>
+  </div>
+</td>
+
+          </tr>
+
+        </tbody>
+        <!-- 显示当前界面二维码 -->
+        <tfoot v-if="formData.isCompleted">
+          <tr>
+            <td colspan="4" class="border-0">
+              <div class="flex justify-end items-center py-1">
+                <div class="text-center">
+                  <Qrcode :text="qrCodeUrl" :width="100" />
+                  <div class="mt-1 text-gray-500 text-xs">扫描查看文件认证信息</div>
                 </div>
-                
-                <div style="display: flex; align-items: center;">
-                  <span style="margin-right: 10px; margin-left: 20px;">签办人：</span>
-                  <div class="inline-flex flex-wrap gap-2">
-                    <div
-                      v-for="user in selectedApprovalUsers"
-                      :key="user.id"
-                      class="bg-gray-100 h-35px rounded-3xl flex items-center pr-8px dark:color-gray-600 position-relative"
-                    >
-                      <el-avatar class="!m-5px" :size="28" v-if="user.avatar" :src="user.avatar" />
-                      <el-avatar class="!m-5px" :size="28" v-else>
-                        {{ user.nickname.substring(0, 1) }}
-                      </el-avatar>
-                      {{ user.nickname }}
-                      <Icon
-                        icon="ep:close"
-                        class="ml-2 cursor-pointer hover:text-red-500"
-                        @click="handleRemoveApprovalUser(user)"
-                      />
-                    </div>
-                    <el-button type="primary" link @click="openApprovalUserSelect">
-                      <Icon icon="ep:plus" />选择人员
-                    </el-button>
-                  </div>
-                </div>
-              </div>
-                
-              <div style="display: flex; justify-content: center; margin-top: 20px;">
-                <el-button type="primary" @click="handleSubmit" v-hasPermi="['document:circulation:submit']">提交</el-button>
               </div>
             </td>
           </tr>
-        </tbody>
+        </tfoot>
       </table>
       </div>
     </el-card>
@@ -830,16 +857,14 @@ import Dialog from '@/components/Dialog/src/Dialog.vue'
 import { waitForDebugger } from 'inspector'
 import { set } from 'lodash-es'
 import { Star, StarFilled } from '@element-plus/icons-vue'
+import { CirculationPostApi } from '@/api/document/circulationPost'
 
-// 获取字典存储实例
-const dictStore = useDictStoreWithOut()
-
-
-// 收藏相关
-const isFavorite = ref(false)
 
 const router = useRouter()
 const route = useRoute()
+
+// 收藏相关
+const isFavorite = ref(false)
 
 // 检查是否已收藏
 const checkIsFavorite = async () => {
@@ -887,6 +912,7 @@ const toggleFavorite = async () => {
   }
 }
 
+
 // 生成当前页面URL
 const currentPageUrl = computed(() => {
   const origin = window.location.origin
@@ -898,6 +924,13 @@ const currentPageUrl = computed(() => {
   return `${origin}${path}`
 })
 
+// 生成简洁的二维码页面URL
+const qrCodeUrl = computed(() => {
+  const origin = window.location.origin
+  // 直接指向静态HTML文件
+  return `${origin}/receipt.html?number=${formData.receiptNumber || ''}`
+})
+
 // 获取路由参数中的文档ID
 const documentId = ref(Number(route.query.id) || 0)
 
@@ -905,21 +938,25 @@ const documentId = ref(Number(route.query.id) || 0)
 const selectedApprovalUsers = ref<UserVO[]>([])
 const userSelectFormRef = ref()
 
+// 用户拥有的下一步类型列表
+const nextValueList = ref<number[]>([])
+
 // 表单数据
 // 当前编辑的消息
 const currentMessage = ref('');
 
 const formData = reactive({
-  id: undefined,
+  id: 0,
   documentName: '',
-  deptId: undefined,
+  deptId: 0,
   deptName: '',
-  circulationTemplateType: undefined,
-  documentType:undefined,
+  circulationTemplateType: 0,
+  documentType:0,
   publicityType: 2, // 默认为依申请公开
   documentNumber: '',
   receiptNumber: '',
   receiptTime: '',
+  isCompleted: false, // 是否已办结
   // 新增字段
   draftUnitReview: '', // 拟稿单位核稿
   drafter: '', // 拟稿人
@@ -938,11 +975,11 @@ const formData = reactive({
   type: undefined,
   nextType: undefined,
   nextCheck: false, // 是否有操作下一步的权限
-  circulationId: undefined,
+  circulationId: 0,
   presentationContent: '', // 呈文内容
   messages: {
     leaderApproval: '', // 0-校党政领导批示
-    officeOpinion: '', // 1-党办校办拟办意见
+    schoolUnitApproval: '', // 1-党办校办拟办意见
     documentHandling: '', // 2-办文情况
     mainLeaderApproval: '', // 3-主要领导批示阅处
     jointSign: '', // 4-会签
@@ -962,7 +999,8 @@ const formData = reactive({
     officeReview: '', // 18-校办核稿
     draftUnitReview: '', // 19-拟稿单位核稿
     documentIssue: '', // 20-发文
-    reviewOpinion: '' // 21-审核意见
+    reviewOpinion: '', // 21-审核意见
+    officeOpinion: '' //99-办公室拟办意见
   },
   approvalUserIds: [] as number[]
 });
@@ -981,6 +1019,11 @@ const mainLeaderApprovalValue = computed({
 const documentHandlingValue = computed({
   get: () => formData.type === 2 ? currentMessage.value : formData.messages.documentHandling || '',
   set: (val) => formData.type === 2 ? currentMessage.value = val : formData.messages.documentHandling = val
+});
+
+const schoolUnitApprovalValue = computed({
+  get: () => formData.type === 1 ? currentMessage.value : formData.messages.schoolUnitApproval || '',
+  set: (val) => formData.type === 1 ? currentMessage.value = val : formData.messages.schoolUnitApproval = val
 });
 
 const unitLeaderSignValue = computed({
@@ -1004,8 +1047,8 @@ const circulationValue = computed({
 });
 
 const officeOpinionValue = computed({
-  get: () => formData.type === 1 ? currentMessage.value : formData.messages.officeOpinion || '',
-  set: (val) => formData.type === 1 ? currentMessage.value = val : formData.messages.officeOpinion = val
+  get: () => formData.type === 99 ? currentMessage.value : formData.messages.officeOpinion || '',
+  set: (val) => formData.type === 99 ? currentMessage.value = val : formData.messages.officeOpinion = val
 });
 
 const departmentOpinionValue = computed({
@@ -1108,7 +1151,7 @@ const getCurrentMessageKey = (type: number | null) => {
     case 0:
       return 'leaderApproval';
     case 1:
-      return 'officeOpinion';
+      return 'schoolUnitApproval';
     case 2:
       return 'documentHandling';
     case 3:
@@ -1149,6 +1192,8 @@ const getCurrentMessageKey = (type: number | null) => {
       return 'documentIssue';
     case 21:
       return 'reviewOpinion';
+    case 99:
+      return 'officeOpinion'
     default:
       return null;
   }
@@ -1181,8 +1226,19 @@ const submit = async () => {
 const getDocumentInfo = async () => {
   try {
     const isTodo = Number(route.query.isTodo || '1')
-    const response = await DocumentApi.getDocumentInfo(documentId.value, { isTodo })
+    let response = await DocumentApi.getDocumentInfo(documentId.value, { isTodo })
     const data = response.data
+    // 如果是待办项并且是校办秘书岗（type=9），可能需要再次获取数据以获得生成的收文编号和收文时间
+    if (isTodo === 1 && data && data.type === 9 && (!data.receiptNumber || !data.receiptTime)) {
+      console.log('需要再次获取文档信息以获取收文编号和收文时间')
+      // 短暂延迟，确保后端有足够时间处理
+      await new Promise(resolve => setTimeout(resolve, 500))
+      // 再次获取文档信息
+      response = await DocumentApi.getDocumentInfo(documentId.value, { isTodo: 1 }) // 使用isTodo=1避免再次触发生成逻辑
+      let data = response.data
+      
+    }
+    
     if (data) {
       console.log('Document data:', data) // 添加日志
       // 设置基本信息
@@ -1192,7 +1248,7 @@ const getDocumentInfo = async () => {
       formData.deptName = data.deptName
       formData.documentNumber = data.documentNumber
       formData.receiptNumber = data.receiptNumber
-      formData.receiptTime = formatDate(data.receiptTime) // 格式化时间戳
+      formData.receiptTime = formatDate(data.receiptTime, "YYYY-MM-DD") // 格式化时间戳
       formData.circulationId = data.circulationId
       formData.documentType = data.documentType
       formData.presentationContent = data.presentationContent || '' // 设置呈文内容
@@ -1235,12 +1291,15 @@ const getDocumentInfo = async () => {
         const currentUser = useUserStore().getUser.nickname; // 获取当前用户名
         console.log("currentUser:"+currentUser)
         console.log("formData:"+formData.type)
+
+        // 查找与文档circulationId匹配的记录
+        console.log('文档的circulationId:', data.circulationId);
         const draftRecord = data.circulationList.find(item =>
-          item.userName === currentUser &&
-          item.type === Number(formData.type) &&
-          item.status === 1
+          item.id === data.circulationId
         );
-        console.log(draftRecord)
+
+        console.log('找到的匹配circulationId的记录:', draftRecord);
+
         if (draftRecord && draftRecord.message) {
           // 直接设置当前消息框的值
           currentMessage.value = draftRecord.message;
@@ -1256,7 +1315,7 @@ const getDocumentInfo = async () => {
                 leaderApprovalValue.value = draftRecord.message;
                 break;
               case 1:
-                officeOpinionValue.value = draftRecord.message;
+                schoolUnitApprovalValue.value = draftRecord.message;
                 break;
               case 2:
                 documentHandlingValue.value = draftRecord.message;
@@ -1300,20 +1359,39 @@ const getDocumentInfo = async () => {
               case 21:
                 reviewOpinionValue.value = draftRecord.message;
                 break;
+              case 99:
+                officeOpinionValue.value = draftRecord.message;
             }
             console.log('已强制更新输入框，类型:', formData.type);
           });
         }
       }
 
-      // 处理签办记录
+      // 检查是否已办结
+      formData.isCompleted = false;
       if (data.circulationList && Array.isArray(data.circulationList)) {
+        // 检查是否有type为11的记录（办结）
+        const hasCompleted = data.circulationList.some(item => item.type === 11);
+        if (hasCompleted) {
+          formData.isCompleted = true;
+        }
+
+        // 处理签办记录 - 只处理已完成的记录(status!=1)作为历史记录显示
+        console.log('开始处理circulationList作为历史记录:', JSON.stringify(data.circulationList));
         data.circulationList.forEach(item => {
           // 对于相同type的多条记录，将message合并
           let message = item.message?.trim() || ''
-          if (!message || item.status === 1) return // 如果message为空，或者未提交则跳过
-          const sign = '\n\t' + item.userName + '\n\t' + item.updateTime
-          message = message + sign
+          console.log(`处理记录: type=${item.type}, status=${item.status}, message=${message}, userName=${item.userName}`);
+
+          // 只处理已完成的记录(status!=1)，未完成的记录(status=1)会在上面的代码中处理到编辑框
+          if (!message || item.status === 1) {
+            console.log(`跳过记录: message为空或status=1(未完成)`);
+            return; // 如果message为空，或者未提交则跳过
+          }
+
+          const sign = '\n\t\t\t\t' + item.userName + '\n\t\t\t\t' + item.updateTime
+          message = '\t'+ message + sign
+          console.log(`处理后的message(已完成记录): ${message}`);
           switch (item.type) {
             case 0:
               formData.messages.leaderApproval = formData.messages.leaderApproval
@@ -1321,8 +1399,8 @@ const getDocumentInfo = async () => {
                 : message;
               break;
             case 1:
-              formData.messages.officeOpinion = formData.messages.officeOpinion
-                ? formData.messages.officeOpinion + '\n' + message
+              formData.messages.schoolUnitApproval = formData.messages.schoolUnitApproval
+                ? formData.messages.schoolUnitApproval + '\n' + message
                 : message;
               break;
             case 2:
@@ -1425,8 +1503,14 @@ const getDocumentInfo = async () => {
                 ? formData.messages.reviewOpinion + '\n' + message
                 : message;
               break;
+            case 99:
+              formData.messages.officeOpinion = formData.messages.officeOpinion
+                ? formData.messages.officeOpinion + '\n' + message
+                : message;
+              break;
           }
         })
+        console.log('处理后的messages对象:', JSON.stringify(formData.messages));
       }
     }
   } catch (error) {
@@ -1436,12 +1520,39 @@ const getDocumentInfo = async () => {
 }
 
 // 页面加载时获取文档信息
-onMounted(() => {
-  if (documentId.value) {
-    getDocumentInfo()
-  }
+onMounted(async () => {
   checkIsFavorite()
+  if (documentId.value) {
+    await getDocumentInfo()
+    // 等待文档信息加载完成后再获取流转类型列表
+    if (formData.documentType) {
+      console.log('执行getSimpleList', formData.documentType)
+      getSimpleList(formData.documentType)
+    }
+    
+  }
 })
+
+// 获取当前用户流转类型列表
+const getSimpleList = async (type: number) => {
+  console.log('获取当前用户流转类型列表', type)
+  try {
+    const res = await CirculationPostApi.simpleList(type)
+    const data = res.data
+    if (data) {
+      // 确保数据是数字类型
+      nextValueList.value = Array.isArray(data)
+        ? data.map((item: any) => Number(item))
+        : typeof data === 'string'
+          ? res.split(',').map((item: any) => Number(item.trim()))
+          : []
+    }
+  } catch (error) {
+    console.error('获取流转类型列表失败:', error)
+    nextValueList.value = []
+  }
+  console.log('获取的流转类型列表:', nextValueList.value)
+}
 
 // 初始化选中的用户
 watch(
@@ -1501,34 +1612,39 @@ const handleSave = async () => {
     //   }
     // }
 
-    // 构建请求数据
-    const data = {
+    // 收文编号和收文时间由后端生成和处理
+    if (Number(formData.type) === 11) {
+      try {
+        // 先获取当前文档的完整信息
+        const documentInfo = await DocumentApi.getDocument(formData.id);
+        
+        // 更新文档信息，但不处理收文编号和收文时间
+        const documentData = {
+          ...documentInfo.data
+        };
+
+        // 调用更新公文主表接口
+        await DocumentApi.updateDocument(documentData);
+      } catch (error) {
+        console.error('更新公文主表失败:', error);
+        ElMessage.error('更新公文主表失败');
+      }
+
+      // 不需要重复调用，已经在try块中调用了
+    }
+
+    // 构建签办信息请求数据
+    const messageData = {
       id: formData.id,
       circulationId: formData.circulationId,
       message: currentMessage.value,
       type: formData.type,
-  //    nextType: formData.nextType !== null ? Number(formData.nextType) : 0,
-      // 新增字段
-      publicityType: formData.publicityType,
-      draftUnitReview: formData.draftUnitReview,
-      drafter: formData.drafter,
-      printCount: formData.printCount,
-      mainRecipient: formData.mainRecipient,
-      ccRecipient: formData.ccRecipient,
-      recorder: formData.recorder,
-      proofreader: formData.proofreader,
-      layouter: formData.layouter,
-      issuer: formData.issuer,
-      // 纸质纪要文件申请相关字段
-      meetingTopic: formData.meetingTopic,
-      applicationReason: formData.applicationReason,
-      collectionStatus: formData.collectionStatus,
-      contactPerson: formData.contactPerson,
+      nextType: formData.nextType !== null ? formData.nextType : 0,
       ids: []
     };
 
-    // 调用保存接口
-    await DocumentApi.saveDocumentMessage(data);
+    // 调用保存签办信息接口
+    await DocumentApi.saveDocumentMessage(messageData);
 
     // 保存成功后，更新本地数据
     formData.messages[messageKey] = formData.messages[messageKey]
@@ -1568,7 +1684,10 @@ const handleSubmit = async () => {
       return;
     }
 
-    if (!formData.approvalUserIds || formData.approvalUserIds.length === 0) {
+    // 如果不是办结(11)，且不是可选人的类型（1-党办校办拟办意见、9-提交校办秘书岗），则需要验证签办人
+    // 类型1和9可以选人也可以不选人
+    if (formData.nextType !== 11 && formData.nextType !== 1 && formData.nextType !== 9 &&
+        (!formData.approvalUserIds || formData.approvalUserIds.length === 0)) {
       ElMessage.warning('请选择签办人');
       return;
     }
@@ -1579,6 +1698,8 @@ const handleSubmit = async () => {
     //   ElMessage.warning('请输入签办信息');
     //   return;
     // }
+
+    // 收文编号和收文时间由后端生成和处理
 
     // 构建请求数据
     const data = {
@@ -1599,7 +1720,11 @@ const handleSubmit = async () => {
       proofreader: formData.proofreader,
       layouter: formData.layouter,
       issuer: formData.issuer,
-      ids: formData.approvalUserIds || []
+      receiptNumber: formData.receiptNumber,
+      receiptTime: formData.receiptTime,
+      // 如果是办结类型，则不需要签办人
+      // 如果是类型1和9，则可以选人也可以不选人
+      ids: formData.nextType === 11 ? [] : (formData.approvalUserIds || [])
     };
 
     // 保存当前消息到本地数据
@@ -1617,32 +1742,15 @@ const handleSubmit = async () => {
     }
 
     // 调用提交接口
-    const res = await DocumentApi.saveDocumentMessage(data);
-    if (res.code === 0) {
-      ElMessage.success('提交成功');
-      // 跳转到我的文档页面
-      //router.push('/document/myDocument');
-      // setTimeout(() => {
-    //   window.close()
-    // }, 1000)
-    // 如果是从待办列表打开的，刷新父窗口的列表
-    if (window.opener && !window.opener.closed) {
-        try {
-          // 通知父窗口刷新列表
-          window.opener.postMessage({ type: 'refreshTodoList' }, '*');
-          console.log('已发送刷新列表消息到父窗口');
-          
-          // 延迟关闭当前窗口
-          setTimeout(() => {
-            window.close();
-          }, 1500);
-        } catch (e) {
-          console.error('通知父窗口刷新失败:', e);
-        }
-      }
-    } else {
-      ElMessage.error(res.msg || '提交失败');
-    }
+    await DocumentApi.submitDocument(data);
+
+    ElMessage.success('提交成功');
+    // 跳转到我的文档页面
+    //router.push('/document/myDocument');
+    setTimeout(() => {
+      window.close()
+    }, 1000)
+
   } catch (error) {
     console.error('提交失败:', error);
     ElMessage.error('提交失败');
@@ -1656,94 +1764,230 @@ const handleCancel = () => {
 
 // 根据documentType过滤下拉框选项
 const getFilteredOptions = () => {
-  const allOptions = getIntDictOptions(DICT_TYPE.CIRCULATION_TYPE);
-  console.log('DICT_TYPE.CIRCULATION_TYPE:', DICT_TYPE.CIRCULATION_TYPE);
-  console.log('allOptions:', allOptions);
-  console.log('documentType:', formData.documentType);
+  console.log('获取的权限列表:', nextValueList.value)
+  if (!nextValueList.value || nextValueList.value.length === 0) {
+    return []; // 如果没有权限数据，返回空数组
+  }
 
   // 根据documentType过滤选项
   if (formData.documentType === 1) { // 校内呈文
-    // 校内呈文包含所有 0-15 的选项，包括呈文单位负责人签字(5)
-    return allOptions.filter(option => [
-      0,  // 校党政领导批示
-      1,  // 党办校办拟办意见
-      2,  // 办文情况
-      3,  // 主要领导批示阅处
-      4,  // 会签
-      5,  // 呈文单位负责人签字
-      6,  // 校属单位处理
-      7,  // 科室处理意见
-      8,  // 文件传阅
-      9,  // 提交校办秘书岗
-      10, // 鉴印
-      11, // 办结
-      12, // 退回修改
-      13, // 阅知
-      14, // 填写建议列席会议单位
-      15  // 会前传阅
-    ].includes(option.value));
+    const allOptions = getIntDictOptions(DICT_TYPE.CIRCULATION_TYPE);
+    return allOptions.filter(option => nextValueList.value.includes(option.value));
   } else if (formData.documentType === 2) { // 校外来文
-    return allOptions.filter(option => [
-      0,  // 校党政领导批示
-      1,  // 党办校办拟办意见
-      2,  // 办文情况
-      3,  // 主要领导批示阅处
-      4,  // 会签
-
-      6,  // 校属单位处理
-      7,  // 科室处理意见
-      8,  // 文件传阅
-      9,  // 提交校办秘书岗
-      10, // 鉴印
-      11, // 办结
-      12, // 退回修改
-      13, // 阅知
-      14, // 填写建议列席会议单位
-      15  // 会前传阅
-    ].includes(option.value));
+    const allOptions = getIntDictOptions(DICT_TYPE.CIRCULATION_TYPE);
+    return allOptions.filter(option => nextValueList.value.includes(option.value));
   } else if (formData.documentType === 3) { // 学校发文
-    // 学校发文包含传阅相关选项和发文特有选项
-    return allOptions.filter(option => [
-      0,  // 校党政领导批示
-      2,  // 办文情况
-      4,  // 会签
-      8,  // 文件传阅
-      9,  // 提交校办秘书岗
-      10, // 鉴印
-      11, // 办结
-      12, // 退回修改
-      13, // 阅知
-      14, // 填写建议列席会议单位
-      15, // 会前传阅
-      16, // 签发
-      17, // 分管领导审核
-      18, // 校办核稿
-      19, // 拟稿单位核稿
-      20  // 发文
-    ].includes(option.value));
+    const allOptions = getIntDictOptions(DICT_TYPE.SEND_CIRCULATION_TYPE);
+    return allOptions.filter(option => nextValueList.value.includes(option.value));
   } else if (formData.documentType === 4) { // 纸质纪要文件申请
-    // 纸质纪要文件申请显示校党政领导批示和审核意见
-    return allOptions.filter(option => [
-      0,  // 校党政领导批示
-      5,  // 呈文单位负责人签字
-      21  // 审核意见
-    ].includes(option.value));
+    const allOptions = getIntDictOptions(DICT_TYPE.MINUTES_CIRCULATION_TYPE);
+    return allOptions.filter(option => nextValueList.value.includes(option.value));
   }
+  return []; // 默认返回空数组
 
-  return allOptions; // 默认返回所有选项
+ 
 }
 
 // 查看呈文详细内容
 const viewPresentationContent = () => {
   if (formData.id) {
-    router.push(`/document/document/presentation-view/${formData.id}`)
+    // router.push(`/document/document/presentation-view/${formData.id}`)
+    window.open(`/document/document/presentation-view/${formData.id}?hideLayout=true`, '_blank', 'width=1200,height=800,top=100,left=100,menubar=no,toolbar=no,location=no,status=no')
+
   } else {
     ElMessage.warning('呈文内容不存在')
   }
 }
 </script>
 
+<style>
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+</style>
+
+<style>
+/* 全局样式设置，确保浏览器滚动条正常显示 */
+html, body {
+  height: 100%;
+  overflow-y: auto !important;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+</style>
+
 <style scoped>
 @import "@/styles/document.css";
+@import "./DocumentApproval.css";
+@import "@/styles/element-override.css";
+@import "@/styles/index.scss";
 /* 使用公共样式文件，只需添加特定于此组件的样式 */
+
+/* 去掉输入框容器的边框 */
+.document-input-container {
+  border: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+/* 让下拉面板里的文字水平居中 */
+:deep(.center-option .el-select-dropdown__item) {
+  text-align: center;
+}
+
+.favorite-btn {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 9999;
+  /* 额外样式（可选）： */
+  padding: 8px 16px;
+  background-color: #409eff;
+  color: #fff;
+  border-radius: 4px;
+}
+
+/* 去掉输入框的外层边框 */
+.document-textarea :deep(.el-textarea__inner) {
+  border: none;
+  padding: 5px;
+  background-color: #fafafa;
+  box-shadow: none !important;
+}
+
+/* 去掉输入框的焦点边框 */
+.document-textarea :deep(.el-textarea__inner:focus) {
+  box-shadow: none;
+  border: none;
+}
+
+/* 去掉pre标签的边框和背景 */
+.document-preview-text {
+  border: none !important;
+  background-color: transparent !important;
+  padding: 5px;
+  margin: 0;
+}
+
+/* 签办人样式 */
+.approval-users-wrapper {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.approval-label {
+  margin-right: 10px;
+  white-space: nowrap;
+}
+
+.approval-users-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 600px;
+}
+
+.approval-user-tag {
+  display: flex;
+  align-items: center;
+  background-color: #f0f2f5;
+  border-radius: 16px;
+  padding: 2px 8px 2px 2px;
+  margin-bottom: 5px;
+  transition: all 0.3s;
+}
+
+.approval-user-tag:hover {
+  background-color: #e6f7ff;
+}
+
+.approval-avatar {
+  margin-right: 5px;
+}
+
+.approval-nickname {
+  font-size: 14px;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.approval-close-icon {
+  margin-left: 5px;
+  font-size: 14px;
+  cursor: pointer;
+  color: #999;
+}
+
+.approval-close-icon:hover {
+  color: #f56c6c;
+}
+
+.approval-add-btn {
+  height: 28px;
+  padding: 0 10px;
+  margin-bottom: 5px;
+}
+
+/* 直接在组件中覆盖输入框样式，确保优先级足够高 */
+:deep(textarea.el-textarea__inner:not([disabled])) {
+  background-color: #fffbe6 !important; /* 淡黄色背景 */
+  color: black !important;
+  font-size: 18px !important;
+  font-family: "楷体", KaiTi, "Microsoft YaHei", sans-serif !important;
+}
+
+:deep(textarea.el-textarea__inner[disabled]) {
+  background-color: #ffffff !important; /* 白色背景 */
+  color: black !important;
+  font-family: "楷体", KaiTi, "Microsoft YaHei", sans-serif !important;
+}
+
+/* 响应式布局样式 */
+@media screen and (max-width: 768px) { 
+  .document-approval {
+    padding: 10px;
+    max-width: 100%;
+  }
+
+  .document-table {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* 在小屏幕上重新布局表格 */
+  .document-table tr {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .document-table td {
+    width: 100% !important;
+    display: block;
+    box-sizing: border-box;
+  }
+
+  /* 特殊处理有标签和内容的单元格 */
+  .table2 {
+    font-weight: bold;
+    border-bottom: none;
+  }
+
+  /* 调整文本区域大小 */
+  .document-textarea {
+    width: 100%;
+  }
+
+  /* 标题样式调整 */
+  .table-title {
+    font-size: 24px;
+  }
+}
 </style>

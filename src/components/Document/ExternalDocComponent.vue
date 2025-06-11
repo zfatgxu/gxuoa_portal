@@ -2,12 +2,18 @@
   <div class="content-section">
     <NavBar :modelValue="currentComponent" @update:modelValue="handleComponentChange" />
     <div class="content-body">
-      <h3 class="component-title">校外发文</h3>
       
       <!-- 搜索组件 -->
-      <SearchBar @search="handleSearch" @reset="handleReset" />
+      <SearchBar @search="handleSearch" @reset="handleReset" :loading="loading" />
       
-      <el-empty description="暂无校外发文" v-if="!loading && externalDocs.length === 0" />
+      <!-- 搜索后无结果时显示提示 -->
+      <div v-if="hasSearched && externalDocs.length === 0 && !loading" class="no-result">
+        <el-empty description="暂无匹配的搜索结果" />
+      </div>
+      
+      <!-- 未搜索但列表为空 -->
+      <el-empty description="暂无校外发文" v-else-if="!hasSearched && externalDocs.length === 0 && !loading" />
+      
       <div v-if="loading" class="loading-container">
         <el-skeleton :rows="5" animated />
       </div>
@@ -18,7 +24,16 @@
               {{ (pagination.currentPage - 1) * pagination.pageSize + scope.$index + 1 }}
             </template>
           </el-table-column>
-          <el-table-column prop="documentName" label="文件名称" min-width="200" show-overflow-tooltip />
+          <el-table-column label="文件名称" min-width="200" show-overflow-tooltip>
+            <template #default="scope">
+              <span 
+                style="cursor: pointer; color: #409EFF; text-decoration: underline;" 
+                @click="handleProcess(scope.row)"
+              >
+                {{ scope.row.documentName }}
+              </span>
+            </template>
+          </el-table-column>
           <el-table-column label="流转状态" width="180">
             <template #default="scope">
               <span 
@@ -126,24 +141,55 @@ const externalDocs = ref<any[]>([])
 // 加载状态
 const loading = ref(false)
 
+// 是否已经搜索
+const hasSearched = ref(false)
+
 // 搜索参数
 const searchParams = ref({
-  fileName: ''
+  fileName: '',
+  sourceUnit: '',
+  contact: '',
+  phone: '',
+  searchType: 'fuzzy' // 默认为模糊搜索
 })
 
 // 处理搜索
 const handleSearch = (params: any) => {
   console.log('搜索参数:', params)
-  searchParams.value = params
-  pagination.value.currentPage = 1 // 搜索时重置到第一页
+  
+  // 更新搜索参数
+  searchParams.value = { ...params }
+  
+  // 标记已经搜索过
+  hasSearched.value = true
+  
+  // 重置分页到第一页
+  pagination.value.currentPage = 1
+  
+  // 加载数据（会带上搜索参数）
   fetchExternalDocs()
 }
 
 // 处理重置
 const handleReset = () => {
+  console.log('重置搜索')
+  
+  // 重置搜索参数
   searchParams.value = {
-    fileName: ''
+    fileName: '',
+    sourceUnit: '',
+    contact: '',
+    phone: '',
+    searchType: 'fuzzy'
   }
+  
+  // 重置搜索状态
+  hasSearched.value = false
+  
+  // 重置分页
+  pagination.value.currentPage = 1
+  
+  // 重新加载数据
   fetchExternalDocs()
 }
 
@@ -154,21 +200,52 @@ const fetchExternalDocs = async () => {
     // 从 API 获取数据
     const { currentPage, pageSize } = pagination.value
     
-    const res = await circulationApi.getExternalDocuments({
+    // 构建API请求参数
+    const params: any = {
       pageNo: currentPage,
       pageSize: pageSize
-    })
+    }
+    
+    // 添加搜索参数（如果有）
+    if (searchParams.value.fileName) {
+      params.documentName = searchParams.value.fileName
+    }
+    
+    if (searchParams.value.sourceUnit) {
+      params.deptName = searchParams.value.sourceUnit
+    }
+    
+    if (searchParams.value.contact) {
+      params.userName = searchParams.value.contact
+    }
+    
+    if (searchParams.value.phone) {
+      params.mobile = searchParams.value.phone
+    }
+    
+    // 如果需要，可以添加搜索类型参数
+    if (searchParams.value.searchType) {
+      params.type = searchParams.value.searchType === 'exact' ? 3 : 1
+    }
+    
+    console.log('发送请求参数:', params)
+    
+    const res = await circulationApi.getExternalDocuments(params)
     
     if (res.code === 0 && res.data) {
       externalDocs.value = res.data.list || []
       pagination.value.total = res.data.total || 0
+      
+      console.log('获取到的校外发文列表：', externalDocs.value)
     } else {
       console.error('获取校外发文失败:', res.message)
+      ElMessage.error(res.message || '获取校外发文失败')
       externalDocs.value = []
       pagination.value.total = 0
     }
   } catch (error) {
     console.error('获取校外发文失败:', error)
+    ElMessage.error('获取校外发文失败')
     externalDocs.value = []
     pagination.value.total = 0
   } finally {
@@ -253,7 +330,7 @@ onMounted(() => {
 
 <style scoped>
 .content-section {
-  margin-top: 20px;
+  margin-top: 3px;
 }
 
 .content-body {

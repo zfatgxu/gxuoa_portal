@@ -31,7 +31,7 @@ export function refreshToken(refreshToken: string) {
 
 // 获取用户信息
 export function getInfo() {
-  return api.get('/app/auth/get-permission-info')
+  return api.get('/app/user/get')
 }
 
 // 退出登录

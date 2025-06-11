@@ -3,7 +3,7 @@
     <NavBar :modelValue="currentComponent" @update:modelValue="handleComponentChange" />
 
     <div class="content-body">
-      <h3 class="component-title">我的收藏</h3>
+    
       
       <!-- 搜索组件 -->
       <SearchBar @search="handleSearch" @reset="handleReset" />
@@ -16,7 +16,16 @@
               {{ (pagination.currentPage - 1) * pagination.pageSize + scope.$index + 1 }}
             </template>
           </el-table-column>
-          <el-table-column prop="documentName" label="文件名称" min-width="180" show-overflow-tooltip />
+          <el-table-column label="文件名称" min-width="180" show-overflow-tooltip>
+            <template #default="scope">
+              <span 
+                style="cursor: pointer; color: #409EFF; text-decoration: underline;" 
+                @click="handleView(scope.row)"
+              >
+                {{ scope.row.documentName }}
+              </span>
+            </template>
+          </el-table-column>
           <el-table-column label="流转状态" min-width="180" align="center">
             <template #default="scope">
               <span 
@@ -79,7 +88,9 @@ const pagination = ref({
 const searchParams = ref({
   fileName: '',
   sourceUnit: '',
-  documentName: ''
+  contact: '',
+  phone: '',
+  searchType: 'fuzzy' // 默认为模糊搜索
 })
 
 // 处理页码变化
@@ -98,22 +109,34 @@ const handleSizeChange = (newSize: number) => {
 // 处理搜索
 const handleSearch = (params: any) => {
   console.log('搜索参数:', params)
-  searchParams.value = {
-    ...searchParams.value,
-    ...params
-  }
-  pagination.value.currentPage = 1 // 搜索时重置到第一页
+  
+  // 更新搜索参数
+  searchParams.value = { ...params }
+  
+  // 重置分页到第一页
+  pagination.value.currentPage = 1
+  
+  // 加载数据（会带上搜索参数）
   loadFavoriteDocs()
 }
 
 // 处理重置
 const handleReset = () => {
+  console.log('重置搜索')
+  
+  // 重置搜索参数
   searchParams.value = {
     fileName: '',
     sourceUnit: '',
-    documentName: ''
+    contact: '',
+    phone: '',
+    searchType: 'fuzzy'
   }
+  
+  // 重置分页
   pagination.value.currentPage = 1
+  
+  // 重新加载数据
   loadFavoriteDocs()
 }
 
@@ -223,18 +246,45 @@ const favoriteDocs = ref<any[]>([])
 const loadFavoriteDocs = async () => {
   try {
     const { currentPage, pageSize } = pagination.value
-    const { documentName } = searchParams.value
+    
+    // 构建API请求参数
+    const params: any = {
+      pageNo: currentPage,
+      pageSize: pageSize
+    }
+    
+    // 添加搜索参数（如果有）
+    if (searchParams.value.fileName) {
+      params.documentName = searchParams.value.fileName
+    }
+    
+    if (searchParams.value.sourceUnit) {
+      params.deptName = searchParams.value.sourceUnit
+    }
+    
+    if (searchParams.value.contact) {
+      params.userName = searchParams.value.contact
+    }
+    
+    if (searchParams.value.phone) {
+      params.mobile = searchParams.value.phone
+    }
+    
+    // 如果需要，可以添加搜索类型参数
+    if (searchParams.value.searchType) {
+      params.type = searchParams.value.searchType === 'exact' ? 3 : 1
+    }
+    
+    console.log('发送请求参数:', params)
     
     // 调用API获取收藏列表
-    const res = await documentFavoriteApi.getDocumentFavoritePage({
-      pageNo: currentPage,
-      pageSize: pageSize,
-      documentName: documentName || undefined
-    })
+    const res = await documentFavoriteApi.getDocumentFavoritePage(params)
     
     if (res.code === 0) {
       // 设置总数据量
       pagination.value.total = res.data.total
+      
+      console.log('获取到的收藏文件列表：', res.data.list)
       
       // 格式化数据
       favoriteDocs.value = res.data.list.map((item: any) => ({
@@ -249,7 +299,10 @@ const loadFavoriteDocs = async () => {
         circulationId: item.circulationId
       }))
     } else {
+      console.error('获取收藏列表失败:', res.msg)
       ElMessage.error(res.msg || '获取收藏列表失败')
+      favoriteDocs.value = []
+      pagination.value.total = 0
     }
   } catch (error) {
     console.error('加载收藏文件数据失败', error)
@@ -266,7 +319,7 @@ onMounted(() => {
 
 <style scoped>
 .content-section {
-  margin-top: 20px;
+  margin-top: 3px;
 }
 
 .content-body {

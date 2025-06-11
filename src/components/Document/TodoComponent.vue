@@ -4,12 +4,20 @@
     
     <!-- 根据当前选中的组件显示不同的内容 -->
     <div v-if="currentComponent === 'TodoComponent'" class="content-body">
-      <h3 class="component-title">我的待办</h3>
+     
       
       <!-- 搜索组件 -->
-      <SearchBar @search="handleSearch" @reset="handleReset" />
+      <SearchBar @search="handleSearch" @reset="handleReset" :loading="loading" />
+
+      <!-- 搜索后无结果时显示提示 -->
+      <div v-if="hasSearched && todoList.length === 0 && !loading" class="no-result">
+        <el-empty description="暂无匹配的搜索结果" />
+      </div>
       
-      <el-empty description="暂无待办事项" v-if="todoList.length === 0" />
+      <!-- 未搜索但待办列表为空 -->
+      <el-empty description="暂无待办事项" v-else-if="!hasSearched && todoList.length === 0" />
+      
+      <!-- 有待办事项时显示列表 -->
       <div v-else>
         <el-table :data="todoList" style="width: 100%" border stripe>
           <el-table-column type="index" label="序号" width="60" align="center">
@@ -96,8 +104,7 @@ import circulationApi from '@/api/circulation'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 
-
-
+// 当前选中的组件
 const currentComponent = ref('TodoComponent')
 
 // 处理组件切换
@@ -273,8 +280,21 @@ const searchParams = ref({
   fileName: '',
   sourceUnit: '',
   contact: '',
-  phone: ''
+  phone: '',
+  searchType: 'fuzzy' // 默认为模糊搜索
 })
+
+// 加载状态
+const loading = ref(false)
+
+// 是否已经搜索
+const hasSearched = ref(false)
+
+// 原始数据列表（从后端获取的完整数据）
+const originalTodoList = ref<TodoItem[]>([])
+
+// 显示的数据列表（经过过滤的数据）
+const todoList = ref<TodoItem[]>([])
 
 // 处理页码变化
 const handleCurrentChange = (newPage: number) => {
@@ -292,77 +312,85 @@ const handleSizeChange = (newSize: number) => {
 // 处理搜索
 const handleSearch = (params: any) => {
   console.log('搜索参数:', params)
-  searchParams.value = params
-  pagination.value.currentPage = 1 // 搜索时重置到第一页
+  
+  // 更新搜索参数
+  searchParams.value = { ...params }
+  
+  // 标记已经搜索过
+  hasSearched.value = true
+  
+  // 重置分页到第一页
+  pagination.value.currentPage = 1
+  
+  // 加载数据（会带上搜索参数）
   fetchTodoList()
 }
 
 // 处理重置
 const handleReset = () => {
+  console.log('重置搜索')
+  
+  // 重置搜索参数
   searchParams.value = {
     fileName: '',
     sourceUnit: '',
     contact: '',
-    phone: ''
+    phone: '',
+    searchType: 'fuzzy' // 默认为模糊搜索
   }
+  
+  // 重置搜索状态
+  hasSearched.value = false
+  
+  // 重置分页
+  pagination.value.currentPage = 1
+  
+  // 重新加载数据
   fetchTodoList()
 }
 
-// 待办列表数据
-const todoList = ref<TodoItem[]>([])
-
-// 示例数据（作为加载失败时的备选）
-const fallbackData: TodoItem[] = [
-  {
-    fileName: '关于2025年度项目经费预算申请的报告',
-    arrivalTime: '2025-05-28 09:30',
-    flowStatus: '待处理',
-    flowPath: '财务处 -> 校长办',
-    sourceUnit: '财务处',
-    contact: '王经理',
-    phone: '13812345678'
-  },
-  {
-    fileName: '关于组织开展教学质量评估工作的通知',
-    arrivalTime: '2025-05-27 14:15',
-    flowStatus: '待审核',
-    flowPath: '教务处 -> 各学院',
-    sourceUnit: '教务处',
-    contact: '李主任',
-    phone: '13987654321'
-  },
-  {
-    fileName: '关于加强校园安全管理的紧急通知',
-    arrivalTime: '2025-05-26 16:45',
-    flowStatus: '已处理',
-    flowPath: '保卫处 -> 各部门',
-    sourceUnit: '保卫处',
-    contact: '张阜长',
-    phone: '13765432198'
-  },
-  {
-    fileName: '关于组织参加第十二届大学生创新创业大赛的通知',
-    arrivalTime: '2025-05-25 10:20',
-    flowStatus: '待处理',
-    flowPath: '团委 -> 各学院',
-    sourceUnit: '团委',
-    contact: '陈书记',
-    phone: '13609876543'
-  }
-]
+// 在前端过滤数据
+const filterTodoList = () => {
+  // 此函数不再需要，因为我们将直接使用后端过滤
+  // 保留函数以避免其他地方可能的引用错误
+  console.log('前端过滤功能已禁用，改为使用后端过滤')
+}
 
 // 获取数据
 const fetchTodoList = async () => {
+  loading.value = true // 开始加载
   try {
-    const res = await circulationApi.getTodoPage({
+    // 构建API请求参数
+    const params: any = {
       pageNo: pagination.value.currentPage,
-      pageSize: pagination.value.pageSize,
-      // 搜索参数可以根据需要添加
-      ...(searchParams.value.fileName ? { fileName: searchParams.value.fileName } : {}),
-      ...(searchParams.value.sourceUnit ? { sourceUnit: searchParams.value.sourceUnit } : {}),
-      ...(searchParams.value.contact ? { contact: searchParams.value.contact } : {}),
-      ...(searchParams.value.phone ? { phone: searchParams.value.phone } : {})
-    })
+      pageSize: pagination.value.pageSize
+    }
+    
+    // 添加搜索参数（如果有）
+    if (searchParams.value.fileName) {
+      params.documentName = searchParams.value.fileName
+    }
+    
+    if (searchParams.value.sourceUnit) {
+      params.deptName = searchParams.value.sourceUnit
+    }
+    
+    if (searchParams.value.contact) {
+      params.userName = searchParams.value.contact
+    }
+    
+    if (searchParams.value.phone) {
+      params.mobile = searchParams.value.phone
+    }
+    
+    // // 如果需要，可以添加搜索类型参数
+    // if (searchParams.value.searchType) {
+    //   params.type = searchParams.value.searchType === 'exact' ? 3 : 1
+    // }
+    
+    console.log('发送请求参数:', params)
+    
+    const res = await circulationApi.getTodoPage(params)
     
     console.log('获取待办事项响应：', res)
     
@@ -399,6 +427,8 @@ const fetchTodoList = async () => {
     console.error('获取待办数据失败:', error)
     todoList.value = []
     pagination.value.total = 0
+  } finally {
+    loading.value = false // 结束加载
   }
 }
 
@@ -429,7 +459,7 @@ const handleWindowMessage = (event) => {
 
 <style scoped>
 .content-section {
-  margin-top: 20px;
+  margin-top: 3px;
 }
 
 .content-title {

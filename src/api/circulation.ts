@@ -43,7 +43,7 @@ getSchoolDocuments: (params: CirculationParams) =>
       ...params,
       personal: 0,  // 表示只查询个人的文件
       type: 1,       // 表示校内文件
-      completed: 1,
+      
     }
   }),
 
@@ -56,7 +56,7 @@ getExternalDocuments: (params: CirculationParams) =>
       ...params,
       personal: 0,  // 表示只查询个人的文件
       type: 2,       // 表示校外发文
-      completed: 1,
+      
     }
   }),
 
@@ -69,7 +69,7 @@ getUniversityDocuments: (params: CirculationParams) =>
       ...params,
       personal: 0,  // 表示只查询个人的文件
       type: 3,       // 表示学校发文
-      completed: 1,
+      
     }
   }),
 
@@ -80,8 +80,8 @@ getAllSchoolDocuments: (params: CirculationParams) =>
     method: 'get',
     params: {
       ...params,
-      type: 1,       // 表示校内文件
-      completed: 1,
+      personal: 0,
+          // 表示校内文件
     }
   }),
 
@@ -94,7 +94,7 @@ getLeaveDocuments: (params: CirculationParams) =>
       ...params,
       personal: 0,  // 表示只查询个人的文件
       type: 5,       // 表示请假文件
-      completed: 1,
+      
     }
   }),
 

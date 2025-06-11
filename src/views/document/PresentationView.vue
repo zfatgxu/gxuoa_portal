@@ -46,7 +46,7 @@ const getPresentationContent = async () => {
 
 // 返回上一页
 const handleBack = () => {
-  router.back()
+  window.close()
 }
 
 // 页面加载时获取文档ID和数据
@@ -57,7 +57,7 @@ onMounted(() => {
     getPresentationContent()
   } else {
     ElMessage.error('文档ID不能为空')
-    router.back()
+    window.close()
   }
 })
 </script>

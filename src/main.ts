@@ -1,20 +1,45 @@
 import { createApp } from 'vue'
 import App from './App.vue'
-// 导入路由配置
 import router from './router'
+import { store } from '@/store'
+// import { setupDirectives } from '@/directives' // 目录不存在，暂时注释
 
-// 导入样式文件
+// 引入样式文件
 import './assets/css/meeting.css'
 import './assets/styles/loading.css'
 import './assets/styles/meeting-form.css'
 import './assets/styles/meeting-topics.css'
 
+// 引入 bootstrap
+import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 
-import { setupI18n } from '@/plugins/vueI18n'
-// 导入Element Plus中文配置
+// 引入全局样式
+import '@/styles/index.scss'
+
+// 引入文档样式
+import '@/styles/document.css'
+
+// 初始化多语言
+import { setupI18n } from '@/plugins/vueI18n'  
+
+// 全局组件
+// import { setupGlobCom } from '@/components' // 可能没有导出此函数，暂时注释
+
+// 引入 element-plus
 import { setupElementPlus } from '@/plugins/elementPlus'
+
+// 引入 form-create
+//import { setupFormCreate } from '@/plugins/formCreate'
+
+// 引入动画库
+import 'animate.css'
+
+// 引入 Uno.css
+import 'uno.css'
+// 引入 SVG 图标
+import 'virtual:svg-icons-register'
 
 // 使用异步函数初始化应用
 const bootstrap = async () => {
@@ -25,6 +50,12 @@ const bootstrap = async () => {
   await setupI18n(app)
   // 初始化Element Plus并设置为中文
   setupElementPlus(app)
+  // 初始化 store
+  app.use(store)
+  // 初始化全局组件
+  // setupGlobCom(app) // 暂时注释
+  // 初始化 form-create
+  //setupFormCreate(app)
   app.mount('#app')
 }
 

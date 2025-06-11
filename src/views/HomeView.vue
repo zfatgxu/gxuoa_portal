@@ -27,7 +27,7 @@
         <div class="icon"><i class="bi bi-gear"></i></div>
         <!-- 简化用户下拉菜单实现 -->
         <el-dropdown trigger="click">
-          <div class="user-avatar">用户</div>
+          <div class="user-avatar" :title="userName">{{ userName[0] }}</div>
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item @click="goToUserCenter">
@@ -39,6 +39,7 @@
             </el-dropdown-menu>
           </template>
         </el-dropdown>
+        {{ userName }}
       </div>
     </div>
 
@@ -65,7 +66,7 @@
             <span class="arrow"><i class="bi bi-chevron-right"></i></span>
           </a>
           <ul class="submenu">
-            <li><a href="#" @click.prevent="currentComponent = 'TodoComponent'" :class="{ active: currentComponent === 'TodoComponent' }">我的代办</a></li>
+            <li><a href="#" @click.prevent="currentComponent = 'TodoComponent'" :class="{ active: currentComponent === 'TodoComponent' }">我的待办</a></li>
             <!-- <li><a href="#" @click.prevent="currentComponent = 'MeetingDocComponent'" :class="{ active: currentComponent === 'MeetingDocComponent' }">拟上会文件</a></li> -->
             <li><a href="#" @click.prevent="currentComponent = 'InternalDocComponent'" :class="{ active: currentComponent === 'InternalDocComponent' }">已签校内文件</a></li>
             <li><a href="#" @click.prevent="currentComponent = 'ExternalDocComponent'" :class="{ active: currentComponent === 'ExternalDocComponent' }">已签校外文件</a></li>
@@ -437,7 +438,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import TodoComponent from '../components/Document/TodoComponent.vue'
@@ -451,6 +452,8 @@ import FavoriteDocComponent from '../components/Document/FavoriteDocComponent.vu
 import UserCenterComponent from '../components/User/UserCenterComponent.vue'
 import { removeToken } from '@/utils/auth'
 import { eventBus, EVENT_NAMES } from '@/utils/eventBus'
+import { useUserStore } from '@/store/modules/user'
+import { CACHE_KEY, useCache } from '@/hooks/web/useCache'
 
 // 路由实例
 const router = useRouter()
@@ -463,6 +466,21 @@ const isWorkbenchOpen = ref(false)
 
 // 侧边栏收起状态
 const isSidebarCollapsed = ref(false)
+
+// 缓存工具
+const { wsCache } = useCache()
+
+// 获取用户名称
+const userName = computed(() => {
+  // 尝试从缓存中获取用户信息
+  const userInfo = wsCache.get(CACHE_KEY.USER)
+  console.log('用户信息:', userInfo)
+  if (userInfo && userInfo.data && userInfo.data.nickname) {
+    return userInfo.data.nickname
+  }
+  // 如果缓存中没有，则返回默认值
+  return '用户'
+})
 
 // 切换用户菜单显示状态
 const toggleUserMenu = () => {
@@ -569,11 +587,17 @@ const logout = () => {
       // 清除可能存在的会话存储
       sessionStorage.removeItem('token')
       sessionStorage.removeItem('user')
+
+      // 清除缓存中的用户信息
+      wsCache.delete(CACHE_KEY.USER)
+      console.log('缓存中的用户信息已清除')
     
       // 删除可能存在的cookie
       document.cookie.split(";").forEach(function(c) {
         document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
       });
+
+      
       
       console.log('所有令牌和登录状态已清除')
       
@@ -808,11 +832,11 @@ const initSidebar = () => {
 <style>
 /* 内容区样式 */
 .content-container {
-  padding: 20px;
+  padding: 0px 20px;
 }
 
 .content-title {
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   color: #303133;
   font-size: 20px;
   font-weight: 500;
@@ -820,7 +844,7 @@ const initSidebar = () => {
 
 .content-body {
   background: #fff;
-  padding: 20px;
+  padding: 0px;
   border-radius: 4px;
   box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
 }
@@ -940,8 +964,8 @@ body {
 }
 
 .user-avatar {
-    width: 36px;
-    height: 36px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     background-color: #fff;
     margin-left: 15px;
@@ -951,6 +975,18 @@ body {
     color: var(--primary-color);
     font-weight: bold;
     cursor: pointer;
+    overflow: hidden;     /* 添加溢出隐藏 */
+    text-overflow: ellipsis;  /* 添加省略号 */
+    white-space: nowrap;  /* 防止文本换行 */
+    max-width: 50px;      /* 确保最大宽度与宽度一致 */
+    padding: 0 5px;       /* 添加内边距，防止文字紧贴边缘 */
+    box-sizing: border-box; /* 确保内边距不会增加元素总宽度 */
+    font-size: 14px;      /* 设置合适的字体大小 */
+}
+
+/* 当名称过长时，显示首字母的样式 */
+.user-avatar.initial-only {
+    font-size: 18px;      /* 首字母可以用更大的字体 */
 }
 
 /* 左侧菜单 */

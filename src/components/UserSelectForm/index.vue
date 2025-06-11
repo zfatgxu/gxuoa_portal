@@ -144,7 +144,7 @@ const filterUserList = async (deptId?: number) => {
 /** 提交选择 */
 const submitForm = async () => {
   try {
-    message.success(t('common.updateSuccess'))
+    //message.success(t('common.updateSuccess'))
     dialogVisible.value = false
     // 从所有用户列表中筛选出已选择的用户
     const emitUserList = userList.value.filter((user: any) =>

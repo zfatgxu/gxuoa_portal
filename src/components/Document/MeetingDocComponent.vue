@@ -3,7 +3,7 @@
     <NavBar :modelValue="currentComponent" @update:modelValue="handleComponentChange" />
 
     <div class="content-body">
-      <h3 class="component-title">拟上会文件</h3>
+      
       
       <!-- 搜索组件 -->
       <SearchBar @search="handleSearch" @reset="handleReset" />
@@ -198,7 +198,7 @@ onMounted(() => {
 
 <style scoped>
 .content-section {
-  margin-top: 20px;
+  margin-top: 3px;
 }
 
 .content-body {
