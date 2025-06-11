@@ -1,0 +1,33 @@
+/* Element Plus 样式覆盖 */
+
+/* 文本框样式 */
+.el-textarea .el-textarea__inner {
+  font-size: 18px !important;
+  font-family: "楷体", KaiTi, "Microsoft YaHei", sans-serif !important;
+}
+
+/* 启用状态下的文本框 */
+.el-textarea:not(.is-disabled) .el-textarea__inner {
+  background-color: #fffbe6 !important; /* 淡黄色背景 */
+}
+
+/* 禁用状态下的文本框 */
+.el-textarea.is-disabled .el-textarea__inner {
+  background-color: #ffffff !important; /* 白色背景 */
+  color: black !important;
+}
+
+/* 直接选择 textarea 元素 */
+textarea.el-textarea__inner {
+  font-size: 18px !important;
+  font-family: "楷体", KaiTi, "Microsoft YaHei", sans-serif !important;
+}
+
+textarea.el-textarea__inner:not([disabled]) {
+  background-color: #fffbe6 !important; /* 淡黄色背景 */
+}
+
+textarea.el-textarea__inner[disabled] {
+  background-color: #ffffff !important; /* 白色背景 */
+  color: black !important;
+}

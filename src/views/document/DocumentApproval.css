@@ -1,0 +1,271 @@
+/* DocumentApprovalRe.css - 文档审批组件样式 */
+
+/* 主容器样式 */
+.document-approval {
+  padding: 20px;
+  height: auto;
+  overflow: visible;
+  max-width: 794px; /* A4 宽度 (210mm 约等于 794px) */
+  margin: 0 auto; /* 居中显示 */
+}
+
+/* 卡片头部样式 */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 卡片容器样式 */
+.box-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 深度选择器修改 Element Plus 卡片内部样式 */
+.box-card :deep(.el-card__body) {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 文档表格容器样式 */
+.document-table-container {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 0px;
+  overflow-x: auto; /* 添加水平滚动以适应小屏幕 */
+}
+
+.center-option .el-select-dropdown__item {
+  text-align: center;
+}
+
+/* 文档表格基础样式 */
+.document-table {
+  width: 100%;
+  max-width: 794px;
+  margin: 0 auto;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: none; /* 移除外边框 */
+  table-layout: fixed;
+}
+
+/* 表格单元格样式 */
+.document-table td {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 表格行样式 */
+.document-table tr {
+  width: 100%;
+}
+
+/* 表格单元格和表头样式 */
+.document-table th,
+.document-table td {
+  border: 1px solid #000; /* 移除所有边框 */
+  padding: 8px;
+  text-align: left;
+  vertical-align: middle;
+  box-shadow: none;
+}
+
+/* 强制表格单元格保持边框 */
+.document-table tr td,
+.document-table tr th {
+  position: relative;
+}
+
+/* 使用伪元素创建极细的边框 */
+.document-table tr td::after,
+.document-table tr th::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 0.2px rgba(0, 0, 0, 0.3); /* 更细、更淡的边框 */
+}
+
+/* 表格标题样式 */
+.table-title {
+  text-align: center !important;
+  font-size: 30px;
+  font-weight: bold;
+  color: red;
+  padding: 15px 0;
+}
+
+/* 表格标签样式 */
+.table2 {
+  font-size: 18px;
+  font-weight: bold;
+  color: red;
+}
+
+/* 表格内容样式 */
+.table3 {
+  font-size: 18px;
+  font-weight: bold;
+  color: black;
+}
+
+/* 文件名链接样式 */
+.table4 {
+  font-family: "宋体";
+  font-size: 18px;
+  font-weight: bold;
+}
+
+/* 文本域样式优化 - 直接修改 textarea 元素 */
+textarea.el-textarea__inner {
+  font-size: 18px !important;
+  font-family: "楷体", KaiTi, "Microsoft YaHei", sans-serif !important;
+}
+
+/* 可编辑文本域样式 */
+textarea.el-textarea__inner:not([disabled]) {
+  background-color: #fffbe6 !important; /* 淡黄色背景 */
+}
+
+/* 禁用文本域样式 */
+textarea.el-textarea__inner[disabled] {
+  background-color: #ffffff !important; /* 白色背景 */
+  color: black !important;
+}
+
+/* 增加选择器优先级 */
+.el-textarea .el-textarea__inner,
+.el-input .el-textarea__inner {
+  font-size: 18px !important;
+  font-family: "楷体", KaiTi, "Microsoft YaHei", sans-serif !important;
+}
+
+.el-textarea .el-textarea__inner:not([disabled]),
+.el-input .el-textarea__inner:not([disabled]) {
+  background-color: #fffbe6 !important; /* 淡黄色背景 */
+}
+
+.el-textarea .el-textarea__inner[disabled],
+.el-input .el-textarea__inner[disabled] {
+  background-color: #ffffff !important; /* 白色背景 */
+  color: black !important;
+}
+
+/* 预格式化文本样式 */
+pre {
+  font-size: 18px;
+}
+
+/* 内容盒子样式 */
+.content-box {
+  padding: 10px;
+  border: 1px solid #e4e7ed;
+  border-radius: 4px;
+  min-height: 100px;
+}
+
+/* 文档组件包装器样式 */
+.document-component-wrapper {
+  width: 100%;
+  display: block;
+}
+
+/* 确保子组件中的表格行和单元格继承父容器宽度 */
+.document-component-wrapper :deep(tr),
+.document-component-wrapper :deep(td) {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* 移除内边距的工具类 */
+.p-0 {
+  padding: 0 !important;
+}
+
+/* 移除边框的工具类 */
+.border-0 {
+  border: none !important;
+}
+
+/* 确保子组件内容占据全宽 */
+.document-component-wrapper :deep(.document-component) {
+  width: 100%;
+  display: block;
+}
+
+/* 文档输入容器样式 */
+.document-input-container {
+  position: relative;
+  width: 100%;
+}
+
+/* 文档预览文本样式 */
+.document-preview-text {
+  margin: 0;
+  padding: 5px;
+  white-space: pre-wrap;
+  font-family: "楷体", KaiTi, "Microsoft YaHei", sans-serif;
+}
+
+/* 文档文本域样式 */
+.document-textarea {
+  width: 100%;
+}
+
+/* 按钮容器样式 */
+.button-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* 附件列表容器样式 */
+.attachment-list {
+  margin-top: 15px;
+}
+
+/* 审批用户列表样式 */
+.approval-users {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* 审批用户项样式 */
+.approval-user-item {
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  background-color: #f0f9eb;
+  border-radius: 4px;
+}
+
+/* 用户头像样式 */
+.user-avatar {
+  margin-right: 5px;
+}
+
+/* 移除用户按钮样式 */
+.remove-user-btn {
+  margin-left: 5px;
+  cursor: pointer;
+  color: #f56c6c;
+}
+
+/* 二维码容器样式 */
+.qrcode-container {
+  display: flex;
+  justify-content: center;
+  margin: 15px 0;
+}
