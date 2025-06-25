@@ -301,10 +301,10 @@
             <tr>
               <td colspan="4" class="table2">退回修改:
                 <div class="document-input-container">
-                  <pre v-if="formData.messages.returnModify && formData.type === 12" class="document-preview-text">{{ formData.messages.returnModify }}</pre>
+                  <pre v-if="formData.messages.returnModify" class="document-preview-text">{{ formData.messages.returnModify }}</pre>
                   <el-input
                   class="document-textarea"
-                    v-model="returnModifyValue"
+                    v-model="currentMessage"
                     type="textarea"
                     autosize="{ minRows: 3 }"
                     resize="none"
@@ -758,60 +758,60 @@
           </template>
 
           <tr v-if="!formData.isCompleted" class="no-print">
-            <td colspan="4">
-  <div class="flex justify-center w-full py-2"> <!-- 上下内边距调小 -->
+            <td colspan="4" v-if="formData.circulationId != null">
+  <div class="flex justify-center w-full py-2" > <!-- 上下内边距调小 -->
     <div class="flex justify-center items-center gap-2">
       <el-button size="default" style="width: 100px;" type="primary" @click="handleSave" v-hasPermi="['document:circulation:saveMessage']">保存</el-button>
       <el-button size="default" style="width: 100px;" @click="handleCancel">取消</el-button>
     </div>
   </div>
 
-  <div v-if="formData.nextCheck" class="flex justify-center w-full py-2"> <!-- 上下内边距 -->
-    <div class="flex justify-center items-center flex-wrap gap-2" style="max-width: 800px;">
-      <el-form-item label="下一步" prop="nextType" class="pt-0 mr-2 mb-0">
-        <el-select v-model="formData.nextType" placeholder="请选择" style="width: 160px;" size="small" popper-class="center-option">
-          <el-option
-            v-for="item in getFilteredOptions()"
-            :key="item.value"
-            :label="item.label"
-            :value="item.value"
-          />
-        </el-select>
-      </el-form-item>
+<!--  <div v-if="formData.nextCheck" class="flex justify-center w-full py-2"> &lt;!&ndash; 上下内边距 &ndash;&gt;-->
+<!--    <div class="flex justify-center items-center flex-wrap gap-2" style="max-width: 800px;">-->
+<!--      <el-form-item label="下一步" prop="nextType" class="pt-0 mr-2 mb-0">-->
+<!--        <el-select v-model="formData.nextType" placeholder="请选择" style="width: 160px;" size="small" popper-class="center-option">-->
+<!--          <el-option-->
+<!--            v-for="item in getFilteredOptions()"-->
+<!--            :key="item.value"-->
+<!--            :label="item.label"-->
+<!--            :value="item.value"-->
+<!--          />-->
+<!--        </el-select>-->
+<!--      </el-form-item>-->
 
-      <el-form-item
-        v-if="![11].includes(formData.nextType)"
-        label="签办人"
-        prop="approvalUserIds"
-        class="mb-0 pt-0"
-      >
-        <div class="flex flex-wrap gap-1">
-          <div
-            v-for="user in selectedApprovalUsers"
-            :key="user.id"
-            class="bg-gray-100 rounded-2xl flex items-center pr-2 pl-1"
-            style="height: 28px;"
-          >
-            <el-avatar class="!m-0" :size="20" v-if="user.avatar" :src="user.avatar" />
-            <el-avatar class="!m-0" :size="20" v-else>
-              {{ user.nickname.substring(0, 1) }}
-            </el-avatar>
-            <span class="text-sm ml-1">{{ user.nickname }}</span>
-            <Icon
-              icon="ep:close"
-              class="ml-1 cursor-pointer hover:text-red-500"
-              @click="handleRemoveApprovalUser(user)"
-            />
-          </div>
-          <el-button type="primary" size="small" link @click="openApprovalUserSelect">
-            <Icon icon="ep:plus" />选择人员
-          </el-button>
-        </div>
-      </el-form-item>
+<!--      <el-form-item-->
+<!--        v-if="![11].includes(formData.nextType)"-->
+<!--        label="签办人"-->
+<!--        prop="approvalUserIds"-->
+<!--        class="mb-0 pt-0"-->
+<!--      >-->
+<!--        <div class="flex flex-wrap gap-1">-->
+<!--          <div-->
+<!--            v-for="user in selectedApprovalUsers"-->
+<!--            :key="user.id"-->
+<!--            class="bg-gray-100 rounded-2xl flex items-center pr-2 pl-1"-->
+<!--            style="height: 28px;"-->
+<!--          >-->
+<!--            <el-avatar class="!m-0" :size="20" v-if="user.avatar" :src="user.avatar" />-->
+<!--            <el-avatar class="!m-0" :size="20" v-else>-->
+<!--              {{ user.nickname.substring(0, 1) }}-->
+<!--            </el-avatar>-->
+<!--            <span class="text-sm ml-1">{{ user.nickname }}</span>-->
+<!--            <Icon-->
+<!--              icon="ep:close"-->
+<!--              class="ml-1 cursor-pointer hover:text-red-500"-->
+<!--              @click="handleRemoveApprovalUser(user)"-->
+<!--            />-->
+<!--          </div>-->
+<!--          <el-button type="primary" size="small" link @click="openApprovalUserSelect">-->
+<!--            <Icon icon="ep:plus" />选择人员-->
+<!--          </el-button>-->
+<!--        </div>-->
+<!--      </el-form-item>-->
 
-      <el-button type="primary" size="default" style="width: 100px;" @click="handleSubmit" v-hasPermi="['document:circulation:submit']">提交</el-button>
-    </div>
-  </div>
+<!--      <el-button type="primary" size="default" style="width: 100px;" @click="handleSubmit" v-hasPermi="['document:circulation:submit']">提交</el-button>-->
+<!--    </div>-->
+<!--  </div>-->
 </td>
 
           </tr>
@@ -858,6 +858,7 @@ import { waitForDebugger } from 'inspector'
 import { set } from 'lodash-es'
 import { Star, StarFilled } from '@element-plus/icons-vue'
 import { CirculationPostApi } from '@/api/document/circulationPost'
+import { eventBus, EVENT_NAMES } from '@/utils/eventBus'
 
 
 const router = useRouter()
@@ -1596,41 +1597,46 @@ const handleSave = async () => {
   try {
     // 获取当前类型对应的消息
     const messageKey = getCurrentMessageKey(formData.type);
-    if (formData.type != null || formData.type != undefined) {
-      if (!messageKey || !currentMessage.value) {
-        ElMessage.warning('请输入签办信息');
-        return;
-      }
 
-    // 验证下一步选项是否符合当前文档类型
-    // if (formData.nextType !== null) {
-    //   const filteredOptions = getFilteredOptions();
-    //   const validNextTypes = filteredOptions.map(option => option.value);
-    //   if (!validNextTypes.includes(formData.nextType)) {
-    //     ElMessage.warning('请选择符合当前文档类型的下一步操作');
-    //     return;
-    //   }
-    // }
+    // 验证公文类型
+    if (formData.type == null) {
+      ElMessage.warning('请选择公文类型');
+      return;
+    }
 
-    // 收文编号和收文时间由后端生成和处理
-    if (Number(formData.type) === 11) {
+    // 验证签办信息
+    if (!messageKey || !currentMessage.value) {
+      ElMessage.warning('请输入签办信息');
+      return;
+    }
+
+    const type = Number(formData.type);
+
+    // 特殊处理：收文编号和收文时间由后端生成和处理
+    if (type === 11) {
       try {
-        // 先获取当前文档的完整信息
+        // 获取当前文档的完整信息
         const documentInfo = await DocumentApi.getDocument(formData.id);
-        
-        // 更新文档信息，但不处理收文编号和收文时间
         const documentData = {
           ...documentInfo.data
         };
-
-        // 调用更新公文主表接口
-        await DocumentApi.updateDocument(documentData);
+        // 更新文档主表
+        let res = await DocumentApi.updateDocument(documentData);
+        if (res.code !== 0) {
+          ElMessage.error('更新公文主表失败');
+          return; // 如果更新失败，不继续后续保存
+        }
+        // 触发刷新待办列表事件
+        // 使用 window.opener.postMessage 替代事件总线通信
+if (window.opener) {
+  window.opener.postMessage({ type: 'refreshTodoList' }, '*');
+  console.log('已发送刷新待办列表消息到父窗口');
+}
       } catch (error) {
         console.error('更新公文主表失败:', error);
         ElMessage.error('更新公文主表失败');
+        return; // 如果更新失败，不继续后续保存
       }
-
-      // 不需要重复调用，已经在try块中调用了
     }
 
     // 构建签办信息请求数据
@@ -1638,36 +1644,40 @@ const handleSave = async () => {
       id: formData.id,
       circulationId: formData.circulationId,
       message: currentMessage.value,
-      type: formData.type,
+      type,
       nextType: formData.nextType !== null ? formData.nextType : 0,
       ids: []
     };
 
-    // 调用保存签办信息接口
-    await DocumentApi.saveDocumentMessage(messageData);
+    // 调用保存接口
+    const res = await DocumentApi.saveDocumentMessage(messageData);
 
-    // 保存成功后，更新本地数据
-    formData.messages[messageKey] = formData.messages[messageKey]
-      ? formData.messages[messageKey] + '\n' + currentMessage.value
-      : currentMessage.value;
+    if (res.code === 0) {
+      // 保存成功，更新本地数据
+      formData.messages[messageKey] = formData.messages[messageKey]
+        ? `${formData.messages[messageKey]}\n${currentMessage.value}`
+        : currentMessage.value;
 
-    // 清空当前消息
-    currentMessage.value = '';
+      currentMessage.value = '';
+      ElMessage.success('保存成功');
 
-    ElMessage.success('保存成功');
-
-    // 关闭当前窗口
-    setTimeout(() => {
-      window.close()
-    }, 1000)
+      // 使用 window.opener.postMessage 替代事件总线通信
+if (window.opener) {
+  window.opener.postMessage({ type: 'refreshTodoList' }, '*');
+  console.log('已发送刷新待办列表消息到父窗口');
+}
+      setTimeout(() => {
+        window.close();
+      }, 1000);
     } else {
-      window.close()
+      ElMessage.error(res.msg || '保存失败');
     }
   } catch (error) {
     console.error('保存失败:', error);
     ElMessage.error('保存失败');
   }
 }
+
 
 const handleSubmit = async () => {
   try {

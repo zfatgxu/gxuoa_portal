@@ -42,5 +42,7 @@ export const eventBus = new EventBusClass()
 
 // 定义事件名称常量
 export const EVENT_NAMES = {
-  SWITCH_COMPONENT: 'switch-component'
+  SWITCH_COMPONENT: 'switch-component',
+  UPDATE_UNREAD_COUNT: 'update-unread-count',
+  REFRESH_TODO_LIST: 'refresh-todo-list'
 }

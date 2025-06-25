@@ -5,37 +5,41 @@
       <div class="card-header">个人中心</div>
       <div class="avatar-container">
         <div class="avatar">
-          <img src="@/assets/default-avatar.png" alt="用户头像" />
+          <img :src="userForm.avatar || '@/assets/default-avatar.png'" alt="用户头像" />
         </div>
       </div>
       <div class="menu-list">
         <div class="menu-item">
           <i class="bi bi-person"></i>
-          <span>用户名称</span>
+          <span>用户名称：{{ userForm.username }}</span> 
+        </div>
+        <div class="menu-item">
+          <i class="bi bi-person-fill"></i>
+          <span>用户昵称：{{ userForm.nickname }}</span>
         </div>
         <div class="menu-item">
           <i class="bi bi-phone"></i>
-          <span>手机号码</span>
+          <span>手机号码：{{ userForm.mobile || '未设置' }}</span>
         </div>
         <div class="menu-item">
           <i class="bi bi-envelope"></i>
-          <span>用户邮箱</span>
+          <span>用户邮箱：{{ userForm.email || '未设置' }}</span>
         </div>
         <div class="menu-item">
           <i class="bi bi-building"></i>
-          <span>所在部门</span>
+          <span>所在部门：{{ userForm.deptName || '未设置' }}</span>
         </div>
         <div class="menu-item">
           <i class="bi bi-briefcase"></i>
-          <span>所属岗位</span>
+          <span>所属岗位：{{ Array.isArray(userForm.postNames) ? userForm.postNames.join('、') : userForm.postNames || '未设置' }}</span>
         </div>
         <div class="menu-item">
-          <i class="bi bi-person-badge"></i>
-          <span>所属职级</span>
+          <i class="bi bi-calendar"></i>
+          <span>注册时间：{{ formatDate(userForm.createTime) }}</span>
         </div>
         <div class="menu-item">
-          <i class="bi bi-card-list"></i>
-          <span>角色权限</span>
+          <i class="bi bi-clock"></i>
+          <span>最近登录：{{ formatDate(userForm.loginDate) }}</span>
         </div>
       </div>
     </div>
@@ -86,6 +90,21 @@
             <el-radio v-model="userForm.gender" :label="1">男</el-radio>
             <el-radio v-model="userForm.gender" :label="2">女</el-radio>
           </div>
+        </div>
+        
+        <div class="form-item">
+          <div class="form-label">用户名</div>
+          <el-input v-model="userForm.username" placeholder="请输入用户名" disabled></el-input>
+        </div>
+        
+        <div class="form-item">
+          <div class="form-label">部门</div>
+          <el-input v-model="userForm.deptName" placeholder="请输入部门" disabled></el-input>
+        </div>
+        
+        <div class="form-item">
+          <div class="form-label">岗位</div>
+          <el-input v-model="userForm.postNames" placeholder="请输入岗位" disabled></el-input>
         </div>
         
         <div class="form-actions">
@@ -155,7 +174,10 @@ const userForm = reactive({
   mobile: '',
   email: '',
   gender: 1, // 1男 2女
-  avatar: ''
+  avatar: '',
+  username: '',
+  deptName: '',
+  postNames: ''
 })
 
 // 获取用户信息
@@ -168,11 +190,22 @@ const fetchUserInfo = async () => {
     
     if (res && res.code === 0 && res.data) {
       const userData = res.data
+      // 更新用户基本信息
       userForm.nickname = userData.nickname || ''
       userForm.mobile = userData.mobile || ''
       userForm.email = userData.email || ''
-      userForm.gender = userData.gender || 1
+      // 性别字段适配：后端 sex 0-男 1-女，前端 gender 1-男 2-女
+      userForm.gender = userData.sex === 1 ? 2 : 1
       userForm.avatar = userData.avatar || ''
+      
+      // 保存用户名、部门和岗位信息
+      userForm.username = userData.username || ''
+      userForm.deptName = userData.deptName || ''
+      userForm.postNames = userData.postNames || []
+      
+      // 保存注册时间和最近登录时间
+      userForm.createTime = userData.createTime || ''
+      userForm.loginDate = userData.loginDate || ''
       
       // 如果有社交信息，也更新社交信息表单
       if (userData.wechat) socialForm.wechat = userData.wechat
@@ -311,6 +344,19 @@ const resetSocialForm = () => {
   // 重新获取用户信息
   fetchUserInfo()
 }
+
+// 日期格式化函数
+const formatDate = (timestamp) => {
+  if (!timestamp) return '未设置';
+  const date = new Date(timestamp);
+  return `${date.getFullYear()}-${padZero(date.getMonth() + 1)}-${padZero(date.getDate())} ${padZero(date.getHours())}:${padZero(date.getMinutes())}:${padZero(date.getSeconds())}`;
+}
+
+// 补零函数
+const padZero = (num) => {
+  return num < 10 ? `0${num}` : num;
+}
+
 // 页面加载时获取用户信息
 onMounted(() => {
   console.log('用户中心组件已挂载')

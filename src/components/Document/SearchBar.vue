@@ -126,8 +126,8 @@ const handleReset = () => {
 
 <style scoped>
 .search-container {
-  margin-bottom: 5px;
-  padding: 10px;
+  
+  
   background-color: #f5f7fa;
   border-radius: 4px;
 }
@@ -135,6 +135,7 @@ const handleReset = () => {
 .search-form {
   display: flex;
   flex-wrap: wrap;
+  margin-bottom: 5px;
 }
 
 .search-form .el-form-item {

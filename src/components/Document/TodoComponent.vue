@@ -65,9 +65,10 @@
           </el-table-column>
           <!-- 紧急程度已移至文件名称后 -->
           <!-- 文件编号列已移除 -->
-          <el-table-column label="操作" width="120" align="center" fixed="right">
+          <el-table-column label="操作" width="150" align="center" fixed="right">
             <template #default="scope">
               <el-button size="small" type="primary" @click="handleProcess(scope.row)">处理</el-button>
+              <el-button size="small" type="primary" @click="handleBack(scope.row)">退回</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -102,7 +103,9 @@ import NavBar from './NavBar.vue'
 import SearchBar from './SearchBar.vue'
 import circulationApi from '@/api/circulation'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {DocumentApi} from '@/api/document/index'
+import { eventBus, EVENT_NAMES } from '@/utils/eventBus'
 
 // 当前选中的组件
 const currentComponent = ref('TodoComponent')
@@ -437,11 +440,20 @@ onMounted(() => {
   
   // 添加消息监听，用于接收子窗口的刷新请求
   window.addEventListener('message', handleWindowMessage)
+
+  // 监听刷新待办列表事件
+  eventBus.on(EVENT_NAMES.REFRESH_TODO_LIST, () => {
+    console.log('收到刷新待办列表事件，正在刷新...')
+    fetchTodoList()
+  })
 })
 
 // 组件卸载时移除事件监听
 onUnmounted(() => {
   window.removeEventListener('message', handleWindowMessage)
+
+  // 移除刷新待办列表事件监听
+  eventBus.off(EVENT_NAMES.REFRESH_TODO_LIST)
 })
 
 // 处理窗口消息
@@ -453,6 +465,35 @@ const handleWindowMessage = (event) => {
     console.log('收到刷新待办列表的请求，正在刷新...')
     // 刷新待办列表
     fetchTodoList()
+  }
+}
+
+// 处理退回操作
+/** 退回待办操作 */
+const handleBack = async (row: any) => {
+  try {
+    // 弹出带输入框的确认对话框
+    const { value: message } = await ElMessageBox.prompt('请输入退回原因', '退回待办', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      inputPlaceholder: '请输入退回原因',
+      type: 'warning'
+    })
+
+    // 调用退回待办接口
+    await DocumentApi.cancelCirculation({
+      id: row.id,
+      circulationId: row.circulationId,
+      message: message
+    })
+    ElMessage.success('退回成功')
+    // 刷新列表
+    fetchTodoList()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('退回失败:', error)
+      ElMessage.error('退回失败')
+    }
   }
 }
 </script>

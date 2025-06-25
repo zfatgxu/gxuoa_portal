@@ -4,6 +4,9 @@ import router from './router'
 import { store } from '@/store'
 // import { setupDirectives } from '@/directives' // 目录不存在，暂时注释
 
+// 引入token刷新管理器
+import { initTokenRefresh } from '@/utils/tokenRefresh'
+
 // 引入样式文件
 import './assets/css/meeting.css'
 import './assets/styles/loading.css'
@@ -56,6 +59,10 @@ const bootstrap = async () => {
   // setupGlobCom(app) // 暂时注释
   // 初始化 form-create
   //setupFormCreate(app)
+  
+  // 初始化token刷新管理器（如果用户已登录）
+  initTokenRefresh()
+  
   app.mount('#app')
 }
 

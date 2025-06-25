@@ -14,7 +14,7 @@ import {
 const userApi = {
   // 获取用户基本信息
   getUserInfo: () => 
-    api.get<AppUserInfoRespVO>('/app/user/get'),
+    api.get('/app/user/get'),
 
   // 修改用户基本信息
   updateUser: (data: AppUserUpdateReqVO) => 

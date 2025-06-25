@@ -15,7 +15,55 @@ const routes: Array<RouteRecordRaw> = [
     component: HomeView,
     meta: {
       requiresAuth: true // 需要登录才能访问
-    }
+    },
+    children: [
+      {
+        path: '',
+        redirect: '/home/default'
+      },
+      {
+        path: 'default',
+        name: 'homeDefault',
+        component: () => import('@/views/home/DefaultView.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'user-center',
+        name: 'userCenter',
+        component: () => import('@/components/User/UserCenterComponent.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'todo',
+        name: 'todoList',
+        component: () => import('@/views/home/TodoListView.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'done',
+        name: 'doneList',
+        component: () => import('@/views/home/DoneListView.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'all',
+        name: 'allList',
+        component: () => import('@/views/home/AllListView.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'apply',
+        name: 'applyList',
+        component: () => import('@/views/home/ApplyListView.vue'),
+        meta: { requiresAuth: true }
+      },
+      {
+        path: 'document/:type',
+        name: 'documentView',
+        component: () => import('@/views/home/DocumentView.vue'),
+        meta: { requiresAuth: true }
+      }
+    ]
   },
   {
     path: '/document/approval',
@@ -35,6 +83,14 @@ const routes: Array<RouteRecordRaw> = [
     path: '/document/circulation/history',
     name: 'CirculationHistory',
     component: () => import('@/views/document/circulation/history.vue'),
+    meta: {
+      requiresAuth: true // 需要登录才能访问
+    }
+  },
+  {
+    path: '/notifications',
+    name: 'Notifications',
+    component: () => import('@/views/notifications/index.vue'),
     meta: {
       requiresAuth: true // 需要登录才能访问
     }

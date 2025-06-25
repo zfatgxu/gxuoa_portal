@@ -85,6 +85,16 @@ getAllSchoolDocuments: (params: CirculationParams) =>
     }
   }),
 
+    // 获取全部校内文件分页
+getDeptDocuments: (params: CirculationParams) =>
+  request({
+    url: '/app/circulation/dept',
+    method: 'get',
+    params: {
+      ...params,
+    }
+  }),
+
   // 获取请假文件分页
 getLeaveDocuments: (params: CirculationParams) =>
   request({

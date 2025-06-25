@@ -16,9 +16,9 @@
         <li><a href="#">文档管理</a></li>
       </ul>
       <div class="user-actions">
-        <div class="icon">
+        <div class="icon" @click="toggleNotifications" ref="notificationIcon">
           <i class="bi bi-bell"></i>
-          <!-- <span class="notification-badge">5</span> -->
+          <span v-if="unreadCount > 0" class="notification-badge">{{ unreadCount }}</span>
         </div>
         <div class="icon">
           <i class="bi bi-envelope"></i>
@@ -66,14 +66,15 @@
             <span class="arrow"><i class="bi bi-chevron-right"></i></span>
           </a>
           <ul class="submenu">
-            <li><a href="#" @click.prevent="currentComponent = 'TodoComponent'" :class="{ active: currentComponent === 'TodoComponent' }">我的待办</a></li>
+            <li><a href="#" @click.prevent="currentComponent = 'TodoComponent'; isWorkbenchOpen = false" :class="{ active: currentComponent === 'TodoComponent' }">我的待办</a></li>
             <!-- <li><a href="#" @click.prevent="currentComponent = 'MeetingDocComponent'" :class="{ active: currentComponent === 'MeetingDocComponent' }">拟上会文件</a></li> -->
-            <li><a href="#" @click.prevent="currentComponent = 'InternalDocComponent'" :class="{ active: currentComponent === 'InternalDocComponent' }">已签校内文件</a></li>
-            <li><a href="#" @click.prevent="currentComponent = 'ExternalDocComponent'" :class="{ active: currentComponent === 'ExternalDocComponent' }">已签校外文件</a></li>
-            <li><a href="#" @click.prevent="currentComponent = 'SchoolDocComponent'" :class="{ active: currentComponent === 'SchoolDocComponent' }">已签学校发文</a></li>
-            <li><a href="#" @click.prevent="currentComponent = 'LeaveDocComponent'" :class="{ active: currentComponent === 'LeaveDocComponent' }">请假文件</a></li>
-            <li><a href="#" @click.prevent="currentComponent = 'AllDocComponent'" :class="{ active: currentComponent === 'AllDocComponent' }">全部公文</a></li>
-            <li><a href="#" @click.prevent="currentComponent = 'FavoriteDocComponent'" :class="{ active: currentComponent === 'FavoriteDocComponent' }">我的收藏</a></li>
+            <li><a href="#" @click.prevent="currentComponent = 'InternalDocComponent'; isWorkbenchOpen = false" :class="{ active: currentComponent === 'InternalDocComponent' }">我的已签校内文件</a></li>
+            <li><a href="#" @click.prevent="currentComponent = 'ExternalDocComponent'; isWorkbenchOpen = false" :class="{ active: currentComponent === 'ExternalDocComponent' }">我的已签校外文件</a></li>
+            <li><a href="#" @click.prevent="currentComponent = 'SchoolDocComponent'; isWorkbenchOpen = false" :class="{ active: currentComponent === 'SchoolDocComponent' }">我的已签学校发文</a></li>
+            <li><a href="#" @click.prevent="currentComponent = 'LeaveDocComponent'; isWorkbenchOpen = false" :class="{ active: currentComponent === 'LeaveDocComponent' }">我的请假文件</a></li>
+            <li><a href="#" @click.prevent="currentComponent = 'DeptDocComponent'; isWorkbenchOpen = false" :class="{ active: currentComponent === 'DeptDocComponent' }">本部门文件</a></li>
+            <li><a href="#" @click.prevent="currentComponent = 'AllDocComponent'; isWorkbenchOpen = false" :class="{ active: currentComponent === 'AllDocComponent' }">我的全部公文</a></li>
+            <li><a href="#" @click.prevent="currentComponent = 'FavoriteDocComponent'; isWorkbenchOpen = false" :class="{ active: currentComponent === 'FavoriteDocComponent' }">我的收藏</a></li>
           </ul>
         </li>
         <li>
@@ -153,29 +154,78 @@
         <UserCenterComponent />
       </div>
       <!-- 待办事项列表 -->
-      <div v-show="currentView === 'todo'" class="content-container">
+       <!-- 待办事项列表 -->
+       <div v-show="currentView === 'todo' && !currentComponent" class="content-container">
         <h2 class="content-title">我的待办</h2>
+        <div class="search-form">
+          <el-form :inline="true" :model="todoSearchForm" class="demo-form-inline">
+            <el-form-item label="标题">
+              <el-input v-model="todoSearchForm.title" placeholder="请输入标题关键词" clearable />
+            </el-form-item>
+            <el-form-item label="类型">
+              <el-select v-model="todoSearchForm.type" placeholder="请选择类型" clearable>
+                <el-option label="全部" value="" />
+                <el-option label="公文" value="公文" />
+                <el-option label="会议" value="会议" />
+                <el-option label="请假" value="请假" />
+                <el-option label="其他" value="其他" />
+              </el-select>
+            </el-form-item>
+            <el-form-item label="状态">
+              <el-select v-model="todoSearchForm.status" placeholder="请选择状态" clearable>
+                <el-option label="全部" value="" />
+                <el-option label="已完成" value="true" />
+                <el-option label="未完成" value="false" />
+              </el-select>
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" @click="searchTodoList">搜索</el-button>
+              <el-button @click="resetTodoSearch">重置</el-button>
+            </el-form-item>
+          </el-form>
+        </div>
         <div class="content-body">
           <el-empty description="暂无待办事项" v-if="todoList.length === 0" />
-          <el-table v-else :data="todoList" style="width: 100%">
-            <el-table-column prop="title" label="标题" />
-            <el-table-column prop="deadline" label="截止日期" width="180" />
-            <el-table-column prop="status" label="状态" width="120">
-              <template #default="scope">
-                <el-tag :type="scope.row.status === '已完成' ? 'success' : 'warning'">
-                  {{ scope.row.status }}
-                </el-tag>
-              </template>
-            </el-table-column>
-          </el-table>
+          <div v-else>
+            <el-table :data="todoList" style="width: 100%" v-loading="todoListLoading">
+              <el-table-column prop="type" label="类型" />
+              <el-table-column prop="title" label="标题">
+                <template #default="scope">
+                  <span class="clickable-title" @click="goToTodoDetail(scope.row)">{{ scope.row.title }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="circulationStatus" label="流转状态" width="180" />
+              <el-table-column prop="comeFrom" label="来件单位" width="180" />
+              <el-table-column prop="comeTime" label="来件时间" width="180" />
+              <el-table-column prop="status" label="状态" width="120">
+                <template #default="scope">
+                  <el-tag :type="scope.row.status === 'true' ? 'success' : 'warning'">
+                    {{ scope.row.status === 'true' ? '已完成' : '未完成' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+            </el-table>
+            <div class="pagination-container">
+              <el-pagination
+                v-model:current-page="todoPageParams.pageNum"
+                v-model:page-size="todoPageParams.pageSize"
+                :page-sizes="[10, 20, 50, 100]"
+                layout="total, sizes, prev, pager, next, jumper"
+                :total="todoTotal"
+                @size-change="handleSizeChange"
+                @current-change="handleCurrentChange"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- 已办事项列表 -->
-      <div v-show="currentView === 'done'" class="content-container">
+      <div v-show="currentView === 'done' && !currentComponent" class="content-container">
         <h2 class="content-title">我的已办</h2>
         <div class="content-body">
           <el-table :data="doneList" style="width: 100%">
+            <el-table-column prop="type" label="类型" />
             <el-table-column prop="title" label="标题" />
             <el-table-column prop="completeDate" label="完成日期" width="180" />
             <el-table-column prop="result" label="处理结果" width="120">
@@ -188,10 +238,11 @@
       </div>
 
       <!-- 我的申请 -->
-      <div v-show="currentView === 'apply'" class="content-container">
+      <div v-show="currentView === 'apply' && !currentComponent" class="content-container">
         <h2 class="content-title">我的申请</h2>
         <div class="content-body">
           <el-table :data="applyList" style="width: 100%">
+            <el-table-column prop="type" label="类型" />
             <el-table-column prop="title" label="申请标题" />
             <el-table-column prop="applyDate" label="申请日期" width="180" />
             <el-table-column prop="status" label="审批状态" width="120">
@@ -224,6 +275,9 @@
       <div v-else-if="currentComponent === 'LeaveDocComponent'" class="content-container">
         <LeaveDocComponent />
       </div>
+      <div v-else-if="currentComponent === 'DeptDocComponent'" class="content-container">
+        <DeptDocComponent />
+      </div>
       <div v-else-if="currentComponent === 'AllDocComponent'" class="content-container">
         <AllDocComponent />
       </div>
@@ -236,41 +290,34 @@
         <!-- 左侧内容 -->
         <div class="col-lg-8">
           <!-- 待办事项 -->
-          <div class="card">
+ <!-- 待办事项 -->
+<!-- 待办事项 -->
+<!-- 待办事项 -->
+<div class="card">
             <div class="card-header">
               <div class="title"><i class="bi bi-check2-square me-2"></i>待办事项</div>
-              <div class="more">更多 <i class="bi bi-chevron-right"></i></div>
+              <div class="more" @click="goToTodoList">更多 <i class="bi bi-chevron-right"></i></div>
             </div>
             <div class="card-body">
-              <div class="todo-list">
-                <div class="todo-item">
-                  <div class="todo-checkbox"><i class="bi bi-check"></i></div>
+              <div class="todo-list" v-if="todoList && todoList.length > 0">
+                <div class="todo-item" v-for="(item, index) in todoList.slice(0, 5)" :key="index" >
+                  <div class="index-circle me-2">{{ index + 1 }}</div>
+                  <div class="todo-type">{{ item.type }}</div>
                   <div class="todo-content">
-                    <div class="todo-title">完成季度报表</div>
-                    <div class="todo-date">截止日期：2023-10-15</div>
+                    <div class="todo-title" @click="goToTodoDetail(item)">{{ item.title }}
+                      <span v-if="item.priority === 'high'" class="badge badge-danger">急</span>
+                    </div>
+                    
                   </div>
-                  <div class="todo-priority high">高</div>
-                </div>
-                <div class="todo-item">
-                  <div class="todo-checkbox"><i class="bi bi-check"></i></div>
-                  <div class="todo-content">
-                    <div class="todo-title">项目进度会议</div>
-                    <div class="todo-date">截止日期：2023-10-10</div>
-                  </div>
-                  <div class="todo-priority medium">中</div>
-                </div>
-                <div class="todo-item">
-                  <div class="todo-checkbox"><i class="bi bi-check"></i></div>
-                  <div class="todo-content">
-                    <div class="todo-title">审核新员工档案</div>
-                    <div class="todo-date">截止日期：2023-10-12</div>
-                  </div>
-                  <div class="todo-priority low">低</div>
+                  <div class="todo-content">{{ item.circulationStatus }}</div>
+                  <div class="todo-content">{{ item.comeFrom }}</div>
+                  <div class="todo-content">{{ formatDate(item.comeTime) }}</div>
                 </div>
               </div>
+              <el-empty v-else description="暂无待办事项" />
             </div>
           </div>
-
+  
           <!-- 文件管理 -->
           <div class="card">
             <div class="card-header">
@@ -435,6 +482,17 @@
       </div>
     </div>
   </div>
+  
+
+  <!-- 通知抽屉 -->
+  <el-drawer
+    v-model="notificationDrawerVisible"
+    title="通知消息"
+    size="30%"
+    :destroy-on-close="false"
+  >
+    <NotificationsIndex />
+  </el-drawer>
 </template>
 
 <script setup lang="ts">
@@ -449,11 +507,16 @@ import SchoolDocComponent from '../components/Document/SchoolDocComponent.vue'
 import LeaveDocComponent from '../components/Document/LeaveDocComponent.vue'
 import AllDocComponent from '../components/Document/AllDocComponent.vue'
 import FavoriteDocComponent from '../components/Document/FavoriteDocComponent.vue'
+import DeptDocComponent from '../components/Document/DeptDocComponent.vue'
 import UserCenterComponent from '../components/User/UserCenterComponent.vue'
 import { removeToken } from '@/utils/auth'
 import { eventBus, EVENT_NAMES } from '@/utils/eventBus'
 import { useUserStore } from '@/store/modules/user'
 import { CACHE_KEY, useCache } from '@/hooks/web/useCache'
+import { getUnreadNotifyMessageCount } from '@/api/notify'
+import NotificationsIndex from '@/views/notifications/index.vue'
+import homeTodoApi  from '@/api/home/home-todo'
+import { formatDate } from '@/utils/formatTime'
 
 // 路由实例
 const router = useRouter()
@@ -475,9 +538,25 @@ const userName = computed(() => {
   // 尝试从缓存中获取用户信息
   const userInfo = wsCache.get(CACHE_KEY.USER)
   console.log('用户信息:', userInfo)
-  if (userInfo && userInfo.data && userInfo.data.nickname) {
-    return userInfo.data.nickname
+  
+  // 检查多种可能的用户信息结构
+  if (userInfo) {
+    // 结构 1：userInfo.data.nickname
+    if (userInfo.data && userInfo.data.nickname) {
+      return userInfo.data.nickname
+    }
+    
+    // 结构 2：userInfo.user.nickname
+    if (userInfo.user && userInfo.user.nickname) {
+      return userInfo.user.nickname
+    }
+    
+    // 结构 3：userInfo.nickname
+    if (userInfo.nickname) {
+      return userInfo.nickname
+    }
   }
+  
   // 如果缓存中没有，则返回默认值
   return '用户'
 })
@@ -491,6 +570,20 @@ const toggleUserMenu = () => {
 const toggleWorkbench = () => {
   isWorkbenchOpen.value = !isWorkbenchOpen.value
   console.log('工作台菜单展开状态：', isWorkbenchOpen.value)
+}
+
+const goToTodoList = () => {
+  
+  currentView.value = 'todo'
+
+   // 确保工作台菜单展开
+   toggleWorkbench()
+  
+  // 清除当前组件选择
+  currentComponent.value = ''
+  
+  console.log('跳转到待办事项列表')
+  
 }
 
 // 切换侧边栏收起/展开状态
@@ -613,12 +706,51 @@ const logout = () => {
 }
 }
 
+// 处理文件处理操作
+const goToTodoDetail = (row) => {
+  
+  const path = router.resolve({
+    path: row.url,
+    query: { id: row.id, isTodo: 1 }
+  }).href
+  
+  try {
+    console.log('打开路径:', path)
+    
+    const newWindow = window.open(
+      path,
+      '_blank',
+      'width=1200,height=800,left=100,top=100,resizable=yes'
+    )
+    
+    if (!newWindow) {
+      ElMessage.warning('请允许弹出窗口')
+      // 备选方案：在当前页打开
+      router.push({ path: row.url, query: { id: row.id, isTodo: 1 } })
+    }
+  } catch (error) {
+    console.error('打开失败:', error)
+    ElMessage.error('处理失败')
+  }
+    
+
+  
+}
+
 // 监听组件切换事件
 const listenToComponentSwitch = () => {
+  
   eventBus.on(EVENT_NAMES.SWITCH_COMPONENT, (componentName: string) => {
     console.log('接收到组件切换事件：', componentName)
     currentComponent.value = componentName
+    
+    
   })
+
+  if (currentComponent.value) {
+   toggleWorkbench()
+  }
+  
 }
 
 // 挂载时添加事件监听
@@ -631,12 +763,32 @@ onMounted(() => {
   if (sidebar) {
     isSidebarCollapsed.value = sidebar.classList.contains('collapsed')
   }
+  
+  // 获取未读通知数量
+  fetchUnreadCount()
+  // 定时刷新未读通知数量
+  notificationTimer.value = setInterval(() => {
+    fetchUnreadCount()
+  }, 6000) // 每6秒刷新一次
+
+   // 监听未读消息计数更新事件
+   eventBus.on(EVENT_NAMES.UPDATE_UNREAD_COUNT, () => {
+    fetchUnreadCount()
+  })
 })
 
 // 卸载时移除事件监听
 onUnmounted(() => {
   document.removeEventListener('click', closeUserMenu)
   eventBus.off(EVENT_NAMES.SWITCH_COMPONENT)
+  
+  // 清除定时器
+  if (notificationTimer.value) {
+    clearInterval(notificationTimer.value)
+  }
+
+  // 移除未读消息计数更新事件监听
+  eventBus.off(EVENT_NAMES.UPDATE_UNREAD_COUNT)
 })
 
 // 当前视图
@@ -648,21 +800,115 @@ const currentComponent = ref('')
 // 切换视图函数
 const switchView = (view: string) => {
   currentView.value = view
+  currentComponent.value = ''
+
+  
+  
 }
 
+
+
 // 待办列表数据
-const todoList = ref([
-  {
-    title: '完成项目文档',
-    deadline: '2025-06-01',
-    status: '进行中'
-  },
-  {
-    title: '代码评审',
-    deadline: '2025-06-02',
-    status: '已完成'
+const todoList = ref([])
+const todoTotal = ref(0)
+const todoListLoading = ref(false)
+
+// 搜索表单
+const todoSearchForm = ref({
+  title: '',
+  type: '',
+  status: ''
+})
+
+// 分页参数
+const todoPageParams = ref({
+  pageNum: 1,
+  pageSize: 10
+})
+
+// 处理页码变化
+const handleCurrentChange = (val) => {
+  todoPageParams.value.pageNum = val
+  getTodoList()
+}
+
+// 处理每页显示数量变化
+const handleSizeChange = (val) => {
+  todoPageParams.value.pageSize = val
+  todoPageParams.value.pageNum = 1 // 重置为第一页
+  getTodoList()
+}
+
+// 搜索待办列表
+const searchTodoList = () => {
+  todoPageParams.value.pageNum = 1 // 搜索时重置为第一页
+  getTodoList()
+}
+
+// 重置搜索条件
+const resetTodoSearch = () => {
+  todoSearchForm.value = {
+    title: '',
+    type: '',
+    status: ''
   }
-])
+  todoPageParams.value.pageNum = 1
+  getTodoList()
+}
+
+// 获取待办列表
+const getTodoList = async () => {
+  try {
+    todoListLoading.value = true
+    
+    // 构建请求参数，包含分页和搜索条件
+    const params = {
+      pageNum: todoPageParams.value.pageNum,
+      pageSize: todoPageParams.value.pageSize,
+      ...todoSearchForm.value
+    }
+    
+    // 移除空值
+    Object.keys(params).forEach(key => {
+      if (params[key] === '' || params[key] === null || params[key] === undefined) {
+        delete params[key]
+      }
+    })
+    
+    console.log('请求参数:', params)
+    
+    const res = await homeTodoApi.getHomeToDoPage(params)
+    if (res.code === 0) {
+      todoList.value = res.data.list || res.data || []
+      todoTotal.value = res.data.total || todoList.value.length
+      console.log('待办列表数据:', todoList.value)
+      console.log('总数:', todoTotal.value)
+    }
+  } catch (error) {
+    console.error('获取待办列表失败', error)
+    ElMessage.error('获取待办列表失败')
+  } finally {
+    todoListLoading.value = false
+  }
+}
+
+
+const priorityMap = {
+  high: '高',
+  medium: '中',
+  low: '低'
+}
+
+const formatDeadline = (deadline) => {
+  if (Array.isArray(deadline)) {
+    return `${deadline[0]}-${deadline[1].toString().padStart(2, '0')}-${deadline[2].toString().padStart(2, '0')}`
+  }
+  return deadline || '未设置'
+}
+
+const goTo = (url) => {
+  if (url) window.open(url, '_blank')
+}
 
 // 已办列表数据
 const doneList = ref([
@@ -707,49 +953,21 @@ const getStatusType = (status: string) => {
   return typeMap[status] || 'info'
 }
 
-// 公文标题映射
-const docTitleMap: Record<string, string> = {
-  'doc-todo': '我的代办公文',
-  'doc-meeting': '拟上会文件',
-  'doc-internal': '已签校内文件',
-  'doc-external': '已签校外文件',
-  'doc-school': '已签学校发文',
-  'doc-leave': '请假文件',
-  'doc-all': '全部公文',
-  'doc-favorite': '我的收藏'
-}
 
-// 获取公文标题
-const getDocTitle = (view: string) => {
-  return docTitleMap[view] || '公文流转'
-}
 
-// 公文数据
-const docData = ref([
-  {
-    title: '关于2025年度工作计划的通知',
-    date: '2025-05-20',
-    department: '校办公室'
-  },
-  {
-    title: '关于举办2025年教师节庆祝活动的通知',
-    date: '2025-05-18',
-    department: '人事处'
-  }
-])
 
-// 获取公文数据
-const getDocData = (view: string) => {
-  // 这里可以根据不同的视图返回不同的数据
-  // 简化处理，所有公文视图都返回相同数据
-  return docData.value
-}
 
-import { onMounted } from 'vue';
+
+
 
 // 生命周期钩子
 onMounted(() => {
   initSidebar();
+  getTodoList();
+  // 定时刷新待办列表
+  setInterval(() => {
+    getTodoList();
+  }, 6000);
 });
 
 // 方法
@@ -827,6 +1045,34 @@ const initSidebar = () => {
     }
   });
 }
+
+// 通知相关
+const unreadCount = ref(0)
+const notificationTimer = ref(null)
+
+// 获取未读通知数量
+const fetchUnreadCount = async () => {
+  try {
+    const res = await getUnreadNotifyMessageCount()
+    if (res.code === 0) {
+      unreadCount.value = res.data
+    }
+  } catch (error) {
+    console.error('获取未读通知数量失败', error)
+  }
+}
+
+// 通知相关
+const notificationDrawerVisible = ref(false)
+// 切换通知面板显示
+const toggleNotifications = () => {
+  notificationDrawerVisible.value = !notificationDrawerVisible.value
+  // 如果是打开通知面板，则触发刷新通知内容
+  if (notificationDrawerVisible.value) {
+    // 通过事件总线触发通知内容刷新
+    eventBus.emit(EVENT_NAMES.UPDATE_UNREAD_COUNT)
+  }
+}
 </script>
 
 <style>
@@ -835,12 +1081,164 @@ const initSidebar = () => {
   padding: 0px 20px;
 }
 
-.content-title {
-  margin-bottom: 10px;
-  color: #303133;
-  font-size: 20px;
-  font-weight: 500;
+.search-form {
+  margin-bottom: 20px;
+  background: #fff;
+  padding: 15px;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
 }
+
+.index-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: var(--primary-color, #2c6aa0);
+  color: #fff;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+/* 待办事项 */
+.todo-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.todo-type {
+    width: 100px;
+    text-align: center;
+    margin-right: 10px;
+    font-weight: bold;
+    color: var(--primary-color);
+    background-color: var(--hover-color);
+    border-radius: 4px;
+}
+
+.todo-item {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+}
+
+.todo-item:last-child {
+    border-bottom: none;
+}
+
+.todo-checkbox {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    cursor: pointer;
+}
+
+.todo-checkbox i {
+    display: none;
+    color: #fff;
+}
+
+.todo-checkbox.checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.todo-checkbox.checked i {
+    display: block;
+}
+
+.todo-content {
+    flex: 1;
+}
+
+.todo-title {
+    font-size: 16px;
+    margin-bottom: 5px;
+}
+
+.todo-title:hover {
+    cursor: pointer;
+    text-decoration: underline;
+    color: var(--primary-color);
+}
+
+.todo-date {
+    font-size: 14px;
+    color: #888;
+}
+
+.todo-priority {
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+    margin-left: 10px;
+}
+
+.todo-priority.high {
+    background-color: #dc3545;
+}
+
+.todo-priority.medium {
+    background-color: #fd7e14;
+}
+
+.todo-priority.low {
+    background-color: #28a745;
+}
+
+.todo-item .badge {
+    margin-right: 10px;
+    background-color: #f0ad4e;
+    color: white;
+    padding: 5px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+.todo-item .title {
+    flex: 1;
+    font-size: 14px;
+}
+
+.todo-item .time {
+    color: #999;
+    font-size: 12px;
+    margin-left: 10px;
+}
+
+.clickable-title {
+  cursor: pointer;
+  color: #2c6aa0;
+}
+
+.clickable-title:hover {
+  text-decoration: underline;
+}
+.content-title {
+  padding: 12px 20px;
+  margin-bottom: 20px;
+  color: #2c3e50;
+  font-size: 22px;
+  font-weight: 600;
+  background: linear-gradient(90deg, var(--primary-color, #409eff) 0%, #66b1ff 100%);
+  color: #fff;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  border: none;
+  letter-spacing: 0.5px;
+}
+
 
 .content-body {
   background: #fff;
@@ -938,7 +1336,7 @@ body {
     bottom: 0;
     left: 0;
     background-color: white;
-    transition: width 0.3s ease;
+    transition: width 0.3s;
 }
 
 .top-menu a:hover:after {
@@ -1135,6 +1533,7 @@ body {
     font-weight: bold; /* 二级菜单加粗 */
     background-color: transparent; /* 移除背景色 */
     border-left: none; /* 移除边框 */
+    width: 250px;
 }
 
 /* 三级菜单样式 */
@@ -1153,12 +1552,6 @@ body {
 
 .sidebar-menu li.open > .submenu {
     display: block;
-}
-
-/* 二级菜单项的箭头图标 */
-.sidebar-menu .submenu .arrow {
-    margin-left: auto;
-    font-size: 10px;
 }
 
 /* 主内容区域 */
@@ -1213,104 +1606,7 @@ body {
     padding: 15px 20px;
 }
 
-/* 待办事项 */
-.todo-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
 
-.todo-item {
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    align-items: center;
-}
-
-.todo-item:last-child {
-    border-bottom: none;
-}
-
-.todo-checkbox {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    border: 2px solid #ddd;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 15px;
-    cursor: pointer;
-}
-
-.todo-checkbox i {
-    display: none;
-    color: #fff;
-}
-
-.todo-checkbox.checked {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-}
-
-.todo-checkbox.checked i {
-    display: block;
-}
-
-.todo-content {
-    flex: 1;
-}
-
-.todo-title {
-    font-size: 16px;
-    margin-bottom: 5px;
-}
-
-.todo-date {
-    font-size: 14px;
-    color: #888;
-}
-
-.todo-priority {
-    padding: 3px 8px;
-    border-radius: 3px;
-    font-size: 12px;
-    font-weight: bold;
-    color: white;
-    margin-left: 10px;
-}
-
-.todo-priority.high {
-    background-color: #dc3545;
-}
-
-.todo-priority.medium {
-    background-color: #fd7e14;
-}
-
-.todo-priority.low {
-    background-color: #28a745;
-}
-
-.todo-item .badge {
-    margin-right: 10px;
-    background-color: #f0ad4e;
-    color: white;
-    padding: 5px 8px;
-    border-radius: 3px;
-    font-size: 12px;
-}
-
-.todo-item .title {
-    flex: 1;
-    font-size: 14px;
-}
-
-.todo-item .time {
-    color: #999;
-    font-size: 12px;
-    margin-left: 10px;
-}
 
 /* 通知公告 */
 .notice-list {
@@ -1331,7 +1627,7 @@ body {
 
 .notice-item:hover {
     background-color: #eef5fb;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .notice-item:last-child {
@@ -1711,14 +2007,6 @@ body {
     text-overflow: ellipsis;
 }
 
-.file-title .badge {
-    font-size: 12px;
-    padding: 3px 6px;
-    border-radius: 3px;
-    margin-left: 5px;
-    flex-shrink: 0;
-}
-
 .file-date {
     font-size: 13px;
     color: #888;
@@ -1925,5 +2213,11 @@ body {
 
 .dropdown-item:not(:last-child) {
     border-bottom: 1px solid #ebeef5;
+}
+
+.pagination-container {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

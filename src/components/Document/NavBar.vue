@@ -33,11 +33,12 @@
   const navItems = [
     { name: 'TodoComponent', label: '我的待办' },
     //{ name: 'MeetingDocComponent', label: '拟上会文件' },
-    { name: 'InternalDocComponent', label: '已签校内文件' },
-    { name: 'ExternalDocComponent', label: '已签校外文件' },
-    { name: 'SchoolDocComponent', label: '已签学校发文' },
-    { name: 'LeaveDocComponent', label: '请假文件' },
-    { name: 'AllDocComponent', label: '全部公文' },
+    { name: 'InternalDocComponent', label: '我的已签校内文件' },
+    { name: 'ExternalDocComponent', label: '我的已签校外文件' },
+    { name: 'SchoolDocComponent', label: '我的已签学校发文' },
+    { name: 'LeaveDocComponent', label: '我的请假文件' },
+    { name: 'DeptDocComponent', label: '本部门文件' },
+    { name: 'AllDocComponent', label: '我的全部公文' },
     { name: 'FavoriteDocComponent', label: '我的收藏' }
   ]
   </script>

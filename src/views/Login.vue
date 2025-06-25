@@ -33,7 +33,8 @@
                   v-model="accountForm.username"
                   placeholder="用户名"
                   size="large"
-                  :prefix-icon="User">
+                  :prefix-icon="User"
+                  @keyup.enter="handleAccountLogin">
                 </el-input>
               </el-form-item>
 
@@ -44,7 +45,8 @@
                   placeholder="密码"
                   size="large"
                   :prefix-icon="Lock"
-                  show-password>
+                  show-password
+                  @keyup.enter="handleAccountLogin">
                 </el-input>
               </el-form-item>
 
@@ -80,7 +82,8 @@
                   v-model="smsForm.mobile"
                   placeholder="手机号码"
                   size="large"
-                  :prefix-icon="Phone">
+                  :prefix-icon="Phone"
+                  @keyup.enter="handleSmsLogin">
                 </el-input>
               </el-form-item>
 
@@ -91,7 +94,8 @@
                     placeholder="验证码"
                     size="large"
                     :prefix-icon="Message"
-                    class="code-input">
+                    class="code-input"
+                    @keyup.enter="handleSmsLogin">
                   </el-input>
                   <el-button 
                     :disabled="smsCountdown > 0"
@@ -156,7 +160,7 @@
 
     <!-- 页脚 -->
     <footer class="login-footer">
-      <p>广西大学 版权所有 Copyright©2025 </p>
+      <p>广西大学 版权所有 Copyright 2025 </p>
       <p>服务邮箱：</p>
     </footer>
   </div>
