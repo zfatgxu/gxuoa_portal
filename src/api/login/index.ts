@@ -36,7 +36,7 @@ export function getInfo() {
 
 //获取用户权限
 export function getPermissions() {
-  return api.get('/app/user/permissions')
+  return api.get('/app/user/permission')
 }
 
 // 退出登录

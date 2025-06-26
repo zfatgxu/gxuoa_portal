@@ -51,6 +51,9 @@ const bootstrap = async () => {
   app.use(router)
   // 初始化 i18n
   await setupI18n(app)
+
+  
+   
   // 初始化Element Plus并设置为中文
   setupElementPlus(app)
   // 初始化 store

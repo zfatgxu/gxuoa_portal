@@ -170,7 +170,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { User, Lock, Phone, Message } from '@element-plus/icons-vue'
-import { login, smsLogin, sendSmsCode as apiSendSmsCode } from '@/api/login'
+import { login, smsLogin, sendSmsCode as apiSendSmsCode ,getPermissions} from '@/api/login'
 import { setToken, setLoginForm, removeLoginForm, getLoginForm } from '@/utils/auth'
 import { useUserStore } from '@/store/modules/user'
 import { useMessage } from '@/hooks/web/useMessage'
@@ -210,7 +210,7 @@ const accountRules = {
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于 6 个字符', trigger: 'blur' }
+    { min: 5, message: '密码长度不能少于 5 个字符', trigger: 'blur' }
   ]
 }
 
@@ -306,6 +306,21 @@ const handleAccountLogin = async () => {
         
         // 提示成功
         message.success('登录成功！')
+
+         // 查询用户权限
+         try {
+          console.log('正在查询用户权限...')
+          const permissionRes = await getPermissions()
+          if (permissionRes.code === 0 && permissionRes.data) {
+            // 存储用户权限
+            localStorage.setItem('userPermissions', JSON.stringify(permissionRes.data))
+            console.log('用户权限查询成功：', permissionRes.data)
+          } else {
+            console.error('用户权限查询失败：', permissionRes)
+          }
+        } catch (permError) {
+          console.error('查询用户权限出错：', permError)
+        }
         
         // 跳转到首页
         console.log('准备跳转到首页...')

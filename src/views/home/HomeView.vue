@@ -67,15 +67,15 @@
             <span class="arrow"><i class="bi bi-chevron-right"></i></span>
           </a>
           <ul class="submenu">
-            <li><router-link to="/home/document/todo" :class="{ active: $route.path === '/home/document/todo' }" >我的待办</router-link></li>
+            <li v-if="shouldShowMenuItem(['doc:todo'], ['admin'])"><router-link to="/home/document/todo" :class="{ active: $route.path === '/home/document/todo' }" >我的待办</router-link></li>
             <!-- <li><router-link to="/home/document/meeting" :class="{ active: $route.path === '/home/document/meeting' }" @click="isWorkbenchOpen = false">拟上会文件</router-link></li> -->
-            <li><router-link to="/home/document/internaldoc" :class="{ active: $route.path === '/home/document/internaldoc' }" >我的已签校内文件</router-link></li>
-            <li><router-link to="/home/document/externaldoc" :class="{ active: $route.path === '/home/document/externaldoc' }" >我的已签校外文件</router-link></li>
-            <li><router-link to="/home/document/schooldoc" :class="{ active: $route.path === '/home/document/schooldoc' }" >我的已签学校发文</router-link></li>
-            <li><router-link to="/home/document/leavedoc" :class="{ active: $route.path === '/home/document/leavedoc' }" >我的请假文件</router-link></li>
-            <li><router-link to="/home/document/deptdoc" :class="{ active: $route.path === '/home/document/deptdoc' }" >本部门文件</router-link></li>
-            <li><router-link to="/home/document/alldoc" :class="{ active: $route.path === '/home/document/alldoc' }" >我的全部公文</router-link></li>
-            <li><router-link to="/home/document/favoritedoc" :class="{ active: $route.path === '/home/document/favoritedoc' }" >我的收藏</router-link></li>
+            <li v-if="shouldShowMenuItem(['doc:internal'], ['admin'])"><router-link to="/home/document/internaldoc" :class="{ active: $route.path === '/home/document/internaldoc' }" >我的已签校内文件</router-link></li>
+            <li v-if="shouldShowMenuItem(['doc:external'], ['admin'])"><router-link to="/home/document/externaldoc" :class="{ active: $route.path === '/home/document/externaldoc' }" >我的已签校外文件</router-link></li>
+            <li v-if="shouldShowMenuItem(['doc:school'], ['admin'])"><router-link to="/home/document/schooldoc" :class="{ active: $route.path === '/home/document/schooldoc' }" >我的已签学校发文</router-link></li>
+            <li v-if="shouldShowMenuItem(['doc:leave'], ['admin'])"><router-link to="/home/document/leavedoc" :class="{ active: $route.path === '/home/document/leavedoc' }" >我的请假文件</router-link></li>
+            <li v-if="shouldShowMenuItem(['doc:dept'], ['admin'])"><router-link to="/home/document/deptdoc" :class="{ active: $route.path === '/home/document/deptdoc' }" >本部门文件</router-link></li>
+            <li v-if="shouldShowMenuItem(['doc:all'], ['admin'])"><router-link to="/home/document/alldoc" :class="{ active: $route.path === '/home/document/alldoc' }" >我的全部公文</router-link></li>
+            <li v-if="shouldShowMenuItem(['doc:favorite'], ['admin'])"><router-link to="/home/document/favoritedoc" :class="{ active: $route.path === '/home/document/favoritedoc' }" >我的收藏</router-link></li>
           </ul>
         </li>
         <li>
@@ -195,6 +195,10 @@ import { getUnreadNotifyMessageCount } from '@/api/notify'
 import NotificationsIndex from '@/views/notifications/index.vue'
 import homeTodoApi  from '@/api/home/home-todo'
 import { formatDate } from '@/utils/formatTime'
+
+// 引入权限相关的 store
+import { usePermissionStore } from '@/store/modules/permission'
+import { hasPermission } from '@/directives/permission/hasPermi'
 
 // 路由实例
 const router = useRouter()
@@ -755,6 +759,17 @@ const toggleNotifications = () => {
     // 通过事件总线触发通知内容刷新
     eventBus.emit(EVENT_NAMES.UPDATE_UNREAD_COUNT)
   }
+}
+
+// 权限检查函数
+const shouldShowMenuItem = (permissions, roles) => {
+  if (permissions && permissions.length > 0) {
+    return hasPermission(permissions)
+  }
+  if (roles && roles.length > 0) {
+    return userRoles.value.some(role => roles.includes(role))
+  }
+  return true
 }
 </script>
 

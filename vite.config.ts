@@ -31,6 +31,13 @@ export default defineConfig(async () => {
         '@': path.resolve(__dirname, 'src'), // 路径别名设置
       }
     },
+    css: {
+      preprocessorOptions: {
+        scss: {
+          additionalData: '@use "@/styles/variables.scss" as *;'
+        }
+      }
+    },
     server: {
       port: 5173,
       proxy: {
