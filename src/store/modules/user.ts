@@ -1,3 +1,4 @@
+import { store } from '@/store'
 import { defineStore } from 'pinia'
 import { getAccessToken, removeToken } from '@/utils/auth'
 import { CACHE_KEY, useCache, deleteUserCache } from '@/hooks/web/useCache'
@@ -10,13 +11,10 @@ interface UserVO {
   avatar: string
   nickname: string
   deptId: number
-  mobile?: string
-  email?: string
-  gender?: number
 }
 
 interface UserInfoVO {
-  // 用户缓存
+  // USER 缓存
   permissions: Set<string>
   roles: string[]
   isSetUser: boolean
@@ -32,10 +30,7 @@ export const useUserStore = defineStore('admin-user', {
       id: 0,
       avatar: '',
       nickname: '',
-      deptId: 0,
-      mobile: '',
-      email: '',
-      gender: 1
+      deptId: 0
     }
   }),
   getters: {
@@ -61,6 +56,11 @@ export const useUserStore = defineStore('admin-user', {
       let userInfo = wsCache.get(CACHE_KEY.USER)
       if (!userInfo) {
         userInfo = await getInfo()
+      } else {
+        // 特殊：在有缓存的情况下，进行加载。但是即使加载失败，也不影响后续的操作，保证可以进入系统
+        try {
+          userInfo = await getInfo()
+        } catch (error) {}
       }
       this.permissions = new Set(userInfo.permissions)
       this.roles = userInfo.roles
@@ -71,14 +71,14 @@ export const useUserStore = defineStore('admin-user', {
     },
     async setUserAvatarAction(avatar: string) {
       const userInfo = wsCache.get(CACHE_KEY.USER)
-      if (!userInfo) return
+      // NOTE: 是否需要像`setUserInfoAction`一样判断`userInfo != null`
       this.user.avatar = avatar
       userInfo.user.avatar = avatar
       wsCache.set(CACHE_KEY.USER, userInfo)
     },
     async setUserNicknameAction(nickname: string) {
       const userInfo = wsCache.get(CACHE_KEY.USER)
-      if (!userInfo) return
+      // NOTE: 是否需要像`setUserInfoAction`一样判断`userInfo != null`
       this.user.nickname = nickname
       userInfo.user.nickname = nickname
       wsCache.set(CACHE_KEY.USER, userInfo)
@@ -97,10 +97,7 @@ export const useUserStore = defineStore('admin-user', {
         id: 0,
         avatar: '',
         nickname: '',
-        deptId: 0,
-        mobile: '',
-        email: '',
-        gender: 1
+        deptId: 0
       }
     }
   }

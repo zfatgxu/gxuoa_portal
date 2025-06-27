@@ -42,7 +42,6 @@ provide('reload', reload)
           footer
       }
     ]"
-    style="overflow: auto; height: auto;"
   >
     <router-view v-if="routerAlive">
       <template #default="{ Component, route }">

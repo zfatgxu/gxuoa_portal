@@ -1,12 +1,10 @@
- <script lang="tsx">
+<script lang="tsx">
 import { computed, defineComponent, unref } from 'vue'
 import { useAppStore } from '@/store/modules/app'
 import { Backtop } from '@/components/Backtop'
 import { Setting } from '@/layout/components/Setting'
 import { useRenderLayout } from './components/useRenderLayout'
 import { useDesign } from '@/hooks/web/useDesign'
-import { useRoute } from 'vue-router'
-
 
 const { getPrefixCls } = useDesign()
 
@@ -48,14 +46,7 @@ const renderLayout = () => {
 export default defineComponent({
   name: 'Layout',
   setup() {
-    const route = useRoute()
-    const hideLayout = computed(() => route.query.hideLayout === 'true')
-
-    return () => hideLayout.value ? (
-      <section class="w-[100%] h-[100%] relative">
-        <router-view />
-      </section>
-    ) : (
+    return () => (
       <section class={[prefixCls, `${prefixCls}__${layout.value}`, 'w-[100%] h-[100%] relative']}>
         {mobile.value && !collapse.value ? (
           <div
@@ -68,7 +59,7 @@ export default defineComponent({
 
         <Backtop></Backtop>
 
-        <Setting></Setting>
+        {/* <Setting></Setting> */}
       </section>
     )
   }
@@ -76,7 +67,6 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
-@use '@/styles/variables.scss' as *;
 $prefix-cls: #{$namespace}-layout;
 
 .#{$prefix-cls} {

@@ -3,7 +3,7 @@
  */
 import { useDictStoreWithOut } from '@/store/modules/dict'
 import { ElementPlusInfoType } from '@/types/elementPlus'
-import { ref } from 'vue'
+
 const dictStore = useDictStoreWithOut()
 
 /**
@@ -29,7 +29,6 @@ export interface StringDictDataType extends DictDataType {
 }
 
 export const getDictOptions = (dictType: string) => {
-  console.log("进入getDictOptions")
   return dictStore.getDictByType(dictType) || []
 }
 
@@ -160,7 +159,6 @@ export enum DICT_TYPE {
   PAY_NOTIFY_STATUS = 'pay_notify_status', // 商户支付回调状态
   PAY_NOTIFY_TYPE = 'pay_notify_type', // 商户支付回调状态
   PAY_TRANSFER_STATUS = 'pay_transfer_status', // 转账订单状态
-  PAY_TRANSFER_TYPE = 'pay_transfer_type', // 转账订单状态
 
   // ========== MP 模块 ==========
   MP_AUTO_REPLY_REQUEST_MATCH = 'mp_auto_reply_request_match', // 自动回复请求匹配类型
@@ -248,8 +246,9 @@ export enum DICT_TYPE {
   IOT_DATA_BRIDGE_DIRECTION_ENUM = 'iot_data_bridge_direction_enum', // 桥梁方向
   IOT_DATA_BRIDGE_TYPE_ENUM = 'iot_data_bridge_type_enum', // 桥梁类型
 
-    // ========== OA_Document - 公文流转模块  ==========
+   // ========== OA_Document - 公文流转模块  ==========
   CIRCULATION_TYPE = 'circulation_type', // 流转类型
   CIRCULATION_TEMPLATE_TYPE = 'circulation_template_type', // 流转模板类型
   DOCUMENT_TYPE = 'document_type', // 呈文类型
+ 
 }

@@ -23,35 +23,12 @@ export const getRefreshToken = () => {
 export const setToken = (token: TokenType) => {
   wsCache.set(RefreshTokenKey, token.refreshToken)
   wsCache.set(AccessTokenKey, token.accessToken)
-  
-  // 同时使用localStorage存储（用于请求拦截器）
-  localStorage.setItem('token', token.accessToken)
-  console.log('在auth.ts中存储令牌：', token.accessToken)
 }
 
 // 删除token
 export const removeToken = () => {
-  // 清除wsCache中的令牌
   wsCache.delete(AccessTokenKey)
   wsCache.delete(RefreshTokenKey)
-  
-  // 清除localStorage中的所有令牌和认证相关项
-  localStorage.removeItem('token')
-  localStorage.removeItem('tokenExpiresTime')
-  localStorage.removeItem('isLoggedIn')
-  localStorage.removeItem('ACCESS_TOKEN')
-  localStorage.removeItem('REFRESH_TOKEN')
-  
-  // 清除可能存在的会话存储
-  sessionStorage.removeItem('token')
-  sessionStorage.removeItem('user')
-  
-  // 删除可能存在的cookie
-  document.cookie.split(";").forEach(function(c) {
-    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/")
-  })
-  
-  console.log('所有令牌和登录状态已清除')
 }
 
 /** 格式化token（jwt格式） */
@@ -90,6 +67,14 @@ export const getTenantId = () => {
   return wsCache.get(CACHE_KEY.TenantId)
 }
 
-export const setTenantId = (username: string) => {
-  wsCache.set(CACHE_KEY.TenantId, username)
+export const setTenantId = (tenantId: number) => {
+  wsCache.set(CACHE_KEY.TenantId, tenantId)
+}
+
+export const getVisitTenantId = () => {
+  return wsCache.get(CACHE_KEY.VisitTenantId)
+}
+
+export const setVisitTenantId = (visitTenantId: number) => {
+  wsCache.set(CACHE_KEY.VisitTenantId, visitTenantId)
 }

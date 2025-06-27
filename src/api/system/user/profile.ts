@@ -32,34 +32,30 @@ export interface ProfileVO {
 }
 
 export interface UserProfileUpdateReqVO {
-  nickname: string
-  email: string
-  mobile: string
-  sex: number
+  nickname?: string
+  email?: string
+  mobile?: string
+  sex?: number
+  avatar?: string
 }
 
 // 查询用户个人信息
 export const getUserProfile = () => {
-  return request.get({ url: '/system/user/profile/get' })
+  return request.get({ url: '/app/user/get' })
 }
 
 // 修改用户个人信息
 export const updateUserProfile = (data: UserProfileUpdateReqVO) => {
-  return request.put({ url: '/system/user/profile/update', data })
+  return request.put({ url: '/app/user/update', data })
 }
 
 // 用户密码重置
 export const updateUserPassword = (oldPassword: string, newPassword: string) => {
   return request.put({
-    url: '/system/user/profile/update-password',
+    url: '/app/user/update-password',
     data: {
       oldPassword: oldPassword,
       newPassword: newPassword
     }
   })
-}
-
-// 用户头像上传
-export const uploadAvatar = (data) => {
-  return request.upload({ url: '/system/user/profile/update-avatar', data: data })
 }

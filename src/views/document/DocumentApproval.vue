@@ -846,18 +846,18 @@ import { useRouter, useRoute } from 'vue-router'
 import Qrcode from '@/components/Qrcode/src/Qrcode.vue'
 import { DICT_TYPE, getIntDictOptions, getDictLabel } from '@/utils/dict'
 import { formatDate } from '@/utils/formatTime'
-import { DocumentApi, DocumentInfoVO } from '@/api/document'
-import documentFavoriteApi from '@/api/document/favorite'
+import * as DocumentApi from '@/api/document/document'
+import * as documentFavoriteApi from '@/api/document/favorite'
 import { useUserStore } from '@/store/modules/user'
 import { useDictStoreWithOut } from '@/store/modules/dict'
 import { UserVO } from '@/api/system/user'
-import UserSelectForm from '@/components/UserSelectForm/index.vue'
+import UserSelectForm from '@/components/document/UserSelectForm/index.vue'
 import ContentWrap from '@/components/ContentWrap/src/ContentWrap.vue'
 import Dialog from '@/components/Dialog/src/Dialog.vue'
 import { waitForDebugger } from 'inspector'
 import { set } from 'lodash-es'
 import { Star, StarFilled } from '@element-plus/icons-vue'
-import { CirculationPostApi } from '@/api/document/circulationPost'
+import * as circulationPostApi from '@/api/document/circulationPost'
 import { eventBus, EVENT_NAMES } from '@/utils/eventBus'
 
 
@@ -872,10 +872,10 @@ const checkIsFavorite = async () => {
   try {
     if (documentId.value) {
       const res = await documentFavoriteApi.isFavorite(documentId.value)
-      if (res.code === 0) {
-        isFavorite.value = res.data
+      
+        isFavorite.value = res
         console.log('文档收藏状态:', isFavorite.value ? '已收藏' : '未收藏')
-      }
+      
     }
   } catch (error) {
     console.error('检查收藏状态失败', error)
@@ -893,19 +893,19 @@ const toggleFavorite = async () => {
     if (isFavorite.value) {
       // 取消收藏
       const res = await documentFavoriteApi.cancelDocumentFavorite(documentId.value)
-      if (res.code === 0) {
+      
         isFavorite.value = false
         ElMessage.success('已取消收藏')
-      }
+      
     } else {
       // 添加收藏
       const res = await documentFavoriteApi.createDocumentFavorite({
         documentId: documentId.value
       })
-      if (res.code === 0) {
+      
         isFavorite.value = true
         ElMessage.success('收藏成功')
-      }
+      
     }
   } catch (error) {
     console.error('操作收藏失败', error)
@@ -1228,7 +1228,7 @@ const getDocumentInfo = async () => {
   try {
     const isTodo = Number(route.query.isTodo || '1')
     let response = await DocumentApi.getDocumentInfo(documentId.value, { isTodo })
-    const data = response.data
+    const data = response
     // 如果是待办项并且是校办秘书岗（type=9），可能需要再次获取数据以获得生成的收文编号和收文时间
     if (isTodo === 1 && data && data.type === 9 && (!data.receiptNumber || !data.receiptTime)) {
       console.log('需要再次获取文档信息以获取收文编号和收文时间')
@@ -1236,7 +1236,7 @@ const getDocumentInfo = async () => {
       await new Promise(resolve => setTimeout(resolve, 500))
       // 再次获取文档信息
       response = await DocumentApi.getDocumentInfo(documentId.value, { isTodo: 1 }) // 使用isTodo=1避免再次触发生成逻辑
-      let data = response.data
+      let data = response
       
     }
     
@@ -1622,10 +1622,7 @@ const handleSave = async () => {
         };
         // 更新文档主表
         let res = await DocumentApi.updateDocument(documentData);
-        if (res.code !== 0) {
-          ElMessage.error('更新公文主表失败');
-          return; // 如果更新失败，不继续后续保存
-        }
+       
         // 触发刷新待办列表事件
         // 使用 window.opener.postMessage 替代事件总线通信
 if (window.opener) {
@@ -1652,7 +1649,7 @@ if (window.opener) {
     // 调用保存接口
     const res = await DocumentApi.saveDocumentMessage(messageData);
 
-    if (res.code === 0) {
+   
       // 保存成功，更新本地数据
       formData.messages[messageKey] = formData.messages[messageKey]
         ? `${formData.messages[messageKey]}\n${currentMessage.value}`
@@ -1669,9 +1666,7 @@ if (window.opener) {
       setTimeout(() => {
         window.close();
       }, 1000);
-    } else {
-      ElMessage.error(res.msg || '保存失败');
-    }
+    
   } catch (error) {
     console.error('保存失败:', error);
     ElMessage.error('保存失败');
@@ -1802,7 +1797,7 @@ const getFilteredOptions = () => {
 const viewPresentationContent = () => {
   if (formData.id) {
     // router.push(`/document/document/presentation-view/${formData.id}`)
-    window.open(`/document/document/presentation-view/${formData.id}?hideLayout=true`, '_blank', 'width=1200,height=800,top=100,left=100,menubar=no,toolbar=no,location=no,status=no')
+    window.open(`/document/presentation-view/${formData.id}?hideLayout=true`, '_blank', 'width=1200,height=800,top=100,left=100,menubar=no,toolbar=no,location=no,status=no')
 
   } else {
     ElMessage.warning('呈文内容不存在')

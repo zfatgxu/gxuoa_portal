@@ -1,72 +1,74 @@
-import { createApp } from 'vue'
-import App from './App.vue'
-import router from './router'
-import { store } from '@/store'
-// import { setupDirectives } from '@/directives' // 目录不存在，暂时注释
+// 引入unocss css
+import '@/plugins/unocss'
 
-// 引入token刷新管理器
-import { initTokenRefresh } from '@/utils/tokenRefresh'
-
-// 引入样式文件
-import './assets/css/meeting.css'
-import './assets/styles/loading.css'
-import './assets/styles/meeting-form.css'
-import './assets/styles/meeting-topics.css'
-
-// 引入 bootstrap
-import 'bootstrap/dist/js/bootstrap.bundle.min.js'
-import 'bootstrap/dist/css/bootstrap.min.css'
-import 'bootstrap-icons/font/bootstrap-icons.css'
-
-// 引入全局样式
-import '@/styles/index.scss'
-
-// 引入文档样式
-import '@/styles/document.css'
+// 导入全局的svg图标
+import '@/plugins/svgIcon'
 
 // 初始化多语言
-import { setupI18n } from '@/plugins/vueI18n'  
+import { setupI18n } from '@/plugins/vueI18n'
+
+// 引入状态管理
+import { setupStore } from '@/store'
 
 // 全局组件
-// import { setupGlobCom } from '@/components' // 可能没有导出此函数，暂时注释
+import { setupGlobCom } from '@/components'
 
 // 引入 element-plus
 import { setupElementPlus } from '@/plugins/elementPlus'
 
 // 引入 form-create
-//import { setupFormCreate } from '@/plugins/formCreate'
+import { setupFormCreate } from '@/plugins/formCreate'
 
-// 引入动画库
-import 'animate.css'
+// 引入全局样式
+import '@/styles/index.scss'
 
-// 引入 Uno.css
-import 'uno.css'
-// 引入 SVG 图标
-import 'virtual:svg-icons-register'
+// 引入动画
+import '@/plugins/animate.css'
 
-// 使用异步函数初始化应用
-const bootstrap = async () => {
+// 路由
+import router, { setupRouter } from '@/router'
+
+// 指令
+import { setupAuth, setupMountedFocus } from '@/directives'
+
+import { createApp } from 'vue'
+
+import App from './App.vue'
+
+import './permission'
+
+import '@/plugins/tongji' // 百度统计
+import Logger from '@/utils/Logger'
+
+import VueDOMPurifyHTML from 'vue-dompurify-html' // 解决v-html 的安全隐患
+import 'bootstrap-icons/font/bootstrap-icons.css'
+// 创建实例
+const setupAll = async () => {
   const app = createApp(App)
-  // 使用路由
-  app.use(router)
-  // 初始化 i18n
+
   await setupI18n(app)
 
-  
-   
-  // 初始化Element Plus并设置为中文
+  setupStore(app)
+
+  setupGlobCom(app)
+
   setupElementPlus(app)
-  // 初始化 store
-  app.use(store)
-  // 初始化全局组件
-  // setupGlobCom(app) // 暂时注释
-  // 初始化 form-create
-  //setupFormCreate(app)
-  
-  // 初始化token刷新管理器（如果用户已登录）
-  initTokenRefresh()
-  
+
+  setupFormCreate(app)
+
+  setupRouter(app)
+
+  // directives 指令
+  setupAuth(app)
+  setupMountedFocus(app)
+
+  await router.isReady()
+
+  app.use(VueDOMPurifyHTML)
+
   app.mount('#app')
 }
 
-bootstrap()
+setupAll()
+
+Logger.prettyPrimary(`欢迎使用`, import.meta.env.VITE_APP_TITLE)

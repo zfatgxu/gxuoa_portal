@@ -239,8 +239,6 @@ const disabledClick = () => {
 </template>
 
 <style lang="scss" scoped>
-@use "@/styles/variables.scss" as *;
-
 $prefix-cls: #{$namespace}-qrcode;
 
 .#{$prefix-cls} {

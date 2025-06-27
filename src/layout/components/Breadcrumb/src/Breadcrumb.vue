@@ -98,6 +98,7 @@ $prefix-cls: #{$elNamespace}-breadcrumb;
       display: flex;
       align-items: center;
       color: var(--top-header-text-color);
+      font-size: 16px;
 
       &:hover {
         color: var(--el-color-primary);
@@ -108,6 +109,7 @@ $prefix-cls: #{$elNamespace}-breadcrumb;
   :deep(.#{$prefix-cls}__item):not(:last-child) {
     .#{$prefix-cls}__inner {
       color: var(--top-header-text-color);
+      font-size: 16px;
 
       &:hover {
         color: var(--el-color-primary);
@@ -120,6 +122,7 @@ $prefix-cls: #{$elNamespace}-breadcrumb;
       display: flex;
       align-items: center;
       color: var(--el-text-color-placeholder);
+      font-size: 16px;
 
       &:hover {
         color: var(--el-text-color-placeholder);

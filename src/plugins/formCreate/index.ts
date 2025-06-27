@@ -65,7 +65,7 @@ import install from '@form-create/element-ui/auto-import'
 //======================= 自定义组件 =======================
 import { UploadFile, UploadImg, UploadImgs } from '@/components/UploadFile'
 import { useApiSelect } from '@/components/FormCreate'
-import { TEditor } from '@/components/Tinymce'
+import { Editor } from '@/components/Editor'
 import DictSelect from '@/components/FormCreate/src/components/DictSelect.vue'
 
 const UserSelect = useApiSelect({
@@ -116,7 +116,7 @@ const components = [
   UserSelect,
   DeptSelect,
   ApiSelect,
-  TEditor,
+  Editor,
   ElCollapse,
   ElCollapseItem,
   ElCard,

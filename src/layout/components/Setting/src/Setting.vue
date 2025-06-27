@@ -55,6 +55,18 @@ const setHeaderTheme = (color: string) => {
   }
 }
 
+// 在组件挂载后直接设置主题
+onMounted(() => {
+  // 设置系统主题色（主色调，用于按钮、链接等强调色）
+// 系统主色（按钮/链接/强调）
+setSystemTheme('#2C6AA0') // 天蓝，明快清新
+
+
+
+
+
+})
+
 // 菜单主题相关
 const menuTheme = ref(appStore.getTheme.leftMenuBgColor || '')
 
@@ -193,8 +205,33 @@ const copyConfig = async () => {
 const clear = () => {
   const { wsCache } = useCache()
   wsCache.delete(CACHE_KEY.LAYOUT)
-  wsCache.delete(CACHE_KEY.THEME)
   wsCache.delete(CACHE_KEY.IS_DARK)
+  // 保留主题设置，不删除主题缓存
+  // wsCache.delete(CACHE_KEY.THEME)
+  
+  // 重新加载页面前，确保主题颜色设置永不失效
+  const systemColor = '#2C6AA0' // 天蓝，明快清新
+ 
+  
+  // 直接设置主题色，不依赖缓存
+  setCssVar('--el-color-primary', systemColor)
+  setCssVar('--top-header-bg-color', headerColor)
+  
+  // 如果不是顶部布局，设置菜单主题色
+  if (layout.value !== 'top') {
+    const isDarkColor = colorIsDark(menuColor)
+    setCssVar('--left-menu-bg-color', menuColor)
+    // 保存主题设置到缓存，确保刷新后仍然生效
+    appStore.setTheme({
+      elColorPrimary: systemColor,
+      topHeaderBgColor: headerColor,
+      leftMenuBgColor: menuColor,
+      // 其他必要的主题设置...
+      leftMenuBgLightColor: isDarkColor ? lighten(menuColor, 6) : menuColor
+    })
+    appStore.setCssVarTheme()
+  }
+  
   window.location.reload()
 }
 </script>
@@ -223,57 +260,30 @@ const clear = () => {
       <LayoutRadioPicker />
 
       <!-- 系统主题 -->
-      <ElDivider>{{ t('setting.systemTheme') }}</ElDivider>
-      <ColorRadioPicker
-        v-model="systemTheme"
-        :schema="[
-          '#409eff',
-          '#009688',
-          '#536dfe',
-          '#ff5c93',
-          '#ee4f12',
-          '#0096c7',
-          '#9c27b0',
-          '#ff9800'
-        ]"
-        @change="setSystemTheme"
-      />
+<ElDivider>{{ t('setting.systemTheme') }}</ElDivider>
+<ColorRadioPicker
+  v-model="systemTheme"
+  :schema="['#2C6AA0']"
+  @change="setSystemTheme"
+/>
 
-      <!-- 头部主题 -->
-      <ElDivider>{{ t('setting.headerTheme') }}</ElDivider>
-      <ColorRadioPicker
-        v-model="headerTheme"
-        :schema="[
-          '#fff',
-          '#151515',
-          '#5172dc',
-          '#e74c3c',
-          '#24292e',
-          '#394664',
-          '#009688',
-          '#383f45'
-        ]"
-        @change="setHeaderTheme"
-      />
+<!-- 头部主题 -->
+<ElDivider>{{ t('setting.headerTheme') }}</ElDivider>
+<ColorRadioPicker
+  v-model="headerTheme"
+  :schema="['#ffffff']"
+  @change="setHeaderTheme"
+/>
 
-      <!-- 菜单主题 -->
-      <template v-if="layout !== 'top'">
-        <ElDivider>{{ t('setting.menuTheme') }}</ElDivider>
-        <ColorRadioPicker
-          v-model="menuTheme"
-          :schema="[
-            '#fff',
-            '#001529',
-            '#212121',
-            '#273352',
-            '#191b24',
-            '#383f45',
-            '#001628',
-            '#344058'
-          ]"
-          @change="setMenuTheme"
-        />
-      </template>
+<!-- 菜单主题 -->
+<template v-if="layout !== 'top'">
+  <ElDivider>{{ t('setting.menuTheme') }}</ElDivider>
+  <ColorRadioPicker
+    v-model="menuTheme"
+    :schema="['#001529']"
+    @change="setMenuTheme"
+  />
+</template>
     </div>
 
     <!-- 界面显示 -->

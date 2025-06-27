@@ -17,13 +17,13 @@ export interface DictTypeType {
   dictValue: DictValueType[]
 }
 export interface DictState {
-  dictMap: Record<string, any>
+  dictMap: Map<string, any>
   isSetDict: boolean
 }
 
 export const useDictStore = defineStore('dict', {
   state: (): DictState => ({
-    dictMap: {},
+    dictMap: new Map<string, any>(),
     isSetDict: false
   }),
   getters: {
@@ -46,10 +46,9 @@ export const useDictStore = defineStore('dict', {
         this.isSetDict = true
       } else {
         const res = await getSimpleDictDataList()
-        
         // 设置数据
         const dictDataMap = new Map<string, any>()
-        res.data.forEach((dictData: DictDataVO) => {
+        res.forEach((dictData: DictDataVO) => {
           // 获得 dictType 层级
           const enumValueObj = dictDataMap[dictData.dictType]
           if (!enumValueObj) {
@@ -66,22 +65,9 @@ export const useDictStore = defineStore('dict', {
         this.dictMap = dictDataMap
         this.isSetDict = true
         wsCache.set(CACHE_KEY.DICT_CACHE, dictDataMap, { exp: 60 }) // 60 秒 过期
-        console.log("dictMap", dictDataMap)
       }
-      // 初始化字典数据
-      const initDict = () => {
-        // 添加会议状态字典
-        const meetingStatusDict = [
-          { label: '未开始', value: 0, colorType: 'info' },
-          { label: '进行中', value: 1, colorType: 'success' },
-          { label: '已结束', value: 2, colorType: 'warning' }
-        ]
-        this.dictMap['oa_meeting_status'] = meetingStatusDict
-      }
-      initDict()
     },
     getDictByType(type: string) {
-      
       if (!this.isSetDict) {
         this.setDictMap()
       }
@@ -90,10 +76,9 @@ export const useDictStore = defineStore('dict', {
     async resetDict() {
       wsCache.delete(CACHE_KEY.DICT_CACHE)
       const res = await getSimpleDictDataList()
-      
       // 设置数据
       const dictDataMap = new Map<string, any>()
-      res.data.forEach((dictData: DictDataVO) => {
+      res.forEach((dictData: DictDataVO) => {
         // 获得 dictType 层级
         const enumValueObj = dictDataMap[dictData.dictType]
         if (!enumValueObj) {

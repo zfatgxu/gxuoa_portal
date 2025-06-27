@@ -3,27 +3,16 @@
     <el-row class="gap2" v-loading="formLoading">
       <el-col :span="6">
         <ContentWrap class="h-1/1">
-          <el-input
-            v-model="deptFilterText"
-            placeholder="搜索部门"
-            clearable
-            prefix-icon="Search"
-            class="mb-2"
+          <el-tree
+            ref="treeRef"
+            :data="deptTree"
+            :expand-on-click-node="false"
+            :props="defaultProps"
+            default-expand-all
+            highlight-current
+            node-key="id"
+            @node-click="handleNodeClick"
           />
-          <div class="dept-tree-container">
-            <el-tree
-              ref="treeRef"
-              :data="deptTree"
-              :expand-on-click-node="false"
-              :props="defaultProps"
-              highlight-current
-              node-key="id"
-              :filter-node-method="filterNode"
-              @node-click="handleNodeClick"
-              :current-node-key="currentDeptId"
-              class="custom-tree"
-            />
-          </div>
         </ContentWrap>
       </el-col>
       <el-col :span="17">
@@ -50,15 +39,9 @@
   </Dialog>
 </template>
 <script lang="ts" setup>
-import ContentWrap from '@/components/ContentWrap/src/ContentWrap.vue'
-import Dialog from '@/components/Dialog/src/Dialog.vue' 
 import { defaultProps, handleTree } from '@/utils/tree'
 import * as DeptApi from '@/api/system/dept'
-import UserApi from '@/api/user'
-import { useI18n } from 'vue-i18n'
-import { useMessage } from '@/hooks/web/useMessage'
-import { ref, computed, watch } from 'vue'
-import { ElTree } from 'element-plus'
+import * as UserApi from '@/api/system/user'
 
 defineOptions({ name: 'UserSelectForm' })
 const emit = defineEmits<{
@@ -73,9 +56,6 @@ const filteredUserList = ref<UserApi.UserVO[]>([]) // 当前部门过滤后的�
 const selectedUserIdList: any = ref([]) // 选中的用户列表
 const dialogVisible = ref(false) // 弹窗的是否展示
 const formLoading = ref(false) // 表单的加载中
-const deptFilterText = ref('') // 部门搜索关键词
-const treeRef = ref<InstanceType<typeof ElTree>>() // 树形组件引用
-const currentDeptId = ref<number>() // 当前选中的部门ID
 const activityId = ref()
 
 /** 计算属性：合并已选择的用户和当前部门过滤后的用户 */
@@ -101,10 +81,10 @@ const open = async (id: number, selectedList?: any[]) => {
 
   // 加载部门、用户列表
   const deptData = await DeptApi.getSimpleDeptList()
-  deptList.value = deptData.data // 保存扁平结构的部门数据
-  deptTree.value = handleTree(deptData.data) // 转换成树形结构
-  const userData = await UserApi.getSimpleUserList()
-  userList.value = userData.data
+  deptList.value = deptData // 保存扁平结构的部门数据
+  deptTree.value = handleTree(deptData) // 转换成树形结构
+  userList.value = await UserApi.getSimpleUserList()
+
   // 初始状态下，过滤列表等于所有用户列表
   filteredUserList.value = [...userList.value]
   selectedUserIdList.value = selectedList?.map((item: any) => item.id) || []
@@ -144,7 +124,7 @@ const filterUserList = async (deptId?: number) => {
 /** 提交选择 */
 const submitForm = async () => {
   try {
-    //message.success(t('common.updateSuccess'))
+    message.success(t('common.updateSuccess'))
     dialogVisible.value = false
     // 从所有用户列表中筛选出已选择的用户
     const emitUserList = userList.value.filter((user: any) =>
@@ -165,26 +145,10 @@ const resetForm = () => {
   selectedUserIdList.value = []
 }
 
-/** 点击部门树节点 */
-const handleNodeClick = (row: any) => {
-  console.log('选中部门:', row)
-  // 设置当前选中的部门ID
-  currentDeptId.value = row.id
-  // 高亮显示当前选中节点
-  treeRef.value?.setCurrentKey(row.id)
+/** 处理部门被点击 */
+const handleNodeClick = (row: { [key: string]: any }) => {
   filterUserList(row.id)
 }
-
-/** 过滤部门树节点 */
-const filterNode = (value: string, data: any) => {
-  if (!value) return true
-  return data.name.toLowerCase().includes(value.toLowerCase())
-}
-
-// 监听部门搜索关键词变化，实时过滤部门树
-watch(deptFilterText, (val) => {
-  treeRef.value?.filter(val)
-})
 
 defineExpose({ open }) // 提供 open 方法，用于打开弹窗
 </script>
@@ -202,36 +166,6 @@ defineExpose({ open }) // 提供 open 方法，用于打开弹窗
     .el-transfer__button:nth-child(2) {
       margin: 0;
     }
-  }
-}
-
-.dept-tree-container {
-  height: 400px;
-  overflow-y: auto;
-  border: 1px solid #e4e7ed;
-  border-radius: 4px;
-  padding: 5px;
-}
-
-/* 自定义树节点样式，增强选中效果 */
-:deep(.custom-tree) {
-  .el-tree-node__content {
-    cursor: pointer; /* 将鼠标样式改为指针形状 */
-  }
-  
-  .el-tree-node.is-current > .el-tree-node__content {
-    background-color: #409eff !important;
-    color: #ffffff !important;
-    font-weight: bold;
-  }
-  
-  .el-tree-node__content:hover {
-    background-color: #f5f7fa;
-  }
-  
-  .el-tree-node:focus > .el-tree-node__content {
-    background-color: #409eff !important;
-    color: #ffffff !important;
   }
 }
 </style>

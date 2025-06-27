@@ -44,7 +44,6 @@
 import * as UserApi from '@/api/system/user'
 import { getAccessToken, getTenantId } from '@/utils/auth'
 import download from '@/utils/download'
-import { ElMessageBox } from 'element-plus'
 
 defineOptions({ name: 'SystemUserImportForm' })
 
@@ -93,48 +92,19 @@ const submitFormSuccess = (response: any) => {
   }
   // 拼接提示语
   const data = response.data
-  
-  // 使用纯文本格式并确保正确的换行
-  let lines = []
-  
-  // 上传成功部分
-  lines.push(`上传成功数量： ${data.createUsernames.length}`)
-  if (data.createUsernames.length > 0) {
-    lines.push('成功用户：')
-    data.createUsernames.forEach(username => {
-      lines.push(`    ${username}`)
-    })
-    lines.push('')  // 添加空行
+  let text = '上传成功数量：' + data.createUsernames.length + ';'
+  for (let username of data.createUsernames) {
+    text += '< ' + username + ' >'
   }
-  
-  // 更新成功部分
-  lines.push(`更新成功数量： ${data.updateUsernames.length}`)
-  if (data.updateUsernames.length > 0) {
-    lines.push('更新用户：')
-    data.updateUsernames.forEach(username => {
-      lines.push(`    ${username}`)
-    })
-    lines.push('')  // 添加空行
+  text += '更新成功数量：' + data.updateUsernames.length + ';'
+  for (const username of data.updateUsernames) {
+    text += '< ' + username + ' >'
   }
-  
-  // 更新失败部分
-  lines.push(`更新失败数量： ${Object.keys(data.failureUsernames).length}`)
-  if (Object.keys(data.failureUsernames).length > 0) {
-    lines.push('失败原因：')
-    for (const username in data.failureUsernames) {
-      lines.push(`    ${username}: ${data.failureUsernames[username]}`)
-    }
+  text += '更新失败数量：' + Object.keys(data.failureUsernames).length + ';'
+  for (const username in data.failureUsernames) {
+    text += '< ' + username + ': ' + data.failureUsernames[username] + ' >'
   }
-  
-  // 将所有行连接成HTML格式的字符串
-  const htmlText = `<pre style="margin: 0; white-space: pre-wrap; font-family: inherit;">${lines.join('\n')}</pre>`
-  
-  // 使用ElementUI的MessageBox显示文本
-  ElMessageBox.alert(htmlText, '系统提示', {
-    dangerouslyUseHTMLString: true,
-    confirmButtonText: '确定',
-    callback: () => {}
-  })
+  message.alert(text)
   formLoading.value = false
   dialogVisible.value = false
   // 发送操作成功的事件

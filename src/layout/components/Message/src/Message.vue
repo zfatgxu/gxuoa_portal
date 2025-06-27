@@ -2,6 +2,7 @@
 import { formatDate } from '@/utils/formatTime'
 import * as NotifyMessageApi from '@/api/system/notify/message'
 import { useUserStoreWithOut } from '@/store/modules/user'
+import MyNotifyMessageDetail from '@/views/system/notify/my/MyNotifyMessageDetail.vue'
 
 defineOptions({ name: 'Message' })
 
@@ -10,6 +11,7 @@ const userStore = useUserStoreWithOut()
 const activeName = ref('notice')
 const unreadCount = ref(0) // 未读消息数量
 const list = ref<any[]>([]) // 消息列表
+const messageDetailRef = ref() // 消息详情组件引用
 
 // 获得消息列表
 const getList = async () => {
@@ -32,6 +34,20 @@ const goMyList = () => {
   })
 }
 
+const detailRef = ref()
+const openDetail = (data: NotifyMessageApi.NotifyMessageVO) => {
+  if (!data.readStatus) {
+    handleReadOne(data.id)
+  }
+  detailRef.value.open(data)
+}
+
+/** 标记一条站内信已读 */
+const handleReadOne = async (id) => {
+  await NotifyMessageApi.updateNotifyMessageRead(id)
+  await getList()
+}
+
 // ========== 初始化 =========
 onMounted(() => {
   // 首次加载小红点
@@ -45,7 +61,7 @@ onMounted(() => {
         unreadCount.value = 0
       }
     },
-    1000 * 60 * 2
+    1000 * 6
   )
 })
 </script>
@@ -54,14 +70,14 @@ onMounted(() => {
     <ElPopover :width="400" placement="bottom" trigger="click">
       <template #reference>
         <ElBadge :is-dot="unreadCount > 0" class="item">
-          <Icon :size="18" class="cursor-pointer" icon="ep:bell" @click="getList" />
+          <Icon :size="18" class="cursor-pointer" color="#ffffff" icon="ep:bell" @click="getList" />
         </ElBadge>
       </template>
       <ElTabs v-model="activeName">
-        <ElTabPane label="我的站内信" name="notice">
+        <ElTabPane label="我的消息" name="notice">
           <el-scrollbar class="message-list">
             <template v-for="item in list" :key="item.id">
-              <div class="message-item">
+              <div class="message-item" @click="openDetail(item)">
                 <img alt="" class="message-icon" src="@/assets/imgs/avatar.gif" />
                 <div class="message-content">
                   <span class="message-title">
@@ -81,6 +97,8 @@ onMounted(() => {
         <XButton preIcon="ep:view" title="查看全部" type="primary" @click="goMyList" />
       </div>
     </ElPopover>
+    <!-- 表单弹窗：详情 -->
+  <MyNotifyMessageDetail ref="detailRef" />
   </div>
 </template>
 <style lang="scss" scoped>
@@ -127,6 +145,9 @@ onMounted(() => {
         color: var(--el-text-color-secondary);
       }
     }
+  }
+  .message-item:hover {
+    background-color: var(--el-color-primary-light-9);
   }
 }
 </style>

@@ -1,62 +1,88 @@
-// vite.config.ts
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import path from 'path'
-import AutoImport from 'unplugin-auto-import/vite'
-import Components from 'unplugin-vue-components/vite'
-import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
-import { createSvgIconsPlugin } from 'vite-plugin-svg-icons'
+import {resolve} from 'path'
+import type {ConfigEnv, UserConfig} from 'vite'
+import {loadEnv} from 'vite'
+import {createVitePlugins} from './build/vite'
+import {exclude, include} from "./build/vite/optimize"
+// 当前执行node命令时文件夹的地址(工作目录)
+const root = process.cwd()
 
-// 使用动态导入方式引入 UnoCSS
-export default defineConfig(async () => {
-  const UnoCSS = (await import('unocss/vite')).default
+// 路径查找
+function pathResolve(dir: string) {
+    return resolve(root, '.', dir)
+}
 
-  return {
-    plugins: [
-      vue(),
-      AutoImport({
-        resolvers: [ElementPlusResolver()],
-      }),
-      Components({
-        resolvers: [ElementPlusResolver()], 
-      }),
-      UnoCSS(),
-      createSvgIconsPlugin({
-        iconDirs: [path.resolve(process.cwd(), 'src/assets/icons')],
-        symbolId: 'icon-[dir]-[name]', 
-      }),
-    ],
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, 'src'), // 路径别名设置
-      }
-    },
-    css: {
-      preprocessorOptions: {
-        scss: {
-          additionalData: '@use "@/styles/variables.scss" as *;'
-        }
-      }
-    },
-    server: {
-      port: 5173,
-      proxy: {
-        '/app-api': {
-          // target: 'http://172.19.97.157:48080',
-          target: 'http://127.0.0.1:48080',
-          changeOrigin: true,
-          rewrite: (path) => {
-            // 如果路径中包含 /system，就把 /app-api 替换成 /admin-api
-            if (path.includes('/system/')) {
-              console.log('原始路径：', path);
-              const newPath = path.replace(/^\/app-api/, '/admin-api');
-              console.log('重写后路径：', newPath);
-              return newPath;
-            }
-            return path;
-          }
-        }
-      }    
+// https://vitejs.dev/config/
+export default ({command, mode}: ConfigEnv): UserConfig => {
+    let env = {} as any
+    const isBuild = command === 'build'
+    if (!isBuild) {
+        env = loadEnv((process.argv[3] === '--mode' ? process.argv[4] : process.argv[3]), root)
+    } else {
+        env = loadEnv(mode, root)
     }
-  }
-})
+    return {
+        base: env.VITE_BASE_PATH,
+        root: root,
+        // 服务端渲染
+        server: {
+            port: env.VITE_PORT, // 端口号
+            host: "0.0.0.0",
+            open: env.VITE_OPEN === 'true',
+            //本地跨域代理. 目前注释的原因：暂时没有用途，server 端已经支持跨域
+            proxy: {
+              ['/app-api']: {
+                target: env.VITE_BASE_URL,
+                ws: false,
+                changeOrigin: true,
+                //rewrite: (path) => path.replace(new RegExp(`^/admin-api`), ''),
+              },
+            },
+        },
+        // 项目使用的vite插件。 单独提取到build/vite/plugin中管理
+        plugins: createVitePlugins(),
+        css: {
+            preprocessorOptions: {
+                scss: {
+                    additionalData: '@use "@/styles/variables.scss" as *;',
+                    javascriptEnabled: true,
+                    silenceDeprecations: ["legacy-js-api"], // 参考自 https://stackoverflow.com/questions/78997907/the-legacy-js-api-is-deprecated-and-will-be-removed-in-dart-sass-2-0-0
+                }
+            }
+        },
+        resolve: {
+            extensions: ['.mjs', '.js', '.ts', '.jsx', '.tsx', '.json', '.scss', '.css'],
+            alias: [
+                {
+                    find: 'vue-i18n',
+                    replacement: 'vue-i18n/dist/vue-i18n.cjs.js'
+                },
+                {
+                    find: /\@\//,
+                    replacement: `${pathResolve('src')}/`
+                }
+            ]
+        },
+        build: {
+            minify: 'terser',
+            outDir: env.VITE_OUT_DIR || 'dist',
+            sourcemap: env.VITE_SOURCEMAP === 'true' ? 'inline' : false,
+            // brotliSize: false,
+            terserOptions: {
+                compress: {
+                    drop_debugger: env.VITE_DROP_DEBUGGER === 'true',
+                    drop_console: env.VITE_DROP_CONSOLE === 'true'
+                }
+            },
+            rollupOptions: {
+                output: {
+                    manualChunks: {
+                      echarts: ['echarts'], // 将 echarts 单独打包，参考 https://gitee.com/yudaocode/yudao-ui-admin-vue3/issues/IAB1SX 讨论
+                      'form-create': ['@form-create/element-ui'], // 参考 https://github.com/yudaocode/yudao-ui-admin-vue3/issues/148 讨论
+                      'form-designer': ['@form-create/designer'],
+                    }
+                },
+            },
+        },
+        optimizeDeps: {include, exclude}
+    }
+}

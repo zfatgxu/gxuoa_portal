@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { ElMessageBox } from 'element-plus'
 
-import avatarImg from '@/assets/imgs/avatar.png'
+import avatarImg from '@/assets/imgs/avatar.gif'
 import { useDesign } from '@/hooks/web/useDesign'
 import { useTagsViewStore } from '@/store/modules/tagsView'
 import { useUserStore } from '@/store/modules/user'
@@ -68,14 +68,14 @@ const toDocument = () => {
           <Icon icon="ep:tools" />
           <div @click="toProfile">{{ t('common.profile') }}</div>
         </ElDropdownItem>
-        <ElDropdownItem>
-          <Icon icon="ep:menu" />
+        <!-- <ElDropdownItem> -->
+          <!-- <Icon icon="ep:menu" />
           <div @click="toDocument">{{ t('common.document') }}</div>
         </ElDropdownItem>
         <ElDropdownItem divided>
           <Icon icon="ep:lock" />
           <div @click="lockScreen">{{ t('lock.lockScreen') }}</div>
-        </ElDropdownItem>
+        </ElDropdownItem> -->
         <ElDropdownItem divided @click="loginOut">
           <Icon icon="ep:switch-button" />
           <div>{{ t('common.loginOut') }}</div>

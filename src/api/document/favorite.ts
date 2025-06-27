@@ -1,4 +1,4 @@
-import request from '../index'
+import request from '@/config/axios'
 
 export interface DocumentFavoriteCreateReqVO {
   documentId: number
@@ -12,46 +12,42 @@ export interface DocumentFavoritePageReqVO {
   createTime?: Date[]
 }
 
-const documentFavoriteApi = {
-  // 创建公文收藏
-  createDocumentFavorite: (data: DocumentFavoriteCreateReqVO) =>
-    request({
-      url: '/document/favorite/create',
-      method: 'post',
-      data
-    }),
-
-  // 删除公文收藏
-  deleteDocumentFavorite: (id: number) =>
-    request({
-      url: '/document/favorite/delete',
-      method: 'delete',
-      params: { id }
-    }),
-
-  // 取消收藏公文
-  cancelDocumentFavorite: (documentId: number) =>
-    request({
-      url: '/document/favorite/cancel',
-      method: 'delete',
-      params: { documentId }
-    }),
-
-  // 获取公文收藏分页
-  getDocumentFavoritePage: (params: DocumentFavoritePageReqVO) =>
-    request({
-      url: '/document/favorite/page',
-      method: 'get',
-      params
-    }),
-
-  // 检查是否已收藏公文
-  isFavorite: (documentId: number) =>
-    request({
-      url: '/document/favorite/is-favorite',
-      method: 'get',
-      params: { documentId }
-    })
+// 创建公文收藏
+export const createDocumentFavorite = async (data: DocumentFavoriteCreateReqVO) => {
+  return await request.post({
+    url: '/document/favorite/create',
+    data
+  })
 }
 
-export default documentFavoriteApi
+// 删除公文收藏
+export const deleteDocumentFavorite = async (id: number) => {
+  return await request.delete({
+    url: '/document/favorite/delete',
+    params: { id }
+  })
+}
+
+// 取消收藏公文
+export const cancelDocumentFavorite = async (documentId: number) => {
+  return await request.delete({
+    url: '/document/favorite/cancel',
+    params: { documentId }
+  })
+}
+
+// 获取公文收藏分页
+export const getDocumentFavoritePage = async (params: DocumentFavoritePageReqVO) => {
+  return await request.get({
+    url: '/document/favorite/page',
+    params
+  })
+}
+
+// 检查是否已收藏公文
+export const isFavorite = async (documentId: number) => {
+  return await request.get({
+    url: '/document/favorite/is-favorite',
+    params: { documentId }
+  })
+}

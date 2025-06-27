@@ -1,11 +1,12 @@
-import { defineStore } from 'pinia'
-import { store } from '../index'
-import { humpToUnderline, setCssVar } from '@/utils'
-import { ElMessage } from 'element-plus'
 import { CACHE_KEY, useCache } from '@/hooks/web/useCache'
 import { ElementPlusSize } from '@/types/elementPlus'
 import { LayoutType } from '@/types/layout'
 import { ThemeTypes } from '@/types/theme'
+import { humpToUnderline, setCssVar } from '@/utils'
+import { getCssColorVariable, hexToRGB, mix } from '@/utils/color'
+import { ElMessage } from 'element-plus'
+import { defineStore } from 'pinia'
+import { store } from '../index'
 
 const { wsCache } = useCache()
 
@@ -48,17 +49,17 @@ export const useAppStore = defineStore('app', {
       title: import.meta.env.VITE_APP_TITLE, // 标题
       pageLoading: false, // 路由跳转loading
 
-      breadcrumb: true, // 面包屑
-      breadcrumbIcon: true, // 面包屑图标
+      breadcrumb: false, // 面包屑
+      breadcrumbIcon: false, // 面包屑图标
       collapse: false, // 折叠菜单
       uniqueOpened: true, // 是否只保持一个子菜单的展开
       hamburger: true, // 折叠图标
-      screenfull: true, // 全屏图标
+      screenfull: false, // 全屏图标
       search: true, // 搜索图标
-      size: true, // 尺寸图标
-      locale: true, // 多语言图标
+      size: false, // 尺寸图标
+      locale: false, // 多语言图标
       message: true, // 消息图标
-      tagsView: true, // 标签页
+      tagsView: false, // 标签页
       tagsViewImmerse: false, // 标签页沉浸
       tagsViewIcon: true, // 是否显示标签图标
       logo: true, // logo
@@ -67,39 +68,55 @@ export const useAppStore = defineStore('app', {
       greyMode: false, // 是否开始灰色模式，用于特殊悼念日
       fixedMenu: wsCache.get('fixedMenu') || false, // 是否固定菜单
 
-      layout: wsCache.get(CACHE_KEY.LAYOUT) || 'classic', // layout布局
+      layout:  'topLeft', // layout布局
       isDark: wsCache.get(CACHE_KEY.IS_DARK) || false, // 是否是暗黑模式
       currentSize: wsCache.get('default') || 'default', // 组件尺寸
-      theme: wsCache.get(CACHE_KEY.THEME) || {
-        // 主题色
+      theme: {
+        // 主题色（主按钮、链接颜色）
         elColorPrimary: '#409eff',
+      
         // 左侧菜单边框颜色
         leftMenuBorderColor: 'inherit',
-        // 左侧菜单背景颜色
-        leftMenuBgColor: '#001529',
-        // 左侧菜单浅色背景颜色
-        leftMenuBgLightColor: '#0f2438',
-        // 左侧菜单选中背景颜色
-        leftMenuBgActiveColor: 'var(--el-color-primary)',
+      
+        // ✅ 左侧菜单背景颜色（更浅一点的蓝色，不压抑）
+        leftMenuBgColor: '#F0F7FF',
+      
+        // 左侧菜单浅色背景颜色（用于悬停/收起时的颜色）
+        leftMenuBgLightColor: '#F0F7FF',
+      
+        // ✅ 左侧菜单选中背景颜色（主色加深，突出当前选项）
+        leftMenuBgActiveColor: '#cce0ff',
+      
         // 左侧菜单收起选中背景颜色
-        leftMenuCollapseBgActiveColor: 'var(--el-color-primary)',
-        // 左侧菜单字体颜色
-        leftMenuTextColor: '#bfcbd9',
-        // 左侧菜单选中字体颜色
-        leftMenuTextActiveColor: '#fff',
+        leftMenuCollapseBgActiveColor: '#cce0ff',
+      
+        // ✅ 左侧菜单字体颜色（加深对比度）
+        leftMenuTextColor: '#000000',
+      
+        // ✅ 左侧菜单选中字体颜色（主色）
+        leftMenuTextActiveColor: '#2C6AA0',
+      
         // logo字体颜色
         logoTitleTextColor: '#fff',
+      
         // logo边框颜色
         logoBorderColor: 'inherit',
-        // 头部背景颜色
-        topHeaderBgColor: '#fff',
-        // 头部字体颜色
-        topHeaderTextColor: 'inherit',
+      
+        // ✅ 头部背景颜色（淡蓝清爽）
+        topHeaderBgColor: '#2C6AA0',
+      
+        // 头部字体颜色（深灰更易读）
+        topHeaderTextColor: '#fff',
+      
         // 头部悬停颜色
-        topHeaderHoverColor: '#f6f6f6',
-        // 头部边框颜色
-        topToolBorderColor: '#eee'
+        topHeaderHoverColor: '#2C6AA0',
+      
+        // 头部工具栏底部边框颜色
+        topToolBorderColor: '#dcdfe6'
       }
+      
+      
+      
     }
   },
   getters: {
@@ -183,6 +200,40 @@ export const useAppStore = defineStore('app', {
     }
   },
   actions: {
+    setPrimaryLight() {
+      if (this.theme.elColorPrimary) {
+        const elColorPrimary = this.theme.elColorPrimary
+        const color = this.isDark ? '#000000' : '#ffffff'
+        const lightList = [3, 5, 7, 8, 9]
+        lightList.forEach((v) => {
+          setCssVar(`--el-color-primary-light-${v}`, mix(color, elColorPrimary, v / 10))
+        })
+        setCssVar(`--el-color-primary-dark-2`, mix(color, elColorPrimary, 0.2))
+
+        this.setAllColorRgbVars()
+      }
+    },
+
+    // 处理element自带的主题色和辅助色的-rgb切换主题变化，如：--el-color-primary-rgb
+    setAllColorRgbVars() {
+      // 需要处理的颜色类型列表
+      const colorTypes = ['primary', 'success', 'warning', 'danger', 'error', 'info']
+
+      colorTypes.forEach((type) => {
+        // 获取当前颜色值
+        const colorValue = getCssColorVariable(`--el-color-${type}`)
+        if (colorValue) {
+          // 转换为rgba并提取RGB部分
+          const rgbaString = hexToRGB(colorValue, 1)
+          const rgbValues = rgbaString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i)
+          if (rgbValues) {
+            const [, r, g, b] = rgbValues
+            // 设置对应的RGB变量
+            setCssVar(`--el-color-${type}-rgb`, `${r}, ${g}, ${b}`)
+          }
+        }
+      })
+    },
     setBreadcrumb(breadcrumb: boolean) {
       this.breadcrumb = breadcrumb
     },
@@ -256,6 +307,7 @@ export const useAppStore = defineStore('app', {
         document.documentElement.classList.remove('dark')
       }
       wsCache.set(CACHE_KEY.IS_DARK, this.isDark)
+      this.setPrimaryLight()
     },
     setCurrentSize(currentSize: ElementPlusSize) {
       this.currentSize = currentSize
@@ -272,6 +324,7 @@ export const useAppStore = defineStore('app', {
       for (const key in this.theme) {
         setCssVar(`--${humpToUnderline(key)}`, this.theme[key])
       }
+      this.setPrimaryLight()
     },
     setFooter(footer: boolean) {
       this.footer = footer

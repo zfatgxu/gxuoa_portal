@@ -1,7 +1,7 @@
-import api from '../../index';
+import request from '@/config/axios'
 
-export type DictTypeVO = {
-  id: number | undefined
+export interface DictTypeVO {
+  id: number
   name: string
   type: string
   status: number
@@ -10,35 +10,44 @@ export type DictTypeVO = {
 }
 
 // 查询字典（精简)列表
-export const getSimpleDictTypeList = () => {
-  return api.get(`/app/dict-type/list-all-simple`)
+export const getSimpleDictTypeList = (): Promise<DictTypeVO[]> => {
+  return request.get({ url: '/system/dict-type/simple-list' })
 }
 
 // 查询字典列表
 export const getDictTypePage = (params: PageParam) => {
-  return api.get(`/app/dict-type/page`, { params })
+  return request.get({ url: '/system/dict-type/page', params })
 }
 
 // 查询字典详情
 export const getDictType = (id: number) => {
-  return api.get(`/app/dict-type/get?id=${id}`)
+  return request.get({ url: '/system/dict-type/get?id=' + id })
 }
 
 // 新增字典
 export const createDictType = (data: DictTypeVO) => {
-  return api.post(`/app/dict-type/create`, data)
+  return request.post({ url: '/system/dict-type/create', data })
 }
 
 // 修改字典
 export const updateDictType = (data: DictTypeVO) => {
-  return api.put(`/app/dict-type/update`, data)
+  return request.put({ url: '/system/dict-type/update', data })
 }
 
 // 删除字典
 export const deleteDictType = (id: number) => {
-  return api.delete(`/app/dict-type/delete?id=${id}`)  
+  return request.delete({ url: '/system/dict-type/delete?id=' + id })
 }
-// 导出字典类型
+
+// 批量删除字典类型
+export const deleteDictTypeList = (ids: number[]) => {
+  return request.delete({ url: '/system/dict-type/delete-list', params: { ids: ids.join(',') } })
+}
+
+// 导出字典
 export const exportDictType = (params) => {
-  return api.download(`/app/dict-type/export`, params)
+  return request.download({
+    url: '/system/dict-type/export-excel',
+    params
+  })
 }

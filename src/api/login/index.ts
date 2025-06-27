@@ -1,45 +1,85 @@
-import api from '../index'
-import { LoginParams, SmsLoginParams, LoginResponse, UserInfoVO } from './types'
+import request from '@/config/axios'
+import type { RegisterVO, UserLoginVO } from './types'
 
-// 账号密码登录
-export function login(data: LoginParams) {
-  return api.post(`/app/auth/login`, data)
+export interface SmsCodeVO {
+  mobile: string
+  scene: number
 }
 
-// 短信验证码登录
-export function smsLogin(data: SmsLoginParams) {
-  return api.post(`/app/auth/sms-login`, data)
+export interface SmsLoginVO {
+  mobile: string
+  code: string
 }
 
-// 发送短信验证码
-export function sendSmsCode(mobile: string) {
-  return api.post(`/app/auth/send-sms-code`, {
-    mobile,
-    scene: 1 // 1代表登录场景
-  })
+// 登录
+export const login = (data: UserLoginVO) => {
+  return request.post({ url: '/app/auth/login', data })
+}
+
+// 注册
+export const register = (data: RegisterVO) => {
+  return request.post({ url: '/app/auth/register', data })
+}
+
+// 使用租户名，获得租户编号
+export const getTenantIdByName = (name: string) => {
+  return request.get({ url: '/app/tenant/get-id-by-name?name=' + name })
+}
+
+// 使用租户域名，获得租户信息
+export const getTenantByWebsite = (website: string) => {
+  return request.get({ url: '/app/tenant/get-by-website?website=' + website })
 }
 
 // 登出
-export function logout() {
-  return api.post(`/app/auth/logout`)
+export const loginOut = () => {
+  return request.post({ url: '/app/auth/logout' })
 }
 
-// 刷新令牌
-export function refreshToken(refreshToken: string) {
-  return api.post(`/app/auth/refresh-token?refreshToken=${refreshToken}`)
+// 获取用户权限信息
+export const getInfo = () => {
+  return request.get({ url: '/app/user/permission' })
 }
 
-// 获取用户信息
-export function getInfo() {
-  return api.get('/app/user/get')
+//获取登录验证码
+export const sendSmsCode = (data: SmsCodeVO) => {
+  return request.post({ url: '/app/auth/send-sms-code', data })
 }
 
-//获取用户权限
-export function getPermissions() {
-  return api.get('/app/user/permission')
+// 短信验证码登录
+export const smsLogin = (data: SmsLoginVO) => {
+  return request.post({ url: '/app/auth/sms-login', data })
 }
 
-// 退出登录
-export function loginOut() {
-  return api.post('/app/auth/logout')
+// 社交快捷登录，使用 code 授权码
+export function socialLogin(type: string, code: string, state: string) {
+  return request.post({
+    url: '/app/auth/social-login',
+    data: {
+      type,
+      code,
+      state
+    }
+  })
+}
+
+// 社交授权的跳转
+export const socialAuthRedirect = (type: number, redirectUri: string) => {
+  return request.get({
+    url: '/app/auth/social-auth-redirect?type=' + type + '&redirectUri=' + redirectUri
+  })
+}
+// 获取验证图片以及 token
+export const getCode = (data: any) => {
+  return request.postOriginal({ url: 'app/captcha/get', data })
+}
+
+// 滑动或者点选验证
+export const reqCheck = (data: any) => {
+  return request.postOriginal({ url: 'app/captcha/check', data })
+}
+
+// 通过短信重置密码
+export const smsResetPassword = (data: any) => {
+  return request.post({ url: '/app/auth/reset-password', data })
 }

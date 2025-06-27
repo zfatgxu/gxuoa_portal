@@ -40,9 +40,6 @@
       <el-form-item label="邮箱" prop="email">
         <el-input v-model="formData.email" maxlength="50" placeholder="请输入邮箱" />
       </el-form-item>
-      <el-form-item label="简介" prop="brief">
-        <el-input v-model="formData.brief" type="textarea" maxlength="200" placeholder="请输入部门简介" />
-      </el-form-item>
       <el-form-item label="状态" prop="status">
         <el-select v-model="formData.status" clearable placeholder="请选择状态">
           <el-option
@@ -86,7 +83,6 @@ const formData = ref({
   leaderUserId: undefined,
   phone: undefined,
   email: undefined,
-  brief: undefined,
   status: CommonStatusEnum.ENABLE
 })
 const formRules = reactive<FormRules>({
@@ -162,7 +158,6 @@ const resetForm = () => {
     leaderUserId: undefined,
     phone: undefined,
     email: undefined,
-    brief: undefined,
     status: CommonStatusEnum.ENABLE
   }
   formRef.value?.resetFields()

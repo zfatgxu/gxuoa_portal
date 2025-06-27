@@ -1,6 +1,5 @@
 import type { App } from 'vue'
 import { useUserStore } from '@/store/modules/user'
-import { useI18n } from '@/hooks/web/useI18n'
 
 const { t } = useI18n() // 国际化
 

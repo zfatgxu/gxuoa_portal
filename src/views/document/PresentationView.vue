@@ -13,7 +13,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { DocumentApi } from '@/api/document/index'
+import * as DocumentApi from '@/api/document/document'
 import { ElMessage } from 'element-plus'
 
 const route = useRoute()
@@ -31,7 +31,7 @@ const getPresentationContent = async () => {
   loading.value = true
   try {
     const documentData = await DocumentApi.getDocument(documentId.value)
-    const data = documentData.data
+    const data = documentData
     if (data) {
       documentTitle.value = data.documentName || '呈文详情'
       presentationContent.value = data.presentationContent || ''

@@ -7,7 +7,7 @@
           placeholder="请输入公文标题" 
           clearable
           @keyup.enter="handleSearch"
-        ></el-input>
+        />
       </el-form-item>
       
       <el-form-item label="来文单位">
@@ -16,7 +16,7 @@
           placeholder="请输入来文单位" 
           clearable
           @keyup.enter="handleSearch"
-        ></el-input>
+        />
       </el-form-item>
       <el-form-item label="联系人">
         <el-input 
@@ -24,7 +24,7 @@
           placeholder="请输入联系人" 
           clearable
           @keyup.enter="handleSearch"
-        ></el-input>
+        />
       </el-form-item>
       <el-form-item label="电话">
         <el-input 
@@ -32,15 +32,15 @@
           placeholder="请输入联系人电话" 
           clearable
           @keyup.enter="handleSearch"
-        ></el-input>
+        />
       </el-form-item>
       
       <el-form-item>
         <el-button type="primary" @click="handleSearch" :loading="loading">
-          <el-icon><Search /></el-icon> 搜索
+           搜索
         </el-button>
         <el-button @click="handleReset">
-          <el-icon><Refresh /></el-icon> 重置
+           重置
         </el-button>
       </el-form-item>
     </el-form>

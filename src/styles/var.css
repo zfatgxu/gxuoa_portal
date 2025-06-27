@@ -11,16 +11,12 @@
 
   --left-menu-bg-active-color: var(--el-color-primary);
 
-  --left-menu-text-color: #bfcbd9;
+  --left-menu-text-color:rgb(15, 84, 163);
 
   --left-menu-text-active-color: #fff;
 
   --left-menu-collapse-bg-active-color: var(--el-color-primary);
   /* left menu end */
-  
-  /* textarea styles */
-  --textarea-enabled-bg-color: #fffbe6;
-  --textarea-disabled-bg-color: #ffffff;
 
   /* logo start */
   --logo-height: 50px;
@@ -57,6 +53,10 @@
   --app-footer-height: 50px;
 
   --transition-time-02: 0.2s;
+  
+  /* 全局通用变量 */
+  --border-color: #e6e6e6;
+  --primary-color: #2c6aa0;
 }
 
 .dark {

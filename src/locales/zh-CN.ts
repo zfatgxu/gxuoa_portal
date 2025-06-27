@@ -114,8 +114,8 @@ export default {
     small: '小'
   },
   login: {
-    welcome: '欢迎使用后台管理系统',
-    message: '',
+    welcome: '欢迎使用本系统',
+    message: '开箱即用的中后台管理系统',
     tenantname: '租户名称',
     username: '用户名',
     password: '密码',
@@ -142,9 +142,9 @@ export default {
     qrcode: '扫描二维码登录',
     btnRegister: '注册',
     SmsSendMsg: '验证码已发送',
-    resetPassword: "重置密码",
-    resetPasswordSuccess: "重置密码成功",
-    invalidTenantName: "无效的租户名称"
+    resetPassword: '重置密码',
+    resetPasswordSuccess: '重置密码成功',
+    invalidTenantName: '无效的租户名称'
   },
   captcha: {
     verification: '请完成安全验证',
@@ -198,7 +198,7 @@ export default {
   },
   workplace: {
     welcome: '你好',
-    happyDay: '',
+    happyDay: '祝你开心每一天!',
     toady: '今日晴',
     notice: '通知公告',
     project: '项目数',
@@ -416,9 +416,9 @@ export default {
     },
     info: {
       title: '基本信息',
-      basicInfo: '基本资料',
-      resetPwd: '修改密码',
-      userSocial: '社交信息'
+      basicInfo: '基本设置',
+      resetPwd: '密码设置',
+      userSocial: '社交绑定'
     },
     rules: {
       nickname: '请输入用户昵称',

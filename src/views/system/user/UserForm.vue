@@ -57,13 +57,6 @@
       </el-row>
       <el-row>
         <el-col :span="12">
-          <el-form-item label="工号" prop="workId">
-            <el-input v-model="formData.workId" placeholder="请输入工号" />
-          </el-form-item>
-        </el-col>
-      </el-row>
-      <el-row>
-        <el-col :span="12">
           <el-form-item label="用户性别">
             <el-select v-model="formData.sex" placeholder="请选择">
               <el-option

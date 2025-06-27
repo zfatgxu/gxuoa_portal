@@ -4,7 +4,7 @@ import Iconify from '@purge-icons/generated'
 import { useDesign } from '@/hooks/web/useDesign'
 
 defineOptions({ name: 'Icon' })
-import { ref, computed, unref, nextTick, watch } from 'vue'
+
 const { getPrefixCls } = useDesign()
 
 const prefixCls = getPrefixCls('icon')
