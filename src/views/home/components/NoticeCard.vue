@@ -1,12 +1,19 @@
 <template>
   <div class="card">
     <div class="card-header">
-      <div class="title"><i class="bi bi-bell me-2"></i>系统公告</div>
+      <div class="title"><i class="bi bi-bell me-2"></i>系统公告
+      
+        <div class="toggle-icon" style="margin-left: auto;" @click="toggleExpand">
+        <i class="bi bi-chevron-down" v-if="isExpanded">收起</i>
+        <i class="bi bi-chevron-up" v-else>展开</i>
+      </div>
+      </div>
+     
       <div class="more" @click="goToNoticeList">更多 <i class="bi bi-chevron-right"></i></div>
     </div>
-    <div class="card-body">
+    <div class="card-body" v-show="isExpanded">
       <div class="notice-list" v-if="noticeList && noticeList.length > 0">
-        <div class="notice-item" v-for="(item, index) in noticeList.slice(0, 3)" :key="index" @click="viewNotice(item)">
+        <div class="notice-item" v-for="(item, index) in noticeList.slice(0, props.noticelength)" :key="index" @click="viewNotice(item)">
           <div class="notice-badge" :class="getNoticeBadgeClass(item.type)">{{ getNoticeTypeText(item.type) }}</div>
           <div class="notice-content">
             <div class="notice-title">{{ item.title }}
@@ -32,6 +39,20 @@ import { ElMessage } from 'element-plus'
 // 定义事件
 const emit = defineEmits(['goToNoticeList', 'viewNotice'])
 
+// 控制卡片内容展开/收起的状态
+const isExpanded = ref(true)
+
+// 切换展开/收起状态
+const toggleExpand = () => {
+  isExpanded.value = !isExpanded.value
+}
+
+const props = defineProps({
+  noticelength: {
+    type: Number,
+    default: 5
+  }
+})
 // 通知列表数据
 const noticeList = ref([])
 const noticeListLoading = ref(false)
@@ -244,6 +265,19 @@ onMounted(() => {
 .card-header .title {
   color: var(--primary-color);
   font-size: 18px;
+  display: flex;
+  align-items: center;
+}
+
+.toggle-icon {
+  cursor: pointer;
+  margin-right: 5px;
+  font-size: 16px;
+  transition: transform 0.3s;
+}
+
+.toggle-icon:hover {
+  color: var(--primary-color);
 }
 
 .card-header .more {

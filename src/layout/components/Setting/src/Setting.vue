@@ -12,6 +12,8 @@ import { ThemeSwitch } from '@/layout/components/ThemeSwitch'
 import ColorRadioPicker from './components/ColorRadioPicker.vue'
 import InterfaceDisplay from './components/InterfaceDisplay.vue'
 import LayoutRadioPicker from './components/LayoutRadioPicker.vue'
+// 导入保存设置的API
+import { updateUserSetting } from '@/api/system/user/setting'
 
 defineOptions({ name: 'Setting' })
 
@@ -58,8 +60,7 @@ const setHeaderTheme = (color: string) => {
 // 在组件挂载后直接设置主题
 onMounted(() => {
   // 设置系统主题色（主色调，用于按钮、链接等强调色）
-// 系统主色（按钮/链接/强调）
-setSystemTheme('#2C6AA0') // 天蓝，明快清新
+
 
 
 
@@ -234,6 +235,26 @@ const clear = () => {
   
   window.location.reload()
 }
+
+// 保存设置到后端
+const saveSettingLoading = ref(false)
+const saveSettingToBackend = async () => {
+  try {
+    saveSettingLoading.value = true
+    
+    const settings = {
+      cardConfig: JSON.stringify(appStore.getCardSettings)
+    }
+    await updateUserSetting(settings)
+    
+    ElMessage.success('设置已成功保存到服务器')
+  } catch (error) {
+    console.error('保存设置失败:', error)
+    ElMessage.error('保存设置失败，请稍后重试')
+  } finally {
+    saveSettingLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -247,19 +268,20 @@ const clear = () => {
 
   <ElDrawer v-model="drawer" :z-index="4000" direction="rtl" size="350px">
     <template #header>
-      <span class="text-16px font-700">{{ t('setting.projectSetting') }}</span>
+      <!-- <span class="text-16px font-700">{{ t('setting.projectSetting') }}</span> -->
+      <span class="text-16px font-700">主页设置</span>
     </template>
 
-    <div class="text-center">
-      <!-- 主题 -->
+   <!-- <div class="text-center">
+      主题
       <ElDivider>{{ t('setting.theme') }}</ElDivider>
       <ThemeSwitch />
 
-      <!-- 布局 -->
+      布局 
       <ElDivider>{{ t('setting.layout') }}</ElDivider>
       <LayoutRadioPicker />
 
-      <!-- 系统主题 -->
+       系统主题
 <ElDivider>{{ t('setting.systemTheme') }}</ElDivider>
 <ColorRadioPicker
   v-model="systemTheme"
@@ -267,7 +289,7 @@ const clear = () => {
   @change="setSystemTheme"
 />
 
-<!-- 头部主题 -->
+ 头部主题 
 <ElDivider>{{ t('setting.headerTheme') }}</ElDivider>
 <ColorRadioPicker
   v-model="headerTheme"
@@ -275,7 +297,7 @@ const clear = () => {
   @change="setHeaderTheme"
 />
 
-<!-- 菜单主题 -->
+ 菜单主题
 <template v-if="layout !== 'top'">
   <ElDivider>{{ t('setting.menuTheme') }}</ElDivider>
   <ColorRadioPicker
@@ -284,15 +306,21 @@ const clear = () => {
     @change="setMenuTheme"
   />
 </template>
-    </div>
-
+    </div> -->
     <!-- 界面显示 -->
     <ElDivider>{{ t('setting.interfaceDisplay') }}</ElDivider>
     <InterfaceDisplay />
 
     <ElDivider />
     <div>
-      <ElButton class="w-full" type="primary" @click="copyConfig">{{ t('setting.copy') }}</ElButton>
+      <ElButton 
+        class="w-full" 
+        type="primary" 
+        :loading="saveSettingLoading"
+        @click="saveSettingToBackend"
+      >
+        保存设置到服务器
+      </ElButton>
     </div>
     <div class="mt-5px">
       <ElButton class="w-full" type="danger" @click="clear">

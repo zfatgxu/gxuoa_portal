@@ -2,6 +2,7 @@ import { CACHE_KEY, useCache } from '@/hooks/web/useCache'
 import { ElementPlusSize } from '@/types/elementPlus'
 import { LayoutType } from '@/types/layout'
 import { ThemeTypes } from '@/types/theme'
+import { CardSetting, CardSettings } from '@/types/card'
 import { humpToUnderline, setCssVar } from '@/utils'
 import { getCssColorVariable, hexToRGB, mix } from '@/utils/color'
 import { ElMessage } from 'element-plus'
@@ -38,85 +39,79 @@ interface AppState {
   footer: boolean
   theme: ThemeTypes
   fixedMenu: boolean
+  cardSettings: CardSettings
 }
 
 export const useAppStore = defineStore('app', {
   state: (): AppState => {
     return {
-      userInfo: 'userInfo', // 登录信息存储字段-建议每个项目换一个字段，避免与其他项目冲突
+      userInfo: 'userInfo', 
       sizeMap: ['default', 'large', 'small'],
-      mobile: false, // 是否是移动端
-      title: import.meta.env.VITE_APP_TITLE, // 标题
-      pageLoading: false, // 路由跳转loading
+      mobile: false, 
+      title: import.meta.env.VITE_APP_TITLE, 
+      pageLoading: false, 
 
-      breadcrumb: false, // 面包屑
-      breadcrumbIcon: false, // 面包屑图标
-      collapse: false, // 折叠菜单
-      uniqueOpened: true, // 是否只保持一个子菜单的展开
-      hamburger: true, // 折叠图标
-      screenfull: false, // 全屏图标
-      search: true, // 搜索图标
-      size: false, // 尺寸图标
-      locale: false, // 多语言图标
-      message: true, // 消息图标
-      tagsView: false, // 标签页
-      tagsViewImmerse: false, // 标签页沉浸
-      tagsViewIcon: true, // 是否显示标签图标
-      logo: true, // logo
-      fixedHeader: true, // 固定toolheader
-      footer: true, // 显示页脚
-      greyMode: false, // 是否开始灰色模式，用于特殊悼念日
-      fixedMenu: wsCache.get('fixedMenu') || false, // 是否固定菜单
+      breadcrumb: false, 
+      breadcrumbIcon: false, 
+      collapse: false, 
+      uniqueOpened: true, 
+      hamburger: true, 
+      screenfull: false, 
+      search: true, 
+      size: false, 
+      locale: false, 
+      message: true, 
+      tagsView: false, 
+      tagsViewImmerse: false, 
+      tagsViewIcon: true, 
+      logo: true, 
+      fixedHeader: true, 
+      footer: true, 
+      greyMode: false, 
+      fixedMenu: wsCache.get('fixedMenu') || false, 
 
-      layout:  'topLeft', // layout布局
-      isDark: wsCache.get(CACHE_KEY.IS_DARK) || false, // 是否是暗黑模式
-      currentSize: wsCache.get('default') || 'default', // 组件尺寸
+      cardSettings: {
+        todo: {
+          visible: wsCache.get('todoCardVisible') !== false,
+          limit: wsCache.get('todoCardLimit') || 5
+        },
+        notice: {
+          visible: wsCache.get('noticeCardVisible') !== false,
+          limit: wsCache.get('noticeCardLimit') || 5
+        },
+        shortcut: {
+          visible: wsCache.get('shortcutCardVisible') !== false,
+          limit: wsCache.get('shortcutCardLimit') || 5
+        },
+        schedule: {
+          visible: wsCache.get('scheduleCardVisible') !== false,
+          limit: wsCache.get('scheduleCardLimit') || 5
+        },
+        file: {
+          visible: wsCache.get('fileCardVisible') !== false,
+          limit: wsCache.get('fileCardLimit') || 5
+        }
+      },
+
+      layout:  'topLeft', 
+      isDark: false, 
+      currentSize: wsCache.get('default') || 'default', 
       theme: {
-        // 主题色（主按钮、链接颜色）
-        elColorPrimary: '#409eff',
-      
-        // 左侧菜单边框颜色
-        leftMenuBorderColor: 'inherit',
-      
-        // ✅ 左侧菜单背景颜色（更浅一点的蓝色，不压抑）
+        elColorPrimary: '#36a3f7',
+        leftMenuBorderColor: '#fff',
         leftMenuBgColor: '#F0F7FF',
-      
-        // 左侧菜单浅色背景颜色（用于悬停/收起时的颜色）
         leftMenuBgLightColor: '#F0F7FF',
-      
-        // ✅ 左侧菜单选中背景颜色（主色加深，突出当前选项）
         leftMenuBgActiveColor: '#cce0ff',
-      
-        // 左侧菜单收起选中背景颜色
         leftMenuCollapseBgActiveColor: '#cce0ff',
-      
-        // ✅ 左侧菜单字体颜色（加深对比度）
         leftMenuTextColor: '#000000',
-      
-        // ✅ 左侧菜单选中字体颜色（主色）
         leftMenuTextActiveColor: '#2C6AA0',
-      
-        // logo字体颜色
         logoTitleTextColor: '#fff',
-      
-        // logo边框颜色
         logoBorderColor: 'inherit',
-      
-        // ✅ 头部背景颜色（淡蓝清爽）
         topHeaderBgColor: '#2C6AA0',
-      
-        // 头部字体颜色（深灰更易读）
         topHeaderTextColor: '#fff',
-      
-        // 头部悬停颜色
         topHeaderHoverColor: '#2C6AA0',
-      
-        // 头部工具栏底部边框颜色
         topToolBorderColor: '#dcdfe6'
       }
-      
-      
-      
     }
   },
   getters: {
@@ -197,6 +192,24 @@ export const useAppStore = defineStore('app', {
     },
     getFooter(): boolean {
       return this.footer
+    },
+    getCardSettings(): CardSettings {
+      return this.cardSettings
+    },
+    getTodoCard(): CardSetting {
+      return this.cardSettings.todo || { visible: true, limit: 5 }
+    },
+    getNoticeCard(): CardSetting {
+      return this.cardSettings.notice || { visible: true, limit: 5 }
+    },
+    getShortcutCard(): CardSetting {
+      return this.cardSettings.shortcut || { visible: true, limit: 5 }
+    },
+    getScheduleCard(): CardSetting {
+      return this.cardSettings.schedule || { visible: true, limit: 5 }
+    },
+    getFileCard(): CardSetting {
+      return this.cardSettings.file || { visible: true, limit: 5 }
     }
   },
   actions: {
@@ -214,21 +227,16 @@ export const useAppStore = defineStore('app', {
       }
     },
 
-    // 处理element自带的主题色和辅助色的-rgb切换主题变化，如：--el-color-primary-rgb
     setAllColorRgbVars() {
-      // 需要处理的颜色类型列表
       const colorTypes = ['primary', 'success', 'warning', 'danger', 'error', 'info']
 
       colorTypes.forEach((type) => {
-        // 获取当前颜色值
         const colorValue = getCssColorVariable(`--el-color-${type}`)
         if (colorValue) {
-          // 转换为rgba并提取RGB部分
           const rgbaString = hexToRGB(colorValue, 1)
           const rgbValues = rgbaString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i)
           if (rgbValues) {
             const [, r, g, b] = rgbValues
-            // 设置对应的RGB变量
             setCssVar(`--el-color-${type}-rgb`, `${r}, ${g}, ${b}`)
           }
         }
@@ -319,6 +327,7 @@ export const useAppStore = defineStore('app', {
     setTheme(theme: ThemeTypes) {
       this.theme = Object.assign(this.theme, theme)
       wsCache.set(CACHE_KEY.THEME, this.theme)
+      this.setCssVarTheme() // 自动应用主题到CSS变量
     },
     setCssVarTheme() {
       for (const key in this.theme) {
@@ -328,6 +337,104 @@ export const useAppStore = defineStore('app', {
     },
     setFooter(footer: boolean) {
       this.footer = footer
+    },
+    setCardSettings(settings: CardSettings) {
+      this.cardSettings = settings
+      if (settings.todo) {
+        wsCache.set('todoCardVisible', settings.todo.visible)
+        wsCache.set('todoCardLimit', settings.todo.limit)
+      }
+      if (settings.notice) {
+        wsCache.set('noticeCardVisible', settings.notice.visible)
+        wsCache.set('noticeCardLimit', settings.notice.limit)
+      }
+      if (settings.shortcut) {
+        wsCache.set('shortcutCardVisible', settings.shortcut.visible)
+        wsCache.set('shortcutCardLimit', settings.shortcut.limit)
+      }
+      if (settings.schedule) {
+        wsCache.set('scheduleCardVisible', settings.schedule.visible)
+        wsCache.set('scheduleCardLimit', settings.schedule.limit)
+      }
+      if (settings.file) {
+        wsCache.set('fileCardVisible', settings.file.visible)
+        wsCache.set('fileCardLimit', settings.file.limit)
+      }
+    },
+    setTodoCard(setting: CardSetting) {
+      this.cardSettings.todo = setting
+      wsCache.set('todoCardVisible', setting.visible)
+      wsCache.set('todoCardLimit', setting.limit)
+    },
+    setNoticeCard(setting: CardSetting) {
+      this.cardSettings.notice = setting
+      wsCache.set('noticeCardVisible', setting.visible)
+      wsCache.set('noticeCardLimit', setting.limit)
+    },
+    setShortcutCard(setting: CardSetting) {
+      this.cardSettings.shortcut = setting
+      wsCache.set('shortcutCardVisible', setting.visible)
+      wsCache.set('shortcutCardLimit', setting.limit)
+    },
+    setScheduleCard(setting: CardSetting) {
+      this.cardSettings.schedule = setting
+      wsCache.set('scheduleCardVisible', setting.visible)
+      wsCache.set('scheduleCardLimit', setting.limit)
+    },
+    setFileCard(setting: CardSetting) {
+      this.cardSettings.file = setting
+      wsCache.set('fileCardVisible', setting.visible)
+      wsCache.set('fileCardLimit', setting.limit)
+    },
+    setTodoCardVisible(visible: boolean) {
+      if (!this.cardSettings.todo) this.cardSettings.todo = { visible, limit: 5 }
+      else this.cardSettings.todo.visible = visible
+      wsCache.set('todoCardVisible', visible)
+    },
+    setNoticeCardVisible(visible: boolean) {
+      if (!this.cardSettings.notice) this.cardSettings.notice = { visible, limit: 5 }
+      else this.cardSettings.notice.visible = visible
+      wsCache.set('noticeCardVisible', visible)
+    },
+    setShortcutCardVisible(visible: boolean) {
+      if (!this.cardSettings.shortcut) this.cardSettings.shortcut = { visible, limit: 5 }
+      else this.cardSettings.shortcut.visible = visible
+      wsCache.set('shortcutCardVisible', visible)
+    },
+    setScheduleCardVisible(visible: boolean) {
+      if (!this.cardSettings.schedule) this.cardSettings.schedule = { visible, limit: 5 }
+      else this.cardSettings.schedule.visible = visible
+      wsCache.set('scheduleCardVisible', visible)
+    },
+    setFileCardVisible(visible: boolean) {
+      if (!this.cardSettings.file) this.cardSettings.file = { visible, limit: 5 }
+      else this.cardSettings.file.visible = visible
+      wsCache.set('fileCardVisible', visible)
+    },
+    setTodoCardLimit(limit: number) {
+      if (!this.cardSettings.todo) this.cardSettings.todo = { visible: true, limit }
+      else this.cardSettings.todo.limit = limit
+      wsCache.set('todoCardLimit', limit)
+    },
+    setNoticeCardLimit(limit: number) {
+      if (!this.cardSettings.notice) this.cardSettings.notice = { visible: true, limit }
+      else this.cardSettings.notice.limit = limit
+      wsCache.set('noticeCardLimit', limit)
+    },
+    setShortcutCardLimit(limit: number) {
+      if (!this.cardSettings.shortcut) this.cardSettings.shortcut = { visible: true, limit }
+      else this.cardSettings.shortcut.limit = limit
+      wsCache.set('shortcutCardLimit', limit)
+    },
+    setScheduleCardLimit(limit: number) {
+      if (!this.cardSettings.schedule) this.cardSettings.schedule = { visible: true, limit }
+      else this.cardSettings.schedule.limit = limit
+      wsCache.set('scheduleCardLimit', limit)
+    },
+    setFileCardLimit(limit: number) {
+      if (!this.cardSettings.file) this.cardSettings.file = { visible: true, limit }
+      else this.cardSettings.file.limit = limit
+      wsCache.set('fileCardLimit', limit)
     }
   },
   persist: false

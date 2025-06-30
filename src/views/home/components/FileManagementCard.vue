@@ -1,12 +1,19 @@
 <template>
   <div class="card">
     <div class="card-header">
-      <div class="title"><i class="bi bi-folder me-2"></i>文件管理</div>
+      <div class="title"><i class="bi bi-folder me-2"></i>文件管理
+        <div class="toggle-icon" style="margin-left: auto;" @click="toggleExpand">
+        <i class="bi bi-chevron-down" v-if="isExpanded">收起</i>
+        <i class="bi bi-chevron-up" v-else>展开</i>
+      </div>
+      
+      </div>
+      
       <div class="more" @click="goToFileManagement">更多 <i class="bi bi-chevron-right"></i></div>
     </div>
-    <div class="card-body">
+    <div class="card-body" v-show="isExpanded">
       <div class="file-list" v-if="fileList && fileList.length > 0">
-        <div class="file-item" v-for="(item, index) in fileList.slice(0, 5)" :key="index">
+        <div class="file-item" v-for="(item, index) in fileList.slice(0, props.filelength)" :key="index">
           <div class="file-icon">
             <i class="bi" :class="getFileIcon(item.fileType)"></i>
           </div>
@@ -33,8 +40,22 @@ import { ref, onMounted } from 'vue'
 import { formatDate } from '@/utils/formatTime'
 import { ElMessage } from 'element-plus'
 
+const props = defineProps({
+  filelength: {
+    type: Number,
+    default: 5
+  }
+})
 // 定义事件
 const emit = defineEmits(['goToFileManagement', 'previewFile', 'downloadFile', 'shareFile'])
+
+// 控制卡片内容展开/收起的状态
+const isExpanded = ref(true)
+
+// 切换展开/收起状态
+const toggleExpand = () => {
+  isExpanded.value = !isExpanded.value
+}
 
 // 文件列表数据
 const fileList = ref([])
@@ -285,6 +306,19 @@ onMounted(() => {
 .card-header .title {
   color: var(--primary-color);
   font-size: 18px;
+  display: flex;
+  align-items: center;
+}
+
+.toggle-icon {
+  cursor: pointer;
+  margin-right: 5px;
+  font-size: 16px;
+  transition: transform 0.3s;
+}
+
+.toggle-icon:hover {
+  color: var(--primary-color);
 }
 
 .card-header .more {

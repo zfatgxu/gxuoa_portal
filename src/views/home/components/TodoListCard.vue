@@ -1,12 +1,19 @@
 <template>
   <div class="card">
     <div class="card-header">
-      <div class="title"><i class="bi bi-check2-square me-2"></i>待办事项</div>
+      <div class="title">
+        <i class="bi bi-check2-square me-2"></i>待办事项  
+        <div class="toggle-icon" style="margin-left: auto;" @click="toggleExpand">
+        <i class="bi bi-chevron-down" v-if="isExpanded">收起</i>
+        <i class="bi bi-chevron-up" v-else>展开</i>
+      </div>
+      </div>
+      
       <div class="more" @click="goToTodoList">更多 <i class="bi bi-chevron-right"></i></div>
     </div>
-    <div class="card-body">
+    <div class="card-body" v-show="isExpanded">
       <div class="todo-list" v-if="todoList && todoList.length > 0">
-        <div class="todo-item" v-for="(item, index) in todoList.slice(0, 5)" :key="index">
+        <div class="todo-item" v-for="(item, index) in todoList.slice(0, props.todolength)" :key="index">
           <div class="todo-icon">
             <i class="bi-clipboard-check" ></i>
           </div>
@@ -42,6 +49,20 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const emit = defineEmits(['goToTodoList', 'goToTodoDetail'])
 
+// 控制卡片内容展开/收起的状态
+const isExpanded = ref(true)
+
+// 切换展开/收起状态
+const toggleExpand = () => {
+  isExpanded.value = !isExpanded.value
+}
+
+const props = defineProps({
+  todolength: {
+    type: Number,
+    default: 5
+  }
+})
 // 待办列表数据
 const todoList = ref([])
 const todoTotal = ref(0)
@@ -294,6 +315,19 @@ onMounted(() => {
 .card-header .title {
   color: var(--primary-color);
   font-size: 18px;
+  display: flex;
+  align-items: center;
+}
+
+.toggle-icon {
+  cursor: pointer;
+  margin-right: 5px;
+  font-size: 16px;
+  transition: transform 0.3s;
+}
+
+.toggle-icon:hover {
+  color: var(--primary-color);
 }
 
 .card-header .more {

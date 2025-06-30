@@ -1,13 +1,21 @@
 <template>
   <div class="card">
     <div class="card-header">
-      <div class="title"><i class="bi bi-lightning-charge me-2"></i>快捷功能</div>
+      <div class="title"><i class="bi bi-lightning-charge me-2"></i>快捷功能
+      
+        <div class="toggle-icon" style="margin-left: auto;" @click="toggleExpand">
+        <i class="bi bi-chevron-down" v-if="isExpanded">收起</i>
+        <i class="bi bi-chevron-up" v-else>展开</i>
+      </div>
+      
+      </div>
+      
       <div class="more" @click="goToAllFunctions">更多 <i class="bi bi-chevron-right"></i></div>
     </div>
-    <div class="card-body">
+    <div class="card-body" v-show="isExpanded">
       <div class="shortcut-grid">
         <div 
-          v-for="(item, index) in shortcutList" 
+          v-for="(item, index) in shortcutList.slice(0, props.shortcutlength)" 
           :key="index" 
           class="shortcut-item"
           @click="handleShortcutClick(item)"
@@ -30,6 +38,20 @@ import { ElMessage } from 'element-plus'
 const router = useRouter()
 const emit = defineEmits(['goToAllFunctions'])
 
+// 控制卡片内容展开/收起的状态
+const isExpanded = ref(true)
+
+// 切换展开/收起状态
+const toggleExpand = () => {
+  isExpanded.value = !isExpanded.value
+}
+
+const props = defineProps({
+  shortcutlength: {
+    type: Number,
+    default: 5
+  }
+})
 // 快捷功能列表
 const shortcutList = ref([
   {
@@ -174,6 +196,19 @@ onMounted(() => {
 .card-header .title {
   color: var(--primary-color);
   font-size: 18px;
+  display: flex;
+  align-items: center;
+}
+
+.toggle-icon {
+  cursor: pointer;
+  margin-right: 5px;
+  font-size: 16px;
+  transition: transform 0.3s;
+}
+
+.toggle-icon:hover {
+  color: var(--primary-color);
 }
 
 .card-header .more {

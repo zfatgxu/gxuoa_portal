@@ -54,6 +54,8 @@
       <TodoListCard 
         @goToTodoList="goToTodoList" 
         @goToTodoDetail="goToTodoDetail" 
+        v-if="cardSettings.todo.visible"
+        :todolength="cardSettings.todo.limit"
       />
       
       <!-- 文件管理卡片 -->
@@ -62,11 +64,15 @@
         @previewFile="previewFile"
         @downloadFile="downloadFile"
         @shareFile="shareFile"
+        v-if="cardSettings.file.visible"
+        :filelength="cardSettings.file.limit"
       />
       
       <!-- 快捷功能卡片 -->
       <ShortcutFunctionsCard 
         @goToAllFunctions="goToAllFunctions"
+        v-if="cardSettings.shortcut.visible"
+        :shortcutlength="cardSettings.shortcut.limit"
       />
     </el-col>
     
@@ -76,12 +82,16 @@
       <NoticeCard 
         @goToNoticeList="goToNoticeList"
         @viewNotice="viewNotice"
+        v-if="cardSettings.notice.visible"
+        :noticelength="cardSettings.notice.limit"
       />
       
       <!-- 日程安排卡片 -->
       <ScheduleCard 
         @goToSchedule="goToSchedule"
         @viewScheduleDetail="viewScheduleDetail"
+        v-if="cardSettings.schedule.visible"
+        :schedulelength="cardSettings.schedule.limit"
       />
     </el-col>
   </el-row>
@@ -93,6 +103,7 @@ import { EChartsOption } from 'echarts'
 import { formatTime } from '@/utils'
 
 import { useUserStore } from '@/store/modules/user'
+import { useAppStore } from '@/store/modules/app'
 import { useRouter } from 'vue-router'
 import type { WorkplaceTotal, Project, Notice, Shortcut } from './types'
 import { pieOptions, barOptions } from './echarts-data'
@@ -103,15 +114,20 @@ import FileManagementCard from './components/FileManagementCard.vue'
 import ShortcutFunctionsCard from './components/ShortcutFunctionsCard.vue'
 import NoticeCard from './components/NoticeCard.vue'
 import ScheduleCard from './components/ScheduleCard.vue'
+import * as getUserSettingApi  from '@/api/system/user/setting'
 
 defineOptions({ name: 'Index' })
 
 const { t } = useI18n()
 const router = useRouter()
 const userStore = useUserStore()
+const appStore = useAppStore()
 const loading = ref(false)
 const avatar = userStore.getUser.avatar
 const username = userStore.getUser.nickname
+
+// 使用 appStore 中的 cardSettings
+const cardSettings = computed(() => appStore.getCardSettings)
 
 // 获取统计数
 let totalSate = reactive<WorkplaceTotal>({

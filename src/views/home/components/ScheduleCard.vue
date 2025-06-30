@@ -1,10 +1,16 @@
 <template>
   <div class="card">
     <div class="card-header">
-      <div class="title"><i class="bi bi-calendar3 me-2"></i>日程安排</div>
+      <div class="title"><i class="bi bi-calendar3 me-2"></i>日程安排
+        <div class="toggle-icon" style="margin-left: auto;" @click="toggleExpand">
+        <i class="bi bi-chevron-down" v-if="isExpanded">收起</i>
+        <i class="bi bi-chevron-up" v-else>展开</i>
+      </div>
+      </div>
+      
       <div class="more" @click="goToSchedule">更多 <i class="bi bi-chevron-right"></i></div>
     </div>
-    <div class="card-body">
+    <div class="card-body" v-show="isExpanded">
       <div class="calendar-header">
         <div class="month-selector">
           <i class="bi bi-chevron-left" @click="prevMonth"></i>
@@ -15,7 +21,7 @@
       
       <div class="schedule-list" v-if="scheduleList && scheduleList.length > 0">
         <div 
-          v-for="(item, index) in scheduleList.slice(0, 5)" 
+          v-for="(item, index) in scheduleList.slice(0, props.schedulelength)" 
           :key="index" 
           class="schedule-item"
           @click="viewScheduleDetail(item)"
@@ -49,8 +55,22 @@
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 
+const props = defineProps({
+  schedulelength: {
+    type: Number,
+    default: 5
+  }
+})
 // 定义事件
 const emit = defineEmits(['goToSchedule', 'viewScheduleDetail'])
+
+// 控制卡片内容展开/收起的状态
+const isExpanded = ref(true)
+
+// 切换展开/收起状态
+const toggleExpand = () => {
+  isExpanded.value = !isExpanded.value
+}
 
 // 当前日期
 const currentDate = ref(new Date())
@@ -342,6 +362,19 @@ onMounted(() => {
 .card-header .title {
   color: var(--primary-color);
   font-size: 18px;
+  display: flex;
+  align-items: center;
+}
+
+.toggle-icon {
+  cursor: pointer;
+  margin-right: 5px;
+  font-size: 16px;
+  transition: transform 0.3s;
+}
+
+.toggle-icon:hover {
+  color: var(--primary-color);
 }
 
 .card-header .more {

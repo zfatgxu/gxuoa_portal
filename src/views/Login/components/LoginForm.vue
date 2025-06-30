@@ -161,6 +161,8 @@ import * as authUtil from '@/utils/auth'
 import { usePermissionStore } from '@/store/modules/permission'
 import * as LoginApi from '@/api/login'
 import { LoginStateEnum, useFormValid, useLoginState } from './useLogin'
+import { getUserSetting } from '@/api/system/user/setting'
+import { useAppStore } from '@/store/modules/app'
 
 defineOptions({ name: 'LoginForm' })
 
@@ -273,6 +275,38 @@ const handleLogin = async (params: any) => {
       authUtil.removeLoginForm()
     }
     authUtil.setToken(res)
+    
+    // 获取用户设置并同步到 appStore
+    try {
+      const appStore = useAppStore()
+      const userSettings = await getUserSetting()
+      if (userSettings) {
+        // 同步卡片设置
+        if (userSettings.cardConfig) {
+          try {
+            // 将字符串格式的卡片配置解析为对象
+            const cardSettings = JSON.parse(userSettings.cardConfig)
+            // 设置到 appStore
+            appStore.setCardSettings(cardSettings)
+          } catch (parseError) {
+            console.error('解析卡片配置失败:', parseError)
+          }
+        }
+        // // 同步主题设置
+        // if (userSettings.data.theme) {
+        //   appStore.setTheme(userSettings.data.theme)
+        //   appStore.setCssVarTheme()
+        // }
+        // // 同步布局设置
+        // if (userSettings.data.layout) {
+        //   appStore.setLayout(userSettings.data.layout)
+        // }
+      }
+    } catch (error) {
+      console.error('获取用户设置失败:', error)
+      // 获取设置失败不影响登录流程，使用默认设置
+    }
+    
     if (!redirect.value) {
       redirect.value = '/'
     }
@@ -284,10 +318,9 @@ const handleLogin = async (params: any) => {
     }
   } finally {
     loginLoading.value = false
-    loading.value.close()
+    loading.value?.close()
   }
 }
-
 // 社交登录
 const doSocialLogin = async (type: number) => {
   if (type === 0) {

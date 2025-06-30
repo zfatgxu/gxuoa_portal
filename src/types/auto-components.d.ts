@@ -41,6 +41,7 @@ declare module 'vue' {
     Dialog: typeof import('./../components/Dialog/src/Dialog.vue')['default']
     DictSelect: typeof import('./../components/FormCreate/src/components/DictSelect.vue')['default']
     DictTag: typeof import('./../components/DictTag/src/DictTag.vue')['default']
+    Dist: typeof import('./../../dist.zip')['default']
     DiyEditor: typeof import('./../components/DiyEditor/index.vue')['default']
     DocAlert: typeof import('./../components/DocAlert/index.vue')['default']
     Draggable: typeof import('./../components/Draggable/index.vue')['default']
