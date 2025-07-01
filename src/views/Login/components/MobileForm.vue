@@ -141,7 +141,7 @@ const loginData = reactive({
 const smsVO = reactive({
   smsCode: {
     mobile: '',
-    scene: 21
+    scene: 1
   },
   loginSms: {
     mobile: '',

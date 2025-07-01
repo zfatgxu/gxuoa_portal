@@ -4,6 +4,7 @@ import { useAppStore } from '@/store/modules/app'
 import { useDesign } from '@/hooks/web/useDesign'
 import { CACHE_KEY, useCache } from '@/hooks/web/useCache'
 import routerSearch from '@/components/RouterSearch/index.vue'
+import { useWsNotifications } from '@/hooks/web/useWsNotification'
 
 defineOptions({ name: 'APP' })
 
@@ -22,6 +23,7 @@ const setDefaultTheme = () => {
   }
   appStore.setIsDark(isDarkTheme)
 }
+useWsNotifications()//链接ws，并处理消息弹窗
 setDefaultTheme()
 </script>
 <template>

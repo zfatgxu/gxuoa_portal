@@ -196,6 +196,7 @@ declare module 'vue' {
     UserTaskListeners: typeof import('./../components/bpmnProcessDesigner/package/penal/listeners/UserTaskListeners.vue')['default']
     UserTaskNode: typeof import('./../components/SimpleProcessDesignerV2/src/nodes/UserTaskNode.vue')['default']
     UserTaskNodeConfig: typeof import('./../components/SimpleProcessDesignerV2/src/nodes-config/UserTaskNodeConfig.vue')['default']
+    UseWsNotification: typeof import('./../hooks/web/useWsNotification.ts')['default']
     Verify: typeof import('./../components/Verifition/src/Verify.vue')['default']
     VerifyPoints: typeof import('./../components/Verifition/src/Verify/VerifyPoints.vue')['default']
     VerifySlide: typeof import('./../components/Verifition/src/Verify/VerifySlide.vue')['default']

@@ -19,6 +19,8 @@
       <div class="login-box">
         <!-- 账号登录表单 -->
         <LoginForm />
+        <!-- 手机登录表单 -->
+        <MobileForm v-show="getLoginState === LoginStateEnum.MOBILE" />
         <!-- 提示信息 -->
         <el-alert
           title="温馨提示"
@@ -51,11 +53,13 @@ import { ThemeSwitch } from '@/layout/components/ThemeSwitch'
 import { LocaleDropdown } from '@/layout/components/LocaleDropdown'
 
 import { LoginForm, MobileForm, QrCodeForm, RegisterForm, SSOLoginVue, ForgetPasswordForm } from './components'
+import { LoginStateEnum, useLoginState } from './components/useLogin'
 
 defineOptions({ name: 'Login' })
 
 const { t } = useI18n()
 const appStore = useAppStore()
+const { getLoginState } = useLoginState()
 
 // Active tab
 const activeTab = ref('account')
