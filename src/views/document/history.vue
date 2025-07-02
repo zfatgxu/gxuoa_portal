@@ -82,26 +82,19 @@
                 </div>
                 
                 <!-- 第二行：处理意见 -->
-                <div class="flow-body">
-                  <div class="opinion-block">
-                    <div class="opinion-header">
-                      <span class="label">处理意见</span>
-                      <span 
-                        v-if="isOpinionLong(item.message)" 
-                        class="toggle-btn" 
-                        @click="toggleOpinion(index)"
-                      >
-                        {{ expandedOpinions[index] ? '收起' : '展开' }}
-                      </span>
-                    </div>
-                    <p 
-                      class="message" 
-                      :class="{ 'collapsed': isOpinionLong(item.message) && !expandedOpinions[index] }"
-                    >
-                      {{ item.message || '无' }}
-                    </p>
+                 <div class="flow-body" @click="toggleOpinion(index)" style="cursor: pointer;">
+                  <div class="opinion-line">
+                    <template v-if="expandedOpinions[index]">
+                      <span class="label">处理意见：</span>
+                      <span class="opinion-content">{{ item.message || '无' }}</span>
+                    </template>
+                    <span class="arrow-icon">
+                      <i v-if="expandedOpinions[index]" class="bi bi-chevron-up"></i>
+                      <i v-else class="bi bi-chevron-down"></i>
+                    </span>
                   </div>
                 </div>
+                
               </div>
             </div>
           </div>
@@ -158,7 +151,7 @@
       const documentId = route.query.documentId
       if (!documentId) {
         ElMessage.warning('缺少文档ID参数')
-        return
+        return []
       }
       
       const res = await circulationApi.getListByDocumentId(Number(documentId))
@@ -168,8 +161,15 @@
         // 根据流转记录生成流程步骤
         generateProcessSteps(res)
       
+      // 初始化展开状态
+      circulationList.value.forEach((item, index) => {
+        expandedOpinions.value[index] = !!item.message // 有内容的默认展开
+      })
+      
+      return res
     } catch (error) {
       ElMessage.error('获取流转记录失败')
+      return []
     }
   }
   
@@ -547,9 +547,55 @@
     color: #5c6b7a;
   }
   
-  /* 流转内容主体 */
+  /* 流转内容主体
   .flow-body {
     padding: 15px;
+  } */
+  
+  /* 处理意见一行显示 */
+  .opinion-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    color: #606266;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .opinion-line .label {
+    display: inline-block;
+    font-size: 12px;
+    color: #5B8FF9;
+    background-color: rgba(91, 143, 249, 0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+
+  
+  .opinion-content {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  /* 切换图标 */
+  .toggle-icon {
+    color: #909399;
+    font-size: 16px;
+    margin-left: 10px;
+    flex-shrink: 0;
+  }
+  
+  /* 箭头图标 */
+  .arrow-icon {
+    color: #909399;
+    font-size: 12px;
+    margin-left: 10px;
+    flex-shrink: 0;
+    font-weight: bold;
   }
   
   /* 意见区块 */
@@ -587,10 +633,29 @@
     text-overflow: ellipsis;
   }
   
-  .toggle-btn {
-    font-size: 12px;
-    color: #5B8FF9;
-    cursor: pointer;
+  /* 简化的处理意见标题 */
+  .opinion-header-simple {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 15px;
+    font-size: 14px;
+    color: #606266;
+  }
+  
+  /* 切换图标 */
+  .toggle-icon {
+    color: #909399;
+    font-size: 16px;
+    transition: transform 0.3s;
+  }
+  
+  /* 折叠的处理意见样式 */
+  .collapsed-opinion {
+    display: flex;
+    justify-content: flex-end;
+    margin: 0;
+    padding: 0 15px 0px;
   }
   
   /* 响应式调整 */

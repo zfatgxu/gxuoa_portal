@@ -1,11 +1,11 @@
 <template>
   <div class="card">
-    <div class="card-header">
+    <div class="card-header" @click="toggleExpand" style="cursor: pointer;">
       <div class="title"><i class="bi bi-bell me-2"></i>系统公告
       
-        <div class="toggle-icon" style="margin-left: auto;" @click="toggleExpand">
-        <i class="bi bi-chevron-down" v-if="isExpanded">收起</i>
-        <i class="bi bi-chevron-up" v-else>展开</i>
+        <div class="toggle-icon" style="margin-left: auto;">
+        <i class="bi bi-chevron-down" v-if="isExpanded"></i>
+        <i class="bi bi-chevron-up" v-else></i>
       </div>
       </div>
      

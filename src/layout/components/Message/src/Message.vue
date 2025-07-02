@@ -77,7 +77,7 @@ onMounted(() => {
         <ElTabPane label="我的消息" name="notice">
           <el-scrollbar class="message-list">
             <template v-for="item in list" :key="item.id">
-              <div class="message-item" @click="openDetail(item)">
+              <div class="message-item" @click="openDetail(item)" style="cursor: pointer;">
                 <img alt="" class="message-icon" src="@/assets/imgs/avatar.gif" />
                 <div class="message-content">
                   <span class="message-title">
