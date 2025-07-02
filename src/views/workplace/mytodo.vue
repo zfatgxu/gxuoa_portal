@@ -39,7 +39,13 @@
               <span class="clickable-title" @click="goToTodoDetail(scope.row)">{{ scope.row.title }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="circulationStatus" label="流转状态" width="180" />
+          <el-table-column prop="circulationStatus" label="流转状态" width="180" >
+
+
+            <template #default="scope"> 
+             <span class="clickable-title" @click="goToHistory(scope.row)">{{ scope.row.circulationStatus }}</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="comeFrom" label="来件单位" width="180" />
           <el-table-column label="来件时间" width="180">
             <template #default="scope">
@@ -78,6 +84,7 @@ import { removeToken } from '@/utils/auth'
 import * as homeTodoApi  from '@/api/home/todo'
 import { formatDate } from '@/utils/formatTime'
 
+const router = useRouter()
 // 待办列表数据
 const todoList = ref([])
 const todoTotal = ref(0)
@@ -157,6 +164,71 @@ const getTodoList = async () => {
     ElMessage.error('获取待办列表失败')
   } finally {
     todoListLoading.value = false
+  }
+}
+
+// 跳转到待办历史
+const goToHistory = (item) => {
+  console.log('查看流转历史:', item)
+  
+  try {
+    // 根据路由配置生成完整路径
+    const fullPath = router.resolve({
+      path: '/document/history',
+      query: { 
+        documentId: item.id,
+        circulationId: item.circulationId
+      }
+    }).href
+    
+    // 在新窗口打开流转历史页面
+    const newWindow = window.open(
+      fullPath, 
+      '_blank',
+      'width=1000,height=700,left=150,top=150,resizable=yes,scrollbars=yes'
+    )
+    
+    if (!newWindow) {
+      ElMessage.warning('请允许弹出窗口或检查浏览器设置')
+      // 备选方案：在当前窗口打开
+      router.push({ 
+        path: '/document/history',
+        query: { 
+          documentId: item.id,
+          circulationId: item.circulationId
+        }
+      })
+    }
+  } catch (error) {
+    console.error('打开流转历史页面失败:', error)
+    ElMessage.error('打开流转历史页面失败，请重试')
+  }
+}
+
+const goToTodoDetail = (item) => {
+  // 使用 router.resolve 获取完整路径
+  const path = router.resolve({
+    name: 'documentApproval',
+    query: { id: item.id, type: 3, isTodo: 1 }
+  }).href
+  
+  try {
+    console.log('打开路径:', path)
+    
+    const newWindow = window.open(
+      path,
+      '_blank',
+      'width=1200,height=800,left=100,top=100,resizable=yes'
+    )
+    
+    if (!newWindow) {
+      ElMessage.warning('请允许弹出窗口')
+      // 备选方案：在当前页打开
+      router.push({ name: 'documentApproval', query: { id: item.id, type: 3, isTodo: 1 } })
+    }
+  } catch (error) {
+    console.error('打开失败:', error)
+    ElMessage.error('处理失败')
   }
 }
 
