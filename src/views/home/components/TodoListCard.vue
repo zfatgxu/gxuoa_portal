@@ -15,7 +15,7 @@
       <div class="todo-list" v-if="todoList && todoList.length > 0">
         <div class="todo-item" v-for="(item, index) in todoList.slice(0, props.todolength)" :key="index">
           <div class="todo-icon">
-            <i class="bi-clipboard-check" ></i>
+            <el-tag size="small" :type="getTagType(item.type)" class="todo-type">{{ item.type }}</el-tag>
           </div>
           <div class="todo-info">
             <div class="todo-name" @click="goToTodoDetail(item)">
@@ -23,7 +23,7 @@
               
             </div>
             <div class="todo-meta">
-              <el-tag size="small" :type="getTagType(item.type)" class="todo-type">{{ item.type }}</el-tag>
+              <!-- <el-tag size="small" :type="getTagType(item.type)" class="todo-type">{{ item.type }}</el-tag> -->
               <span v-if="item.comeFrom!=null" class="todo-from">{{ item.comeFrom }}</span>
               <span v-if="item.comeTime!=null" class="todo-time">{{ formatDate(item.comeTime) }}</span>
               <span v-if="item.priority === 'high'" class="badge badge-danger">急</span>
@@ -220,6 +220,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   margin-right: 10px;
+  margin-left: 10px;
   font-size: 24px;
   color: var(--primary-color);
 }
