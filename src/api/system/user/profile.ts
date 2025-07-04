@@ -41,18 +41,31 @@ export interface UserProfileUpdateReqVO {
 
 // 查询用户个人信息
 export const getUserProfile = () => {
-  return request.get({ url: '/app/user/get' })
+  return request.get({ url: '/app/user/profile/get' })
 }
 
 // 修改用户个人信息
 export const updateUserProfile = (data: UserProfileUpdateReqVO) => {
-  return request.put({ url: '/app/user/update', data })
+  return request.put({ url: '/app/user/profile/update', data })
+}
+
+// 更新头像 update-avatar
+export const updateAvatar = (avatarFile: File) => {
+  const formData = new FormData()
+  formData.append('avatarFile', avatarFile)
+  return request.put({ 
+    url: '/app/user/profile/update-avatar',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
 }
 
 // 用户密码重置
 export const updateUserPassword = (oldPassword: string, newPassword: string) => {
   return request.put({
-    url: '/app/user/update-password',
+    url: '/app/user/profile/update-password',
     data: {
       oldPassword: oldPassword,
       newPassword: newPassword

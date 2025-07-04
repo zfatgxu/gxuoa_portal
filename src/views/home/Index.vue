@@ -49,16 +49,29 @@
   <!-- 主要内容区域 - 左右布局 -->
   <el-row class="mt-8px" :gutter="16" type="flex" align="top">
     <!-- 左侧卡片区域 -->
-    <el-col :xl="16" :lg="16" :md="24" :sm="24" :xs="24">
-      <!-- 待办事项卡片 -->
+    <el-col :xl="19" :lg="19" :md="24" :sm="24" :xs="24">
+      <!-- 快捷入口卡片 -->
+      <QuickEntryCard 
+        @goToAllEntries="goToAllEntries"
+        @addEntry="handleAddEntry"
+        
+      />
+
+      <TabTodoCard 
+        @goToTodoList="goToTodoList" 
+        @goToTodoDetail="goToTodoDetail" 
+        
+      />
+      
+      <!-- 待办事项卡片
       <TodoListCard 
         @goToTodoList="goToTodoList" 
         @goToTodoDetail="goToTodoDetail" 
         v-if="cardSettings.todo.visible"
         :todolength="cardSettings.todo.limit"
-      />
+      /> -->
       
-      <!-- 文件管理卡片 -->
+      <!-- 文件管理卡片
       <FileManagementCard 
         @goToFileManagement="goToFileManagement"
         @previewFile="previewFile"
@@ -66,25 +79,25 @@
         @shareFile="shareFile"
         v-if="cardSettings.file.visible"
         :filelength="cardSettings.file.limit"
-      />
+      /> -->
       
-      <!-- 快捷功能卡片 -->
+      <!-- 快捷功能卡片
       <ShortcutFunctionsCard 
         @goToAllFunctions="goToAllFunctions"
         v-if="cardSettings.shortcut.visible"
         :shortcutlength="cardSettings.shortcut.limit"
-      />
+      /> -->
     </el-col>
     
     <!-- 右侧卡片区域 -->
-    <el-col :xl="8" :lg="8" :md="24" :sm="24" :xs="24">
+    <el-col :xl="5" :lg="5" :md="24" :sm="24" :xs="24">
       <!-- 通知公告卡片 -->
-      <NoticeCard 
+      <!-- <NoticeCard 
         @goToNoticeList="goToNoticeList"
         @viewNotice="viewNotice"
         v-if="cardSettings.notice.visible"
         :noticelength="cardSettings.notice.limit"
-      />
+      /> -->
       
       <!-- 日程安排卡片 -->
       <ScheduleCard 
@@ -114,7 +127,9 @@ import FileManagementCard from './components/FileManagementCard.vue'
 import ShortcutFunctionsCard from './components/ShortcutFunctionsCard.vue'
 import NoticeCard from './components/NoticeCard.vue'
 import ScheduleCard from './components/ScheduleCard.vue'
+import QuickEntryCard from './components/QuickEntryCard.vue'
 import * as getUserSettingApi  from '@/api/system/user/setting'
+import TabTodoCard from './components/TabTodoCard.vue'
 
 defineOptions({ name: 'Index' })
 
@@ -201,6 +216,15 @@ const shareFile = (file) => {
 // 快捷功能卡片
 const goToAllFunctions = () => {
   router.push('/system/menu')
+}
+
+// 快捷入口卡片
+const goToAllEntries = () => {
+  router.push('/system/menu')
+}
+
+const handleAddEntry = () => {
+  ElMessage.info('添加快捷入口功能正在开发中')
 }
 
 // 通知公告卡片

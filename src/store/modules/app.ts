@@ -99,17 +99,17 @@ export const useAppStore = defineStore('app', {
       theme: {
         elColorPrimary: '#36a3f7',
         leftMenuBorderColor: '#fff',
-        leftMenuBgColor: '#F0F7FF',
-        leftMenuBgLightColor: '#F0F7FF',
-        leftMenuBgActiveColor: '#cce0ff',
-        leftMenuCollapseBgActiveColor: '#cce0ff',
-        leftMenuTextColor: '#000000',
-        leftMenuTextActiveColor: '#2C6AA0',
+        leftMenuBgColor: '#fff',
+        leftMenuBgLightColor: '#fff',
+        leftMenuBgActiveColor: '#2498F7',
+        leftMenuCollapseBgActiveColor: '#2498F7',
+        leftMenuTextColor: '#00000',
+        leftMenuTextActiveColor: '#fff',
         logoTitleTextColor: '#fff',
         logoBorderColor: 'inherit',
-        topHeaderBgColor: '#2C6AA0',
+        topHeaderBgColor: '#2498F7',
         topHeaderTextColor: '#fff',
-        topHeaderHoverColor: '#2C6AA0',
+        topHeaderHoverColor: '#2498F7',
         topToolBorderColor: '#dcdfe6'
       }
     }

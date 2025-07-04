@@ -137,41 +137,67 @@ $prefix-cls: #{$namespace}-menu;
     width: 100% !important;
     border-right: none;
 
-    // 设置选中时子标题的颜色
-    .is-active {
-      & > .#{$elNamespace}-sub-menu__title {
-        color: var(--left-menu-text-active-color) !important;
-      }
-    }
-
-    // 设置子菜单悬停的高亮和背景色
+    // 默认菜单样式：白色背景，黑色文字
     .#{$elNamespace}-sub-menu__title,
     .#{$elNamespace}-menu-item {
+      color: var(--left-menu-text-color) !important;
+      background-color: var(--left-menu-bg-color) !important;
+      
+      // 悬停状态：蓝色背景，白色文字
       &:hover {
         color: var(--left-menu-text-active-color) !important;
-        background-color: var(--left-menu-bg-color) !important;
-      }
-    }
-
-    // 设置选中时的高亮背景和高亮颜色
-    .#{$elNamespace}-menu-item.is-active {
-      color: var(--left-menu-text-active-color) !important;
-      background-color: var(--left-menu-bg-active-color) !important;
-
-      &:hover {
         background-color: var(--left-menu-bg-active-color) !important;
       }
     }
 
+    // 选中状态：蓝色背景，白色文字
     .#{$elNamespace}-menu-item.is-active {
+      color: var(--left-menu-text-active-color) !important;
+      background-color: var(--left-menu-bg-active-color) !important;
       position: relative;
     }
+    
+    // 选中状态的子菜单标题：白色文字，蓝色背景
+    .is-active {
+      & > .#{$elNamespace}-sub-menu__title {
+        color: var(--left-menu-text-active-color) !important;
+        background-color: var(--left-menu-bg-active-color) !important;
+      }
+    }
 
-    // 设置子菜单的背景颜色
+    // 子菜单内部的样式
     .#{$elNamespace}-menu {
+      // 子菜单内的菜单项和子菜单标题也遵循相同的样式规则
       .#{$elNamespace}-sub-menu__title,
-      .#{$elNamespace}-menu-item:not(.is-active) {
+      .#{$elNamespace}-menu-item {
         background-color: var(--left-menu-bg-light-color) !important;
+        
+        &:hover {
+          color: var(--left-menu-text-active-color) !important;
+          background-color: var(--left-menu-bg-active-color) !important;
+        }
+      }
+      
+      // 子菜单内的选中菜单项
+      .#{$elNamespace}-menu-item.is-active {
+        color: var(--left-menu-text-active-color) !important;
+        background-color: var(--left-menu-bg-active-color) !important;
+      }
+    }
+    
+    // 添加菜单项之间的分隔线
+    .#{$elNamespace}-menu-item:not(:last-child),
+    .#{$elNamespace}-sub-menu:not(:last-child) {
+      position: relative;
+      
+      &::after {
+        content: '';
+        position: absolute;
+        left: 20px;
+        right: 20px;
+        bottom: 0;
+        height: 1px;
+        background-color: rgba(19, 18, 18, 0.1);
       }
     }
   }
@@ -184,6 +210,15 @@ $prefix-cls: #{$namespace}-menu;
     & > .is-active > .#{$elNamespace}-sub-menu__title {
       position: relative;
       background-color: var(--left-menu-collapse-bg-active-color) !important;
+    }
+    
+    // 折叠时的分隔线样式调整
+    .#{$elNamespace}-menu-item:not(:last-child),
+    .#{$elNamespace}-sub-menu:not(:last-child) {
+      &::after {
+        left: 5px;
+        right: 5px;
+      }
     }
   }
 
@@ -232,6 +267,12 @@ $prefix-cls: #{$namespace}-menu;
         max-height: calc(var(--top-tool-height) - 2px) !important;
         /* stylelint-disable-next-line */
         line-height: calc(var(--top-tool-height) - 2px);
+      }
+      
+      // 水平菜单不需要分隔线
+      .#{$elNamespace}-menu-item:not(:last-child)::after,
+      .#{$elNamespace}-sub-menu:not(:last-child)::after {
+        display: none;
       }
     }
   }

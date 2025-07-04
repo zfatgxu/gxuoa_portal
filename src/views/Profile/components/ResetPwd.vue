@@ -20,6 +20,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 
 import { InputPassword } from '@/components/InputPassword'
 import { updateUserPassword } from '@/api/system/user/profile'
+import { useUserStore } from '@/store/modules/user'
 
 defineOptions({ name: 'ResetPwd' })
 
@@ -56,12 +57,18 @@ const rules = reactive<FormRules>({
   ]
 })
 
+const userStore = useUserStore()
+
 const submit = (formEl: FormInstance | undefined) => {
   if (!formEl) return
   formEl.validate(async (valid) => {
     if (valid) {
       await updateUserPassword(password.oldPassword, password.newPassword)
       message.success(t('common.updateSuccess'))
+      // 密码修改成功后，提示用户需要重新登录
+      await message.confirm('密码修改成功，需要重新登录')
+      // 调用登出方法，重定向到登录页面
+      await userStore.loginOut()
     }
   })
 }

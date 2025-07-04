@@ -22,20 +22,20 @@
       <li class="list-group-item">
         <Icon class="mr-5px" icon="carbon:tree-view-alt" />
         {{ t('profile.user.dept') }}
-        <div v-if="userInfo?.deptName" class="pull-right">{{ userInfo?.deptName }}</div>
+        <div v-if="userInfo?.dept?.name" class="pull-right">{{ userInfo?.dept?.name }}</div>
       </li>
       <li class="list-group-item">
         <Icon class="mr-5px" icon="ep:suitcase" />
         {{ t('profile.user.posts') }}
-        <div v-if="userInfo?.postNames" class="pull-right">
-          {{ userInfo?.postNames }}
+        <div v-if="userInfo?.posts?.length" class="pull-right">
+          {{ userInfo?.posts?.map((post) => post.name).join(',') }}
         </div>
       </li>
       <li class="list-group-item">
         <Icon class="mr-5px" icon="icon-park-outline:peoples" />
         {{ t('profile.user.roles') }}
-        <div v-if="userInfo?.roleName" class="pull-right">
-          {{ userInfo?.roleName }}
+        <div v-if="userInfo?.roles?.length" class="pull-right">
+          {{ userInfo?.roles?.map((role) => role.name).join(',') }}
         </div>
       </li>
       <li class="list-group-item">

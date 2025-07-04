@@ -7,7 +7,10 @@
         <i class="bi bi-chevron-up" v-else></i>
       </div>
       </div>
-      
+      <!-- 搜索图标 -->
+      <div class="search-icon" @click="goToSchedule">
+        <i class="bi bi-search"></i>
+      </div>
       <div class="more" @click="goToSchedule">更多 <i class="bi bi-chevron-right"></i></div>
     </div>
     <div class="card-body" v-show="isExpanded">
@@ -39,9 +42,7 @@
               <i class="bi bi-geo-alt me-1"></i>{{ item.location }}
             </div>
           </div>
-          <div class="schedule-status" :class="getScheduleStatusClass(item)">
-            {{ getScheduleStatusText(item) }}
-          </div>
+          
         </div>
       </div>
       <div v-else class="empty-schedule">

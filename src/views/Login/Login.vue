@@ -21,6 +21,8 @@
         <LoginForm />
         <!-- 手机登录表单 -->
         <MobileForm v-show="getLoginState === LoginStateEnum.MOBILE" />
+        <!-- 忘记密码表单 -->
+        <ForgetPasswordForm />
         <!-- 提示信息 -->
         <el-alert
           title="温馨提示"

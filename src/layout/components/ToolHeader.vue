@@ -9,6 +9,7 @@ import { SizeDropdown } from '@/layout/components/SizeDropdown'
 import { LocaleDropdown } from '@/layout/components/LocaleDropdown'
 import RouterSearch from '@/components/RouterSearch/index.vue'
 import TenantVisit from '@/layout/components/TenantVisit/index.vue'
+import QuickAccess from '@/layout/components/QuickAccess/index.vue'
 import { useAppStore } from '@/store/modules/app'
 import { useDesign } from '@/hooks/web/useDesign'
 import { checkPermi } from '@/utils/permission'
@@ -30,6 +31,9 @@ const screenfull = computed(() => appStore.getScreenfull)
 
 // 搜索图片
 const search = computed(() => appStore.search)
+
+// 快捷入口
+const quickAccess = computed(() => true) // 默认启用快捷入口
 
 // 尺寸图标
 const size = computed(() => appStore.getSize)
@@ -72,6 +76,9 @@ export default defineComponent({
           {hasTenantVisitPermission.value ? <TenantVisit /> : undefined}
           {screenfull.value ? (
             <Screenfull class="custom-hover" color="var(--top-header-text-color)"></Screenfull>
+          ) : undefined}
+          {quickAccess.value ? (
+            <QuickAccess class="custom-hover" color="var(--top-header-text-color)"></QuickAccess>
           ) : undefined}
           {search.value ? <RouterSearch isModal={false} /> : undefined}
           {size.value ? (

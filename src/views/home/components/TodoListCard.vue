@@ -29,8 +29,12 @@
               <span v-if="item.priority === 'high'" class="badge badge-danger">急</span>
             </div>
           </div>
-          <div class="todo-actions">
-            <span v-if="item.circulationStatus!=null" class="todo-status" @click="goToHistory(item)">{{ item.circulationStatus }}</span>
+          <div class="todo-actions" >
+            <el-tooltip content="流转历史" placement="top">
+              <div class="action-icon" @click="goToHistory(item)">
+                <i class="bi bi-three-dots"></i>
+              </div>
+            </el-tooltip>
           </div>
         </div>
       </div>
@@ -344,5 +348,30 @@ onMounted(() => {
 
 .card-body {
   padding: 15px 20px;
+}
+
+.action-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background-color: #f0f0f0;
+    transform: scale(1.1);
+    
+    i {
+      color: #409EFF;
+    }
+  }
+  
+  i {
+    font-size: 14px;
+    color: #606266;
+  }
 }
 </style>
