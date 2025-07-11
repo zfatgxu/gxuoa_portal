@@ -67,8 +67,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import NavBar from '@/components/document/NavBar.vue'
-import SearchBar from '@/components/document/SearchBar.vue'
+import NavBar from '@/components/Document/NavBar.vue'
+import SearchBar from '@/components/Document/SearchBar.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import * as documentFavoriteApi from '@/api/document/favorite'
 import { formatDate } from '@/utils/formatTime'
