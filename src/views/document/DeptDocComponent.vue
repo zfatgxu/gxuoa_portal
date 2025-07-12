@@ -90,8 +90,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import NavBar from '@/components/document/NavBar.vue'
-import SearchBar from '@/components/document/SearchBar.vue'
+import NavBar from '@/components/Document/NavBar.vue'
+import SearchBar from '@/components/Document/SearchBar.vue'
 import * as circulationApi from '@/api/document/circulation'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
