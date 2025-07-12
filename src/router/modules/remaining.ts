@@ -147,6 +147,32 @@ const remainingRouter: AppRouteRecordRaw[] = [
           icon: '',
           activeMenu: '/dcdb'
         }
+      },
+      {
+        path: '/dcdb/dept',
+        component: () => import('@/views/dcdb/dept/index.vue'),
+        name: 'DcdbDept',
+        meta: {
+          title: '部门界面',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: '',
+          activeMenu: '/dcdb/dept'
+        }
+      },
+      {
+        path: '/dcdb/leader',
+        component: () => import('@/views/dcdb/leader/index.vue'),
+        name: 'DcdbLeader',
+        meta: {
+          title: '分管领导',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: '',
+          activeMenu: '/dcdb/dept'
+        }
       }
     ]
   },
