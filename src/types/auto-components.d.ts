@@ -36,6 +36,7 @@ declare module 'vue' {
     Cropper: typeof import('./../components/Cropper/src/Cropper.vue')['default']
     CropperAvatar: typeof import('./../components/Cropper/src/CropperAvatar.vue')['default']
     CycleConfig: typeof import('./../components/bpmnProcessDesigner/package/penal/time-event-config/CycleConfig.vue')['default']
+    Dcdb: typeof import('./../views/dcdb/index.vue')['default']
     DelayTimerNode: typeof import('./../components/SimpleProcessDesignerV2/src/nodes/DelayTimerNode.vue')['default']
     DelayTimerNodeConfig: typeof import('./../components/SimpleProcessDesignerV2/src/nodes-config/DelayTimerNodeConfig.vue')['default']
     DeptDocComponent: typeof import('./../views/document/DeptDocComponent.vue')['default']
