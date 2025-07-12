@@ -73,7 +73,7 @@
             </div>
         </div>
         <div class="ml-4 space-y-1 text-sm">
-            <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
             <div class="flex items-center">
                 <div class="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
                 <span class="text-gray-600">进展较快</span>
@@ -267,7 +267,7 @@
                     </div>
                 </div>
                 <div class="flex ml-6">
-                    <el-button class="w-20">
+                    <el-button class="w-20" @click="openDetailDialog(task)">
                         查看详情
                     </el-button>
                     <el-button class="w-20">
@@ -282,30 +282,41 @@
         </div>
     </div>
     </div>
+
+    <!-- 督办详情弹框 -->
+    <SupervisionDetailDialog
+      v-model="detailDialogVisible"
+      :task-data="selectedTask"
+    />
 </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
-import { 
-Calendar, 
-Clock, 
-CheckCircle, 
+import {
+Calendar,
+Clock,
+CheckCircle,
 TimerOff,
-Search, 
-Bell, 
-ChevronRight, 
-Users, 
-Building, 
+Search,
+Bell,
+ChevronRight,
+Users,
+Building,
 User,
-AlertTriangle 
+AlertTriangle
 } from 'lucide-vue-next'
+import SupervisionDetailDialog from './components/SupervisionDetailDialog.vue'
 
 // Reactive data
 const activeTab = ref('work')
 const searchQuery = ref('')
 const selectedDepartment = ref('')
 const selectedStatus = ref('')
+
+// 弹框相关状态
+const detailDialogVisible = ref(false)
+const selectedTask = ref(null)
 
 // Static data
 const tabs = [
@@ -431,6 +442,12 @@ return tasks.value.filter(task => {
     return matchesTab && matchesSearch && matchesDepartment && matchesStatus
 })
 })
+
+// 打开详情弹框
+const openDetailDialog = (task) => {
+  selectedTask.value = task
+  detailDialogVisible.value = true
+}
 </script>
 
 <style scoped>

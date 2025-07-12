@@ -818,7 +818,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
     children: [
       {
         path: 'create',
-        component: () => import('@/views/supervision/create.vue'),
+        component: () => import('@/views/dcdb/create.vue'),
         name: 'SupervisionCreate',
         meta: {
           requiresAuth: true,
@@ -827,19 +827,6 @@ const remainingRouter: AppRouteRecordRaw[] = [
           canTo: true,
           title: '创建督办单',
           activeMenu: '/supervision/create'
-        }
-      },
-      {
-        path: 'detail/:id',
-        component: () => import('@/views/supervision/detail.vue'),
-        name: 'SupervisionDetail',
-        meta: {
-          requiresAuth: true,
-          noCache: true,
-          hidden: true,
-          canTo: true,
-          title: '督办单详情',
-          activeMenu: '/supervision/detail'
         }
       }
     ]
