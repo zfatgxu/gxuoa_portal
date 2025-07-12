@@ -7,6 +7,7 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    _tmp_22500_746b4c2d1488a00922e06e82415a143a: typeof import('./../../_tmp_22500_746b4c2d1488a00922e06e82415a143a')['default']
     AppLinkInput: typeof import('./../components/AppLinkInput/index.vue')['default']
     AppLinkSelectDialog: typeof import('./../components/AppLinkInput/AppLinkSelectDialog.vue')['default']
     Backtop: typeof import('./../components/Backtop/src/Backtop.vue')['default']
@@ -33,6 +34,7 @@ declare module 'vue' {
     Cropper: typeof import('./../components/Cropper/src/Cropper.vue')['default']
     CropperAvatar: typeof import('./../components/Cropper/src/CropperAvatar.vue')['default']
     CycleConfig: typeof import('./../components/bpmnProcessDesigner/package/penal/time-event-config/CycleConfig.vue')['default']
+    Dcdb: typeof import('./../views/dcdb/index.vue')['default']
     DelayTimerNode: typeof import('./../components/SimpleProcessDesignerV2/src/nodes/DelayTimerNode.vue')['default']
     DelayTimerNodeConfig: typeof import('./../components/SimpleProcessDesignerV2/src/nodes-config/DelayTimerNodeConfig.vue')['default']
     DeptSelectForm: typeof import('./../components/DeptSelectForm/index.vue')['default']
@@ -101,6 +103,7 @@ declare module 'vue' {
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
     ElTransfer: typeof import('element-plus/es')['ElTransfer']
     ElTree: typeof import('element-plus/es')['ElTree']
+    ElTreeSelect: typeof import('element-plus/es')['ElTreeSelect']
     ElUpload: typeof import('element-plus/es')['ElUpload']
     EndEventNode: typeof import('./../components/SimpleProcessDesignerV2/src/nodes/EndEventNode.vue')['default']
     Error: typeof import('./../components/Error/src/Error.vue')['default']
@@ -125,6 +128,7 @@ declare module 'vue' {
     OperateLogV2: typeof import('./../components/OperateLogV2/src/OperateLogV2.vue')['default']
     Pagination: typeof import('./../components/Pagination/index.vue')['default']
     ParallelNode: typeof import('./../components/SimpleProcessDesignerV2/src/nodes/ParallelNode.vue')['default']
+    'PnpmLock.yaml': typeof import('./../../pnpm-lock.yaml.2089862947')['default']
     ProcessDesigner: typeof import('./../components/bpmnProcessDesigner/package/designer/ProcessDesigner.vue')['default']
     ProcessExpressionDialog: typeof import('./../components/bpmnProcessDesigner/package/penal/task/task-components/ProcessExpressionDialog.vue')['default']
     ProcessListenerDialog: typeof import('./../components/bpmnProcessDesigner/package/penal/listeners/ProcessListenerDialog.vue')['default']
@@ -173,7 +177,6 @@ declare module 'vue' {
     VerifyPoints: typeof import('./../components/Verifition/src/Verify/VerifyPoints.vue')['default']
     VerifySlide: typeof import('./../components/Verifition/src/Verify/VerifySlide.vue')['default']
     VerticalButtonGroup: typeof import('./../components/VerticalButtonGroup/index.vue')['default']
-    Workspace: typeof import('./../../.idea/workspace.xml')['default']
     XButton: typeof import('./../components/XButton/src/XButton.vue')['default']
     XTextButton: typeof import('./../components/XButton/src/XTextButton.vue')['default']
   }
