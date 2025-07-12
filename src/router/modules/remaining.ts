@@ -147,7 +147,33 @@ const remainingRouter: AppRouteRecordRaw[] = [
           icon: '',
           activeMenu: '/dcdb'
         }
-      }
+      },
+      {
+        path: 'work_supervision',
+        component: () => import('@/views/dcdb/work_supervision.vue'),
+        name: 'DcdbWorkSupervision',
+        meta: {
+          title: '工作督办',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: '',
+          activeMenu: '/dcdb'
+        }
+      },
+      {
+        path: 'special_supervision',
+        component: () => import('@/views/dcdb/special_supervision.vue'),
+        name: 'DcdbSpecialSupervision',
+        meta: {
+          title: '专项督办',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: '',
+          activeMenu: '/dcdb'
+        }
+      },
     ]
   },
   {
