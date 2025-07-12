@@ -73,7 +73,7 @@
             </div>
         </div>
         <div class="ml-4 space-y-1 text-sm">
-            <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-3">
             <div class="flex items-center">
                 <div class="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
                 <span class="text-gray-600">进展较快</span>
