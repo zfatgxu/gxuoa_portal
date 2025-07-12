@@ -53,11 +53,11 @@ const maxEntries = computed(() => {
   return 2
 })
 
-// 监听窗口大小变化
-const updateMaxEntries = () => {
-  // 窗口大小变化时重新计算
-  window.dispatchEvent(new Event('resize'))
-}
+// // 监听窗口大小变化
+// const updateMaxEntries = () => {
+//   // 窗口大小变化时重新计算
+//   window.dispatchEvent(new Event('resize'))
+// }
 
 // 快捷入口列表
 const entryList = ref([
@@ -127,7 +127,7 @@ const handleAddEntry = () => {
 
 onMounted(() => {
   // 可以在这里加载用户自定义的快捷入口
-  window.addEventListener('resize', updateMaxEntries)
+  //window.addEventListener('resize', updateMaxEntries)
 })
 
 </script>
