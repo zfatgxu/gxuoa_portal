@@ -218,21 +218,17 @@ const handleAuthorized = () => {
       return
     }
     isRelogin.show = true
-    ElMessageBox.confirm(t('sys.api.timeoutMessage'), t('common.confirmTitle'), {
-      showCancelButton: false,
-      closeOnClickModal: false,
-      showClose: false,
-      closeOnPressEscape: false,
-      confirmButtonText: t('login.relogin'),
-      type: 'warning'
-    }).then(() => {
+    //去掉弹窗
+   
+      
+    
       resetRouter() // 重置静态路由表
       deleteUserCache() // 删除用户缓存
       removeToken()
       isRelogin.show = false
       // 干掉token后再走一次路由让它过router.beforeEach的校验
       window.location.href = window.location.href
-    })
+    
   }
   return Promise.reject(t('sys.api.timeoutMessage'))
 }

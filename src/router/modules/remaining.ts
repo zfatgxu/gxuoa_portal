@@ -59,7 +59,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
     children: [
       {
         path: 'index',
-        component: () => import('@/views/home/Index.vue'),
+        component: () => import('@/views/Home/Index.vue'),
         name: 'Index',
         meta: {
           title: t('router.home'),
@@ -341,6 +341,40 @@ const remainingRouter: AppRouteRecordRaw[] = [
           canTo: true,
           title: '修改流程',
           activeMenu: '/bpm/manager/model'
+        }
+      }
+    ]
+  },
+  {
+    path: '/seal',
+    component: Layout,
+    name: 'SealCenter',
+    meta: {
+      hidden: true
+    },
+    children: [
+      {
+        path: 'create',
+        component: () => import('@/views/seal/task/create/index.vue'),
+        name: 'SealCreate',
+        meta: {
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          title: '发起印章申请',
+          activeMenu: '/seal'
+        }
+      },
+      {
+        path: 'detail',
+        component: () => import('@/views/seal/detail.vue'),
+        name: 'SealDetail',
+        meta: {
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          title: '查看印章详情',  
+          activeMenu: '/seal'
         }
       }
     ]

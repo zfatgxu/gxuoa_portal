@@ -2,3 +2,9 @@
 /build/
 /.idea/
 /dist/
+/dist-prod
+*.zip
+.package-lock.json
+.gitignore
+settings.json
+.auto-import.d.ts
