@@ -1,353 +1,173 @@
 <template>
-  <div class="email-app">
-    <!-- Sidebar -->
-    <div class="sidebar">
-      <!-- Logo/Header -->
-      <div class="sidebar-header">
-        <div class="logo">
-          <i class="icon-mail"></i>
-          <span class="logo-text">内部邮</span>
-        </div>
-      </div>
-
-      <!-- Compose Button -->
-      <div class="compose-section">
-        <button class="compose-btn">
-          <i class="icon-edit"></i>
-          写信
-        </button>
-        <button class="inbox-btn">
-          <i class="icon-inbox"></i>
-          收信
-        </button>
-      </div>
-
-      <!-- Folder List -->
-      <div class="folder-list">
-        <div class="folder-item" :class="{ active: activeFolder === 'inbox' }" @click="setActiveFolder('inbox')">
-          <i class="icon-folder"></i>
-          <span>收件箱</span>
-          <span class="count">(1)</span>
-        </div>
-        <div class="folder-item important" :class="{ active: activeFolder === 'important' }" @click="setActiveFolder('important')">
-          <i class="icon-star"></i>
-          <span>重要邮件</span>
-          <i class="star-icon">★</i>
-        </div>
-        <div class="folder-item" :class="{ active: activeFolder === 'sent' }" @click="setActiveFolder('sent')">
-          <i class="icon-sent"></i>
-          <span>已发送</span>
-        </div>
-        <div class="folder-item" :class="{ active: activeFolder === 'drafts' }" @click="setActiveFolder('drafts')">
-          <i class="icon-folder"></i>
-          <span>草稿箱</span>
-          <span class="count">(4)</span>
-        </div>
-        <div class="folder-item" :class="{ active: activeFolder === 'deleted' }" @click="setActiveFolder('deleted')">
-          <i class="icon-folder"></i>
-          <span>已删除</span>
-        </div>
-        <div class="folder-item" :class="{ active: activeFolder === 'spam' }" @click="setActiveFolder('spam')">
-          <i class="icon-folder"></i>
-          <span>垃圾邮件</span>
-          <span class="count">(8)</span>
-        </div>
-        <div class="folder-item" :class="{ active: activeFolder === 'custom' }" @click="setActiveFolder('custom')">
-          <i class="icon-folder"></i>
-          <span>我的文件夹</span>
-        </div>
-      </div>
+  <div class="mail-container">
+    <!-- 顶部标题栏 -->
+    <div class="header">
+      <div class="header-left header-left-icons">
+  <span class="header-icon header-icon--bl">
+    <svg width="1.5em" height="1.5em" viewBox="0 0 32 32" fill="none">
+      <rect x="4" y="8" width="24" height="16" rx="4" fill="#2196f3"/>
+      <path d="M4 8l12 10l12-10" stroke="#fff" stroke-width="2" fill="none"/>
+    </svg>
+  </span>
+  <span class="header-title">内部邮</span>
+  <span class="header-icon header-icon--tr">
+    <svg width="1.5em" height="1.5em" viewBox="0 0 32 32" fill="none">
+      <rect x="4" y="8" width="24" height="16" rx="4" fill="#ffa726"/>
+      <path d="M4 8l12 10l12-10" stroke="#fff" stroke-width="2" fill="none"/>
+    </svg>
+  </span>
+</div>
+      <div class="header-right">
+  <div class="header-search">
+    <span class="search-icon">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="7" cy="7" r="6" stroke="#bdbdbd" stroke-width="1.5" fill="none"/>
+        <path d="M12 12l-2.5-2.5" stroke="#bdbdbd" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </span>
+    <input class="search-input" type="text" placeholder="搜索" />
+  </div>
+</div>
     </div>
 
-    <!-- Main Content -->
-    <div class="main-content">
-      <!-- Header -->
-      <div class="header">
-        <div class="header-left">
-          <div class="title-dropdown">
-            <select v-model="selectedMailbox" class="mailbox-selector">
-              <option value="inbox">收件箱</option>
-              <option value="sent">已发送</option>
-              <option value="starred">星标邮件</option>
-            </select>
-          </div>
-        </div>
-        <div class="header-right">
-          <div class="search-box">
-            <i class="icon-search"></i>
-            <input type="text" placeholder="搜索" v-model="searchQuery" />
-          </div>
-        </div>
-      </div>
-
-      <!-- Toolbar -->
-      <div class="toolbar">
-        <div class="toolbar-left">
-          <button class="btn btn-primary">
-            <i class="icon-edit"></i>
+    <div class="content-wrapper">
+      <!-- 左侧边栏 -->
+      <div class="sidebar">
+        <!-- 顶部按钮区域 -->
+        <div class="sidebar-top">
+          <button class="compose-btn active">
+            <span class="icon">✏️</span>
             写信
           </button>
-          <button class="btn">
-            <i class="icon-checkbox"></i>
-            已发送 ⏫
+          <button class="inbox-btn">
+            <span class="icon">📥</span>
+            收件箱
           </button>
-          <button class="btn">
-            <i class="icon-delete"></i>
-            删除
-          </button>
-          <button class="btn">
-            <i class="icon-forward"></i>
-            转发
-          </button>
-          <button class="btn">
-            <i class="icon-mark-read"></i>
-            全部标记为已读
-          </button>
-          <select class="dropdown">
-            <option>操作...</option>
-          </select>
-          <select class="dropdown">
-            <option>移动到...</option>
-          </select>
         </div>
-        <div class="toolbar-right">
-          <span class="email-count">共745封 ⏫</span>
-          <i class="icon-refresh"></i>
-        </div>
+
+        <!-- 文件夹列表 -->
+        <div class="folder-list">
+  <div class="folder-item" :class="{active: selectedFolder==='inbox'}" @click="selectFolder('inbox')">
+    <span class="folder-icon">
+      <!-- 信箱SVG -->
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="12" rx="3" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M2 6l8 6 8-6" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
+    </span>
+    <span class="folder-name">收件箱</span><span class="folder-badge">1</span>
+  </div>
+  <div class="folder-item" :class="{active: selectedFolder==='starred'}" @click="selectFolder('starred')">
+    <span class="folder-icon">
+      <!-- 星标SVG -->
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="10,2 12,7.5 18,7.5 13,11.5 15,17 10,13.5 5,17 7,11.5 2,7.5 8,7.5" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
+    </span>
+    <span class="folder-name">星标邮件</span>
+  </div>
+  <div class="folder-item" :class="{active: selectedFolder==='sent'}" @click="selectFolder('sent')">
+    <span class="folder-icon">
+      <!-- 纸飞机SVG -->
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="2,18 18,10 2,2 5,10 2,18" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
+    </span>
+    <span class="folder-name">已发送</span>
+  </div>
+  <div class="folder-item">
+    <span class="folder-icon">
+      <!-- 文件夹SVG -->
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="10" rx="2" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M2 6l6-4 4 4h6" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
+    </span>
+    <span class="folder-name">草稿箱</span><span class="folder-badge">4</span>
+  </div>
+  <div class="folder-item">
+    <span class="folder-icon">
+      <!-- 垃圾桶SVG -->
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="5" y="7" width="10" height="9" rx="2" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M3 7h14" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M8 10v3" stroke="#ff9800" stroke-width="1.2"/><path d="M12 10v3" stroke="#ff9800" stroke-width="1.2"/></svg>
+    </span>
+    <span class="folder-name">已删除</span>
+  </div>
+  <div class="folder-item">
+    <span class="folder-icon">
+      <!-- 垃圾箱SVG -->
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="12" rx="3" stroke="#ff9800" stroke-width="1.5" fill="none"/><rect x="8" y="10" width="4" height="4" rx="1" stroke="#ff9800" stroke-width="1.2" fill="none"/></svg>
+    </span>
+    <span class="folder-name">垃圾箱</span><span class="folder-badge">8</span>
+  </div>
+  <div class="folder-item">
+    <span class="folder-icon">
+      <!-- 文件夹SVG -->
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="2,18 18,10 2,2 5,10 2,18" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
+    </span>
+    <span class="folder-name">我的文件夹</span>
+  </div>
+</div>
       </div>
 
-      <!-- Email List -->
-      <div class="email-list">
-        <!-- Today Section -->
-        <div class="section">
-          <div class="section-header">
-            <span class="section-title">今天 (2封)</span>
-          </div>
-          <div class="email-item" v-for="email in todayEmails" :key="email.id" @click="selectEmail(email)">
-            <input type="checkbox" class="email-checkbox" v-model="email.selected" />
-            <i class="email-icon icon-folder"></i>
-            <div class="email-content">
-              <div class="email-sender">{{ email.sender }}</div>
-              <div class="email-subject">{{ email.subject }}</div>
-            </div>
-            <div class="email-time">{{ email.time }}</div>
-            <i class="star-icon" :class="{ starred: email.starred }" @click.stop="toggleStar(email)">☆</i>
-          </div>
-        </div>
-
-        <!-- Yesterday Section -->
-        <div class="section">
-          <div class="section-header">
-            <span class="section-title">昨天 (1封)</span>
-          </div>
-          <div class="email-item" v-for="email in yesterdayEmails" :key="email.id" @click="selectEmail(email)">
-            <input type="checkbox" class="email-checkbox" v-model="email.selected" />
-            <i class="email-icon icon-attachment"></i>
-            <div class="email-content">
-              <div class="email-sender">{{ email.sender }}</div>
-              <div class="email-subject">{{ email.subject }}</div>
-            </div>
-            <div class="email-time">{{ email.time }}</div>
-            <i class="star-icon" :class="{ starred: email.starred }" @click.stop="toggleStar(email)">☆</i>
-          </div>
-        </div>
-
-        <!-- Monday Section -->
-        <div class="section">
-          <div class="section-header">
-            <span class="section-title">周一 (2封)</span>
-          </div>
-          <div class="email-item" v-for="email in mondayEmails" :key="email.id" @click="selectEmail(email)">
-            <input type="checkbox" class="email-checkbox" v-model="email.selected" />
-            <i class="email-icon icon-attachment"></i>
-            <div class="email-content">
-              <div class="email-sender">{{ email.sender }}</div>
-              <div class="email-subject">{{ email.subject }}</div>
-            </div>
-            <div class="email-time">{{ email.time }}</div>
-            <i class="star-icon" :class="{ starred: email.starred }" @click.stop="toggleStar(email)">☆</i>
-          </div>
-        </div>
-
-        <!-- Sunday Section -->
-        <div class="section">
-          <div class="section-header">
-            <span class="section-title">周日 (1封)</span>
-          </div>
-          <div class="email-item" v-for="email in sundayEmails" :key="email.id" @click="selectEmail(email)">
-            <input type="checkbox" class="email-checkbox" v-model="email.selected" />
-            <i class="email-icon icon-attachment"></i>
-            <div class="email-content">
-              <div class="email-sender">{{ email.sender }}</div>
-              <div class="email-subject">{{ email.subject }}</div>
-            </div>
-            <div class="email-time">{{ email.time }}</div>
-            <i class="star-icon" :class="{ starred: email.starred }" @click.stop="toggleStar(email)">☆</i>
-          </div>
-        </div>
-
-        <!-- Last Week Section -->
-        <div class="section">
-          <div class="section-header">
-            <span class="section-title">上周 (19封)</span>
-          </div>
-          <div class="email-item" v-for="email in lastWeekEmails" :key="email.id" @click="selectEmail(email)">
-            <input type="checkbox" class="email-checkbox" v-model="email.selected" />
-            <i class="email-icon icon-attachment"></i>
-            <div class="email-content">
-              <div class="email-sender">{{ email.sender }}</div>
-              <div class="email-subject">{{ email.subject }}</div>
-            </div>
-            <div class="email-time">{{ email.time }}</div>
-            <i class="star-icon" :class="{ starred: email.starred }" @click.stop="toggleStar(email)">☆</i>
-          </div>
-        </div>
-      </div>
-
-      <!-- Pagination -->
-      <div class="pagination">
-        <div class="pagination-right">
-          <div class="pagination-numbers">
-            <button class="pagination-btn" @click="previousPage">‹</button>
-            <button class="pagination-btn active" @click="goToPage(1)">1</button>
-            <button class="pagination-btn" @click="goToPage(2)">2</button>
-            <button class="pagination-btn" @click="goToPage(3)">3</button>
-            <button class="pagination-btn" @click="goToPage(4)">4</button>
-            <button class="pagination-btn" @click="goToPage(5)">5</button>
-            <span class="pagination-dots">...</span>
-            <button class="pagination-btn" @click="nextPage">›</button>
-          </div>
-          <div class="pagination-actions">
-            <span class="pagination-text">7条/页</span>
-            <button class="pagination-action-btn">首页</button>
-            <button class="pagination-action-btn">上一页</button>
-            <button class="pagination-action-btn primary">下一页</button>
-          </div>
-        </div>
-      </div>
+      <!-- 主内容区域 -->
+      <MainContent :folderName="folderLabels[selectedFolder]" :emails="allEmails[selectedFolder]" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import MainContent from './components/mainContent.vue'
+import { ref } from 'vue'
 import '@/views/mail/mail.css'
+
 interface Email {
   id: number
   sender: string
   subject: string
   time: string
-  selected: boolean
-  starred: boolean
+  date: string // 新增日期字段 yyyy-MM-dd
 }
 
-const activeFolder = ref('inbox')
-const searchQuery = ref('')
-const currentPage = ref(1)
-const selectedMailbox = ref('inbox')
+// 使用 mockjs 生成 50 条以上假数据
+import Mock from 'mockjs'
 
-const todayEmails = reactive<Email[]>([
-  {
-    id: 1,
-    sender: '宇体库字体库',
-    subject: '思源黑体字体字 sdfbtgbnrsntynrstydtbhtdtr周天晚gdbfbsfgafbvrgastbfdqfgbntsgbndfnhhgdnbkbt...',
-    time: '20:30',
-    selected: false,
-    starred: false
-  },
-  {
-    id: 2,
-    sender: '宇体库字体库',
-    subject: '思源黑体字体字 sdfbtgbnrsntynrstydtbhtdtr周天晚gdbfbsfgafbvrgastbfdqfgbntsgbndfnhhgdnbkbt...',
-    time: '20:30',
-    selected: false,
-    starred: false
+function genEmails(folder: string, count: number): Email[] {
+  // 生成分布在不同时间段的日期
+  const today = new Date()
+  function formatDate(d: Date) {
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0')
   }
-])
-
-const yesterdayEmails = reactive<Email[]>([
-  {
-    id: 3,
-    sender: '888',
-    subject: '777 动态信风飞(6ewgqrgeabatbnhrrfnnsfdbraferfhgatfbdsnfgnarfgaergsbfgfsgazzdfbsbnfgnbgcdsbgftg...',
-    time: '10:30',
-    selected: false,
-    starred: false
-  }
-])
-
-const mondayEmails = reactive<Email[]>([
-  {
-    id: 4,
-    sender: '宇体库字体库',
-    subject: '思源黑体字体字 sdfbtgbnrsntynrstydtbhtdtr周天晚gdbfbsfgafbvrgastbfdqfgbntsgbndfnhhgdnbkbt...',
-    time: '20:30',
-    selected: false,
-    starred: false
-  },
-  {
-    id: 5,
-    sender: '宇体库字体库',
-    subject: '思源黑体字体字 sdfbtgbnrsntynrstydtbhtdtr周天晚gdbfbsfgafbvrgastbfdqfgbntsgbndfnhhgdnbkbt...',
-    time: '20:30',
-    selected: false,
-    starred: false
-  }
-])
-
-const sundayEmails = reactive<Email[]>([
-  {
-    id: 6,
-    sender: '宇体库字体库',
-    subject: '思源黑体字体字 sdfbtgbnrsntynrstydtbhtdtr周天晚gdbfbsfgafbvrgastbfdqfgbntsgbndfnhhgdnbkbt...',
-    time: '20:30',
-    selected: false,
-    starred: false
-  }
-])
-
-const lastWeekEmails = reactive<Email[]>([
-  {
-    id: 7,
-    sender: '宇体库字体库',
-    subject: '思源黑体字体字 sdfbtgbnrsntynrstydtbhtdtr周天晚gdbfbsfgafbvrgastbfdqfgbntsgbndfnhhgdnbkbt...',
-    time: '20:30',
-    selected: false,
-    starred: false
-  },
-  {
-    id: 8,
-    sender: '宇体库字体库',
-    subject: '思源黑体字体字 sdfbtgbnrsntynrstydtbhtdtr周天晚gdbfbsfgafbvrgastbfdqfgbntsgbndfnhhgdnbkbt...',
-    time: '20:30',
-    selected: false,
-    starred: false
-  }
-])
-
-const setActiveFolder = (folder: string) => {
-  activeFolder.value = folder
+  // 四类日期分布
+  const buckets = [
+    { label: '今天', offset: () => 0 },
+    { label: '昨天', offset: () => -1 },
+    { label: '一周内', offset: () => -Math.floor(Math.random()*5)-2 }, // 随机-2~-6天
+    { label: '一周前', offset: () => -Math.floor(Math.random()*20)-7 } // 随机-7~-26天
+  ]
+  return Array.from({length: count}).map((_, i) => {
+    let bucketIdx
+    const r = Math.random()
+    if (r < 0.15) bucketIdx = 0 // 今天
+    else if (r < 0.3) bucketIdx = 1 // 昨天
+    else if (r < 0.7) bucketIdx = 2 // 一周内
+    else bucketIdx = 3 // 一周前
+    const offset = buckets[bucketIdx].offset()
+    const date = formatDate(new Date(today.getTime() + offset*86400000))
+    return {
+      id: i+1,
+      sender: folder === 'sent' ? '我' : Mock.Random.cname(),
+      subject: `${folder === 'inbox' ? '收件箱' : folder === 'starred' ? '星标' : '已发送'}邮件 - ` + Mock.Random.ctitle(8, 20),
+      time: Mock.Random.time('HH:mm'),
+      date
+    }
+  })
 }
 
-const selectEmail = (email: Email) => {
-  console.log('Selected email:', email)
+const allEmails: Record<string, Email[]> = {
+  inbox: genEmails('inbox', 60),
+  starred: genEmails('starred', 55),
+  sent: genEmails('sent', 52)
 }
 
-const toggleStar = (email: Email) => {
-  email.starred = !email.starred
+
+const folderLabels: Record<string, string> = {
+  inbox: '收件箱',
+  starred: '星标邮件',
+  sent: '已发送'
 }
 
-const previousPage = () => {
-  if (currentPage.value > 1) {
-    currentPage.value--
-  }
-}
-
-const nextPage = () => {
-  currentPage.value++
-}
-
-const goToPage = (page: number) => {
-  currentPage.value = page
+const selectedFolder = ref('inbox')
+function selectFolder(folder: string) {
+  selectedFolder.value = folder
 }
 </script>
