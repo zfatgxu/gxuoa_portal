@@ -127,7 +127,29 @@ const remainingRouter: AppRouteRecordRaw[] = [
       }
     ]
   },
-
+  {
+    path: '/dcdb',
+    component: Layout,
+    name: 'dcdb',
+    meta: {
+      hidden: true
+    },
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/dcdb/index.vue'),
+        name: 'Dcdb',
+        meta: {
+          title: '督查督办',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: '',
+          activeMenu: '/dcdb'
+        }
+      }
+    ]
+  },
   {
     path: '/codegen',
     component: Layout,
