@@ -11,7 +11,7 @@
         <!-- 操作按钮区域 -->
         <div class="action-bar">
           <div class="action-buttons">
-            <el-button type="primary" :icon="Plus">新建</el-button>
+            <el-button type="primary" :icon="Plus" @click="handleCreate">新建</el-button>
             <el-button :icon="Edit">修改</el-button>
             <el-button :icon="Delete" type="danger">删除</el-button>
             <el-button :icon="Download">导出</el-button>
@@ -109,6 +109,9 @@
   <script setup>
   import { ref, reactive, computed } from 'vue'
   import { Plus, Edit, Delete, Download, Bell } from '@element-plus/icons-vue'
+  import { useRouter } from 'vue-router'
+
+  const router = useRouter()
   
   // 搜索表单
   const searchForm = reactive({
@@ -260,6 +263,11 @@
   // 处理当前页变化
   const handleCurrentChange = (page) => {
     currentPage.value = page
+  }
+
+  // 处理新建督办单
+  const handleCreate = () => {
+    router.push('/dcdb/create')
   }
   </script>
   

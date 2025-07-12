@@ -173,7 +173,6 @@ const remainingRouter: AppRouteRecordRaw[] = [
           icon: '',
           activeMenu: '/dcdb/dept'
         }
-      }
       },
       {
         path: 'work_supervision',
@@ -201,6 +200,20 @@ const remainingRouter: AppRouteRecordRaw[] = [
           activeMenu: '/dcdb'
         }
       },
+      {
+        path: 'create',
+        component: () => import('@/views/dcdb/create.vue'),
+        name: 'DcdbCreate',
+        meta: {
+          title: '创建督办单',
+          requiresAuth: true,
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: '',
+          activeMenu: '/dcdb'
+        }
+      }
     ]
   },
   {
@@ -861,29 +874,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
       activeMenu: '/document/presentation-view'
     }
   },
-  {
-    path: '/supervision',
-    component: Layout,
-    name: 'Supervision',
-    meta: {
-      hidden: true
-    },
-    children: [
-      {
-        path: 'create',
-        component: () => import('@/views/dcdb/create.vue'),
-        name: 'SupervisionCreate',
-        meta: {
-          requiresAuth: true,
-          noCache: true,
-          hidden: true,
-          canTo: true,
-          title: '创建督办单',
-          activeMenu: '/supervision/create'
-        }
-      }
-    ]
-  }
+
 
 ]
 

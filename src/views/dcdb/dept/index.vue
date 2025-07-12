@@ -138,32 +138,12 @@
       </div>
     </div>
 
-    <!-- Task Detail Dialog -->
-    <el-dialog
+    <!-- 督办详情弹窗 -->
+    <SupervisionDetailDialog
       v-model="detailDialogVisible"
-      title="任务详情"
-      width="60%"
-      :before-close="handleDetailClose"
-    >
-      <div v-if="selectedTask" class="task-detail-content">
-        <h3>{{ selectedTask.title }}</h3>
-        <div class="detail-info">
-          <p><strong>主要内容：</strong></p>
-          <div class="scrollable-content">
-            {{ selectedTask.mainContent || '针对近期校园安全事件，要求各部门加强安全意识，完善应急预案，确保师生人身财产安全...' }}
-          </div>
-          <p><strong>承办内容：</strong></p>
-          <div class="scrollable-content">
-            {{ selectedTask.undertakingContent || '加强学生宿舍日常管理，完善管理制度，改善住宿环境，提升学生满意度和安全保障水平...' }}
-          </div>
-        </div>
-        <el-button type="text" @click="showMoreHistory">更多历史</el-button>
-      </div>
-      <template #footer>
-        <el-button @click="detailDialogVisible = false">关闭</el-button>
-        <el-button type="primary" @click="addProgress(selectedTask)">添加进度</el-button>
-      </template>
-    </el-dialog>
+      :task-data="selectedTask"
+      @close="handleDetailClose"
+    />
 
     <!-- Add Progress Dialog -->
     <el-dialog
@@ -198,6 +178,7 @@ import {
   Search, Bell, DataAnalysis, Document, Clock, CircleCheck, Warning,
   ArrowRight, OfficeBuilding, User
 } from '@element-plus/icons-vue'
+import SupervisionDetailDialog from '../components/SupervisionDetailDialog.vue'
 
 // Reactive data
 const activeTab = ref('my-tasks') // 默认激活“我的任务”
@@ -681,25 +662,7 @@ const filteredTaskListByStatus = (status) => {
   flex-shrink: 0;
 }
 
-.task-detail-content {
-  max-height: 500px;
-  overflow-y: auto;
-}
 
-.detail-info {
-  margin: 20px 0;
-}
-
-.scrollable-content {
-  max-height: 100px;
-  overflow-y: auto;
-  padding: 10px;
-  background-color: #f5f7fa;
-  border-radius: 4px;
-  margin: 10px 0;
-  line-height: 1.6;
-  border: 1px solid #e4e7ed;
-}
 
 .no-tasks-message {
   text-align: center;

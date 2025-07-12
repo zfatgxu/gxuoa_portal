@@ -150,72 +150,12 @@
       </div>
     </div>
 
-    <!-- Task Detail Dialog -->
-    <el-dialog
+    <!-- 督办详情弹窗 -->
+    <SupervisionDetailDialog
       v-model="detailDialogVisible"
-      title="任务详情"
-      width="70%"
-      :before-close="handleDetailClose"
-    >
-      <div v-if="selectedTask" class="task-detail-content">
-        <div class="detail-header">
-          <h3>{{ selectedTask.title }}</h3>
-          <div class="detail-tags">
-            <el-tag :type="getPriorityType(selectedTask.priority)">{{ selectedTask.priority }}</el-tag>
-            <el-tag :type="getStatusType(selectedTask.status)">{{ selectedTask.status }}</el-tag>
-          </div>
-        </div>
-        <div class="detail-info">
-          <div class="info-section">
-            <h4>基本信息</h4>
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="label">下发单位：</span>
-                <span>{{ selectedTask.issuer }}</span>
-              </div>
-              <div class="info-item">
-                <span class="label">协办部门：</span>
-                <span>{{ selectedTask.collaborators.join('、') }}</span>
-              </div>
-              <div class="info-item">
-                <span class="label">分管领导：</span>
-                <span class="supervisor">{{ selectedTask.supervisor }}</span>
-              </div>
-              <div class="info-item">
-                <span class="label">截止时间：</span>
-                <span class="deadline-date">{{ selectedTask.deadline }}</span>
-              </div>
-              <div class="info-item">
-                <span class="label">创建时间：</span>
-                <span>{{ selectedTask.createTime }}</span>
-              </div>
-            </div>
-          </div>
-          <div class="content-section">
-            <h4>主要内容</h4>
-            <div class="scrollable-content" @scroll="handleScroll">
-              {{ selectedTask.mainContent || '针对近期校园安全事件，要求各部门加强安全意识，完善应急预案，确保师生人身财产安全。重点检查宿舍区域、教学楼、实验室等重点场所的安全设施配备情况，建立健全安全管理制度。加强日常巡查，及时发现和消除安全隐患。完善应急预案，提高应急处置能力。加强安全教育，提高师生安全意识和自我保护能力。' }}
-            </div>
-          </div>
-          <div class="content-section">
-            <h4>承办内容</h4>
-            <div class="scrollable-content" @scroll="handleScroll">
-              {{ selectedTask.undertakingContent || '1. 学生处负责学生安全教育和宿舍管理，制定学生安全教育计划，定期开展安全教育活动；2. 后勤处负责校园基础设施安全检查，定期检查教学楼、宿舍楼等建筑物的安全设施；3. 保卫处负责校园安全巡逻和应急处置，建立24小时值班制度；4. 各学院配合做好学生安全教育工作。' }}
-            </div>
-          </div>
-        </div>
-        <div class="history-section">
-          <el-button type="text" @click="showMoreHistory" class="history-btn">
-            <el-icon><Clock /></el-icon>
-            更多历史
-          </el-button>
-        </div>
-      </div>
-      <template #footer>
-        <el-button @click="detailDialogVisible = false">关闭</el-button>
-        <el-button type="primary" @click="addInstruction(selectedTask)">新增批示</el-button>
-      </template>
-    </el-dialog>
+      :task-data="selectedTask"
+      @close="handleDetailClose"
+    />
 
     <!-- Add Instruction Dialog -->
     <el-dialog
@@ -293,6 +233,7 @@ import {
   ArrowRight, OfficeBuilding, User
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import SupervisionDetailDialog from '../components/SupervisionDetailDialog.vue'
 
 // Reactive data
 const activeTab = ref('managed-items') // 默认激活“分管事项”
@@ -814,93 +755,9 @@ const filteredTaskListByInstruction = () => {
   flex-shrink: 0;
 }
 
-.task-detail-content {
-  max-height: 600px;
-  overflow-y: auto;
-}
 
-.detail-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #e4e7ed;
-}
 
-.detail-header h3 {
-  margin: 0;
-  color: #303133;
-}
 
-.detail-tags {
-  display: flex;
-  gap: 8px;
-}
-
-.detail-info {
-  margin: 20px 0;
-}
-
-.info-section, .content-section {
-  margin-bottom: 25px;
-}
-
-.info-section h4, .content-section h4 {
-  margin: 0 0 15px 0;
-  color: #409eff;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 15px;
-}
-
-.info-item {
-  display: flex;
-  align-items: center;
-  font-size: 14px;
-}
-
-.info-item .label {
-  font-weight: 500;
-  color: #606266;
-  margin-right: 8px;
-  min-width: 80px;
-}
-
-.scrollable-content {
-  max-height: 120px;
-  overflow-y: auto;
-  padding: 15px;
-  background-color: #f5f7fa;
-  border-radius: 6px;
-  border: 1px solid #e4e7ed;
-  line-height: 1.6;
-  font-size: 14px;
-  color: #606266;
-}
-
-.scrollable-content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.scrollable-content::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.scrollable-content::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.scrollable-content::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
 
 .history-section {
   margin-top: 20px;
