@@ -785,6 +785,42 @@ const remainingRouter: AppRouteRecordRaw[] = [
       title: '呈文详情',
       activeMenu: '/document/presentation-view'
     }
+  },
+  {
+    path: '/supervision',
+    component: Layout,
+    name: 'Supervision',
+    meta: {
+      hidden: true
+    },
+    children: [
+      {
+        path: 'create',
+        component: () => import('@/views/supervision/create.vue'),
+        name: 'SupervisionCreate',
+        meta: {
+          requiresAuth: true,
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          title: '创建督办单',
+          activeMenu: '/supervision/create'
+        }
+      },
+      {
+        path: 'detail/:id',
+        component: () => import('@/views/supervision/detail.vue'),
+        name: 'SupervisionDetail',
+        meta: {
+          requiresAuth: true,
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          title: '督办单详情',
+          activeMenu: '/supervision/detail'
+        }
+      }
+    ]
   }
 
 ]
