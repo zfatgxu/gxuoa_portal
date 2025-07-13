@@ -45,7 +45,7 @@
       />
       <el-table-column align="center" label="审批状态" prop="status" width="120">
         <template #default="scope">
-          <dict-tag :type="DICT_TYPE.BPM_TASK_STATUS" :value="scope.row.status" />
+          <dict-tag :type="DICT_TYPE.SEAL_APPLY_STATE" :value="scope.row.status" />
         </template>
       </el-table-column>
       <el-table-column align="center" label="审批建议" prop="reason" min-width="180" />
