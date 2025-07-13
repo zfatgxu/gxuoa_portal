@@ -14,7 +14,7 @@
           <div class="text-26px font-bold mb-5px">{{ processInstance.name }}</div>
           <dict-tag
             v-if="processInstance.status"
-            :type="DICT_TYPE.BPM_PROCESS_INSTANCE_STATUS"
+            :type="DICT_TYPE.SEAL_APPLY_STATE"
             :value="processInstance.status"
           />
         </div>
@@ -205,6 +205,8 @@ const getApprovalDetail = async () => {
       return
     }
     processInstance.value = data.processInstance
+    console.log('processInstance.businessKey', processInstance.value.businessKey)
+    console.log('processInstance.id', processInstance.value.id)
     processDefinition.value = data.processDefinition
 
     // 设置表单信息
