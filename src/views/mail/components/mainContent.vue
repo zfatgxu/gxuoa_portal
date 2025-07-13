@@ -3,15 +3,14 @@
     <!-- 工具栏 -->
     <div class="toolbar">
       <div class="toolbar-left">
+        <input type="checkbox" v-model="allSelected" class="select-all-checkbox" title="全选/取消全选" />
         <span class="toolbar-inbox-label">
           {{ folderName }}
           <span class="inbox-toolbar-icon">
-            <svg width="20" height="20" viewBox="0 0 20 20" style="vertical-align: middle;">
-              <g fill="none" stroke="#222" stroke-width="1.5">
-                <path d="M3 16V8.5a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1V16"/>
-                <path d="M2 16h16"/>
-                <path d="M7 10v2a3 3 0 0 0 6 0v-2"/>
-              </g>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 6l5-4 5 4"/>
+              <path d="M3 11h14"/>
+              <path d="M3 15h14"/>
             </svg>
           </span>
         </span>
@@ -24,10 +23,9 @@
         <button class="tool-btn">
           <span class="tool-btn-icon">
             <!-- 转发：极简带右上角箭头的方框 -->
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#222" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="5" y="7" width="10" height="10" rx="2"/>
-              <path d="M15 9l4-4"/>
-              <path d="M19 5v6h-6"/>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+              <path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5z"/>
+              <path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0v-5z"/>
             </svg>
           </span>
           转发
@@ -35,9 +33,8 @@
         <button class="tool-btn">
           <span class="tool-btn-icon">
             <!-- 全部标记为已读：信封 -->
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="#222" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="5" width="12" height="8" rx="2"/>
-              <path d="M3 5l6 5l6-5"/>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 16 16">
+              <path d="M8.47 1.318a1 1 0 0 0-.94 0l-6 3.2A1 1 0 0 0 1 5.4v.817l5.75 3.45L8 8.917l1.25.75L15 6.217V5.4a1 1 0 0 0-.53-.882l-6-3.2ZM15 7.383l-4.778 2.867L15 13.117V7.383Zm-.035 6.88L8 10.082l-6.965 4.18A1 1 0 0 0 2 15h12a1 1 0 0 0 .965-.738ZM1 13.116l4.778-2.867L1 7.383v5.734Z"/>
             </svg>
           </span>
           全部标记为已读
@@ -63,7 +60,7 @@
           <span class="group-label">{{ group.label }}({{ group.emails.length }}封)</span>
         </div>
         <div v-for="email in group.emails" :key="email.id" class="email-item">
-          <input type="checkbox" class="email-checkbox" />
+          <input type="checkbox" class="email-checkbox" v-model="selectedEmails" :value="email.id" />
           <span class="email-icon">📁</span>
           <span class="sender">{{ email.sender }}</span>
           <span class="subject">{{ email.subject }}</span>
@@ -95,6 +92,28 @@ import { ElIcon } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 
 const props = defineProps<{ folderName: string, emails: Array<{ id: number, sender: string, subject: string, time: string, date: string }> }>()
+
+// --- 全选逻辑 ---
+const selectedEmails = ref<(string|number)[]>([])
+const allSelected = computed({
+  get() {
+    // If there are emails and all of them are selected, the checkbox is checked
+    return props.emails.length > 0 && selectedEmails.value.length === props.emails.length
+  },
+  set(value: boolean) {
+    // When the 'select all' checkbox is checked/unchecked, update the selection list
+    if (value) {
+      selectedEmails.value = props.emails.map(email => email.id)
+    } else {
+      selectedEmails.value = []
+    }
+  }
+})
+
+// When the list of emails changes (e.g., folder switch), reset the selection
+watch(() => props.emails, () => {
+  selectedEmails.value = []
+})
 
 // 日期分组辅助
 import { computed } from 'vue'
