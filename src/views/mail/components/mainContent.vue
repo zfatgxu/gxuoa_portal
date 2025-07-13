@@ -56,16 +56,21 @@
       </div>
     </div>
 
-    <!-- 邮件列表 -->
+    <!-- 邮件列表分组显示 -->
     <div class="email-list">
-      <div class="email-item" v-for="email in pagedEmails" :key="email.id">
-        <input type="checkbox" class="email-checkbox" />
-        <span class="email-icon">📁</span>
-        <span class="sender">{{ email.sender }}</span>
-        <span class="subject">{{ email.subject }}</span>
-        <span class="time">{{ email.time }}</span>
-        <span class="star-btn">☆</span>
-      </div>
+      <template v-for="group in groupedEmails" :key="group.label">
+        <div class="group-label-bar">
+          <span class="group-label">{{ group.label }}({{ group.emails.length }}封)</span>
+        </div>
+        <div v-for="email in group.emails" :key="email.id" class="email-item">
+          <input type="checkbox" class="email-checkbox" />
+          <span class="email-icon">📁</span>
+          <span class="sender">{{ email.sender }}</span>
+          <span class="subject">{{ email.subject }}</span>
+          <span class="time">{{ email.time }}</span>
+          <span class="star-btn">☆</span>
+        </div>
+      </template>
     </div>
     <!-- 分页 -->
     <div class="pagination">
@@ -113,8 +118,8 @@ const groupedEmails = computed(() => {
     if (!groups[label]) groups[label] = []
     groups[label].push(email)
   })
-  // 分组排序
-  const order = ['今天','昨天','本周','上周','上月','今年','更早']
+  // 只显示今天、昨天、一周内、一周前
+  const order = ['今天','昨天','本周','上周']
   return order.map(label => ({ label, emails: (groups[label]||[]).sort((a,b)=>b.date.localeCompare(a.date)||b.time.localeCompare(a.time)) })).filter(g=>g.emails.length)
 })
 
