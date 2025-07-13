@@ -17,6 +17,15 @@ importers:
       '@form-create/element-ui':
         specifier: ^3.2.11
         version: 3.2.14(vue@3.5.12(typescript@5.3.3))
+      '@fortawesome/fontawesome-svg-core':
+        specifier: ^6.7.2
+        version: 6.7.2
+      '@fortawesome/free-solid-svg-icons':
+        specifier: ^6.7.2
+        version: 6.7.2
+      '@fortawesome/vue-fontawesome':
+        specifier: ^3.0.8
+        version: 3.0.8(@fortawesome/fontawesome-svg-core@6.7.2)(vue@3.5.12(typescript@5.3.3))
       '@iconify/iconify':
         specifier: ^3.1.1
         version: 3.1.1
@@ -116,6 +125,9 @@ importers:
       mitt:
         specifier: ^3.0.1
         version: 3.0.1
+      mockjs:
+        specifier: ^1.1.0
+        version: 1.1.0
       nprogress:
         specifier: ^0.2.0
         version: 0.2.0
@@ -1234,6 +1246,24 @@ packages:
 
   '@form-create/utils@3.2.14':
     resolution: {integrity: sha512-LDr2uao4qM68C4BXXAQkaMErxRvy3ZFda9992n1frXG8Ry2sbXXxOaY20ZWQoFY6HQP8ABJuJFVfM9p0KVSFLQ==, tarball: https://registry.npmmirror.com/@form-create/utils/-/utils-3.2.14.tgz}
+
+  '@fortawesome/fontawesome-common-types@6.7.2':
+    resolution: {integrity: sha512-Zs+YeHUC5fkt7Mg1l6XTniei3k4bwG/yo3iFUtZWd/pMx9g3fdvkSK9E0FOC+++phXOka78uJcYb8JaFkW52Xg==}
+    engines: {node: '>=6'}
+
+  '@fortawesome/fontawesome-svg-core@6.7.2':
+    resolution: {integrity: sha512-yxtOBWDrdi5DD5o1pmVdq3WMCvnobT0LU6R8RyyVXPvFRd2o79/0NCuQoCjNTeZz9EzA9xS3JxNWfv54RIHFEA==}
+    engines: {node: '>=6'}
+
+  '@fortawesome/free-solid-svg-icons@6.7.2':
+    resolution: {integrity: sha512-GsBrnOzU8uj0LECDfD5zomZJIjrPhIlWU82AHwa2s40FKH+kcxQaBvBo3Z4TxyZHIyX8XTDxsyA33/Vx9eFuQA==}
+    engines: {node: '>=6'}
+
+  '@fortawesome/vue-fontawesome@3.0.8':
+    resolution: {integrity: sha512-yyHHAj4G8pQIDfaIsMvQpwKMboIZtcHTUvPqXjOHyldh1O1vZfH4W03VDPv5RvI9P6DLTzJQlmVgj9wCf7c2Fw==}
+    peerDependencies:
+      '@fortawesome/fontawesome-svg-core': ~1 || ~6
+      vue: '>= 3.0.0 < 4'
 
   '@gera2ld/jsx-dom@2.2.2':
     resolution: {integrity: sha512-EOqf31IATRE6zS1W1EoWmXZhGfLAoO9FIlwTtHduSrBdud4npYBxYAkv8dZ5hudDPwJeeSjn40kbCL4wAzr8dA==, tarball: https://registry.npmmirror.com/@gera2ld/jsx-dom/-/jsx-dom-2.2.2.tgz}
@@ -3961,6 +3991,10 @@ packages:
   mobius1-selectr@2.4.13:
     resolution: {integrity: sha512-Mk9qDrvU44UUL0EBhbAA1phfQZ7aMZPjwtL7wkpiBzGh8dETGqfsh50mWoX9EkjDlkONlErWXArHCKfoxVg0Bw==}
 
+  mockjs@1.1.0:
+    resolution: {integrity: sha512-eQsKcWzIaZzEZ07NuEyO4Nw65g0hdWAyurVol1IPl1gahRwY+svqzfgfey8U8dahLwG44d6/RwEzuK52rSa/JQ==}
+    hasBin: true
+
   moddle-xml@10.1.0:
     resolution: {integrity: sha512-erWckwLt+dYskewKXJso9u+aAZ5172lOiYxSOqKCPTy7L/xmqH1PoeoA7eVC7oJTt3PqF5TkZzUmbjGH6soQBg==, tarball: https://registry.npmmirror.com/moddle-xml/-/moddle-xml-10.1.0.tgz}
 
@@ -6244,6 +6278,21 @@ snapshots:
       vue: 3.5.12(typescript@5.3.3)
 
   '@form-create/utils@3.2.14': {}
+
+  '@fortawesome/fontawesome-common-types@6.7.2': {}
+
+  '@fortawesome/fontawesome-svg-core@6.7.2':
+    dependencies:
+      '@fortawesome/fontawesome-common-types': 6.7.2
+
+  '@fortawesome/free-solid-svg-icons@6.7.2':
+    dependencies:
+      '@fortawesome/fontawesome-common-types': 6.7.2
+
+  '@fortawesome/vue-fontawesome@3.0.8(@fortawesome/fontawesome-svg-core@6.7.2)(vue@3.5.12(typescript@5.3.3))':
+    dependencies:
+      '@fortawesome/fontawesome-svg-core': 6.7.2
+      vue: 3.5.12(typescript@5.3.3)
 
   '@gera2ld/jsx-dom@2.2.2':
     dependencies:
@@ -9315,6 +9364,10 @@ snapshots:
       ufo: 1.5.4
 
   mobius1-selectr@2.4.13: {}
+
+  mockjs@1.1.0:
+    dependencies:
+      commander: 12.1.0
 
   moddle-xml@10.1.0:
     dependencies:

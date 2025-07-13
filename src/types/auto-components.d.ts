@@ -164,7 +164,6 @@ declare module 'vue' {
     VerifyPoints: typeof import('./../components/Verifition/src/Verify/VerifyPoints.vue')['default']
     VerifySlide: typeof import('./../components/Verifition/src/Verify/VerifySlide.vue')['default']
     VerticalButtonGroup: typeof import('./../components/VerticalButtonGroup/index.vue')['default']
-    Write: typeof import('./../views/mail/mock/write.js')['default']
     XButton: typeof import('./../components/XButton/src/XButton.vue')['default']
     XTextButton: typeof import('./../components/XButton/src/XTextButton.vue')['default']
   }
