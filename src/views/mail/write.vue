@@ -1,46 +1,109 @@
 <template>
   <div class="mail-container">
     <!-- 顶部标题栏 -->
-    <div class="mail-header">
-      <div class="mail-logo">
-        <span class="logo-text">内部邮件</span>
+    <div class="header">
+      <div class="header-left header-left-icons">
+        <span class="header-icon header-icon--bl">
+          <svg width="1.5em" height="1.5em" viewBox="0 0 32 32" fill="none">
+            <rect x="4" y="8" width="24" height="16" rx="4" fill="#2196f3"/>
+            <path d="M4 8l12 10l12-10" stroke="#fff" stroke-width="2" fill="none"/>
+          </svg>
+        </span>
+        <span class="header-title">内部邮件</span>
+        <span class="header-icon header-icon--tr">
+          <svg width="1.5em" height="1.5em" viewBox="0 0 32 32" fill="none">
+            <rect x="4" y="8" width="24" height="16" rx="4" fill="#ffa726"/>
+            <path d="M4 8l12 10l12-10" stroke="#fff" stroke-width="2" fill="none"/>
+          </svg>
+        </span>
       </div>
-      <div class="search-box">
-        <el-input placeholder="搜索" prefix-icon="Search" clearable />
+      <div class="header-right">
+        <div class="header-search">
+          <span class="search-icon">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="7" cy="7" r="6" stroke="#bdbdbd" stroke-width="1.5" fill="none"/>
+              <path d="M12 12l-2.5-2.5" stroke="#bdbdbd" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <input class="search-input" type="text" placeholder="搜索" />
+        </div>
       </div>
     </div>
     
     <!-- 主体内容区 -->
-    <div class="mail-layout">
-      <!-- 左侧菜单 -->
-      <div class="mail-sidebar">
+    <div class="content-wrapper">
+      <!-- 左侧边栏 -->
+      <div class="sidebar">
+        <!-- 顶部按钮区域 -->
         <div class="sidebar-top">
-          <div class="write-btn">
-            <font-awesome-icon :icon="['fas', 'pen-to-square']" />
-            <span>写信</span>
-          </div>
-          <div class="inbox-btn">
-            <font-awesome-icon :icon="['fas', 'envelope']" />
-            <span>收信</span>
-          </div>
-          <div class="inbox-btn">
-            <font-awesome-icon :icon="['fas', 'file']" />
-            <span>草稿</span>
-          </div>
+          <button class="compose-btn active">
+            <span class="icon">✏️</span>
+            写信
+          </button>
+          <button class="inbox-btn">
+            <span class="icon">📥</span>
+            收件箱
+          </button>
         </div>
-        <div class="sidebar-menu">
-          <div v-for="(item, index) in sidebarItems" :key="index" class="menu-item">
-            <font-awesome-icon :icon="getMenuIcon(item.icon)" />
-            <span>{{ item.name }}</span>
-            <span v-if="item.count" class="count">({{ item.count }})</span>
+
+        <!-- 文件夹列表 -->
+        <div class="folder-list">
+          <div class="folder-item">
+            <span class="folder-icon">
+              <!-- 信箱SVG -->
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="12" rx="3" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M2 6l8 6 8-6" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
+            </span>
+            <span class="folder-name">收件箱</span><span class="folder-badge">1</span>
+          </div>
+          <div class="folder-item">
+            <span class="folder-icon">
+              <!-- 星标SVG -->
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="10,2 12,7.5 18,7.5 13,11.5 15,17 10,13.5 5,17 7,11.5 2,7.5 8,7.5" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
+            </span>
+            <span class="folder-name">星标邮件</span>
+          </div>
+          <div class="folder-item">
+            <span class="folder-icon">
+              <!-- 纸飞机SVG -->
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="2,18 18,10 2,2 5,10 2,18" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
+            </span>
+            <span class="folder-name">已发送</span>
+          </div>
+          <div class="folder-item">
+            <span class="folder-icon">
+              <!-- 文件夹SVG -->
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="10" rx="2" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M2 6l6-4 4 4h6" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
+            </span>
+            <span class="folder-name">草稿箱</span><span class="folder-badge">4</span>
+          </div>
+          <div class="folder-item">
+            <span class="folder-icon">
+              <!-- 垃圾桶SVG -->
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="5" y="7" width="10" height="9" rx="2" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M3 7h14" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M8 10v3" stroke="#ff9800" stroke-width="1.2"/><path d="M12 10v3" stroke="#ff9800" stroke-width="1.2"/></svg>
+            </span>
+            <span class="folder-name">已删除</span>
+          </div>
+          <div class="folder-item">
+            <span class="folder-icon">
+              <!-- 垃圾箱SVG -->
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="12" rx="3" stroke="#ff9800" stroke-width="1.5" fill="none"/><rect x="8" y="10" width="4" height="4" rx="1" stroke="#ff9800" stroke-width="1.2" fill="none"/></svg>
+            </span>
+            <span class="folder-name">垃圾箱</span><span class="folder-badge">8</span>
+          </div>
+          <div class="folder-item">
+            <span class="folder-icon">
+              <!-- 文件夹SVG -->
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="2,18 18,10 2,2 5,10 2,18" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
+            </span>
+            <span class="folder-name">我的文件夹</span>
           </div>
         </div>
       </div>
       
       <!-- 中间内容区 -->
-      <div class="mail-content">
+      <div class="main-content">
         <!-- 写信工具栏 -->
-        <div class="mail-toolbar">
+        <div class="toolbar">
           <div class="toolbar-left">
             <div class="tool-btn primary" @click="sendMail">
               <el-icon><Position /></el-icon>
@@ -75,7 +138,7 @@
             </el-dropdown>
           </div>
           <div class="toolbar-right">
-            <span class="time">已于{{ currentTime }}保存至草稿</span>
+            <span class="time" style="min-width: 180px; white-space: nowrap;">已于{{ currentTime }}保存至草稿</span>
             <div class="tool-btn" @click="closeEditor">
               <el-icon><Close /></el-icon>
             </div>
@@ -190,85 +253,85 @@
         </div>
         
         <!-- 编辑器工具栏 -->
-        <div class="editor-toolbar">
+        <div class="editor-toolbar" style="background-color: #f5faff; border-bottom: 1px solid #e0e0e0; padding: 10px 20px;">
           <div class="toolbar-group">
-            <div class="tool-icon">
+            <div class="tool-btn">
               <el-icon><ArrowLeftBold /></el-icon>
             </div>
-            <div class="tool-icon">
+            <div class="tool-btn">
               <el-icon><ArrowRightBold /></el-icon>
             </div>
-            <div class="tool-icon">
+            <div class="tool-btn">
               <el-icon><PictureFilled /></el-icon>
             </div>
-            <div class="tool-icon">
+            <div class="tool-btn">
               <el-icon><Link /></el-icon>
             </div>
-            <div class="tool-icon">
+            <div class="tool-btn">
               <el-icon><Document /></el-icon>
             </div>
-            <div class="tool-icon">
+            <div class="tool-btn">
               <el-icon><Clock /></el-icon>
             </div>
-            <div class="tool-icon">
+            <div class="tool-btn">
               <el-icon><Avatar /></el-icon>
             </div>
           </div>
           
           <div class="toolbar-group">
-            <div class="format-btn">
+            <div class="tool-select">
               <span>默认字体</span>
               <el-icon><ArrowDown /></el-icon>
             </div>
             
-            <div class="format-btn">
+            <div class="tool-select">
               <span>字号</span>
               <el-icon><ArrowDown /></el-icon>
             </div>
           </div>
           
           <div class="toolbar-group">
-            <div class="tool-icon" @click="execFormatCommand('bold')" title="加粗">
+            <div class="tool-btn" @click="execFormatCommand('bold')" title="加粗">
               <font-awesome-icon :icon="['fas', 'bold']" />
             </div>
-            <div class="tool-icon" @click="execFormatCommand('italic')" title="斜体">
+            <div class="tool-btn" @click="execFormatCommand('italic')" title="斜体">
               <font-awesome-icon :icon="['fas', 'italic']" />
             </div>
-            <div class="tool-icon" @click="execFormatCommand('underline')" title="下划线">
+            <div class="tool-btn" @click="execFormatCommand('underline')" title="下划线">
               <font-awesome-icon :icon="['fas', 'underline']" />
             </div>
-            <div class="tool-icon">
+            <div class="tool-btn">
               <el-icon><Delete /></el-icon>
             </div>
-            <div class="tool-icon">
+            <div class="tool-btn">
               <el-icon><Edit /></el-icon>
             </div>
           </div>
           
           <div class="toolbar-group">
-            <div class="tool-icon" @click="execFormatCommand('insertUnorderedList')" title="无序列表">
+            <div class="tool-btn" @click="execFormatCommand('insertUnorderedList')" title="无序列表">
               <font-awesome-icon :icon="['fas', 'list-ul']" />
             </div>
-            <div class="tool-icon" @click="execFormatCommand('insertOrderedList')" title="有序列表">
+            <div class="tool-btn" @click="execFormatCommand('insertOrderedList')" title="有序列表">
               <font-awesome-icon :icon="['fas', 'list-ol']" />
             </div>
-            <div class="tool-icon" @click="execFormatCommand('justifyLeft')" title="左对齐">
+            <div class="tool-btn" @click="execFormatCommand('justifyLeft')" title="左对齐">
               <font-awesome-icon :icon="['fas', 'align-left']" />
             </div>
-            <div class="tool-icon" @click="execFormatCommand('justifyCenter')" title="居中对齐">
+            <div class="tool-btn" @click="execFormatCommand('justifyCenter')" title="居中对齐">
               <font-awesome-icon :icon="['fas', 'align-center']" />
             </div>
-            <div class="tool-icon" @click="execFormatCommand('justifyRight')" title="右对齐">
+            <div class="tool-btn" @click="execFormatCommand('justifyRight')" title="右对齐">
               <font-awesome-icon :icon="['fas', 'align-right']" />
             </div>
-            <div class="tool-icon" @click="execFormatCommand('justifyFull')" title="两端对齐">
+            <div class="tool-btn" @click="execFormatCommand('justifyFull')" title="两端对齐">
               <font-awesome-icon :icon="['fas', 'align-justify']" />
             </div>
           </div>
         </div>
         
         <!-- 编辑器内容区 -->
-        <div class="editor-content" contenteditable="true" @input="onEditorInput">
+        <div class="editor-content" contenteditable="true" @input="onEditorInput" style="flex: 1; padding: 20px; background-color: #ffffff; min-height: 300px; outline: none; border-radius: 0 0 4px 4px;">
           <p>请输入正文</p>
         </div>
         
@@ -280,34 +343,42 @@
       </div>
       
       <!-- 右侧联系人列表 -->
-      <div class="contact-list">
-        <div class="contact-header">
+      <div class="contact-list" style="width: 220px; background-color: #ffffff; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-left: 8px; overflow: hidden;">
+        <div class="contact-header" style="padding: 12px 15px; font-size: 16px; font-weight: bold; border-bottom: 1px solid #e6e6e6; background-color: #f5faff;">
           <span>联系人</span>
         </div>
         
-        <div class="contact-search">
-          <el-input
-            v-model="contactSearch"
-            placeholder="搜索联系人"
-            prefix-icon="Search"
-          />
+        <div class="contact-search" style="padding: 10px; border-bottom: 1px solid #e6e6e6;">
+          <div class="header-search" style="width: 100%; height: 32px;">
+            <span class="search-icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <circle cx="7" cy="7" r="6" stroke="#bdbdbd" stroke-width="1.5" fill="none"/>
+                <path d="M12 12l-2.5-2.5" stroke="#bdbdbd" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <input class="search-input" type="text" placeholder="搜索联系人" v-model="contactSearch" />
+          </div>
         </div>
         
-        <div class="contact-groups">
+        <div class="contact-groups" style="flex: 1; overflow-y: auto; padding: 10px;">
           <div 
             v-for="(group, index) in contactGroups" 
             :key="index"
             class="contact-group"
+            style="margin-bottom: 10px;"
           >
             <div 
-              class="group-header" 
+              class="folder-item" 
               @click="toggleGroupExpand(index)"
+              style="display: flex; align-items: center; padding: 6px 4px; cursor: pointer; font-size: 12px; color: #333; border-radius: 2px; margin-bottom: 2px;"
             >
-              <el-icon>
-                <component :is="!group.expanded ? ArrowRight : ArrowDown" />
-              </el-icon>
-              <span>{{ group.name }}</span>
-              <span class="count">({{ group.contacts.length }})</span>
+              <span class="folder-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M4 6l4 4 4-4" stroke="#ff9800" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" :transform="!group.expanded ? 'rotate(-90 8 8)' : ''"/>
+                </svg>
+              </span>
+              <span class="folder-name">{{ group.name }}</span>
+              <span class="folder-badge">{{ group.contacts.length }}</span>
             </div>
             
             <div class="group-contacts" v-if="group.expanded">
@@ -318,9 +389,9 @@
                 @click="addRecipient(contact)"
               >
                 <el-avatar :size="24">{{ contact.name.substring(0, 1) }}</el-avatar>
-                <div class="contact-info">
-                  <div class="contact-name">{{ contact.name }}</div>
-                  <div class="contact-email">{{ contact.email }}</div>
+                <div class="contact-info" style="flex: 1; min-width: 0; overflow: hidden;">
+                  <div class="contact-name" style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ contact.name }}</div>
+                  <div class="contact-email" style="font-size: 11px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ contact.email }}</div>
                 </div>
               </div>
             </div>
@@ -336,6 +407,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
+import '@/views/mail/mail.css'
 
 // 导入Font Awesome组件和图标
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -398,7 +470,7 @@ import {
   contactGroups as mockContactGroups,
   sendingOptions as mockSendingOptions,
   searchUsers
-} from './mock/index.js'
+} from './mock/write.js'
 
 const router = useRouter()
 
@@ -575,6 +647,8 @@ onMounted(() => {
 })
 </script>
 
+
+
 <style scoped>
 /* 整体布局 */
 .mail-container {
@@ -584,6 +658,83 @@ onMounted(() => {
   background-color: #f5f7fa;
   color: #303133;
   overflow: hidden; /* 防止溢出出现滚动条 */
+}
+
+/* 使用:deep选择器来正确应用按钮样式 */
+.sidebar :deep(.sidebar-top) {
+  margin: 0 -8px 20px -8px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  padding: 12px 8px 8px 8px;
+  border-bottom: 2px solid #e3f2fd;
+}
+
+.sidebar :deep(.compose-btn), .sidebar :deep(.inbox-btn) {
+  width: 100%;
+  padding: 8px 4px;
+  margin-bottom: 4px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background-color: #ffffff;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #333;
+}
+
+.sidebar :deep(.compose-btn.active) {
+  background-color: #4285f4;
+  color: white;
+  border-color: #4285f4;
+}
+
+.sidebar :deep(.compose-btn:hover), .sidebar :deep(.inbox-btn:hover) {
+  background-color: #f0f0f0;
+}
+
+.sidebar :deep(.compose-btn.active:hover) {
+  background-color: #3367d6;
+}
+
+.folder-list {
+  flex: 1;
+  background: #fff;
+  margin: 0 -8px -8px -8px;
+  padding: 8px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.folder-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #333;
+  border-radius: 2px;
+  margin-bottom: 2px;
+}
+
+.folder-icon {
+  margin-right: 4px;
+  font-size: 12px;
+}
+
+.folder-name {
+  flex: 1;
+  font-size: 11px;
+}
+
+.folder-badge {
+  background-color: #e0e0e0;
+  border-radius: 10px;
+  padding: 0 6px;
+  font-size: 10px;
 }
 
 /* 顶部标题栏 */

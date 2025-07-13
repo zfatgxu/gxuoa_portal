@@ -9,7 +9,7 @@
       <path d="M4 8l12 10l12-10" stroke="#fff" stroke-width="2" fill="none"/>
     </svg>
   </span>
-  <span class="header-title">内部邮</span>
+  <span class="header-title">内部邮件</span>
   <span class="header-icon header-icon--tr">
     <svg width="1.5em" height="1.5em" viewBox="0 0 32 32" fill="none">
       <rect x="4" y="8" width="24" height="16" rx="4" fill="#ffa726"/>
