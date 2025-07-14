@@ -1,0 +1,160 @@
+<template>
+  <div class="main-content">
+    <!-- 工具栏 -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <input type="checkbox" v-model="allSelected" class="select-all-checkbox" title="全选/取消全选" />
+        <span class="toolbar-inbox-label">
+          {{ folderName }}
+          <span class="inbox-toolbar-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 6l5-4 5 4"/>
+              <path d="M3 11h14"/>
+              <path d="M3 15h14"/>
+            </svg>
+          </span>
+        </span>
+        <button class="tool-btn">
+          <span class="tool-btn-icon">
+            <el-icon><Delete /></el-icon>
+          </span>
+          删除
+        </button>
+        <button class="tool-btn">
+          <span class="tool-btn-icon">
+            <!-- 转发：极简带右上角箭头的方框 -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+              <path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5z"/>
+              <path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0v-5z"/>
+            </svg>
+          </span>
+          转发
+        </button>
+        <button class="tool-btn">
+          <span class="tool-btn-icon">
+            <!-- 全部标记为已读：信封 -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 16 16">
+              <path d="M8.47 1.318a1 1 0 0 0-.94 0l-6 3.2A1 1 0 0 0 1 5.4v.817l5.75 3.45L8 8.917l1.25.75L15 6.217V5.4a1 1 0 0 0-.53-.882l-6-3.2ZM15 7.383l-4.778 2.867L15 13.117V7.383Zm-.035 6.88L8 10.082l-6.965 4.18A1 1 0 0 0 2 15h12a1 1 0 0 0 .965-.738ZM1 13.116l4.778-2.867L1 7.383v5.734Z"/>
+            </svg>
+          </span>
+          全部标记为已读
+        </button>
+        <select class="tool-select">
+          <option>标记为...</option>
+        </select>
+        <select class="tool-select">
+          <option>移动...</option>
+        </select>
+      </div>
+      <div class="toolbar-right">
+        <span class="email-count">共{{ emails.length }}封 ⬇</span>
+        <span class="refresh-icon">🔄</span>
+
+      </div>
+    </div>
+
+    <!-- 邮件列表分组显示 -->
+    <div class="email-list">
+      <template v-for="group in groupedEmails" :key="group.label">
+        <div class="group-label-bar">
+          <span class="group-label">{{ group.label }}({{ group.emails.length }}封)</span>
+        </div>
+        <div v-for="email in group.emails" :key="email.id" class="email-item">
+          <input type="checkbox" class="email-checkbox" v-model="selectedEmails" :value="email.id" />
+          <span class="email-icon">📁</span>
+          <span class="sender">{{ email.sender }}</span>
+          <span class="subject">{{ email.subject }}</span>
+          <span class="time">{{ email.time }}</span>
+          <span class="star-btn">☆</span>
+        </div>
+      </template>
+    </div>
+    <!-- 分页 -->
+    <div class="pagination">
+      <div class="pagination-numbers">
+      <button v-for="n in totalPages" :key="n" class="page-btn" :class="{active: n===currentPage}" @click="currentPage=n">{{ n }}</button>
+      <span v-if="totalPages > 7" class="dots">...</span>
+      <span class="page-info">{{ pageSize }}条/页</span>
+    </div>
+    <div class="pagination-actions">
+      <button class="action-btn" @click="currentPage=1">首页</button>
+      <button class="action-btn" @click="currentPage=Math.max(1,currentPage-1)">上一页</button>
+      <button class="action-btn" @click="currentPage=Math.min(totalPages,currentPage+1)">下一页</button>
+      <button class="action-btn" @click="currentPage=totalPages">末页</button>
+    </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref,  watch } from 'vue'
+import { ElIcon } from 'element-plus'
+import { Delete } from '@element-plus/icons-vue'
+
+const props = defineProps<{ folderName: string, emails: Array<{ id: number, sender: string, subject: string, time: string, date: string }> }>()
+
+// --- 全选逻辑 ---
+const selectedEmails = ref<(string|number)[]>([])
+const allSelected = computed({
+  get() {
+    // If there are emails and all of them are selected, the checkbox is checked
+    return props.emails.length > 0 && selectedEmails.value.length === props.emails.length
+  },
+  set(value: boolean) {
+    // When the 'select all' checkbox is checked/unchecked, update the selection list
+    if (value) {
+      selectedEmails.value = props.emails.map(email => email.id)
+    } else {
+      selectedEmails.value = []
+    }
+  }
+})
+
+// When the list of emails changes (e.g., folder switch), reset the selection
+watch(() => props.emails, () => {
+  selectedEmails.value = []
+})
+
+// 日期分组辅助
+import { computed } from 'vue'
+function getDateLabel(dateStr: string) {
+  const today = new Date()
+  const d = new Date(dateStr)
+  const diffDays = Math.floor((today.getTime()-d.getTime())/86400000)
+  if (diffDays === 0) return '今天'
+  if (diffDays === 1) return '昨天'
+  if (diffDays < 7) return '本周'
+  if (diffDays < 14) return '上周'
+  if (diffDays < 40) return '上月'
+  if (today.getFullYear() === d.getFullYear()) return '今年'
+  return '更早'
+}
+const groupedEmails = computed(() => {
+  // 先分组，再组内按时间倒序
+  const groups: Record<string, any[]> = {}
+  props.emails.forEach(email => {
+    const label = getDateLabel(email.date)
+    if (!groups[label]) groups[label] = []
+    groups[label].push(email)
+  })
+  // 只显示今天、昨天、一周内、一周前
+  const order = ['今天','昨天','本周','上周']
+  return order.map(label => ({ label, emails: (groups[label]||[]).sort((a,b)=>b.date.localeCompare(a.date)||b.time.localeCompare(a.time)) })).filter(g=>g.emails.length)
+})
+
+const pageSize = ref(15)
+const currentPage = ref(1)
+const totalPages = computed(() => Math.ceil(props.emails.length / pageSize.value))
+const pagedEmails = computed(() => {
+  // 按日期和时间升序排列
+  const sorted = [...props.emails].sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date)
+    return a.time.localeCompare(b.time)
+  })
+  const start = (currentPage.value - 1) * pageSize.value
+  return sorted.slice(start, start + pageSize.value)
+})
+watch([() => props.emails, pageSize], () => {
+  currentPage.value = 1
+})
+</script>

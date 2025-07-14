@@ -250,5 +250,9 @@ export enum DICT_TYPE {
   CIRCULATION_TYPE = 'circulation_type', // 流转类型
   CIRCULATION_TEMPLATE_TYPE = 'circulation_template_type', // 流转模板类型
   DOCUMENT_TYPE = 'document_type', // 呈文类型
+
+  // ========== SEAL - 印章模块 ==========
+  SEAL_APPLY_MATERIAL_TYPES = 'seal_apply_materialTypes', // 印章申请材料类型
+  SEAL_APPLY_STATE = 'sealapply_state', // 印章申请状态
  
 }

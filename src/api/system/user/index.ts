@@ -77,5 +77,5 @@ export const updateUserStatus = (id: number, status: number) => {
 
 // 获取用户精简信息列表
 export const getSimpleUserList = (): Promise<UserVO[]> => {
-  return request.get({ url: '/app/user/simple-list' })
+  return request.get({ url: '/app/user/list-all-simple' })
 }

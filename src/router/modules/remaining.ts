@@ -147,6 +147,72 @@ const remainingRouter: AppRouteRecordRaw[] = [
           icon: '',
           activeMenu: '/dcdb'
         }
+      },
+      {
+        path: '/dcdb/dept',
+        component: () => import('@/views/dcdb/dept/index.vue'),
+        name: 'DcdbDept',
+        meta: {
+          title: '部门界面',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: '',
+          activeMenu: '/dcdb/dept'
+        }
+      },
+      {
+        path: '/dcdb/leader',
+        component: () => import('@/views/dcdb/leader/index.vue'),
+        name: 'DcdbLeader',
+        meta: {
+          title: '分管领导',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: '',
+          activeMenu: '/dcdb/dept'
+        }
+      },
+      {
+        path: 'work_supervision',
+        component: () => import('@/views/dcdb/work_supervision.vue'),
+        name: 'DcdbWorkSupervision',
+        meta: {
+          title: '工作督办',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: '',
+          activeMenu: '/dcdb'
+        }
+      },
+      {
+        path: 'special_supervision',
+        component: () => import('@/views/dcdb/special_supervision.vue'),
+        name: 'DcdbSpecialSupervision',
+        meta: {
+          title: '专项督办',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: '',
+          activeMenu: '/dcdb'
+        }
+      },
+      {
+        path: 'create',
+        component: () => import('@/views/dcdb/create.vue'),
+        name: 'DcdbCreate',
+        meta: {
+          title: '创建督办单',
+          requiresAuth: true,
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: '',
+          activeMenu: '/dcdb'
+        }
       }
     ]
   },
@@ -363,6 +429,40 @@ const remainingRouter: AppRouteRecordRaw[] = [
           canTo: true,
           title: '修改流程',
           activeMenu: '/bpm/manager/model'
+        }
+      }
+    ]
+  },
+  {
+    path: '/seal',
+    component: Layout,
+    name: 'SealCenter',
+    meta: {
+      hidden: true
+    },
+    children: [
+      {
+        path: 'create',
+        component: () => import('@/views/seal/task/create/index.vue'),
+        name: 'SealCreate',
+        meta: {
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          title: '发起印章申请',
+          activeMenu: '/seal'
+        }
+      },
+      {
+        path: 'detail',
+        component: () => import('@/views/seal/detail.vue'),
+        name: 'SealDetail',
+        meta: {
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          title: '查看印章详情',  
+          activeMenu: '/seal'
         }
       }
     ]
@@ -807,8 +907,27 @@ const remainingRouter: AppRouteRecordRaw[] = [
       title: '呈文详情',
       activeMenu: '/document/presentation-view'
     }
-  }
-
+  },
+  {
+    path: '/mail',
+    component: Layout,
+    name: 'Mail',
+    redirect: '/mail/index',  // ⭐⭐ 重点加这行
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/mail/index.vue'),
+        name: 'mails',
+        meta: {
+          title: '内部邮',
+          noCache: true,
+          canTo: true,
+          icon: 'ep:comment',
+          activeMenu: '/mail'
+        }
+      }
+    ]
+  },
 ]
 
 export default remainingRouter
