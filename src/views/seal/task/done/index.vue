@@ -96,7 +96,7 @@ const list = ref([]) // 列表的数据
 const queryParams = reactive({
   pageNo: 1,
   pageSize: 10, // 直接指定用印申请流程的key
-  getProcessDefinitionKey: 'seal_apply',
+  category: '用印申请',
 })
 
 /** 查询任务列表 */
