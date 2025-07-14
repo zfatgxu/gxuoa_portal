@@ -111,6 +111,7 @@ declare module 'vue' {
     FlowCondition: typeof import('./../components/bpmnProcessDesigner/package/penal/flow-condition/FlowCondition.vue')['default']
     Form: typeof import('./../components/Form/src/Form.vue')['default']
     Highlight: typeof import('./../components/Highlight/src/Highlight.vue')['default']
+    Hs_err_pid28888: typeof import('./../../hs_err_pid28888.log')['default']
     HttpRequestParamSetting: typeof import('./../components/SimpleProcessDesignerV2/src/nodes-config/components/HttpRequestParamSetting.vue')['default']
     HttpRequestSetting: typeof import('./../components/SimpleProcessDesignerV2/src/nodes-config/components/HttpRequestSetting.vue')['default']
     Icon: typeof import('./../components/Icon/src/Icon.vue')['default']
