@@ -908,26 +908,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
       activeMenu: '/document/presentation-view'
     }
   },
-  {
-    path: '/mail',
-    component: Layout,
-    name: 'Mail',
-    redirect: '/mail/index',  // ⭐⭐ 重点加这行
-    children: [
-      {
-        path: 'index',
-        component: () => import('@/views/mail/index.vue'),
-        name: 'mails',
-        meta: {
-          title: '内部邮',
-          noCache: true,
-          canTo: true,
-          icon: 'ep:comment',
-          activeMenu: '/mail'
-        }
-      }
-    ]
-  },
+ 
 ]
 
 export default remainingRouter
