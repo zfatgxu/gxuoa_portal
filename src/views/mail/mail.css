@@ -7,11 +7,12 @@
     background-color: #f5f5f5;
 }
 
+/* .content-wrapper: 调整内边距和gap以控制整体布局 */
 .content-wrapper {
     display: flex;
     flex: 1;
     background-color: #e3f2fd;
-    padding: 8px;
+    padding: 0 8px 8px 8px; /* 顶部padding为0，左右下为8px */
     gap: 8px;
 }
 
@@ -26,6 +27,19 @@
     background-color: #f5faff;
     position: relative;
     z-index: 10;
+}
+
+.inbox-toolbar {
+    display: flex;
+    align-items: center;
+    padding: 10px 18px;
+    background: #f5f7fa;
+    border-bottom: 1px solid #e0e6ed;
+}
+
+.select-all-checkbox {
+    margin-right: 15px; /* Add space to the right of the checkbox */
+    cursor: pointer;
 }
 
 .header-left {
@@ -131,7 +145,7 @@
 .sidebar-top {
     margin: 0 -8px 20px -8px;
     background: #fff;
-    border-radius: 8px;
+    border-radius: 18px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     padding: 12px 8px 8px 8px;
     border-bottom: 2px solid #e3f2fd;
@@ -176,7 +190,7 @@
     background: #fff;
     margin: 0 -8px -8px -8px;
     padding: 8px;
-    border-radius: 8px;
+    border-radius: 18px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     margin-top: 0;
     /* 如需更大分隔可适当增加 */
@@ -189,7 +203,7 @@
     cursor: pointer;
     font-size: 12px;
     color: #333;
-    border-radius: 2px;
+    border-radius: 12px;
     margin-bottom: 2px;
 }
 
@@ -218,13 +232,14 @@
 
 /* 主内容区域 */
 .main-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    background-color: #ffffff;
-    border-radius: 4px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    overflow: hidden;
+  flex: 1;
+  background-color: #fff;
+  border-radius: 20px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.07);
+  margin: 0; /* 移除所有margin */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* 工具栏 */
@@ -248,7 +263,7 @@
     height: 33px;
     padding: 0 16px;
     border: 1px solid #e0e0e0;
-    border-radius: 2px;
+    border-radius: 12px;
     background-color: #ffffff;
     cursor: pointer;
     font-size: 15px;
@@ -331,16 +346,48 @@
 }
 
 /* 邮件列表 */
-.email-list {
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid #f0f0f0;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+.group-label-bar {
+  background: #fff; /* 背景色变为白 */
+  border-top: 2px solid #fbbc04; /* 顶部为橘黄分界线 */
+  border-bottom: none; /* 移除底部分界线 */
+  padding: 8px 18px 6px 12px;
+  margin-top: 10px;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+}
+.group-label {
+  font-size: 15px;
+  color: #000; /* 字体颜色改为黑色 */
+  font-weight: bold; /* 保持加粗 */
+  letter-spacing: 1px;
+}
 
-    flex: 1;
-    overflow-y: auto;
-    padding: 0 16px;
+.email-list {
+  flex: 1; /* Allow the list to grow and fill available space */
+  overflow-y: auto; /* Enable vertical scrolling when content overflows */
+  max-height: calc(100vh - 280px); /* Fallback max-height */
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+  padding: 0 16px;
+}
+
+/* 自定义邮件列表的滚动条样式 */
+.email-list::-webkit-scrollbar {
+  width: 6px; /* 设置滚动条宽度，使其变细 */
+}
+
+.email-list::-webkit-scrollbar-track {
+  background: transparent; /* 轨道背景透明 */
+}
+
+.email-list::-webkit-scrollbar-thumb {
+  background-color: #ccc; /* 滑块颜色设为灰色 */
+  border-radius: 10px; /* 设置滑块圆角 */
+}
+
+.email-list::-webkit-scrollbar-thumb:hover {
+  background-color: #aaa; /* 鼠标悬停时滑块颜色加深 */
 }
 
 .time-section {
@@ -491,7 +538,7 @@ margin-right: 8px;
     width: 24px;
     height: 24px;
     border: 1px solid #e0e0e0;
-    border-radius: 2px;
+    border-radius: 12px;
     background-color: #ffffff;
     cursor: pointer;
     font-size: 11px;
@@ -533,7 +580,7 @@ margin-right: 8px;
     padding: 4px 8px;
     height: 24px;
     border: 1px solid #e0e0e0;
-    border-radius: 2px;
+    border-radius: 12px;
     background-color: #ffffff;
     cursor: pointer;
     font-size: 11px;

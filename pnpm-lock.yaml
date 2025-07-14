@@ -125,6 +125,9 @@ importers:
       mitt:
         specifier: ^3.0.1
         version: 3.0.1
+      mockjs:
+        specifier: ^1.1.0
+        version: 1.1.0
       nprogress:
         specifier: ^0.2.0
         version: 0.2.0
@@ -3987,6 +3990,10 @@ packages:
 
   mobius1-selectr@2.4.13:
     resolution: {integrity: sha512-Mk9qDrvU44UUL0EBhbAA1phfQZ7aMZPjwtL7wkpiBzGh8dETGqfsh50mWoX9EkjDlkONlErWXArHCKfoxVg0Bw==}
+
+  mockjs@1.1.0:
+    resolution: {integrity: sha512-eQsKcWzIaZzEZ07NuEyO4Nw65g0hdWAyurVol1IPl1gahRwY+svqzfgfey8U8dahLwG44d6/RwEzuK52rSa/JQ==}
+    hasBin: true
 
   moddle-xml@10.1.0:
     resolution: {integrity: sha512-erWckwLt+dYskewKXJso9u+aAZ5172lOiYxSOqKCPTy7L/xmqH1PoeoA7eVC7oJTt3PqF5TkZzUmbjGH6soQBg==, tarball: https://registry.npmmirror.com/moddle-xml/-/moddle-xml-10.1.0.tgz}
@@ -9357,6 +9364,10 @@ snapshots:
       ufo: 1.5.4
 
   mobius1-selectr@2.4.13: {}
+
+  mockjs@1.1.0:
+    dependencies:
+      commander: 12.1.0
 
   moddle-xml@10.1.0:
     dependencies:
