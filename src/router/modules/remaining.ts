@@ -331,7 +331,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
       hidden: true
     },
     children: [
-      
+
     ]
   },
   //信访
@@ -367,7 +367,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
           activeMenu: '/petition'
         }
       },
-        
+
     ]
   },
   {
@@ -946,6 +946,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
       activeMenu: '/document/presentation-view'
     }
   },
+
 ]
 
 export default remainingRouter

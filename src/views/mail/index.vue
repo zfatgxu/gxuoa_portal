@@ -9,7 +9,7 @@
       <path d="M4 8l12 10l12-10" stroke="#fff" stroke-width="2" fill="none"/>
     </svg>
   </span>
-  <span class="header-title">内部邮</span>
+  <span class="header-title">内部邮件</span>
   <span class="header-icon header-icon--tr">
     <svg width="1.5em" height="1.5em" viewBox="0 0 32 32" fill="none">
       <rect x="4" y="8" width="24" height="16" rx="4" fill="#ffa726"/>
@@ -36,7 +36,11 @@
         <!-- 顶部按钮区域 -->
         <div class="sidebar-top">
           <button class="compose-btn active">
-            <span class="icon">✏️</span>
+            <span class="icon">
+              <svg width="20" height="20" viewBox="0 0 20 20">
+                <path fill="#f5a623" d="M16.5,2.9c-0.2-0.2-0.5-0.3-0.8-0.3c-0.3,0-0.6,0.1-0.8,0.3L4.2,13.6c-0.4,0.4-0.4,1.1,0,1.5c0.4,0.4,1.1,0.4,1.5,0L16.5,4.4c0.4-0.4,0.4-1.1,0-1.5C16.5,2.9,16.5,2.9,16.5,2.9z M13.1,8.9l-1.5-1.5L15,4l1.5,1.5L13.1,8.9z M4.9,15.7l-1.5,1.5c-0.2,0.2-0.5,0.3-0.8,0.3s-0.6-0.1-0.8-0.3c-0.4-0.4-0.4-1.1,0-1.5l1.5-1.5L4.9,15.7z"/>
+              </svg>
+            </span>
             写信
           </button>
           <button class="inbox-btn">
