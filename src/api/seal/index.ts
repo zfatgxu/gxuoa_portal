@@ -3,7 +3,7 @@ import request from '@/config/axios'
 //提交印章申请
 export const submitSealApplication = async (data: any) => {
   return await request.post({ 
-    url: '/bpm/seal/apply/create', 
+    url: '/bpm/seal/seal_apply/create', 
     data: data,
     headers: {
       'Content-Type': 'application/json'
