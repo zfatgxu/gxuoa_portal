@@ -59,7 +59,7 @@
                       </el-col>
                       <!-- 情况二：业务表单 -->
                       <div v-if="processDefinition?.formType === BpmModelFormType.CUSTOM">
-                        <BusinessFormComponent :id="processInstance.businessKey" />
+                        <BusinessFormComponent :id="processInstance.businessKey" :activity-nodes="activityNodes"/>
                       </div>
                     </div>
                   </el-col>

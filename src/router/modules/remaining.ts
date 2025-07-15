@@ -503,7 +503,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
       },
       {
         path: 'detail',
-        component: () => import('@/views/seal/detail.vue'),
+        component: () => import('@/views/bpm/processInstance/detail/sealindex.vue'),
         name: 'SealDetail',
         meta: {
           noCache: true,
