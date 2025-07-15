@@ -322,6 +322,54 @@ const remainingRouter: AppRouteRecordRaw[] = [
       noTagsView: true
     }
   },
+  //文件管理
+  {
+    path: '/filemanage',
+    component: Layout,
+    name: 'FileManage',
+    meta: {
+      hidden: true
+    },
+    children: [
+
+    ]
+  },
+  //信访
+  {
+    path: '/petition',
+    component: Layout,
+    name: 'Petition',
+    meta: {
+      hidden: true
+    },
+    children: [
+      {
+        path: 'petitioner',
+        component: () => import('@/views/petition/petitioner/index.vue'),
+        name: 'PetitionPetitioner',
+        meta: {
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          title: '信访人信息',
+          activeMenu: '/petition'
+        }
+      },
+      {
+        path: 'petitioner/index',
+        component: () => import('@/views/petition/petitioner/index.vue'),
+        name: 'PetitionPetitionerIndex',
+        meta: {
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          title: '信访人信息',
+          activeMenu: '/petition'
+        }
+      },
+
+    ]
+  },
   {
     path: '/bpm',
     component: Layout,
@@ -817,16 +865,6 @@ const remainingRouter: AppRouteRecordRaw[] = [
     ]
   },
   {
-    path: '/:pathMatch(.*)*',
-    component: () => import('@/views/Error/404.vue'),
-    name: '',
-    meta: {
-      title: '404',
-      hidden: true,
-      breadcrumb: false
-    }
-  },
-  {
     path: '/iot',
     component: Layout,
     name: 'IOT',
@@ -908,26 +946,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
       activeMenu: '/document/presentation-view'
     }
   },
-  {
-    path: '/mail',
-    component: Layout,
-    name: 'Mail',
-    redirect: '/mail/index',  // ⭐⭐ 重点加这行
-    children: [
-      {
-        path: 'index',
-        component: () => import('@/views/mail/index.vue'),
-        name: 'mails',
-        meta: {
-          title: '内部邮',
-          noCache: true,
-          canTo: true,
-          icon: 'ep:comment',
-          activeMenu: '/mail'
-        }
-      }
-    ]
-  },
+
 ]
 
 export default remainingRouter
