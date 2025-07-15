@@ -43,9 +43,14 @@
     <ContentWrap>
       <el-table v-loading="loading" :data="list">
         <el-table-column align="center" label="申请编号" prop="id" />
-        <el-table-column align="center" label="状态" prop="status">
+        <el-table-column align="center" label="审批状态" prop="status">
           <template #default="scope">
             <dict-tag :type="DICT_TYPE.SEAL_APPLY_STATE" :value="scope.row.status" />
+          </template>
+        </el-table-column>
+        <el-table-column align="center" label="用印状态" prop="sealState">
+          <template #default="scope">
+            <dict-tag :type="DICT_TYPE.SEAL_STATE" :value="scope.row.sealState" />
           </template>
         </el-table-column>
         <el-table-column align="center" label="材料名称" prop="materialName" />
@@ -57,15 +62,27 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column align="center" label="经办人签字" prop="manager" />
-        <el-table-column align="center" label="单位负责人签字" prop="leader" />
-        <el-table-column align="center" label="联系方式" prop="contact" />
+        <el-table-column align="center" label="申请单标题" prop="applyTitle" />
+        <el-table-column align="center" label="联系方式" prop="phone" />
         <el-table-column align="center" label="操作" width="120">
           <template #default="scope">
             <el-button size="mini" @click="viewDetail(scope.row)">详情</el-button>
           </template>
         </el-table-column>
       </el-table>
+      
+      <!-- 分页组件 -->
+      <div class="pagination-container" style="display: flex; justify-content: flex-end; margin-top: 16px;">
+        <el-pagination
+          v-model:current-page="queryParams.pageNo"
+          v-model:page-size="queryParams.pageSize"
+          :page-sizes="[10, 20, 50, 100]"
+          layout="total, sizes, prev, pager, next, jumper"
+          :total="total"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
+      </div>
     </ContentWrap>
   </template>
   
@@ -79,9 +96,12 @@
   const router = useRouter()
   const loading = ref(false)
   const list = ref([]) // 数据列表
+  const total = ref(0) // 总条数
   const queryParams = ref({
     materialName: '',
-    materialType: ''
+    materialType: '',
+    pageNo: 1,
+    pageSize: 10
   })
   // 单位选择弹窗相关
   const dialogVisible = ref(false)
@@ -106,10 +126,15 @@
   
   // 查询、重置、发起、详情等方法
   const handleQuery = () => {
-    // TODO: 查询逻辑
+    getSealApplicationPage(queryParams.value)
   }
   const resetQuery = () => {
-    queryParams.value = { materialName: '', materialType: '' }
+    queryParams.value = { 
+      materialName: '', 
+      materialType: '',
+      pageNo: 1,
+      pageSize: queryParams.value.pageSize
+    }
     handleQuery()
   }
   const handleCreate = () => {
@@ -133,15 +158,35 @@
 
   //获取印章申请分页
   const getSealApplicationPage = async (data: any) => {
-    const res = await SealApi.getSealApplicationPage(data)
-    list.value = res.list
-    
+    loading.value = true
+    try {
+      const res = await SealApi.getSealApplicationPage(data)
+      list.value = res.list || []
+      total.value = res.total || 0
+    } catch (error) {
+      console.error('获取印章申请列表失败', error)
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  // 处理分页大小变化
+  const handleSizeChange = (val: number) => {
+    queryParams.value.pageSize = val
+    queryParams.value.pageNo = 1
+    handleQuery()
+  }
+  
+  // 处理页码变化
+  const handleCurrentChange = (val: number) => {
+    queryParams.value.pageNo = val
+    handleQuery()
   }
   
   const viewDetail = (row: any) => {
-    router.push({ name: 'SealDetail', query: { id: row.id } })
+    router.push({ name: 'SealDetail', query: { id: row.processInstanceId } })
   }
   onMounted(() => {
-    getSealApplicationPage()
+    getSealApplicationPage(queryParams.value)
   })
   </script>

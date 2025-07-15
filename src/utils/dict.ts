@@ -265,5 +265,6 @@ export enum DICT_TYPE {
   // ========== SEAL - 印章模块 ==========
   SEAL_APPLY_MATERIAL_TYPES = 'seal_apply_materialTypes', // 印章申请材料类型
   SEAL_APPLY_STATE = 'sealapply_state', // 印章申请状态
+  SEAL_STATE = 'seal_state', // 印章单状态
  
 }

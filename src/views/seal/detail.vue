@@ -27,21 +27,33 @@
       <div class="form-section">
         <div class="section-header">单位签字</div>
         <div class="signature-content">
-          <div class="signature-row">
-            <span class="required">经办人签字</span>
-            <span class="signature-value">{{ detail.handlerSignature }}</span>
-          </div>
-          <div class="signature-row">
-            <span class="required">审核人签字</span>
-            <span class="signature-value">{{ detail.reviewerSignature }}</span>
-          </div>
-          <div class="signature-row">
-            <span class="required">单位负责人签字</span>
-            <span class="signature-value">{{ detail.unitHeadSignature }}</span>
-          </div>
-          <div class="signature-row">
-            <span class="required">联系电话</span>
-            <span class="signature-value">{{ detail.contactPhone }}</span>
+          <!-- 遍历审批节点 -->
+          <div v-for="(activity, index) in filteredActivityNodes" :key="index">
+            <div class="signature-row">
+              <span class="required">{{ activity.name }}</span>
+              <span class="signature-value">
+                <!-- 显示审批人和状态 -->
+                <template v-if="activity.tasks && activity.tasks.length > 0">
+                  <!-- 判断审批状态 -->
+                  <span v-if="activity.status === 2" style="color: #00b32a;">
+                    {{ activity.tasks[0].assigneeUser?.nickname }}（已同意）
+                  </span>
+                  <span v-else-if="activity.status === 1" style="color: #448ef7;">
+                    {{ activity.tasks[0].assigneeUser?.nickname }}（处理中）
+                  </span>
+                  <span v-else-if="activity.status === 0" style="color: #f46b6c;">
+                    {{ activity.tasks[0].assigneeUser?.nickname }}（不同意）
+                  </span>
+                  <span v-else>
+                    {{ activity.tasks[0].assigneeUser?.nickname }}
+                  </span>
+                </template>
+                <!-- 如果没有任务信息 -->
+                <template v-else>
+                  尚未审核
+                </template>
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -103,10 +115,21 @@ import * as SealApi from '@/api/seal'
 
 const qrText = computed(() => window.location.href)
 const props = defineProps({
-  id: propTypes.number.def(undefined)
+  id: propTypes.number.def(undefined),
+  activityNodes: propTypes.array.def([])
 })
-const { query } = useRoute() // 查询参数
-const queryId = query.id as unknown as number // 从 URL 传递过来的 id 编号
+
+//父组件传入的ID和activityNodes
+
+const id = props.id
+const activityNodes = props.activityNodes
+console.log(activityNodes)
+const filteredActivityNodes = computed(() => {
+  return activityNodes.filter(
+    (activity) => activity.id !== "StartUserNode" && activity.id !== "EndEvent"
+  );
+})
+
 const detail = ref({
   title: '',
   materialName: '',
@@ -122,8 +145,6 @@ const detail = ref({
 })
 
 const fetchDetail = async () => {
-  console.log('获取详情ID:', queryId, props.id)
-  const id =  props.id || queryId
   console.log('获取详情ID:', id)
   
   //如果 getApplyInfoById API 已实现，请取消下面注释
@@ -132,9 +153,6 @@ const fetchDetail = async () => {
     title: res.title,
     materialName: res.materialName,
     sealTypes: res.sealTypes || [],
-    handlerSignature: res.handlerSignature,
-    reviewerSignature: res.reviewerSignature,
-    unitHeadSignature: res.unitHeadSignature,
     contactPhone: res.contactPhone,
     materialTypes: res.materialTypes || {},
     notes: res.notes,

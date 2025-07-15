@@ -116,7 +116,7 @@
           </el-row>
         </el-form-item>
       </el-col>
-      <el-divider content-position="center">{{ t('login.otherLogin') }}</el-divider>
+      <!-- <el-divider content-position="center">{{ t('login.otherLogin') }}</el-divider>
       <el-col :span="24" style="padding-right: 10px; padding-left: 10px">
         <el-form-item>
           <div class="w-[100%] flex justify-between">
@@ -131,7 +131,7 @@
             />
           </div>
         </el-form-item>
-      </el-col>
+      </el-col> -->
 <!--      <el-divider content-position="center">萌新必读</el-divider>-->
 <!--      <el-col :span="24" style="padding-right: 10px; padding-left: 10px">-->
 <!--        <el-form-item>-->
