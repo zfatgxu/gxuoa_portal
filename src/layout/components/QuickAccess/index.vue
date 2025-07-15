@@ -16,7 +16,7 @@
         <div class="quick-access-grid">
           <div v-for="(item, index) in quickItems" :key="index" class="quick-access-item" @click="handleItemClick(item)">
             <div class="quick-access-item-icon">
-              <Icon :icon="item.icon" />
+              <img :src="item.icon" alt="icon" class="quick-access-item-img" />
             </div>
             <div class="quick-access-item-label">{{ item.label }}</div>
           </div>
@@ -46,32 +46,32 @@ const router = useRouter()
 // 快捷功能项
 const quickItems = [
   {
-    icon: 'ep:document',
+    icon: new URL('@/assets/imgs/shortcuts/document.png', import.meta.url).href,
     label: '文档中心',
     //path: '/document/my'
   },
   {
-    icon: 'ep:clock',
+    icon: new URL('@/assets/imgs/shortcuts/leave.png', import.meta.url).href,
     label: '请假申请',
     //path: '/calendar'
   },
   {
-    icon:'ep:office-building',
+    icon: new URL('@/assets/imgs/shortcuts/meetingRoom.png', import.meta.url).href,
     label: '会议室申请',
     //path: '/notice'
   },
   {
-    icon: 'ep:chat-dot-round',
+    icon: new URL('@/assets/imgs/shortcuts/sms.png', import.meta.url).href,
     label: '即时通讯',
     //path: '/user/profile'
   },
   {
-    icon: 'ep:setting',
+    icon: new URL('@/assets/imgs/shortcuts/setting.png', import.meta.url).href,
     label: '系统设置',
     //path: '/system/setting'
   },
   {
-    icon: 'ep:help',
+    icon: new URL('@/assets/imgs/shortcuts/help.png', import.meta.url).href,
     label: '帮助中心',
     //path: '/help'
   }
@@ -126,9 +126,13 @@ const handleItemClick = (item: any) => {
     }
 
     &-icon {
-      font-size: 24px;
-      color: var(--el-color-primary);
       margin-bottom: 8px;
+    }
+
+    &-img {
+      width: 50px;
+      height: 50px;
+      object-fit: contain;
     }
 
     &-label {
