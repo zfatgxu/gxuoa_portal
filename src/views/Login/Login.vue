@@ -14,124 +14,160 @@
       </div>
     </header>
 
-    <!-- 登录表单容器 -->
-    <div class="login-form-container">
-      <div class="login-box">
-        <!-- 账号登录表单 -->
-        <LoginForm />
-        <!-- 手机登录表单 -->
-        <MobileForm v-show="getLoginState === LoginStateEnum.MOBILE" />
-        <!-- 忘记密码表单 -->
-        <ForgetPasswordForm />
-        <!-- 提示信息 -->
-        <el-alert
-          title="温馨提示"
-          type="info"
-          :closable="false"
-          class="login-tips">
-          <div class="tips-content">
-            <p>1.用户名为"学工号/学号"，首次登录密码显示密码错误的，请点击重置密码重置方法。</p>
-            <p>2.建议浏览器：
-              <el-tag size="small" type="warning" class="browser-tag">火狐</el-tag>
-              <el-tag size="small" type="success">谷歌</el-tag>
-            </p>
+    <!-- 右侧登录区域 -->
+    <div class="login-right">
+      <div class="login-form-container">
+        <div class="login-box">
+          <div class="corner-decoration"></div>
+          <div class="login-tabs">
+            <el-tabs v-model="activeTab">
+              <el-tab-pane label="密码登录" name="account">
+                <LoginForm />
+              </el-tab-pane>
+              <el-tab-pane label="验证码登录" name="mobile">
+                <MobileForm v-show="getLoginState === LoginStateEnum.MOBILE" />
+              </el-tab-pane>
+            </el-tabs>
           </div>
-        </el-alert>
+          
+          <ForgetPasswordForm />
+          
+          <el-alert
+            title="温馨提示"
+            type="info"
+            :closable="false"
+            class="login-tips">
+            <div class="tips-content">
+              <p>1.用户名为“学工号/学号”，首次登录密码显示密码错误的，请点击重置密码重置方法。</p>
+              <p>2.建议浏览器：
+                <el-tag size="small" type="warning" class="browser-tag">火狐</el-tag>
+                <el-tag size="small" type="success">谷歌</el-tag>
+              </p>
+            </div>
+          </el-alert>
+        </div>
       </div>
     </div>
 
     <!-- 页脚 -->
     <footer class="login-footer">
       <p>广西大学 版权所有 Copyright 2025 </p>
-      <p>服务邮箱：</p>
     </footer>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { ref } from 'vue'
-import { useAppStore } from '@/store/modules/app'
-import { ThemeSwitch } from '@/layout/components/ThemeSwitch'
-import { LocaleDropdown } from '@/layout/components/LocaleDropdown'
-
-import { LoginForm, MobileForm, QrCodeForm, RegisterForm, SSOLoginVue, ForgetPasswordForm } from './components'
+import { LoginForm, MobileForm, ForgetPasswordForm } from './components'
 import { LoginStateEnum, useLoginState } from './components/useLogin'
 
 defineOptions({ name: 'Login' })
 
-const { t } = useI18n()
-const appStore = useAppStore()
 const { getLoginState } = useLoginState()
-
-// Active tab
 const activeTab = ref('account')
-
-// 社交登录方法
-const socialLogin = (type) => {
-  const typeMap = {
-    qq: 'QQ',
-    wechat: '微信',
-    'work-wechat': '企业微信'
-  }
-  ElMessage.warning(`${typeMap[type]}登录功能演示`)
-}
 </script>
 
 <style>
-/* 登录页面整体样式 */
+/* login page */
 .login-page {
   height: 100vh;
   width: 100%;
   position: relative;
   overflow: hidden;
+  background-color: #fff;
 }
 
-/* 背景样式 */
+/* background */
 .login-bg {
   position: absolute;
-  width: 100%;
+  left: 0;
+  width: 70%;
   height: 100%;
-  background: url('@/assets/imgs/login-bg.png') center/cover;
+  background: url('@/assets/imgs/login-bg.jpg') no-repeat center;
+  background-size: cover;
+  opacity: 0.95;
+}
+
+/* 右侧区域 */
+.login-right {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 30%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 顶部遮罩 */
+.login-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 80px;
+  background-color: rgba(0, 120, 212, 0.98);
+  z-index: -1;
+}
+
+/* 底部遮罩 */
+.login-page::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  background-color: rgba(0, 120, 212, 0.98);
+  pointer-events: none;
 }
 
 /* 头部样式 */
 .login-header {
-  position: relative;
-  padding: 40px 60px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 80px;
+  padding: 0 40px;
   z-index: 10;
-  margin-left: 100px; /* 向右移动 */
+  display: flex;
+  align-items: center;
 }
 
 .header-content {
   display: flex;
   align-items: center;
+  height: 100%;
 }
 
 .university-logo {
   margin-right: 25px;
+  display: flex;
+  align-items: center;
 }
 
 .gxdx-img {
-  height: 120px; /* 增大图片尺寸 */
-  filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.5));
+  height: 70px;
+  display: block;
 }
 
 .divider {
-  width: 3px; /* 增加宽度 */
-  height: 70px; /* 进一步增加高度 */
-  background-color: white; /* 改为纯白色，增强对比度 */
-  margin: 0 30px; /* 增加间距 */
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.8); /* 添加发光效果 */
-  border-radius: 1.5px; /* 添加圆角 */
+  width: 2px;
+  height: 40px;
+  background-color: rgba(255, 255, 255, 0.6);
+  margin: 0 25px;
+  align-self: center;
 }
 
 .platform-title {
-  font-size: 50px; /* 进一步增大字体 */
-  margin: 0;
-  font-weight: 600; /* 增加字重 */
-  letter-spacing: 2px; /* 增加字间距 */
-  color: white; /* 文字颜色保持白色 */
-  text-shadow: 0 0 15px rgba(255, 255, 255, 0.4); /* 增强发光效果 */
+  font-family: '华文行楷', sans-serif;
+  color: white;
+  font-size: 40px;
+  font-weight: 500;
+  letter-spacing: 1px;
 }
 
 /* 响应式调整 */
@@ -167,55 +203,175 @@ const socialLogin = (type) => {
   }
 }
 
+@media (max-width: 1200px) {
+  .login-form-container {
+    right: 100px;
+  }
+}
+
+@media (max-width: 992px) {
+  .login-bg {
+    width: 100%;
+    opacity: 0.1;
+  }
+  
+  .login-form-container {
+    right: 50%;
+    transform: translate(50%, -50%);
+  }
+}
+
+@media (max-width: 768px) {
+  .login-header {
+    padding: 15px;
+    height: 50px;
+  }
+  
+  .gxdx-img {
+    height: 30px;
+  }
+  
+  .platform-title {
+    font-size: 20px;
+  }
+  
+  .login-form-container {
+    width: 90%;
+    max-width: 360px;
+  }
+  
+  .login-box {
+    width: 100%;
+    padding: 20px;
+  }
+  
+  .bottom-icons {
+    bottom: 15px;
+    right: 15px;
+    gap: 10px;
+  }
+  
+  .icon-item {
+    width: 35px;
+    height: 35px;
+  }
+  
+  .icon-item .el-icon {
+    font-size: 18px;
+  }
+}
+
 /* 登录表单容器 */
 .login-form-container {
-  position: absolute;
-  right: 250px;
-  left: auto;
-  top: 150px;
-  transform: none;
+  width: 100%;
+  max-width: 400px;
+  padding: 0 20px;
   z-index: 10;
 }
 
 .login-box {
-  background-color: white;
+  position: relative;
+  width: 100%;
+  padding: 30px;
+  background: #fff;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  padding: 40px; /* 增加内边距 */
-  width: 550px; /* 增大宽度 */
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.corner-decoration {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 80px;
+  height: 80px;
+  background: linear-gradient(135deg, transparent 50%, rgba(0, 120, 212, 0.1) 50%);
+  border-top-right-radius: 4px;
+}
+
+/* 登录选项卡 */
+.login-tabs {
+  margin-bottom: 20px;
+}
+
+:deep(.demo-tabs .el-tabs__item) {
+  font-size: 16px;
+  padding: 0 15px 15px;
+  color: #606266;
+}
+
+:deep(.demo-tabs .el-tabs__item.is-active) {
+  color: #0078d4;
+  font-weight: 500;
+}
+
+:deep(.demo-tabs .el-tabs__active-bar) {
+  background-color: #0078d4;
+  height: 3px;
+}
+
+:deep(.demo-tabs .el-tabs__nav-wrap::after) {
+  height: 1px;
+  background-color: #e4e7ed;
 }
 
 /* 表单样式 */
 .login-form {
-  margin-top: 20px; /* 增加上边距 */
+  margin-top: 15px;
 }
 
-/* 增大表单元素尺寸 */
+/* 表单元素样式 */
 :deep(.login-form .el-input__wrapper) {
-  padding: 4px 15px; /* 增加输入框内边距 */
+  padding: 1px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+:deep(.login-form .el-input__wrapper:hover) {
+  border-color: #0078d4;
+}
+
+:deep(.login-form .el-input__wrapper.is-focus) {
+  border-color: #0078d4;
+  box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.2);
 }
 
 :deep(.login-form .el-input__inner) {
-  font-size: 16px; /* 增大输入框字体 */
-  height: 48px; /* 增加输入框高度 */
+  font-size: 14px;
+  height: 38px;
+  color: #606266;
 }
 
 :deep(.login-form .el-checkbox__label) {
-  font-size: 16px; /* 增大复选框文字大小 */
+  font-size: 14px;
+  color: #606266;
+}
+
+:deep(.login-form .el-checkbox__input.is-checked .el-checkbox__inner) {
+  background-color: #0078d4;
+  border-color: #0078d4;
 }
 
 .form-options {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin: 15px 0;
 }
 
 .login-btn {
   width: 100%;
-  height: 50px !important; /* 增大按钮高度 */
-  font-size: 18px !important; /* 增大按钮文字 */
-  font-weight: bold; /* 加粗文字 */
+  height: 40px !important;
+  font-size: 16px !important;
+  font-weight: 500;
+  background-color: #0078d4 !important;
+  border-color: #0078d4 !important;
+  transition: all 0.3s;
+}
+
+.login-btn:hover {
+  background-color: #106ebe !important;
+  border-color: #106ebe !important;
 }
 
 .code-input-group {
@@ -225,6 +381,39 @@ const socialLogin = (type) => {
 
 .code-input {
   flex-grow: 1;
+}
+
+/* 底部图标 */
+.bottom-icons {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  display: flex;
+  gap: 12px;
+  z-index: 10;
+}
+
+.icon-item {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  backdrop-filter: blur(4px);
+}
+
+.icon-item:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+.icon-item .el-icon {
+  font-size: 18px;
+  color: white;
 }
 
 /* 社交登录 */
@@ -272,27 +461,27 @@ const socialLogin = (type) => {
 
 /* 页脚 */
 .login-footer {
-  position: absolute;
+  position: fixed;
   bottom: 0;
   left: 0;
+  width: 100%;
   color: white;
-  padding: 25px; /* 保持内边距 */
+  padding: 18px;
   z-index: 10;
-  font-size: 18px; /* 保持字体大小 */
-  opacity: 1; /* 保持不透明度 */
-  text-shadow: 0 0 10px rgba(255, 255, 255, 0.3); /* 保持发光效果 */
-  font-weight: 500; /* 保持字重 */
-  letter-spacing: 1px; /* 保持字间距 */
+  font-size: 14px;
+  text-align: center;
+  font-weight: normal;
+  letter-spacing: 0.5px;
 }
 
 .login-footer p {
-  margin: 0 0 8px 0; /* 保持段落间距 */
-  text-align: left; /* 文字左对齐 */
+  margin: 0;
 }
 
 /* Element Plus组件样式覆盖 */
 :deep(.login-tabs .el-tabs__header) {
   margin: 0;
+  border-bottom: none;
 }
 
 :deep(.login-tabs .el-tabs__nav-wrap::after) {
@@ -300,30 +489,86 @@ const socialLogin = (type) => {
 }
 
 :deep(.login-tabs .el-tabs__active-bar) {
-  background-color: #dc3545;
+  background-color: #0078d4;
+  height: 3px;
+}
+
+:deep(.login-tabs .el-tabs__item) {
+  font-size: 16px;
+  color: #606266;
+  padding: 0 32px 12px;
 }
 
 :deep(.login-tabs .el-tabs__item.is-active) {
-  color: #dc3545;
+  color: #0078d4;
+  font-weight: 500;
 }
 
 :deep(.login-tabs .el-tabs__item:hover) {
-  color: #dc3545;
+  color: #0078d4;
 }
 
 /* 响应式调整 */
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
   .login-form-container {
-    position: relative;
-    right: auto;
-    top: auto;
-    transform: none;
-    margin: 30px auto;
-    max-width: 90%;
+    right: 100px;
+  }
+}
+
+@media (max-width: 992px) {
+  .login-bg {
+    width: 100%;
+    opacity: 0.1;
+  }
+  
+  .login-form-container {
+    right: 50%;
+    transform: translate(50%, -50%);
+  }
+}
+
+@media (max-width: 768px) {
+  .login-header {
+    padding: 15px;
+    height: 50px;
+  }
+  
+  .gxdx-img {
+    height: 30px;
+  }
+  
+  .platform-title {
+    font-size: 20px;
+  }
+  
+  .login-form-container {
+    width: 90%;
+    max-width: 360px;
   }
   
   .login-box {
     width: 100%;
+    padding: 20px;
+  }
+  
+  .bottom-icons {
+    bottom: 15px;
+    right: 15px;
+    gap: 10px;
+  }
+  
+  .icon-item {
+    width: 35px;
+    height: 35px;
+  }
+  
+  .icon-item .el-icon {
+    font-size: 18px;
+  }
+  
+  .login-footer {
+    padding: 15px;
+    font-size: 12px;
   }
 }
 </style>
