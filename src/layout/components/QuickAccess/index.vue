@@ -56,7 +56,7 @@ const quickItems = [
     //path: '/calendar'
   },
   {
-    icon: new URL('@/assets/imgs/shortcuts/meetingRoom.png', import.meta.url).href,
+    icon: new URL('@/assets/imgs/shortcuts/office.png', import.meta.url).href,
     label: '会议室申请',
     //path: '/notice'
   },
