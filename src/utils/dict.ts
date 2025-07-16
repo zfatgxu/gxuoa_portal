@@ -255,5 +255,16 @@ export enum DICT_TYPE {
   SEAL_APPLY_MATERIAL_TYPES = 'seal_apply_materialTypes', // 印章申请材料类型
   SEAL_APPLY_STATE = 'sealapply_state', // 印章申请状态
   SEAL_STATE = 'seal_state', // 印章单状态
+
+  // ========== Leave - 请假模块  ==========
+  LEAVE_TYPE = 'leave_type', // 请假类型
+  ACADEMIC_NATURE = 'academic_nature', // 学术会议性质
+  IS_PRESENTATION = 'is_presentation', // 是否受邀做学术报告
+  REPORT_TYPE = 'report_type', // 报告类型
+  PERSONAL_TYPE = 'personal_type', // 请假类型
+  PERSONAL_VISIT_TYPE = 'personal_visit_type', // 探亲类别
+  MARITAL_STATUS = 'marital_status', // 婚姻状况
+  PARITY = 'parity', // 生育次数
+  LEAVE_STATUS = 'leave_status', // 请假流转状态
  
 }
