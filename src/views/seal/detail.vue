@@ -84,7 +84,7 @@
       <div class="form-section">
         <div class="section-header">注意事项</div>
         <div class="notes-content">
-          <div style="white-space:pre-line; color:#333;">{{ detail.notes }}</div>
+          <div style="white-space:pre-line; color:#333;">{{ detail.attention }}</div>
         </div>
       </div>
 
@@ -116,20 +116,27 @@ import { useRoute } from 'vue-router'
 import { Qrcode } from '@/components/Qrcode'
 import { propTypes } from '@/utils/propTypes'
 import * as SealApi from '@/api/seal'
+import { formatDate } from '@/utils/formatTime'
 
 
+//由网上印章申请，用户：  ，时间：   ，编号：  
+const qrText = ref('')
 
-const qrText = computed(() => window.location.href)
 const props = defineProps({
   id: propTypes.number.def(undefined),
-  activityNodes: propTypes.array.def([])
+  activityNodes: propTypes.array.def([]),
+  applyUser: propTypes.string.def(''),
+  applyTime: propTypes.string.def('')
 })
 
 //父组件传入的ID和activityNodes
 
 const id = props.id
 const activityNodes = props.activityNodes
+const applyUser = props.applyUser
+const applyTime = props.applyTime
 console.log(activityNodes)
+
 const filteredActivityNodes = computed(() => {
   return activityNodes.filter(
     (activity) => activity.id !== "StartUserNode" && activity.id !== "EndEvent"
@@ -181,9 +188,16 @@ const fetchDetail = async () => {
   // }
 }
 
+// 获取详情后设置二维码文本
+const updateQrText = () => {
+  qrText.value = `网上印章申请，用户：${applyUser}，时间：${formatDate(applyTime)}，编号：${detail.value?.applyId || ''}`
+}
+
 // 正确使用 onMounted 钩子
 onMounted(() => {
-  fetchDetail()
+  fetchDetail().then(() => {
+    updateQrText()
+  })
 })
 </script>
 

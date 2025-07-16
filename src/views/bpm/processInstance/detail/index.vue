@@ -59,7 +59,7 @@
                       </el-col>
                       <!-- 情况二：业务表单 -->
                       <div v-if="processDefinition?.formType === BpmModelFormType.CUSTOM">
-                        <BusinessFormComponent :id="processInstance.businessKey" :activity-nodes="activityNodes"/>
+                        <BusinessFormComponent :id="processInstance.businessKey" :activity-nodes="activityNodes" :apply-user="applyUser" :apply-time="applyTime"/>
                       </div>
                     </div>
                   </el-col>
@@ -174,6 +174,13 @@ const detailForm = ref({
   value: {}
 }) // 流程实例的表单详情
 
+//申请人名字
+const applyUser = ref('')
+
+
+//申请时间
+const applyTime = ref('')
+
 const writableFields: Array<string> = [] // 表单可以编辑的字段
 
 /** 获得详情 */
@@ -205,6 +212,12 @@ const getApprovalDetail = async () => {
       return
     }
     processInstance.value = data.processInstance
+    if (processInstance.value.startUser) {
+      applyUser.value = processInstance.value.startUser.nickname
+    }
+    if (processInstance.value.startTime) {
+      applyTime.value = processInstance.value.startTime
+    }
     console.log('processInstance.businessKey', processInstance.value.businessKey)
     console.log('processInstance.id', processInstance.value.id)
     processDefinition.value = data.processDefinition

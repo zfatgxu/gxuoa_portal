@@ -77,10 +77,10 @@ export default defineComponent({
           {screenfull.value ? (
             <Screenfull class="custom-hover" color="var(--top-header-text-color)"></Screenfull>
           ) : undefined}
+          {search.value ? <RouterSearch isModal={false} /> : undefined}
           {quickAccess.value ? (
             <QuickAccess class="custom-hover" color="var(--top-header-text-color)"></QuickAccess>
           ) : undefined}
-          {search.value ? <RouterSearch isModal={false} /> : undefined}
           {size.value ? (
             <SizeDropdown class="custom-hover" color="var(--top-header-text-color)"></SizeDropdown>
           ) : undefined}

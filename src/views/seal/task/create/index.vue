@@ -1,7 +1,9 @@
 <template>
   <div class="form-container">
     <div class="form-header">
-      <h1> {{ form.title }}</h1>
+      <h1><el-select v-model="selectedUnit" placeholder="请选择一个单位申请印章" filterable style="width: 300px">
+        <el-option v-for="unit in unitList" :key="unit.id" :label="unit.name" :value="unit.id" />
+      </el-select> 用印申请单</h1>
     </div>
     
     <el-form :model="form" label-width="120px" class="seal-form">
@@ -21,7 +23,9 @@
 
       <!-- 印章类型 -->
       <div class="form-section">
-        <div class="section-header">印章类型</div>
+        <div class="section-header"><el-button type="primary" link @click="addCustomSeal" size="small">
+              <el-icon><Plus /></el-icon> 添加印章类型
+            </el-button></div>
         <div class="seal-type-content">
           <!-- <div class="seal-item" v-for="(seal, index) in defaultSealTypes" :key="'default-'+index">
             <span class="seal-name">{{ seal.name }}</span>
@@ -65,17 +69,17 @@
           </div>
           
           <!-- 添加印章按钮 -->
-          <div class="add-seal-button">
+          <!-- <div class="add-seal-button">
             <el-button type="primary" link @click="addCustomSeal" size="small">
               <el-icon><Plus /></el-icon> 添加印章
             </el-button>
-          </div>
+          </div> -->
         </div>
       </div>
 
       <!-- 指定审批人 -->
       <div class="form-section" v-if="startUserSelectTasks.length > 0">
-        <div class="section-header">指定审批人</div>
+        <div class="section-header">选择单位签字审批人</div>
         <div class="signature-content">
           <el-form
             :model="startUserSelectAssignees"
@@ -89,6 +93,7 @@
                 multiple
                 placeholder="请选择审批人"
                 class="signature-input"
+                filterable
               >
                 <el-option
                   v-for="user in userList"
@@ -169,24 +174,24 @@
 
       <!-- 注意事项 -->
       <div class="form-section">
-        <div class="section-header">注意事项</div>
+        <div class="section-header">申请说明</div>
         <div class="notes-content">
           <el-input
             v-model="form.notes"
             type="textarea"
             :rows="4"
-            placeholder="请填写注意事项或特殊要求"
+            placeholder="请填写备注"
           />
         </div>
       </div>
 
       <!-- 单位签字 -->
       <div class="form-section">
-        <div class="section-header">单位签字</div>
+        <div class="section-header">申请人联系电话</div>
         <div class="signature-content">
           <div class="signature-row">
-            <span class="required">联系电话</span>
-            <el-input v-model="form.contactPhone" placeholder="请输入联系电话" class="signature-input" />
+            <!--<span class="required">联系电话</span>-->
+            <el-input v-model="form.contactPhone" placeholder="请输入您的联系电话" class="signature-input" />
           </div>
         </div>
       </div>
@@ -215,9 +220,12 @@ import { useRoute } from 'vue-router'
 import { getAccessToken } from '@/utils/auth'
 import { useUpload } from '@/components/UploadFile/src/useUpload'
 import { sealApi } from '@/api/seal/seal'
+import { getSimpleDeptList } from '@/api/system/dept'
+import { useRouter } from 'vue-router'
 
 //接传过来的数据
 const route = useRoute()
+const router = useRouter()
 
 // 表单数据
 const form = reactive({
@@ -229,6 +237,9 @@ const form = reactive({
   attachments: [] // 添加附件字段
 })
 
+const selectedUnit = ref('')
+const unitList = ref([])
+
 // 指定审批人
 const processDefineKey = 'seal_apply' // 流程定义 Key
 const startUserSelectTasks = ref([]) // 发起人需要选择审批人的用户任务列表
@@ -239,6 +250,12 @@ const userList = ref<Array<any>>([])
 
 // 默认印章类型数据,是从数据库，印章表中获取的，
 const defaultSealTypes = ref([])
+
+const fetchUnitList = async () => {
+    const res = await getSimpleDeptList()
+    // 兼容返回结构
+    unitList.value = Array.isArray(res) ? res : (res.data || [])
+  }
 
 const getDefaultSealTypes = async () => {
   try {
@@ -401,6 +418,14 @@ const submitForm = async () => {
     return
   }
   
+  // 校验印章数量不能为0
+  const zeroQuantitySeal = [...defaultSealTypes.value, ...customSealTypes.value].find(seal => seal.quantity === 0)
+  if (zeroQuantitySeal) {
+    const sealName = zeroQuantitySeal.name || '印章'
+    ElMessage.error(`${sealName}数量不能为0，请输入有效数量或删除该印章`)
+    return
+  }
+  
   // 校验指定审批人
   if (startUserSelectTasks.value?.length > 0) {
     try {
@@ -425,7 +450,7 @@ const simplifiedFiles = uploadedFiles.map(file => ({
   }))
   // 构建符合后端要求的数据结构
   const submitData = {
-    applyTitle: form.title,//表单标题
+    applyTitle: selectedUnit.value+'印章申请单',//表单标题
     materialName: form.materialName,//材料名称
     phone: form.contactPhone,//联系电话
     materialTypes: selectedMaterialTypeLabels,//材料类型
@@ -447,6 +472,8 @@ const simplifiedFiles = uploadedFiles.map(file => ({
   try {
     await SealApi.submitSealApplication(submitData)
     ElMessage.success('申请提交成功')
+    //跳转到印章申请列表
+    router.push('/seal/seal_apply')
   } catch (error) {
     ElMessage.error('申请提交失败')
   }
@@ -455,12 +482,7 @@ const simplifiedFiles = uploadedFiles.map(file => ({
 const bpmnXml = ref('')
 
 onMounted(async () => {
-  //如果有单位名称，就设置表单标题
-  if (route.query.unitName) {
-    form.title = route.query.unitName + '印章申请单'
-  } else {
-    form.title = '印章申请单'
-  }
+  await fetchUnitList()
   
   //获取默认印章类型数据
   //await getDefaultSealTypes()

@@ -59,7 +59,7 @@
                         </el-col>
                         <!-- 情况二：业务表单 -->
                         <div v-if="processDefinition?.formType === BpmModelFormType.CUSTOM">
-                          <BusinessFormComponent :id="processInstance.businessKey" :activity-nodes="activityNodes"/>
+                          <BusinessFormComponent :id="processInstance.businessKey" :activity-nodes="activityNodes" :applyUser="applyUser" :applyTime="applyTime"/>
                         </div>
                       </div>
                     </el-col>
@@ -173,6 +173,9 @@
   }) // 流程实例的表单详情
   
   const writableFields: Array<string> = [] // 表单可以编辑的字段
+
+    const applyUser = ref('') // 申请人
+    const applyTime = ref('') // 申请时间
   
   /** 获得详情 */
   const getDetail = () => {
@@ -201,6 +204,12 @@
         return
       }
       processInstance.value = data.processInstance
+      if (processInstance.value.startUser) {
+      applyUser.value = processInstance.value.startUser.nickname
+    }
+    if (processInstance.value.startTime) {
+      applyTime.value = processInstance.value.startTime
+    }
       console.log('processInstance.businessKey', processInstance.value.businessKey)
       console.log('processInstance.id', processInstance.value.id)
       processDefinition.value = data.processDefinition
@@ -257,7 +266,7 @@
         bpmnXml: ''
       }
     }
-    const data = await ProcessInstanceApi.getProcessInstanceBpmnModelView(props.id)
+    const data = await ProcessInstanceApi.getProcessInstanceBpmnModelView(id)
     if (data) {
       processModelView.value = data
     }
