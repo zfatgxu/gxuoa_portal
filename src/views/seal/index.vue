@@ -138,9 +138,15 @@
     handleQuery()
   }
   const handleCreate = () => {
-    selectedUnit.value = ''
-    fetchUnitList()
-    dialogVisible.value = true
+    // selectedUnit.value = ''
+    // fetchUnitList()
+    // dialogVisible.value = true
+    router.push({
+      name: 'SealCreate',
+      query: {
+        
+      }
+    })
   }
   
   const handleUnitConfirm = () => {
