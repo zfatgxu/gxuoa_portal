@@ -198,13 +198,20 @@
             >
               编辑
             </el-button>
+<!--            <el-button-->
+<!--              link-->
+<!--              type="danger"-->
+<!--              @click="handleDelete(scope.row.id)"-->
+<!--              v-hasPermi="['leave:register:delete']"-->
+<!--            >-->
+<!--              删除-->
+<!--            </el-button>-->
             <el-button
               link
-              type="danger"
-              @click="handleDelete(scope.row.id)"
-              v-hasPermi="['leave:register:delete']"
+              type="primary"
+              @click="handleDetail(scope.row)"
             >
-              删除
+              查看详情
             </el-button>
           </template>
           <!-- 其他状态只显示查看详情按钮 -->
@@ -212,7 +219,7 @@
             <el-button
               link
               type="primary"
-              @click="openForm('create/detail', scope.row.id)"
+              @click="handleDetail(scope.row)"
             >
               查看详情
             </el-button>
@@ -302,6 +309,15 @@ const resetQuery = () => {
 const router = useRouter()
 const openForm = (path: string, id?: number) => {
   router.push({ path: `/leave/${path}`, query: { id } })
+}
+/** 查看详情 */
+const handleDetail = (row: any) => {
+  router.push({
+    path: '/bpm/process-instance/detail',
+    query: {
+      id: row.processInstanceId
+    }
+  })
 }
 
 /** 删除按钮操作 */

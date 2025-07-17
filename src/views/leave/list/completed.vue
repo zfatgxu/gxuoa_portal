@@ -1,118 +1,118 @@
 <template>
-  <ContentWrap>
-    <!-- 搜索工作栏 -->
-    <el-form
-      ref="queryFormRef"
-      :inline="true"
-      :model="queryParams"
-      class="-mb-15px"
-      label-width="68px"
-    >
-      <el-form-item label="" prop="processInstance.startUser.nickname">
-        <el-input
-          v-model="queryParams.processInstance.startUser.nickname"
-          class="!w-240px"
-          clearable
-          placeholder="请输入发起人"
-          @keyup.enter="handleQuery"
-        />
-      </el-form-item>
-      <el-form-item>
-        <el-button @click="handleQuery">
-          <Icon class="mr-5px" icon="ep:search" />
-          搜索
-        </el-button>
-      </el-form-item>
+<!--  <ContentWrap>-->
+<!--    &lt;!&ndash; 搜索工作栏 &ndash;&gt;-->
+<!--    <el-form-->
+<!--      ref="queryFormRef"-->
+<!--      :inline="true"-->
+<!--      :model="queryParams"-->
+<!--      class="-mb-15px"-->
+<!--      label-width="68px"-->
+<!--    >-->
+<!--      <el-form-item label="" prop="processInstance.startUser.nickname">-->
+<!--        <el-input-->
+<!--          v-model="queryParams.processInstance.startUser.nickname"-->
+<!--          class="!w-240px"-->
+<!--          clearable-->
+<!--          placeholder="请输入发起人"-->
+<!--          @keyup.enter="handleQuery"-->
+<!--        />-->
+<!--      </el-form-item>-->
+<!--      <el-form-item>-->
+<!--        <el-button @click="handleQuery">-->
+<!--          <Icon class="mr-5px" icon="ep:search" />-->
+<!--          搜索-->
+<!--        </el-button>-->
+<!--      </el-form-item>-->
 
-      <!-- <el-form-item label="" prop="category" :style="{ position: 'absolute', right: '300px' }">
-        <el-select
-          v-model="queryParams.category"
-          placeholder="请选择流程分类"
-          clearable
-          class="!w-155px"
-          @change="handleQuery"
-        >
-          <el-option
-            v-for="category in categoryList"
-            :key="category.code"
-            :label="category.name"
-            :value="category.code"
-          />
-        </el-select>
-      </el-form-item> -->
+<!--      &lt;!&ndash; <el-form-item label="" prop="category" :style="{ position: 'absolute', right: '300px' }">-->
+<!--        <el-select-->
+<!--          v-model="queryParams.category"-->
+<!--          placeholder="请选择流程分类"-->
+<!--          clearable-->
+<!--          class="!w-155px"-->
+<!--          @change="handleQuery"-->
+<!--        >-->
+<!--          <el-option-->
+<!--            v-for="category in categoryList"-->
+<!--            :key="category.code"-->
+<!--            :label="category.name"-->
+<!--            :value="category.code"-->
+<!--          />-->
+<!--        </el-select>-->
+<!--      </el-form-item> &ndash;&gt;-->
 
-      <!-- <el-form-item label="" prop="status" :style="{ position: 'absolute', right: '130px' }">
-        <el-select
-          v-model="queryParams.status"
-          placeholder="请选择流程状态"
-          clearable
-          class="!w-155px"
-          @change="handleQuery"
-        >
-          <el-option
-            v-for="dict in getIntDictOptions(DICT_TYPE.BPM_PROCESS_INSTANCE_STATUS)"
-            :key="dict.value"
-            :label="dict.label"
-            :value="dict.value"
-          />
-        </el-select>
-      </el-form-item> -->
+<!--      &lt;!&ndash; <el-form-item label="" prop="status" :style="{ position: 'absolute', right: '130px' }">-->
+<!--        <el-select-->
+<!--          v-model="queryParams.status"-->
+<!--          placeholder="请选择流程状态"-->
+<!--          clearable-->
+<!--          class="!w-155px"-->
+<!--          @change="handleQuery"-->
+<!--        >-->
+<!--          <el-option-->
+<!--            v-for="dict in getIntDictOptions(DICT_TYPE.BPM_PROCESS_INSTANCE_STATUS)"-->
+<!--            :key="dict.value"-->
+<!--            :label="dict.label"-->
+<!--            :value="dict.value"-->
+<!--          />-->
+<!--        </el-select>-->
+<!--      </el-form-item> &ndash;&gt;-->
 
-      <!-- 高级筛选 -->
-      <!-- <el-form-item :style="{ position: 'absolute', right: '0px' }">
-        <el-popover
-          :visible="showPopover"
-          persistent
-          :width="400"
-          :show-arrow="false"
-          placement="bottom-end"
-        >
-          <template #reference>
-            <el-button @click="showPopover = !showPopover">
-              <Icon icon="ep:plus" class="mr-5px" />高级筛选
-            </el-button>
-          </template>
-          <el-form-item
-            label="所属流程"
-            class="font-bold"
-            label-position="top"
-            prop="processDefinitionKey"
-          >
-            <el-select
-              v-model="queryParams.processDefinitionKey"
-              placeholder="请选择流程定义"
-              clearable
-              @change="handleQuery"
-              class="!w-390px"
-            >
-              <el-option
-                v-for="item in processDefinitionList"
-                :key="item.key"
-                :label="item.name"
-                :value="item.key"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="发起时间" class="bold-label" label-position="top" prop="createTime">
-            <el-date-picker
-              v-model="queryParams.createTime"
-              value-format="YYYY-MM-DD HH:mm:ss"
-              type="daterange"
-              start-placeholder="开始日期"
-              end-placeholder="结束日期"
-              :default-time="[new Date('1 00:00:00'), new Date('1 23:59:59')]"
-              class="!w-240px"
-            />
-          </el-form-item>
-          <el-form-item class="bold-label" label-position="top">
-            <el-button @click="handleQuery"> 确认</el-button>
-            <el-button @click="showPopover = false"> 取消</el-button>
-            <el-button @click="resetQuery"> 清空</el-button>
-          </el-form-item>
-        </el-popover>
-      </el-form-item> -->
-    </el-form>
-  </ContentWrap>
+<!--      &lt;!&ndash; 高级筛选 &ndash;&gt;-->
+<!--      &lt;!&ndash; <el-form-item :style="{ position: 'absolute', right: '0px' }">-->
+<!--        <el-popover-->
+<!--          :visible="showPopover"-->
+<!--          persistent-->
+<!--          :width="400"-->
+<!--          :show-arrow="false"-->
+<!--          placement="bottom-end"-->
+<!--        >-->
+<!--          <template #reference>-->
+<!--            <el-button @click="showPopover = !showPopover">-->
+<!--              <Icon icon="ep:plus" class="mr-5px" />高级筛选-->
+<!--            </el-button>-->
+<!--          </template>-->
+<!--          <el-form-item-->
+<!--            label="所属流程"-->
+<!--            class="font-bold"-->
+<!--            label-position="top"-->
+<!--            prop="processDefinitionKey"-->
+<!--          >-->
+<!--            <el-select-->
+<!--              v-model="queryParams.processDefinitionKey"-->
+<!--              placeholder="请选择流程定义"-->
+<!--              clearable-->
+<!--              @change="handleQuery"-->
+<!--              class="!w-390px"-->
+<!--            >-->
+<!--              <el-option-->
+<!--                v-for="item in processDefinitionList"-->
+<!--                :key="item.key"-->
+<!--                :label="item.name"-->
+<!--                :value="item.key"-->
+<!--              />-->
+<!--            </el-select>-->
+<!--          </el-form-item>-->
+<!--          <el-form-item label="发起时间" class="bold-label" label-position="top" prop="createTime">-->
+<!--            <el-date-picker-->
+<!--              v-model="queryParams.createTime"-->
+<!--              value-format="YYYY-MM-DD HH:mm:ss"-->
+<!--              type="daterange"-->
+<!--              start-placeholder="开始日期"-->
+<!--              end-placeholder="结束日期"-->
+<!--              :default-time="[new Date('1 00:00:00'), new Date('1 23:59:59')]"-->
+<!--              class="!w-240px"-->
+<!--            />-->
+<!--          </el-form-item>-->
+<!--          <el-form-item class="bold-label" label-position="top">-->
+<!--            <el-button @click="handleQuery"> 确认</el-button>-->
+<!--            <el-button @click="showPopover = false"> 取消</el-button>-->
+<!--            <el-button @click="resetQuery"> 清空</el-button>-->
+<!--          </el-form-item>-->
+<!--        </el-popover>-->
+<!--      </el-form-item> &ndash;&gt;-->
+<!--    </el-form>-->
+<!--  </ContentWrap>-->
 
   <!-- 列表 -->
   <ContentWrap>
@@ -131,13 +131,13 @@
         prop="createTime"
         width="180"
       />
-      <el-table-column align="center" label="当前任务" prop="name" width="180" />
-      <el-table-column align="center" label="审批状态" prop="status" width="120">
-        <template #default="scope">
-          <dict-tag :type="DICT_TYPE.BPM_TASK_STATUS" :value="scope.row.status" />
-        </template>
-      </el-table-column>
-      <el-table-column align="center" label="审批建议" prop="reason" min-width="180" />
+<!--      <el-table-column align="center" label="当前任务" prop="name" width="180" />-->
+<!--      <el-table-column align="center" label="审批状态" prop="status" width="120">-->
+<!--        <template #default="scope">-->
+<!--          <dict-tag :type="DICT_TYPE.BPM_TASK_STATUS" :value="scope.row.status" />-->
+<!--        </template>-->
+<!--      </el-table-column>-->
+<!--      <el-table-column align="center" label="审批建议" prop="reason" min-width="180" />-->
       <el-table-column align="center" label="耗时" prop="durationInMillis" width="160">
         <template #default="scope">
           {{ formatPast2(scope.row.durationInMillis) }}

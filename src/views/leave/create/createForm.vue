@@ -677,7 +677,7 @@ const beforeRemove = (file: UploadFile) => {
 const destination = ref('');
 const workArrangement = ref('');
 const remarks = ref('');
-
+const router = useRouter()
 // 提交流程
 const handleSubmit = async () => {
   try {
@@ -874,7 +874,7 @@ const handleSubmit = async () => {
     
     ElMessage.success('提交成功')
     // 提交成功后跳转到列表页
-    // router.push('/leave/list')
+    router.push('/leave/list/index')
   } catch (error) {
     ElMessage.error('提交失败，请稍后重试')
   }
