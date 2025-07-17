@@ -274,20 +274,13 @@ const queryParams = reactive({
 })
 const queryFormRef = ref() // 搜索的表单
 const exportLoading = ref(false) // 导出的加载
-const currentUser = useUserStore().getUser
 /** 查询列表 */
 const getList = async () => {
   loading.value = true
   try {
     const data = await RegisterApi.getRegisterPage(queryParams)
-    list.value = data.list.filter((item: any) => {
-      // 检查名称是否与当前登录用户匹配
-      const isCurrentUser = item.personId === currentUser.id
-      return isCurrentUser
-    })
-
-    // 更新总数为过滤后的数量
-    total.value = list.value.length
+    list.value = data.list
+    total.value = data.total
   } finally {
     loading.value = false
   }
