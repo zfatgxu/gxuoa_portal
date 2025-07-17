@@ -89,21 +89,21 @@
           class="!w-240px"
         />
       </el-form-item> -->
-      <!-- <el-form-item label="流转状态" prop="status">
+       <el-form-item label="流转状态" prop="status">
         <el-select
           v-model="queryParams.status"
           placeholder="请选择流转状态"
           clearable
           class="!w-240px"
         >
-          <el-option 
+          <el-option
             v-for="dict in getIntDictOptions(DICT_TYPE.LEAVE_STATUS)"
-            :key="dict.value" 
-            :label="dict.label" 
+            :key="dict.value"
+            :label="dict.label"
             :value="dict.value"
           />
         </el-select>
-      </el-form-item> -->
+      </el-form-item>
       <!-- <el-form-item label="审核人" prop="personAdmitId">
         <el-input
           v-model="queryParams.personAdmitId"
@@ -188,8 +188,8 @@
       /> -->
       <el-table-column label="操作" align="center" min-width="120px">
         <template #default="scope">
-          <!-- 状态为待会签(1)时显示编辑和删除按钮 -->
-          <template v-if="scope.row.status === 1">
+          <!-- 状态为待审批(2)时显示编辑和删除按钮 -->
+          <template v-if="scope.row.status === 2">
             <el-button
               link
               type="primary"
