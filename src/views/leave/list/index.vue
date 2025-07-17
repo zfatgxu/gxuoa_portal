@@ -198,13 +198,20 @@
             >
               编辑
             </el-button>
+<!--            <el-button-->
+<!--              link-->
+<!--              type="danger"-->
+<!--              @click="handleDelete(scope.row.id)"-->
+<!--              v-hasPermi="['leave:register:delete']"-->
+<!--            >-->
+<!--              删除-->
+<!--            </el-button>-->
             <el-button
               link
-              type="danger"
-              @click="handleDelete(scope.row.id)"
-              v-hasPermi="['leave:register:delete']"
+              type="primary"
+              @click="handleDetail(scope.row)"
             >
-              删除
+              查看详情
             </el-button>
           </template>
           <!-- 其他状态只显示查看详情按钮 -->
