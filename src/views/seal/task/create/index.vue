@@ -174,13 +174,13 @@
 
       <!-- 注意事项 -->
       <div class="form-section">
-        <div class="section-header">申请说明</div>
+        <div class="section-header">请填写申请摘要</div>
         <div class="notes-content">
           <el-input
             v-model="form.notes"
             type="textarea"
             :rows="4"
-            placeholder="请填写备注"
+            placeholder="请填写申请摘要"
           />
         </div>
       </div>

@@ -2,6 +2,7 @@
   <div class="form-container">
     <div class="form-header">
       <h1>{{ detail.applyTitle }}</h1>
+      <p v-if="status==2" style="color: red;">盖章编号：{{ detail.sealNumber }}</p>
     </div>
     <el-form label-width="120px" class="seal-form">
       <!-- 材料名称 -->
@@ -80,9 +81,9 @@
           <div v-else style="color:#888;">无附件</div>
         </div>
       </div>
-      <!-- 申请说明 -->
+      <!-- 申请摘要 -->
       <div class="form-section">
-        <div class="section-header">申请说明</div>
+        <div class="section-header">申请摘要</div>
         <div class="notes-content">
           <div style="white-space:pre-line; color:#333;">{{ detail.attention }}</div>
         </div>
@@ -126,7 +127,8 @@ const props = defineProps({
   id: propTypes.number.def(undefined),
   activityNodes: propTypes.array.def([]),
   applyUser: propTypes.string.def(''),
-  applyTime: propTypes.string.def('')
+  applyTime: propTypes.string.def(''),
+  status: propTypes.string.def('')
 })
 
 //父组件传入的ID和activityNodes
@@ -135,6 +137,8 @@ const id = props.id
 const activityNodes = props.activityNodes
 const applyUser = props.applyUser
 const applyTime = props.applyTime
+const status = props.status
+console.log("status",status)
 console.log(activityNodes)
 
 const filteredActivityNodes = computed(() => {

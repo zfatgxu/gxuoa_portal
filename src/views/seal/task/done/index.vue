@@ -3,6 +3,7 @@
     <!-- 列表 -->
     <el-table v-loading="loading" :data="filteredList">
       <el-table-column align="center" label="申请编号" prop="applyData.applyId" width="120" />
+      <el-table-column align="center" label="申请摘要" prop="applyData.attention" width="120" />
       <el-table-column align="center" label="当前进度" prop="name" width="120" />
       <el-table-column align="center" label="用印状态" width="100">
         <template #default="scope">
@@ -11,7 +12,7 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column align="center" label="用印材料名" prop="applyData.materialName" width="800" />
+      <el-table-column align="center" label="用印材料名" prop="applyData.materialName" width="700" />
       <el-table-column align="center" label="经办人" width="100">
         <template #default="scope">
           {{ scope.row.applyData.signers ? scope.row.applyData.signers.split(',')[0] : '' }}
