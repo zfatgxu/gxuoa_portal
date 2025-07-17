@@ -12,7 +12,7 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column align="center" label="用印材料名" prop="applyData.materialName" width="700" />
+      <el-table-column align="center" label="用印材料名" prop="applyData.materialName" width="550" />
       <el-table-column align="center" label="经办人" width="100">
         <template #default="scope">
           {{ scope.row.applyData.signers ? scope.row.applyData.signers.split(',')[0] : '' }}
@@ -44,11 +44,6 @@
         prop="endTime"
         width="150"
       />
-      <el-table-column align="center" label="审批状态" prop="status" width="100">
-        <template #default="scope">
-          <dict-tag :type="DICT_TYPE.SEAL_APPLY_STATE" :value="scope.row.status" />
-        </template>
-      </el-table-column>
       <el-table-column align="center" label="操作" fixed="right" width="80">
         <template #default="scope">
           <el-button link type="primary" @click="handleAudit(scope.row)">历史</el-button>

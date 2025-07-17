@@ -9,7 +9,7 @@
     <el-form :model="form" label-width="120px" class="seal-form">
       <!-- 材料名称 -->
       <div class="form-section">
-        <div class="section-header">材料名称</div>
+        <div class="section-header required">材料名称</div>
         <div class="material-name-content">
           <el-input
             v-model="form.materialName"
@@ -21,9 +21,21 @@
         </div>
       </div>
 
+      <div class="form-section">
+        <div class="section-header required">请填写申请摘要</div>
+        <div class="notes-content">
+          <el-input
+            v-model="form.notes"
+            type="textarea"
+            :rows="4"
+            placeholder="请填写申请摘要"
+          />
+        </div>
+      </div>
+
       <!-- 印章类型 -->
       <div class="form-section">
-        <div class="section-header"><el-button type="primary" link @click="addCustomSeal" size="small">
+        <div class="section-header required"><el-button type="primary" link @click="addCustomSeal" size="small">
               <el-icon><Plus /></el-icon> 添加印章类型
             </el-button></div>
         <div class="seal-type-content">
@@ -79,7 +91,7 @@
 
       <!-- 指定审批人 -->
       <div class="form-section" v-if="startUserSelectTasks.length > 0">
-        <div class="section-header">选择单位签字审批人</div>
+        <div class="section-header required">选择单位签字审批人</div>
         <div class="signature-content">
           <el-form
             :model="startUserSelectAssignees"
@@ -109,7 +121,7 @@
 
       <!-- 材料类型 -->
       <div class="form-section">
-        <div class="section-header">材料类型</div>
+        <div class="section-header required">材料类型</div>
         <div class="material-type-content">
           <el-checkbox-group v-model="form.selectedMaterialTypes">
             <el-checkbox 
@@ -173,21 +185,11 @@
       </div>
 
       <!-- 注意事项 -->
-      <div class="form-section">
-        <div class="section-header">请填写申请摘要</div>
-        <div class="notes-content">
-          <el-input
-            v-model="form.notes"
-            type="textarea"
-            :rows="4"
-            placeholder="请填写申请摘要"
-          />
-        </div>
-      </div>
+      
 
       <!-- 单位签字 -->
       <div class="form-section">
-        <div class="section-header">申请人联系电话</div>
+        <div class="section-header required">申请人联系电话</div>
         <div class="signature-content">
           <div class="signature-row">
             <!--<span class="required">联系电话</span>-->
@@ -413,37 +415,94 @@ const getFileType = (filename) => {
 // 提交表单
 const submitForm = async () => {
   // 验证必填字段
+  if (!selectedUnit.value) {
+    ElMessage.error('请选择一个单位申请印章')
+    return
+  }
+  if (!form.materialName) {
+    ElMessage.error('请填写材料名称')
+    return
+  }
+  
   if (!form.contactPhone) {
     ElMessage.error('请填写联系电话')
     return
   }
   
-  // 校验印章数量不能为0
-  const zeroQuantitySeal = [...defaultSealTypes.value, ...customSealTypes.value].find(seal => seal.quantity === 0)
+  // 验证联系电话格式
+  const phoneRegex = /^1[3-9]\d{9}$/
+  if (!phoneRegex.test(form.contactPhone)) {
+    ElMessage.error('请输入正确的手机号码格式')
+    return
+  }
+  
+  // 验证是否添加了印章类型
+  if (customSealTypes.value.length === 0) {
+    ElMessage.error('请至少添加一种印章类型')
+    return
+  }
+  
+  // 验证印章类型是否选择
+  const noTypeSeal = customSealTypes.value.find(seal => !seal.id)
+  if (noTypeSeal) {
+    ElMessage.error('请选择印章类型')
+    return
+  }
+  
+  // 校验印章数量
+  const zeroQuantitySeal = customSealTypes.value.find(seal => !seal.quantity || seal.quantity === 0)
   if (zeroQuantitySeal) {
-    const sealName = zeroQuantitySeal.name || '印章'
-    ElMessage.error(`${sealName}数量不能为0，请输入有效数量或删除该印章`)
+    const sealName = sealTypeOptions.value.find(option => option.id === zeroQuantitySeal.id)?.name || '印章'
+    ElMessage.error(`${sealName}数量不能为0，请输入有效数量`)
     return
   }
   
   // 校验指定审批人
   if (startUserSelectTasks.value?.length > 0) {
-    try {
-      await startUserSelectAssigneesFormRef.value.validate()
-    } catch (error) {
-      ElMessage.error('请选择所有必填的审批人')
-      return
+    // 检查是否有未选择审批人的任务
+    const emptyAssignees = Object.entries(startUserSelectAssignees.value).find(
+      ([taskId, assignees]) => {
+        // 检查该任务是否存在于startUserSelectTasks中
+        const taskExists = startUserSelectTasks.value.some(task => task.id === taskId);
+        // 如果任务存在且没有选择审批人，则返回true
+        return taskExists && (!assignees || assignees.length === 0);
+      }
+    );
+    
+    if (emptyAssignees) {
+      ElMessage.error('请选择所有必填的审批人');
+      return;
+    }
+    
+    // 确保所有任务都有对应的审批人
+    for (const task of startUserSelectTasks.value) {
+      if (!startUserSelectAssignees.value[task.id] || startUserSelectAssignees.value[task.id].length === 0) {
+        ElMessage.error(`请为"${task.name}"选择审批人`);
+        return;
+      }
     }
   }
   
+  // 验证材料类型
+  if (!form.selectedMaterialTypes || form.selectedMaterialTypes.length === 0) {
+    ElMessage.error('请至少选择一种材料类型')
+    return
+  }
+  
+  // 验证摘要
+  if (!form.notes) {
+    ElMessage.error('请填写申请摘要')
+    return
+  }
+  
   // 获取选中的材料类型的名称并合并为字符串
-const selectedMaterialTypeLabels = form.selectedMaterialTypes.map(value => {
-  const dict = getDictOptions(DICT_TYPE.SEAL_APPLY_MATERIAL_TYPES).find(item => item.value === value)
-  return dict ? dict.label : ''
-}).filter(label => label !== '').join(',') // 使用逗号连接成字符串
+  const selectedMaterialTypeLabels = form.selectedMaterialTypes.map(value => {
+    const dict = getDictOptions(DICT_TYPE.SEAL_APPLY_MATERIAL_TYPES).find(item => item.value === value)
+    return dict ? dict.label : ''
+  }).filter(label => label !== '').join(',') // 使用逗号连接成字符串
 
-// 处理文件数据，只保留名称、大小和URL
-const simplifiedFiles = uploadedFiles.map(file => ({
+  // 处理文件数据，只保留名称、大小和URL
+  const simplifiedFiles = uploadedFiles.map(file => ({
     name: file.name,
     size: file.size,
     url: file.url
