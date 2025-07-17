@@ -67,6 +67,7 @@
 <script lang="ts" setup>
 import { dateFormatter } from '@/utils/formatTime'
 import * as TaskApi from '@/api/bpm/task'
+import * as SealApi from "@/api/seal";
 
 defineOptions({ name: 'SealTodoTask' })
 
@@ -85,7 +86,8 @@ const queryParams = reactive({
 const getList = async () => {
   loading.value = true
   try {
-    const data = await TaskApi.getTaskTodoPage(queryParams)
+    //const data = await TaskApi.getTaskTodoPage(queryParams)
+    const  data = await  SealApi.getSealTodoPage(queryParams)
     list.value = data.list
     total.value = data.total
   } finally {
