@@ -212,7 +212,7 @@
             <el-button
               link
               type="primary"
-              @click="openForm('create/detail', scope.row.id)"
+              @click="handleDetail(scope.row)"
             >
               查看详情
             </el-button>
@@ -302,6 +302,15 @@ const resetQuery = () => {
 const router = useRouter()
 const openForm = (path: string, id?: number) => {
   router.push({ path: `/leave/${path}`, query: { id } })
+}
+/** 查看详情 */
+const handleDetail = (row: any) => {
+  router.push({
+    path: '/bpm/process-instance/detail',
+    query: {
+      id: row.processInstanceId
+    }
+  })
 }
 
 /** 删除按钮操作 */
