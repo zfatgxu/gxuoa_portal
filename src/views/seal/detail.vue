@@ -80,9 +80,9 @@
           <div v-else style="color:#888;">无附件</div>
         </div>
       </div>
-      <!-- 注意事项 -->
+      <!-- 申请说明 -->
       <div class="form-section">
-        <div class="section-header">注意事项</div>
+        <div class="section-header">申请说明</div>
         <div class="notes-content">
           <div style="white-space:pre-line; color:#333;">{{ detail.attention }}</div>
         </div>

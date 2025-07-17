@@ -34,3 +34,10 @@ export const getSealTodoPage = async (data: any) => {
     params: data
   })
 }
+//获取已办分页
+export const getSealDonePage = async (data: any) => {
+  return await request.get({
+    url: '/bpm/seal/done-page',
+    params: data
+  })
+}

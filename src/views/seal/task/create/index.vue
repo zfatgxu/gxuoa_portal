@@ -2,7 +2,7 @@
   <div class="form-container">
     <div class="form-header">
       <h1><el-select v-model="selectedUnit" placeholder="请选择一个单位申请印章" filterable style="width: 300px">
-        <el-option v-for="unit in unitList" :key="unit.id" :label="unit.name" :value="unit.id" />
+        <el-option v-for="unit in unitList" :key="unit.id" :label="unit.name" :value="unit.name" />
       </el-select> 用印申请单</h1>
     </div>
     
