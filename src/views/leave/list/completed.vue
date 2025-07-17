@@ -182,11 +182,8 @@ const processDefinitionList = ref<any[]>([]) // 流程定义列表
 const queryParams = reactive({
   pageNo: 1,
   pageSize: 10,
-  processInstance: {
-    startUser: {
-      nickname: '',
-    },
-  },
+  processDefinitionKey: 'oa_leaveRegister', // 直接指定用印申请流程的key
+  category: '请假登记'
 })
 const queryFormRef = ref() // 搜索的表单
 const categoryList = ref<CategoryVO[]>([]) // 流程分类列表
@@ -197,15 +194,8 @@ const getList = async () => {
   loading.value = true
   try {
     const data = await TaskApi.getTaskDonePage(queryParams)
-    list.value = data.list.filter((item: any) => {
-      // 确保是督查通过的状态（状态码2表示通过）
-      const isApproved = item.status === 2
-      const isLeaveRegister = item.processInstance.name === '请假登记'
-      return isApproved && isLeaveRegister
-    })
-    
-    // 更新总数
-    total.value = list.value.length
+    list.value = data.list
+    total.value = data.total
   } finally {
     loading.value = false
   }
