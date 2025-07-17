@@ -451,7 +451,7 @@
     </el-popover> -->
 
     <!--【取消】按钮 这个对应发起人的取消, 只有发起人可以取消 -->
-    <el-popover
+    <!-- <el-popover
       :visible="popOverVisible.cancel"
       placement="top-start"
       :width="420"
@@ -492,9 +492,9 @@
           </el-form-item>
         </el-form>
       </div>
-    </el-popover>
+    </el-popover> -->
     <!-- 【再次提交】 按钮-->
-    <div
+    <!-- <div
       @click="handleReCreate()"
       class="hover-bg-gray-100 rounded-xl p-6px"
       v-if="
@@ -504,7 +504,7 @@
       "
     >
       <Icon :size="14" icon="ep:refresh" />&nbsp; 再次提交
-    </div>
+    </div> -->
   </div>
 
   <!-- 签名弹窗 -->

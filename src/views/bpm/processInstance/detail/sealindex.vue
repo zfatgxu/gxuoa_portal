@@ -109,9 +109,9 @@
             </el-tab-pane>
           </el-tabs>
   
-          <!-- <div class="b-t-solid border-t-1px border-[var(--el-border-color)]">
-             操作栏按钮 
-            <ProcessInstanceOperationButton
+           <div class="b-t-solid border-t-1px border-[var(--el-border-color)]">
+             
+            <SealapplyButton
               ref="operationButtonRef"
               :process-instance="processInstance"
               :process-definition="processDefinition"
@@ -121,7 +121,8 @@
               :writable-fields="writableFields"
               @success="refresh"
             />
-          </div> -->
+          </div> 
+          
         </el-scrollbar>
       </div>
     </ContentWrap>
@@ -139,6 +140,7 @@
   import ProcessInstanceSimpleViewer from './ProcessInstanceSimpleViewer.vue'
   import ProcessInstanceTaskList from './ProcessInstanceTaskList.vue'
   import ProcessInstanceOperationButton from './ProcessInstanceOperationButton.vue'
+  import SealapplyButton from './sealapplyButton.vue'
   import ProcessInstanceTimeline from './ProcessInstanceTimeline.vue'
   import { FieldPermissionType } from '@/components/SimpleProcessDesignerV2/src/consts'
   import { TaskStatusEnum } from '@/api/bpm/task'
