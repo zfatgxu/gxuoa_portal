@@ -73,24 +73,24 @@
           </el-tab-pane>
 
           <!-- 流程图 -->
-          <el-tab-pane label="流程图" name="diagram">
-            <div class="form-scroll-area">
-              <ProcessInstanceSimpleViewer
-                v-show="
-                  processDefinition.modelType && processDefinition.modelType === BpmModelType.SIMPLE
-                "
-                :loading="processInstanceLoading"
-                :model-view="processModelView"
-              />
-              <ProcessInstanceBpmnViewer
-                v-show="
-                  processDefinition.modelType && processDefinition.modelType === BpmModelType.BPMN
-                "
-                :loading="processInstanceLoading"
-                :model-view="processModelView"
-              />
-            </div>
-          </el-tab-pane>
+<!--          <el-tab-pane label="流程图" name="diagram">-->
+<!--            <div class="form-scroll-area">-->
+<!--              <ProcessInstanceSimpleViewer-->
+<!--                v-show="-->
+<!--                  processDefinition.modelType && processDefinition.modelType === BpmModelType.SIMPLE-->
+<!--                "-->
+<!--                :loading="processInstanceLoading"-->
+<!--                :model-view="processModelView"-->
+<!--              />-->
+<!--              <ProcessInstanceBpmnViewer-->
+<!--                v-show="-->
+<!--                  processDefinition.modelType && processDefinition.modelType === BpmModelType.BPMN-->
+<!--                "-->
+<!--                :loading="processInstanceLoading"-->
+<!--                :model-view="processModelView"-->
+<!--              />-->
+<!--            </div>-->
+<!--          </el-tab-pane>-->
 
           <!-- 流转记录 -->
           <el-tab-pane label="流转记录" name="record">
