@@ -455,12 +455,13 @@
           <span style="font-size: 14px;margin-bottom: 5px;">请假期间主持工作负责人会签</span>
         </div>
         <div class="action-item">
-          <div v-for="userTask in startUserSelectTasks" :key="userTask.id" style="width: 120px">
+          <div v-for="userTask in startUserSelectTasks" :key="userTask.id" style="width: 200px">
               <el-select
                 v-model="startUserSelectAssignees[userTask.id]"
                 multiple
-                placeholder="请选择审批人"
+                placeholder="请选择代工人"
                 class="signature-input"
+                filterable
               >
                 <el-option
                   v-for="user in userList"
