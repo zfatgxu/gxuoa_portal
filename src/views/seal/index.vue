@@ -50,7 +50,18 @@
         </el-table-column>
         <el-table-column align="center" label="用印状态" prop="sealState">
           <template #default="scope">
-            <dict-tag :type="DICT_TYPE.SEAL_STATE" :value="scope.row.sealState" />
+            <div style="display: flex; align-items: center; justify-content: center;">
+              <dict-tag 
+                :type="DICT_TYPE.SEAL_STATE" 
+                :value="scope.row.sealState" 
+              />
+              <el-checkbox
+                :model-value="scope.row.sealState === 1"
+                :disabled="scope.row.status !== 2" 
+                @change="(val) => handleSealStateChange(scope.row, val)"
+                style="margin-left: 6px;"
+              />
+            </div>
           </template>
         </el-table-column>
         <el-table-column align="center" label="材料名称" prop="materialName" />
@@ -92,7 +103,8 @@
   import { DICT_TYPE } from '@/utils/dict'
   import { getSimpleDeptList } from '@/api/system/dept'
   import * as SealApi from '@/api/seal'
-  
+  import { ElMessageBox, ElMessage } from 'element-plus'
+
   const router = useRouter()
   const loading = ref(false)
   const list = ref([]) // 数据列表
@@ -192,6 +204,46 @@
   const viewDetail = (row: any) => {
     router.push({ name: 'SealDetail', query: { id: row.processInstanceId } })
   }
+  
+  // 处理用印状态变更
+  const handleSealStateChange = (row: any, checked: boolean) => {
+    if (row.status !== 2) { 
+      ElMessage.warning('只有审核通过的申请才能更改用印状态')
+      return
+    }
+    
+    // 根据勾选状态确定新的状态码
+    const newSealState = checked ? 1 : 2
+    const stateText = checked ? '已用印' : '未用印'
+    
+    ElMessageBox.confirm(
+      `确认将此申请用印状态设为"${stateText}"？`,
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+      .then(async () => {
+        try {
+          // 调用API更新用印状态，传递申请表单id和sealState
+          await SealApi.updateSealState({
+            id: row.id,
+            sealState: newSealState
+          })
+          
+          // 更新成功后更新本地数据
+          row.sealState = newSealState
+          ElMessage.success(`用印状态已更新为"${stateText}"`)
+        } catch (error) {
+          ElMessage.error('更新用印状态失败，请重试')
+          console.error('更新用印状态失败:', error)
+        }
+      })
+      .catch(() => {})
+  }
+  
   onMounted(() => {
     getSealApplicationPage(queryParams.value)
   })
