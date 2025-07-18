@@ -3,13 +3,13 @@
     <ContentWrap>
       <el-form :inline="true" :model="queryParams" @submit.prevent>
         <el-form-item label="材料名称">
-          <el-input v-model="queryParams.materialName" placeholder="请输入材料名称" clearable />
+          <el-input v-model="queryParams.materialName" placeholder="请输入材料名称" clearable style="width: 220px" />
         </el-form-item>
         <el-form-item label="材料类型">
-          <el-select v-model="queryParams.materialType" clearable placeholder="请选择材料类型">
-            <el-option label="合同类材料" value="合同类材料" />
-            <el-option label="合同类材料，未经过法务审核" value="合同类材料，未经过法务审核" />
-            <el-option label="合同类材料，经过法务分室" value="合同类材料，经过法务分室" />
+          <el-select v-model="queryParams.materialType" clearable placeholder="请选择材料类型" style="width: 280px">
+            <el-option label="非合同类" value="非合同类" />
+            <el-option label="合同类材料，未经法务办审核" value="合同类材料，未经法务办审核" />
+            <el-option label="合同类材料，经法务办审查" value="合同类材料，经法务办审查" />
           </el-select>
         </el-form-item>
         <el-form-item>
