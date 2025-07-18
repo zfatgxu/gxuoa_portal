@@ -52,14 +52,14 @@
     <el-col :xl="19" :lg="19" :md="24" :sm="24" :xs="24">
       <!-- 快捷入口卡片 -->
       <QuickEntryCard 
-        @goToAllEntries="goToAllEntries"
-        @addEntry="handleAddEntry"
+        @go-to-all-entries="goToAllEntries"
+        @add-entry="handleAddEntry"
         
       />
 
       <TabTodoCard 
-        @goToTodoList="goToTodoList" 
-        @goToTodoDetail="goToTodoDetail" 
+        @go-to-todo-list="goToTodoList" 
+        @go-to-todo-detail="goToTodoDetail" 
         
       />
       
@@ -101,8 +101,8 @@
       
       <!-- 日程安排卡片 -->
       <ScheduleCard 
-        @goToSchedule="goToSchedule"
-        @viewScheduleDetail="viewScheduleDetail"
+        @go-to-schedule="goToSchedule"
+        @view-schedule-detail="viewScheduleDetail"
         v-if="cardSettings.schedule.visible"
         :schedulelength="cardSettings.schedule.limit"
       />
