@@ -57,8 +57,8 @@
         <el-table-column align="center" label="材料类型" prop="materialType" />
         <el-table-column align="center" label="印章类型">
           <template #default="scope">
-            <div v-for="seal in scope.row.sealTypes" :key="seal">
-              {{ sealLabel(seal) }} × {{ scope.row.sealCounts[seal] || 0 }}
+            <div v-for="seal in (scope.row.sealTypes || [])" :key="seal.id">
+              {{ seal.name }} × {{ seal.quantity || 0 }}
             </div>
           </template>
         </el-table-column>
@@ -138,9 +138,15 @@
     handleQuery()
   }
   const handleCreate = () => {
-    selectedUnit.value = ''
-    fetchUnitList()
-    dialogVisible.value = true
+    // selectedUnit.value = ''
+    // fetchUnitList()
+    // dialogVisible.value = true
+    router.push({
+      name: 'SealCreate',
+      query: {
+        
+      }
+    })
   }
   
   const handleUnitConfirm = () => {

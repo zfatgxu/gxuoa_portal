@@ -1,7 +1,8 @@
 <template>
   <div class="form-container">
     <div class="form-header">
-      <h1>{{ detail.title }}</h1>
+      <h1>{{ detail.applyTitle }}</h1>
+      <p v-if="status==2" style="color: red;">盖章编号：{{ detail.sealNumber }}</p>
     </div>
     <el-form label-width="120px" class="seal-form">
       <!-- 材料名称 -->
@@ -41,7 +42,7 @@
                   <span v-else-if="activity.status === 1" style="color: #448ef7;">
                     {{ activity.tasks[0].assigneeUser?.nickname }}（处理中）
                   </span>
-                  <span v-else-if="activity.status === 0" style="color: #f46b6c;">
+                  <span v-else-if="activity.status === 3" style="color: #f46b6c;">
                     {{ activity.tasks[0].assigneeUser?.nickname }}（不同意）
                   </span>
                   <span v-else>
@@ -61,9 +62,7 @@
       <div class="form-section">
         <div class="section-header">材料类型</div>
         <div class="material-type-content">
-          <span v-if="detail.materialTypes && detail.materialTypes.nonContract" class="material-checkbox">非合同类材料</span>
-          <span v-if="detail.materialTypes && detail.materialTypes.contractNotReviewed" class="material-checkbox">合同类材料，未经法务办审核</span>
-          <span v-if="detail.materialTypes && detail.materialTypes.contractReviewed" class="material-checkbox">合同类材料，经法务办审查</span>
+         {{ detail.materialType }}
         </div>
       </div>
       <!-- 附件 -->
@@ -71,22 +70,30 @@
         <div class="section-header">附件</div>
         <div class="upload-content">
           <div class="file-list" v-if="detail.attachments && detail.attachments.length">
-            <div class="file-item" v-for="(file, idx) in detail.attachments" :key="idx">
+            <div class="file-item" v-for="file in detail.attachments" :key="file.attachmentId">
               <div class="file-info">
-                <span class="file-name">{{ file.name }}</span>
-                <span class="file-size">{{ file.size }}</span>
-                <a :href="file.url" target="_blank" style="margin-left:8px;">下载</a>
+                <span class="file-name">{{ file.attachmentName }}</span>
+                <span class="file-size">{{ file.attachmentSize }}</span>
+                <a :href="file.attachmentUrl" target="_blank" style="margin-left:8px;">下载</a>
               </div>
             </div>
           </div>
           <div v-else style="color:#888;">无附件</div>
         </div>
       </div>
-      <!-- 注意事项 -->
+      <!-- 申请摘要 -->
       <div class="form-section">
-        <div class="section-header">注意事项</div>
+        <div class="section-header">申请摘要</div>
         <div class="notes-content">
-          <div style="white-space:pre-line; color:#333;">{{ detail.notes }}</div>
+          <div style="white-space:pre-line; color:#333;">{{ detail.attention }}</div>
+        </div>
+      </div>
+
+      <!-- 电话 -->
+      <div class="form-section">
+        <div class="section-header">电话</div>
+        <div class="phone-content">
+          {{ detail.phone }}
         </div>
       </div>
 
@@ -110,20 +117,30 @@ import { useRoute } from 'vue-router'
 import { Qrcode } from '@/components/Qrcode'
 import { propTypes } from '@/utils/propTypes'
 import * as SealApi from '@/api/seal'
+import { formatDate } from '@/utils/formatTime'
 
 
+//由网上印章申请，用户：  ，时间：   ，编号：  
+const qrText = ref('')
 
-const qrText = computed(() => window.location.href)
 const props = defineProps({
   id: propTypes.number.def(undefined),
-  activityNodes: propTypes.array.def([])
+  activityNodes: propTypes.array.def([]),
+  applyUser: propTypes.string.def(''),
+  applyTime: propTypes.string.def(''),
+  status: propTypes.string.def('')
 })
 
 //父组件传入的ID和activityNodes
 
 const id = props.id
 const activityNodes = props.activityNodes
+const applyUser = props.applyUser
+const applyTime = props.applyTime
+const status = props.status
+console.log("status",status)
 console.log(activityNodes)
+
 const filteredActivityNodes = computed(() => {
   return activityNodes.filter(
     (activity) => activity.id !== "StartUserNode" && activity.id !== "EndEvent"
@@ -131,17 +148,7 @@ const filteredActivityNodes = computed(() => {
 })
 
 const detail = ref({
-  title: '',
-  materialName: '',
-  sealTypes: [],
-  handlerSignature: '',
-  reviewerSignature: '',
-  unitHeadSignature: '',
-  contactPhone: '',
-  materialTypes: {},
-  notes: '',
-  attachments: [],
-  sealStatus: '',
+  
 })
 
 const fetchDetail = async () => {
@@ -149,15 +156,7 @@ const fetchDetail = async () => {
   
   //如果 getApplyInfoById API 已实现，请取消下面注释
   const res = await SealApi.getSealApplicationById(id)
-  detail.value = {
-    title: res.title,
-    materialName: res.materialName,
-    sealTypes: res.sealTypes || [],
-    contactPhone: res.contactPhone,
-    materialTypes: res.materialTypes || {},
-    notes: res.notes,
-    attachments: res.attachments || []
-  }
+  detail.value = res
   
   // 临时使用模拟数据
   // detail.value = {
@@ -193,9 +192,16 @@ const fetchDetail = async () => {
   // }
 }
 
+// 获取详情后设置二维码文本
+const updateQrText = () => {
+  qrText.value = `网上印章申请，用户：${applyUser}，时间：${formatDate(applyTime)}，编号：${detail.value?.applyId || ''}`
+}
+
 // 正确使用 onMounted 钩子
 onMounted(() => {
-  fetchDetail()
+  fetchDetail().then(() => {
+    updateQrText()
+  })
 })
 </script>
 
@@ -325,7 +331,7 @@ onMounted(() => {
 .signature-row {
   display: flex;
   align-items: center;
-  margin-bottom: 15px;
+ padding-bottom: 15px;
   gap: 15px;
 }
 
@@ -335,7 +341,7 @@ onMounted(() => {
 .signature-row .required {
   width: 140px; /* 或 144px，确保能容纳最长的标签 */
   min-width: 140px;
-  text-align: left;
+  text-align: center;
   margin-right: 12px;
   display: inline-block;
   flex-shrink: 0;
@@ -422,6 +428,12 @@ onMounted(() => {
 .notes-content {
   flex: 1;
   padding: 15px;
+}
+
+.phone-content {
+
+  padding: 15px;
+  text-align: center;
 }
 
 .qr-content {

@@ -131,7 +131,7 @@
     </el-popover>
 
     <!-- 【抄送】按钮 -->
-    <el-popover
+    <!-- <el-popover
       :visible="popOverVisible.copy"
       placement="top-start"
       :width="420"
@@ -186,10 +186,10 @@
           </el-form-item>
         </el-form>
       </div>
-    </el-popover>
+    </el-popover> -->
 
     <!-- 【转办】按钮 -->
-    <el-popover
+    <!-- <el-popover
       :visible="popOverVisible.transfer"
       placement="top-start"
       :width="420"
@@ -238,10 +238,10 @@
           </el-form-item>
         </el-form>
       </div>
-    </el-popover>
+    </el-popover> -->
 
     <!-- 【委派】按钮 -->
-    <el-popover
+    <!-- <el-popover
       :visible="popOverVisible.delegate"
       placement="top-start"
       :width="420"
@@ -290,10 +290,10 @@
           </el-form-item>
         </el-form>
       </div>
-    </el-popover>
+    </el-popover> -->
 
     <!-- 【加签】按钮 当前任务审批人为A，向前加签选了一个C，则需要C先审批，然后再是A审批，向后加签B，A审批完，需要B再审批完，才算完成这个任务节点 -->
-    <el-popover
+    <!-- <el-popover
       :visible="popOverVisible.addSign"
       placement="top-start"
       :width="420"
@@ -345,10 +345,10 @@
           </el-form-item>
         </el-form>
       </div>
-    </el-popover>
+    </el-popover> -->
 
     <!-- 【减签】按钮 -->
-    <el-popover
+    <!-- <el-popover
       :visible="popOverVisible.deleteSign"
       placement="top-start"
       :width="420"
@@ -396,10 +396,10 @@
           </el-form-item>
         </el-form>
       </div>
-    </el-popover>
+    </el-popover> -->
 
     <!-- 【退回】按钮 -->
-    <el-popover
+    <!-- <el-popover
       :visible="popOverVisible.return"
       placement="top-start"
       :width="420"
@@ -448,10 +448,10 @@
           </el-form-item>
         </el-form>
       </div>
-    </el-popover>
+    </el-popover> -->
 
     <!--【取消】按钮 这个对应发起人的取消, 只有发起人可以取消 -->
-    <el-popover
+    <!-- <el-popover
       :visible="popOverVisible.cancel"
       placement="top-start"
       :width="420"
@@ -492,9 +492,9 @@
           </el-form-item>
         </el-form>
       </div>
-    </el-popover>
+    </el-popover> -->
     <!-- 【再次提交】 按钮-->
-    <div
+    <!-- <div
       @click="handleReCreate()"
       class="hover-bg-gray-100 rounded-xl p-6px"
       v-if="
@@ -504,7 +504,7 @@
       "
     >
       <Icon :size="14" icon="ep:refresh" />&nbsp; 再次提交
-    </div>
+    </div> -->
   </div>
 
   <!-- 签名弹窗 -->
@@ -534,6 +534,7 @@ const router = useRouter() // 路由
 const message = useMessage() // 消息弹窗
 
 const userId = useUserStoreWithOut().getUser.id // 当前登录的编号
+console.log(userId)
 const emit = defineEmits(['success']) // 定义 success 事件，用于操作成功后的回调
 
 const props = defineProps<{

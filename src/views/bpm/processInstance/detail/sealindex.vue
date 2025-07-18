@@ -59,7 +59,7 @@
                         </el-col>
                         <!-- 情况二：业务表单 -->
                         <div v-if="processDefinition?.formType === BpmModelFormType.CUSTOM">
-                          <BusinessFormComponent :id="processInstance.businessKey" :activity-nodes="activityNodes"/>
+                          <BusinessFormComponent :id="processInstance.businessKey" :activity-nodes="activityNodes" :applyUser="applyUser" :applyTime="applyTime" :status="processInstance.status"/>
                         </div>
                       </div>
                     </el-col>
@@ -109,9 +109,9 @@
             </el-tab-pane>
           </el-tabs>
   
-          <!-- <div class="b-t-solid border-t-1px border-[var(--el-border-color)]">
-             操作栏按钮 
-            <ProcessInstanceOperationButton
+           <div class="b-t-solid border-t-1px border-[var(--el-border-color)]">
+             
+            <SealapplyButton
               ref="operationButtonRef"
               :process-instance="processInstance"
               :process-definition="processDefinition"
@@ -121,7 +121,8 @@
               :writable-fields="writableFields"
               @success="refresh"
             />
-          </div> -->
+          </div> 
+          
         </el-scrollbar>
       </div>
     </ContentWrap>
@@ -139,6 +140,7 @@
   import ProcessInstanceSimpleViewer from './ProcessInstanceSimpleViewer.vue'
   import ProcessInstanceTaskList from './ProcessInstanceTaskList.vue'
   import ProcessInstanceOperationButton from './ProcessInstanceOperationButton.vue'
+  import SealapplyButton from './sealapplyButton.vue'
   import ProcessInstanceTimeline from './ProcessInstanceTimeline.vue'
   import { FieldPermissionType } from '@/components/SimpleProcessDesignerV2/src/consts'
   import { TaskStatusEnum } from '@/api/bpm/task'
@@ -173,6 +175,9 @@
   }) // 流程实例的表单详情
   
   const writableFields: Array<string> = [] // 表单可以编辑的字段
+
+    const applyUser = ref('') // 申请人
+    const applyTime = ref('') // 申请时间
   
   /** 获得详情 */
   const getDetail = () => {
@@ -201,6 +206,12 @@
         return
       }
       processInstance.value = data.processInstance
+      if (processInstance.value.startUser) {
+      applyUser.value = processInstance.value.startUser.nickname
+    }
+    if (processInstance.value.startTime) {
+      applyTime.value = processInstance.value.startTime
+    }
       console.log('processInstance.businessKey', processInstance.value.businessKey)
       console.log('processInstance.id', processInstance.value.id)
       processDefinition.value = data.processDefinition
@@ -257,7 +268,7 @@
         bpmnXml: ''
       }
     }
-    const data = await ProcessInstanceApi.getProcessInstanceBpmnModelView(props.id)
+    const data = await ProcessInstanceApi.getProcessInstanceBpmnModelView(id)
     if (data) {
       processModelView.value = data
     }
@@ -312,25 +323,17 @@
   $process-header-height: 194px;
   
   .processInstance-wrap-main {
-    height: calc(
+    height: auto;
+    min-height: calc(
       100vh - var(--top-tool-height) - var(--tags-view-height) - var(--app-footer-height) - 35px
     );
-    max-height: calc(
-      100vh - var(--top-tool-height) - var(--tags-view-height) - var(--app-footer-height) - 35px
-    );
-    overflow: auto;
+    overflow: visible;
   
     .form-scroll-area {
       display: flex;
-      height: calc(
-        100vh - var(--top-tool-height) - var(--tags-view-height) - var(--app-footer-height) - 35px -
-          $process-header-height - 40px
-      );
-      max-height: calc(
-        100vh - var(--top-tool-height) - var(--tags-view-height) - var(--app-footer-height) - 35px -
-          $process-header-height - 40px
-      );
-      overflow: auto;
+      height: auto;
+      min-height: 400px;
+      overflow: visible;
       flex-direction: column;
   
       :deep(.box-card) {

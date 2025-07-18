@@ -8,8 +8,8 @@
           class="entry-item"
           @click="handleEntryClick(item)"
         >
-          <div class="entry-icon" :style="{ backgroundColor: item.bgColor }">
-            <i class="bi" :class="item.icon"></i>
+          <div class="entry-icon">
+            <img :src="item.icon" :alt="item.name" class="entry-img" />
             <span v-if="item.badge" class="badge">{{ item.badge }}</span>
           </div>
           <div class="entry-name">{{ item.name }}</div>
@@ -63,42 +63,42 @@ const maxEntries = computed(() => {
 const entryList = ref([
   {
     name: '公文',
-    icon: 'bi-briefcase',
+    icon: new URL('@/assets/imgs/quickEntry/document.png', import.meta.url).href,
     path: '/document',
     bgColor: '#4a7eff',
     badge: '1'
   },
   {
     name: '邮件',
-    icon: 'bi-envelope',
+    icon: new URL('@/assets/imgs/quickEntry/mail.png', import.meta.url).href,
     path: '/mail',
     bgColor: '#4cd964',
     badge: '1'
   },
   {
     name: '请假审批',
-    icon: 'bi-calendar-check',
+    icon: new URL('@/assets/imgs/quickEntry/leave.png', import.meta.url).href,
     path: '/leave-approval',
     bgColor: '#9c88ff',
     badge: '1'
   },
   {
-    name: '督查督办',
-    icon: 'bi-clipboard-check',
-    path: '/supervision',
-    bgColor: '#70a1ff',
-    badge: '1'
-  },
-  {
-    name: '信访',
-    icon: 'bi-people',
+    name: '出差审批',
+    icon: new URL('@/assets/imgs/quickEntry/trip.png', import.meta.url).href,
     path: '/visit',
     bgColor: '#5352ed',
     badge: '1'
   },
   {
-    name: '行政审批',
-    icon: 'bi-file-earmark-text',
+    name: '督查督办',
+    icon: new URL('@/assets/imgs/quickEntry/supervison.png', import.meta.url).href,
+    path: '/supervision',
+    bgColor: '#70a1ff',
+    badge: '1'
+  },
+  {
+    name: '问题反馈',
+    icon: new URL('@/assets/imgs/quickEntry/feedback.png', import.meta.url).href,
     path: '/approval',
     bgColor: '#2ed573',
     badge: '1'
@@ -168,17 +168,19 @@ onMounted(() => {
 }
 
 .entry-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 5px;
-  color: white;
-  font-size: 20px;
   transition: all 0.3s;
   position: relative;
+}
+
+.entry-img {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  /*filter: brightness(0);*/
 }
 
 .entry-item:hover .entry-icon {
@@ -211,6 +213,9 @@ onMounted(() => {
   color: #747d8c;
   border: 2px dashed #dfe4ea;
   border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  font-size: 24px;
 }
 
 .add-entry:hover .add-icon {

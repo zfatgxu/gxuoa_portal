@@ -1,66 +1,49 @@
 <template>
   <ContentWrap>
     <!-- 列表 -->
-    <el-table v-loading="loading" :data="list">
-      <el-table-column align="center" label="流程" prop="processInstance.name" width="180" />
-      <el-table-column label="摘要" prop="processInstance.summary" width="180">
+    <el-table v-loading="loading" :data="filteredList">
+      <el-table-column align="center" label="申请编号" prop="applyData.applyId" width="120" />
+      <el-table-column align="center" label="申请摘要" prop="applyData.attention" width="120" />
+      <el-table-column align="center" label="当前进度" prop="name" width="120" />
+      <el-table-column align="center" label="用印状态" width="100">
         <template #default="scope">
-          <div
-            class="flex flex-col"
-            v-if="scope.row.processInstance.summary && scope.row.processInstance.summary.length > 0"
-          >
-            <div v-for="(item, index) in scope.row.processInstance.summary" :key="index">
-              <el-text type="info"> {{ item.key }} : {{ item.value }} </el-text>
-            </div>
-          </div>
+          <el-tag :type="scope.row.applyData.sealState === 1 ? 'success' : scope.row.applyData.sealState === 2 ? 'warning' : 'info'">
+            {{ scope.row.applyData.sealState === 1 ? '已用印' : scope.row.applyData.sealState === 2 ? '待用印' : '未知' }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column align="center" label="用印材料名" prop="applyData.materialName" width="550" />
+      <el-table-column align="center" label="经办人" width="100">
+        <template #default="scope">
+          {{ scope.row.applyData.signers ? scope.row.applyData.signers.split(',')[0] : '' }}
         </template>
       </el-table-column>
       <el-table-column
+        :formatter="dateFormatter"
         align="center"
-        label="发起人"
+        label="申请时间"
+        prop="applyData.createTime"
+        width="150"
+      />
+      <el-table-column
+        align="center"
+        label="申请人"
         prop="processInstance.startUser.nickname"
         width="100"
       />
+      <el-table-column align="center" label="联系电话" prop="applyData.phone" width="120" />
+      <el-table-column align="center" label="单位" width="150">
+        <template #default="scope">
+          {{ scope.row.applyData.applyTitle ? scope.row.applyData.applyTitle.split('印章申请单')[0] : '' }}
+        </template>
+      </el-table-column>
       <el-table-column
         :formatter="dateFormatter"
         align="center"
-        label="发起时间"
-        prop="createTime"
-        width="180"
-      />
-      <el-table-column align="center" label="当前任务" prop="name" width="180" />
-      <el-table-column
-        :formatter="dateFormatter"
-        align="center"
-        label="任务开始时间"
-        prop="createTime"
-        width="180"
-      />
-      <el-table-column
-        :formatter="dateFormatter"
-        align="center"
-        label="任务结束时间"
+        label="完成时间"
         prop="endTime"
-        width="180"
+        width="150"
       />
-      <el-table-column align="center" label="审批状态" prop="status" width="120">
-        <template #default="scope">
-          <dict-tag :type="DICT_TYPE.SEAL_APPLY_STATE" :value="scope.row.status" />
-        </template>
-      </el-table-column>
-      <el-table-column align="center" label="审批建议" prop="reason" min-width="180" />
-      <el-table-column align="center" label="耗时" prop="durationInMillis" width="160">
-        <template #default="scope">
-          {{ formatPast2(scope.row.durationInMillis) }}
-        </template>
-      </el-table-column>
-      <el-table-column
-        align="center"
-        label="流程编号"
-        prop="processInstanceId"
-        :show-overflow-tooltip="true"
-      />
-      <el-table-column align="center" label="任务编号" prop="id" :show-overflow-tooltip="true" />
       <el-table-column align="center" label="操作" fixed="right" width="80">
         <template #default="scope">
           <el-button link type="primary" @click="handleAudit(scope.row)">历史</el-button>
@@ -85,6 +68,7 @@
 import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
 import { dateFormatter, formatPast2 } from '@/utils/formatTime'
 import * as TaskApi from '@/api/bpm/task'
+import * as SealApi from '@/api/seal/index'
 
 defineOptions({ name: 'SealDoneTask' })
 
@@ -93,6 +77,9 @@ const { push } = useRouter() // 路由
 const loading = ref(true) // 列表的加载中
 const total = ref(0) // 列表的总页数
 const list = ref([]) // 列表的数据
+const filteredList = computed(() => {
+  return list.value.filter(item => item.applyData !== null)
+})
 const queryParams = reactive({
   pageNo: 1,
   pageSize: 10, // 直接指定用印申请流程的key
@@ -103,7 +90,7 @@ const queryParams = reactive({
 const getList = async () => {
   loading.value = true
   try {
-    const data = await TaskApi.getTaskDonePage(queryParams)
+    const data = await SealApi.getSealDonePage(queryParams)
     list.value = data.list
     total.value = data.total
   } finally {

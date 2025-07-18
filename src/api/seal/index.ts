@@ -3,7 +3,7 @@ import request from '@/config/axios'
 //提交印章申请
 export const submitSealApplication = async (data: any) => {
   return await request.post({ 
-    url: '/bpm/seal/apply/create', 
+    url: '/bpm/seal/create',
     data: data,
     headers: {
       'Content-Type': 'application/json'
@@ -14,7 +14,7 @@ export const submitSealApplication = async (data: any) => {
 //获取印章申请分页
 export const getSealApplicationPage = async (data: any) => {
   return await request.get({
-    url: '/bpm/seal/seal_apply/page',
+    url: '/bpm/seal/page',
     params: data
   })
 }
@@ -22,6 +22,22 @@ export const getSealApplicationPage = async (data: any) => {
 // 根据id获取印章申请
 export const getSealApplicationById = async (id: number) => {
   return await request.get({
-    url: '/bpm/seal/seal_apply/get?id=' + id
+    url: '/bpm/seal/get?id=' + id
+  })
+
+}
+
+//获取待办分页
+export const getSealTodoPage = async (data: any) => {
+  return await request.get({
+    url: '/bpm/seal/todo-page',
+    params: data
+  })
+}
+//获取已办分页
+export const getSealDonePage = async (data: any) => {
+  return await request.get({
+    url: '/bpm/seal/done-page',
+    params: data
   })
 }

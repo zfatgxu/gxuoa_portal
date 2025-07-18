@@ -61,7 +61,7 @@ onMounted(() => {
         unreadCount.value = 0
       }
     },
-    1000 * 6
+    1000 * 30
   )
 })
 </script>

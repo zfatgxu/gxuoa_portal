@@ -8,3 +8,4 @@
 .gitignore
 settings.json
 .auto-import.d.ts
+src/types/auto-components.d.ts

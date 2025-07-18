@@ -61,7 +61,7 @@ export const useAppStore = defineStore('app', {
       size: false, 
       locale: false, 
       message: true, 
-      tagsView: false, 
+      tagsView: true, 
       tagsViewImmerse: false, 
       tagsViewIcon: true, 
       logo: true, 
