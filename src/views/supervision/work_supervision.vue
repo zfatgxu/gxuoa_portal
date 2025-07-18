@@ -35,7 +35,7 @@
               <el-option label="12部门" value="dept12" />
             </el-select>
           </div>
-          <el-button type="primary">搜索</el-button>
+          <el-button type="primary" @click="handleSearch">搜索</el-button>
         </div>
       </div>
 
@@ -67,15 +67,27 @@
       </div>
 
       <!-- 数据表格 -->
-      <el-table :data="currentTableData" style="width: 100%" @selection-change="handleSelectionChange">
+      <el-table :data="currentTableData" style="width: 100%" @selection-change="handleSelectionChange" v-loading="loading">
         <el-table-column type="selection" width="55" />
         <el-table-column prop="id" label="序号" width="80" />
-        <el-table-column prop="supervisionNumber" label="督办编号" min-width="120" />
-        <el-table-column prop="content" label="督办内容" min-width="150" />
-        <el-table-column prop="handlingUnit" label="承办单位" min-width="100" />
-        <el-table-column prop="deadline" label="完成期限" min-width="120" />
-        <el-table-column prop="registrationDate" label="登记日期" min-width="100" />
-        <el-table-column prop="processingUser" label="处理用户" min-width="120" />
+        <el-table-column prop="orderCode" label="督办编号" min-width="120" />
+        <el-table-column prop="orderTitle" label="督办内容" min-width="150" />
+        <el-table-column label="承办单位" min-width="100">
+          <template #default="{ row }">
+            {{ row.leadDeptName || '未分配' }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="deadline" label="完成期限" min-width="120">
+          <template #default="{ row }">
+            {{ formatDate(row.deadline) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="createTime" label="登记日期" min-width="100">
+          <template #default="{ row }">
+            {{ formatDate(row.createTime) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="supervisorName" label="督办人" min-width="120" />
         <el-table-column label="操作" width="80" fixed="right">
           <template #default>
             <el-button type="primary" link>详情</el-button>
@@ -86,30 +98,33 @@
       <!-- 分页 -->
       <div class="pagination-wrapper">
         <div class="pagination-info">
-          共 {{ currentTableData.length }} 条记录 第 1 / {{ Math.ceil(currentTableData.length / pageSize) }} 页
+          共 {{ pagination.total }} 条记录 第 {{ pagination.pageNo }} / {{ Math.ceil(pagination.total / pagination.pageSize) || 1 }} 页
         </div>
         <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
+          v-model:current-page="pagination.pageNo"
+          v-model:page-size="pagination.pageSize"
           :page-sizes="[5, 10, 20, 50]"
           layout="prev, pager, next, sizes, jumper"
-          :total="currentTableData.length"
+          :total="pagination.total"
           @size-change="handleSizeChange"
           @current-change="handleCurrentChange"
         />
         <div class="pagination-actions">
-          <el-button type="primary">确定</el-button>
-          <el-button>回到第一页</el-button>
+          <el-button type="primary" @click="handleSearch">刷新</el-button>
+          <el-button @click="pagination.pageNo = 1; handleCurrentChange(1)">回到第一页</el-button>
         </div>
       </div>
     </div>
   </div>
 </template>
 
-<script setup>
-import { ref, reactive, computed } from 'vue'
+<script setup lang="ts">
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { Plus, Edit, Delete, Download, Bell } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
+import { OrderApi } from '@/api/supervision'
+import type { OrderPageReqVO, OrderRespVO } from '@/api/supervision'
+import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 
@@ -131,120 +146,99 @@ const sortOrder = ref('desc')
 const currentPage = ref(1)
 const pageSize = ref(20)
 
-// 流程中的数据
-const processingData = ref([
-  {
-    id: 1,
-    supervisionNumber: 'dfbgfb',
-    content: '2222',
-    handlingUnit: '11部门',
-    deadline: '2025-10-8',
-    registrationDate: '2025-04',
-    processingUser: '11, 22, 33,'
-  },
-  {
-    id: 2,
-    supervisionNumber: 'sfgnrnt',
-    content: '333',
-    handlingUnit: '11部门',
-    deadline: '2025-10-8',
-    registrationDate: '2025-04',
-    processingUser: '44, 55'
-  },
-  {
-    id: 3,
-    supervisionNumber: 'mnt',
-    content: 'rrrrf',
-    handlingUnit: '11部门',
-    deadline: '2025-10-8',
-    registrationDate: '2025-04',
-    processingUser: '22'
-  },
-  {
-    id: 4,
-    supervisionNumber: 'dfbgrth',
-    content: 'fbgnhn',
-    handlingUnit: '11部门',
-    deadline: '2025-10-8',
-    registrationDate: '2025-04',
-    processingUser: '33'
-  },
-  {
-    id: 5,
-    supervisionNumber: 'trhsbtn',
-    content: 'dvfbgn',
-    handlingUnit: '11部门',
-    deadline: '2025-10-8',
-    registrationDate: '2025-04',
-    processingUser: '44'
-  }
-])
+// 数据加载状态
+const loading = ref(false)
 
-// 结办文件数据
-const completedData = ref([
-  {
-    id: 1,
-    supervisionNumber: 'WC001',
-    content: '年度工作总结报告',
-    handlingUnit: '办公室',
-    deadline: '2024-12-31',
-    registrationDate: '2024-12',
-    processingUser: '张三'
-  },
-  {
-    id: 2,
-    supervisionNumber: 'WC002',
-    content: '财务审计报告',
-    handlingUnit: '财务部',
-    deadline: '2024-11-30',
-    registrationDate: '2024-11',
-    processingUser: '李四'
-  },
-  {
-    id: 3,
-    supervisionNumber: 'WC003',
-    content: '项目验收报告',
-    handlingUnit: '技术部',
-    deadline: '2024-10-15',
-    registrationDate: '2024-10',
-    processingUser: '王五'
-  }
-])
+// 日期格式化函数
+const formatDate = (timestamp: number | string) => {
+  if (!timestamp) return '-'
+  const date = new Date(typeof timestamp === 'string' ? parseInt(timestamp) : timestamp)
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
+}
 
-// 否决文件数据
-const rejectedData = ref([
-  {
-    id: 1,
-    supervisionNumber: 'RJ001',
-    content: '不合规申请材料',
-    handlingUnit: '审批科',
-    deadline: '2024-09-20',
-    registrationDate: '2024-09',
-    processingUser: '赵六'
-  },
-  {
-    id: 2,
-    supervisionNumber: 'RJ002',
-    content: '资质不符要求',
-    handlingUnit: '人事部',
-    deadline: '2024-08-10',
-    registrationDate: '2024-08',
-    processingUser: '孙七'
+// 所有数据
+const allData = ref<OrderRespVO[]>([])
+
+// 分页信息
+const pagination = reactive({
+  total: 0,
+  pageNo: 1,
+  pageSize: 20
+})
+
+// 获取督办单数据
+const fetchOrderData = async () => {
+  try {
+    loading.value = true
+
+    const params: OrderPageReqVO = {
+      pageNo: pagination.pageNo,
+      pageSize: pagination.pageSize,
+      orderType: 1 // 工作督办类型
+    }
+
+    // 添加搜索条件
+    if (searchForm.content) {
+      params.content = searchForm.content
+    }
+    if (searchForm.number) {
+      params.orderCode = searchForm.number
+    }
+    if (searchForm.unit && searchForm.unit !== 'all') {
+      params.leadDept = searchForm.unit
+    }
+
+    const response = await OrderApi.getOrderPage(params)
+
+    if (response && response.list) {
+      allData.value = response.list
+      pagination.total = response.total || 0
+    } else {
+      allData.value = []
+      pagination.total = 0
+    }
+  } catch (error) {
+    console.error('获取督办单数据失败:', error)
+    ElMessage.error('获取数据失败')
+    allData.value = []
+    pagination.total = 0
+  } finally {
+    loading.value = false
   }
-])
+}
+
+// 根据状态过滤数据
+const getDataByStatus = (status: string) => {
+  return allData.value.filter(item => {
+    // 只显示工作督办类型的督办单 (type = 1)
+    if (item.type !== 1) return false
+
+    switch (status) {
+      case 'processing':
+        // 流程中：supervision_approve为1(同意)或未设置，且supervision_reapprove不为1
+        return (item.supervisionApprove === 1 || !item.supervisionApprove) && item.supervisionReapprove !== 1
+      case 'completed':
+        // 结办文件：supervision_reapprove为1(同意结办)
+        return item.supervisionReapprove === 1
+      case 'rejected':
+        // 否决文件：supervision_approve为2(不同意)
+        return item.supervisionApprove === 2
+      default:
+        return true
+    }
+  })
+}
 
 // 根据当前标签页显示对应数据
 const currentTableData = computed(() => {
-  switch (activeTab.value) {
-    case 'processing':
-      return processingData.value
-    case 'completed':
-      return completedData.value
-    case 'rejected':
-      return rejectedData.value
-    default:
-      return processingData.value
-  }
+  const filteredData = getDataByStatus(activeTab.value)
+
+  // 直接返回后端数据，不进行额外转换
+  return filteredData
 })
 
 // 选中的行
@@ -258,17 +252,44 @@ const handleSelectionChange = (selection) => {
 // 处理页面大小变化
 const handleSizeChange = (size) => {
   pageSize.value = size
+  pagination.pageSize = size
+  pagination.pageNo = 1
+  fetchOrderData()
 }
 
 // 处理当前页变化
 const handleCurrentChange = (page) => {
   currentPage.value = page
+  pagination.pageNo = page
+  fetchOrderData()
+}
+
+// 处理搜索
+const handleSearch = () => {
+  pagination.pageNo = 1
+  fetchOrderData()
 }
 
 // 处理新建督办单
 const handleCreate = () => {
-  router.push('/dcdb/create')
+  router.push({
+    path: '/dcdb/create',
+    query: {
+      from: 'work_supervision',
+      type: 'work'
+    }
+  })
 }
+
+// 监听标签页变化
+watch(activeTab, () => {
+  // 标签页变化时不需要重新请求数据，只需要重新过滤
+})
+
+// 组件挂载时获取数据
+onMounted(() => {
+  fetchOrderData()
+})
 </script>
 
 <style scoped>

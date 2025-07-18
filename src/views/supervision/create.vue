@@ -5,11 +5,19 @@
       <div v-if="currentStep === 1">
         <!-- 页面标题 -->
         <div class="page-header mb-6 text-center">
-          <h2 class="text-2xl font-bold text-red-600">广西大学工作督办单</h2>
+          <h2 class="text-2xl font-bold text-red-600">{{ pageTitle }}</h2>
         </div>
 
         <!-- 督办单表单 -->
-      <el-form :model="orderForm" :rules="rules" ref="orderFormRef" label-width="120px" class="order-form">
+      <el-form
+        :model="orderForm"
+        :rules="rules"
+        ref="orderFormRef"
+        label-width="120px"
+        class="order-form"
+        v-loading="dataLoading"
+        element-loading-text="正在加载数据..."
+      >
         <!-- 第一行：督办编号放右边 -->
         <el-row :gutter="20">
           <el-col :span="12">
@@ -17,7 +25,11 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="督办编号：" prop="orderNumber">
-              <el-input v-model="orderForm.orderNumber" placeholder="请输入编号" />
+              <el-input
+                v-model="orderForm.orderNumber"
+                placeholder="正在生成督办编号..."
+                readonly
+              />
             </el-form-item>
           </el-col>
         </el-row>
@@ -35,21 +47,25 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="督办分类：" prop="category">
-              <el-select v-model="orderForm.category" placeholder="上级部门文件办理" style="width: 100%">
-                <el-option label="上级部门文件办理" value="上级部门文件办理" />
-                <el-option label="学校重要工作" value="学校重要工作" />
-                <el-option label="领导批示事项" value="领导批示事项" />
-                <el-option label="其他事项" value="其他事项" />
+              <el-select v-model="orderForm.category" placeholder="请选择督办分类" style="width: 100%">
+                <el-option
+                  v-for="dict in supervisionTypeOptions"
+                  :key="dict.value"
+                  :label="dict.label"
+                  :value="dict.value"
+                />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="督办依据：" prop="basis">
               <el-select v-model="orderForm.basis" placeholder="请选择督办依据" style="width: 100%">
-                <el-option label="上级文件要求" value="上级文件要求" />
-                <el-option label="学校工作安排" value="学校工作安排" />
-                <el-option label="领导指示" value="领导指示" />
-                <el-option label="其他" value="其他" />
+                <el-option
+                  v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_REASON)"
+                  :key="dict.value"
+                  :label="dict.label"
+                  :value="dict.value"
+                />
               </el-select>
             </el-form-item>
           </el-col>
@@ -59,10 +75,13 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="紧急程度：" prop="urgencyLevel">
-              <el-select v-model="orderForm.urgencyLevel" placeholder="一般" style="width: 100%">
-                <el-option label="一般" :value="1" />
-                <el-option label="紧急" :value="2" />
-                <el-option label="特急" :value="3" />
+              <el-select v-model="orderForm.urgencyLevel" placeholder="请选择紧急程度" style="width: 100%">
+                <el-option
+                  v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_PRIORITY_TYPE)"
+                  :key="dict.value"
+                  :label="dict.label"
+                  :value="dict.value"
+                />
               </el-select>
             </el-form-item>
           </el-col>
@@ -84,22 +103,31 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="牵头单位：" prop="leadDept">
-              <el-select v-model="orderForm.leadDept" placeholder="牵头部门" style="width: 100%">
+              <el-select
+                v-model="orderForm.leadDept"
+                placeholder="牵头部门"
+                style="width: 100%"
+                @change="handleLeadDeptChange"
+              >
                 <el-option
                   v-for="dept in deptList"
                   :key="dept.id"
                   :label="dept.name"
                   :value="dept.name"
+                  :data-id="dept.id"
                 />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="12">
             <el-form-item label="重要程度：" prop="importance">
-              <el-select v-model="orderForm.importance" placeholder="一般" style="width: 100%">
-                <el-option label="一般" value="一般" />
-                <el-option label="重要" value="重要" />
-                <el-option label="特别重要" value="特别重要" />
+              <el-select v-model="orderForm.importance" placeholder="请选择重要程度" style="width: 100%">
+                <el-option
+                  v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_SIGNIFICANCE_TYPE)"
+                  :key="dict.value"
+                  :label="dict.label"
+                  :value="dict.value"
+                />
               </el-select>
             </el-form-item>
           </el-col>
@@ -121,12 +149,14 @@
                 remote
                 :remote-method="searchDepts"
                 :loading="false"
+                @change="handleCollaborateDeptsChange"
               >
                 <el-option
                   v-for="dept in filteredCollaborateDepts"
                   :key="dept.id"
                   :label="dept.name"
                   :value="dept.name"
+                  :data-id="dept.id"
                 />
               </el-select>
             </el-form-item>
@@ -168,12 +198,14 @@
                   remote
                   :remote-method="searchUsers"
                   :loading="false"
+                  @change="handleSupervisorChange"
                 >
                   <el-option
                     v-for="user in filteredUserList"
                     :key="user.id"
                     :label="user.nickname || user.username"
                     :value="user.nickname || user.username"
+                    :data-id="user.id"
                   />
                 </el-select>
               </div>
@@ -231,11 +263,13 @@
         <el-row :gutter="20">
           <el-col :span="24">
             <el-form-item label="督察办审批：" prop="inspectionApproval">
-              <el-select v-model="orderForm.inspectionApproval" placeholder="同意办结" style="width: 200px">
-                <el-option label="同意办结" value="同意办结" />
-                <el-option label="补充办理" value="补充办理" />
-                <el-option label="不同意办结" value="不同意办结" />
-                <el-option label="需要整改" value="需要整改" />
+              <el-select v-model="orderForm.inspectionApproval" placeholder="请选择审批状态" style="width: 200px">
+                <el-option
+                  v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_APPROVE_TYPE)"
+                  :key="dict.value"
+                  :label="dict.label"
+                  :value="dict.value"
+                />
               </el-select>
             </el-form-item>
           </el-col>
@@ -266,11 +300,13 @@
         <el-row :gutter="20">
           <el-col :span="24">
             <el-form-item label="督查督办复核：" prop="supervisionReview">
-              <el-select v-model="orderForm.supervisionReview" placeholder="同意办结" style="width: 200px">
-                <el-option label="同意办结" value="同意办结" />
-                <el-option label="继续督办" value="继续督办" />
-                <el-option label="需要整改" value="需要整改" />
-                <el-option label="暂缓办理" value="暂缓办理" />
+              <el-select v-model="orderForm.supervisionReview" placeholder="请选择复核状态" style="width: 200px">
+                <el-option
+                  v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_REAPPROVE_TYPE)"
+                  :key="dict.value"
+                  :label="dict.label"
+                  :value="dict.value"
+                />
               </el-select>
             </el-form-item>
           </el-col>
@@ -278,8 +314,8 @@
 
         <!-- 操作按钮 -->
         <div class="form-actions mt-8 text-center">
-          <el-button type="primary" @click="submitOrder" size="large" :loading="submitLoading">
-            保存
+          <el-button type="info" @click="submitOrder" size="large" :loading="submitLoading">
+            保存草稿
           </el-button>
           <el-button @click="handleNext" type="primary" size="large">
             下一步
@@ -295,7 +331,7 @@
       <div v-if="currentStep === 2">
         <!-- 页面标题 -->
         <div class="page-header mb-6 text-center">
-          <h2 class="text-2xl font-bold text-red-600">广西大学工作督办单</h2>
+          <h2 class="text-2xl font-bold text-red-600">{{ pageTitle }}</h2>
         </div>
 
         <!-- 督办单表单 -->
@@ -340,7 +376,7 @@
                     督办分类：
                   </el-checkbox>
                 </template>
-                <el-input v-model="orderForm.category" readonly />
+                <el-input :value="getCategoryLabel(orderForm.category)" readonly />
               </el-form-item>
             </el-col>
             <el-col :span="12">
@@ -350,7 +386,7 @@
                     督办依据：
                   </el-checkbox>
                 </template>
-                <el-input v-model="orderForm.basis" readonly />
+                <el-input :value="getReasonLabel(orderForm.basis)" readonly />
               </el-form-item>
             </el-col>
           </el-row>
@@ -548,7 +584,7 @@
       <div v-if="currentStep === 3">
         <!-- 页面标题 -->
         <div class="page-header mb-6 text-center">
-          <h2 class="text-2xl font-bold text-red-600">广西大学工作督办单</h2>
+          <h2 class="text-2xl font-bold text-red-600">{{ pageTitle }}</h2>
         </div>
 
         <!-- 督办单表单 -->
@@ -579,20 +615,24 @@
             <el-col :span="12">
               <el-form-item label="督办分类：">
                 <el-select v-model="orderForm.category" disabled style="width: 100%">
-                  <el-option label="上级部门文件办理" value="上级部门文件办理" />
-                  <el-option label="学校重要工作" value="学校重要工作" />
-                  <el-option label="领导批示事项" value="领导批示事项" />
-                  <el-option label="其他事项" value="其他事项" />
+                  <el-option
+                    v-for="dict in supervisionTypeOptions"
+                    :key="dict.value"
+                    :label="dict.label"
+                    :value="dict.value"
+                  />
                 </el-select>
               </el-form-item>
             </el-col>
             <el-col :span="12">
               <el-form-item label="督办依据：">
                 <el-select v-model="orderForm.basis" disabled style="width: 100%">
-                  <el-option label="上级文件要求" value="上级文件要求" />
-                  <el-option label="学校工作安排" value="学校工作安排" />
-                  <el-option label="领导指示" value="领导指示" />
-                  <el-option label="其他" value="其他" />
+                  <el-option
+                    v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_REASON)"
+                    :key="dict.value"
+                    :label="dict.label"
+                    :value="dict.value"
+                  />
                 </el-select>
               </el-form-item>
             </el-col>
@@ -603,9 +643,12 @@
             <el-col :span="12">
               <el-form-item label="紧急程度：">
                 <el-select v-model="orderForm.urgencyLevel" disabled style="width: 100%">
-                  <el-option label="一般" :value="1" />
-                  <el-option label="紧急" :value="2" />
-                  <el-option label="特急" :value="3" />
+                  <el-option
+                    v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_PRIORITY_TYPE)"
+                    :key="dict.value"
+                    :label="dict.label"
+                    :value="dict.value"
+                  />
                 </el-select>
               </el-form-item>
             </el-col>
@@ -640,9 +683,12 @@
             <el-col :span="12">
               <el-form-item label="重要程度：">
                 <el-select v-model="orderForm.importance" disabled style="width: 100%">
-                  <el-option label="一般" value="一般" />
-                  <el-option label="重要" value="重要" />
-                  <el-option label="特别重要" value="特别重要" />
+                  <el-option
+                    v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_SIGNIFICANCE_TYPE)"
+                    :key="dict.value"
+                    :label="dict.label"
+                    :value="dict.value"
+                  />
                 </el-select>
               </el-form-item>
             </el-col>
@@ -763,10 +809,12 @@
             <el-col :span="24">
               <el-form-item label="督察办审批：">
                 <el-select v-model="orderForm.inspectionApproval" disabled style="width: 200px">
-                  <el-option label="同意办结" value="同意办结" />
-                  <el-option label="补充办理" value="补充办理" />
-                  <el-option label="不同意办结" value="不同意办结" />
-                  <el-option label="需要整改" value="需要整改" />
+                  <el-option
+                    v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_APPROVE_TYPE)"
+                    :key="dict.value"
+                    :label="dict.label"
+                    :value="dict.value"
+                  />
                 </el-select>
               </el-form-item>
             </el-col>
@@ -796,10 +844,12 @@
             <el-col :span="24">
               <el-form-item label="督查督办复核：">
                 <el-select v-model="orderForm.supervisionReview" disabled style="width: 200px">
-                  <el-option label="同意办结" value="同意办结" />
-                  <el-option label="继续督办" value="继续督办" />
-                  <el-option label="需要整改" value="需要整改" />
-                  <el-option label="暂缓办理" value="暂缓办理" />
+                  <el-option
+                    v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_REAPPROVE_TYPE)"
+                    :key="dict.value"
+                    :label="dict.label"
+                    :value="dict.value"
+                  />
                 </el-select>
               </el-form-item>
             </el-col>
@@ -829,7 +879,9 @@
           <!-- 操作按钮 -->
           <div class="form-actions mt-8 text-center">
             <el-button @click="goToStep(2)" size="large">返回上一步修改概述信息</el-button>
-            <el-button type="primary" @click="completeOrder" size="large">完成</el-button>
+            <el-button type="primary" @click="completeOrder" size="large" :loading="submitLoading">
+              完成并提交
+            </el-button>
           </div>
         </el-form>
       </div>
@@ -840,19 +892,83 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { useRouter } from 'vue-router'
+
+import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
 import * as DeptApi from '@/api/system/dept'
 import * as UserApi from '@/api/system/user'
+import { OrderApi, type OrderVO } from '@/api/supervision'
+import { DICT_TYPE, getIntDictOptions, getStrDictOptions } from '@/utils/dict'
 import { Icon } from '@/components/Icon'
 
 defineOptions({ name: 'SupervisionOrderCreate' })
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
+
+// 获取返回路径的函数
+const getReturnPath = () => {
+  const fromPage = route.query.from as string
+  switch (fromPage) {
+    case 'work_supervision':
+      return '/supervision/work_supervision'
+    case 'special_supervision':
+      return '/supervision/special_supervision'
+  }
+}
+
+// 获取督办类型
+const getSupervisionOrderType = () => {
+  const type = route.query.type as string
+  return type === 'special' ? 'special' : 'work'
+}
+
+// 页面标题
+const pageTitle = computed(() => {
+  const orderType = getSupervisionOrderType()
+  return orderType === 'special' ? '广西大学专项督办单' : '广西大学工作督办单'
+})
+
+// 督办分类选项
+const supervisionTypeOptions = ref<any[]>([])
+
+// 获取督办分类列表
+const loadSupervisionTypes = async () => {
+  try {
+    const orderType = getSupervisionOrderType()
+    // 工作督办是1，专项督办是2
+    const typeValue = orderType === 'special' ? 2 : 1
+    const result = await OrderApi.getSupervisionDetailTypes(typeValue)
+    console.log('API返回的督办分类数据:', result)
+
+    // 将字符串数组转换为下拉框需要的格式
+    if (result && Array.isArray(result)) {
+      supervisionTypeOptions.value = result.map((item, index) => ({
+        value: item, // 使用字符串本身作为值
+        label: item // 字符串作为显示标签
+      }))
+      console.log('转换后的督办分类选项:', supervisionTypeOptions.value)
+    } else {
+      supervisionTypeOptions.value = []
+      console.log('API返回数据格式不正确或为空')
+    }
+  } catch (error) {
+    console.error('获取督办分类列表失败:', error)
+    ElMessage.error('获取督办分类列表失败')
+    // 如果API调用失败，回退到使用数据字典
+    const orderType = getSupervisionOrderType()
+    if (orderType === 'special') {
+      supervisionTypeOptions.value = getIntDictOptions(DICT_TYPE.SPECIAL_SUPERVISION_TYPE)
+    } else {
+      supervisionTypeOptions.value = getIntDictOptions(DICT_TYPE.WORK_SUPERVISION_TYPE)
+    }
+  }
+}
 
 // 响应式数据
 const submitLoading = ref(false)
+const dataLoading = ref(false)
 const orderFormRef = ref()
 const deptList = ref<DeptApi.DeptVO[]>([])
 const userList = ref<any[]>([])
@@ -924,29 +1040,32 @@ const searchUsers = (query: string) => {
 
 // 督办单表单数据
 const orderForm = reactive({
-  orderNumber: '',
-  title: '',
-  category: '',
-  basis: '',
-  urgencyLevel: 1,
-  deadline: '',
-  leadDept: '', // 牵头单位
-  importance: '一般',
-  collaborateDepts: [], // 协办单位改为数组
-  supervisorName: '',
+  orderNumber: '', // 督办编号
+  title: '', // 督办标题
+  category: undefined, // 督办分类（字符串类型）
+  basis: undefined, // 督办依据（数字类型）
+  urgencyLevel: undefined, // 紧急程度（数字类型）
+  deadline: '', // 完成时间
+  leadDept: '', // 牵头单位名称（用于显示）
+  leadDeptId: 0, // 牵头单位ID（用于提交）
+  importance: undefined, // 重要程度（数字类型）
+  collaborateDepts: [], // 协办单位名称数组（用于显示）
+  collaborateDeptIds: [], // 协办单位ID数组（用于提交）
+  supervisorName: '', // 督办人姓名（用于显示）
+  supervisorId: 0, // 督办人ID（用于提交）
   officePhone: '',
   leader: '',
-  content: '',
-  tasks: '',
-  inspectionApproval: '同意办结', // 督察办审批
-  handlingDetails: '',
-  supervisionReview: '同意办结' // 督查督办复核
+  content: '', // 主要内容
+  tasks: '', // 承办事项
+  inspectionApproval: undefined, // 督察办审批（数字类型）
+  handlingDetails: '', // 牵头单位承办情况
+  supervisionReview: undefined // 督查督办复核（数字类型）
 })
 
 // 表单验证规则
 const rules = {
   orderNumber: [
-    { required: true, message: '请输入督办编号', trigger: 'blur' }
+    { required: true, message: '督办编号不能为空', trigger: 'blur' }
   ],
   title: [
     { required: true, message: '请输入文件标题', trigger: 'blur' },
@@ -955,11 +1074,14 @@ const rules = {
   category: [
     { required: true, message: '请选择督办分类', trigger: 'change' }
   ],
+  basis: [
+    { required: false, message: '请选择督办依据', trigger: 'change' }
+  ],
   urgencyLevel: [
     { required: true, message: '请选择紧急程度', trigger: 'change' }
   ],
   deadline: [
-    { required: true, message: '请选择完成时间', trigger: 'change' }
+    { required: false, message: '请选择完成时间', trigger: 'change' }
   ],
   leadDept: [
     { required: true, message: '请选择牵头单位', trigger: 'change' }
@@ -970,34 +1092,58 @@ const rules = {
   content: [
     { required: true, message: '请输入主要内容', trigger: 'blur' },
     { min: 1, max: 2000, message: '内容长度在 1 到 2000 个字符', trigger: 'blur' }
+  ],
+  tasks: [
+    { required: false, message: '请输入承办事项', trigger: 'blur' },
+    { min: 1, max: 1000, message: '承办事项长度在 1 到 1000 个字符', trigger: 'blur' }
   ]
 }
 
 // 方法
-const generateOrderNumber = () => {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0')
-  return `DB${year}${month}${day}${random}`
+const generateOrderNumber = async () => {
+  try {
+    const orderCode = await OrderApi.generateSupervisionOrderCode()
+    orderForm.orderNumber = orderCode
+  } catch (error) {
+    console.error('生成督办编号失败:', error)
+    ElMessage.error('生成督办编号失败，请重试')
+    // 如果生成失败，设置一个默认值或者重试
+    orderForm.orderNumber = '生成失败，请刷新页面重试'
+  }
 }
 
 const loadDeptList = async () => {
   try {
-    deptList.value = await DeptApi.getSimpleDeptList()
+    dataLoading.value = true
+    const result = await DeptApi.getSimpleDeptList()
+    deptList.value = result || []
   } catch (error) {
     console.error('加载部门列表失败:', error)
     ElMessage.error('加载部门列表失败')
+  } finally {
+    dataLoading.value = false
   }
 }
 
 const loadUserList = async () => {
   try {
-    userList.value = await UserApi.getSimpleUserList()
+    const result = await UserApi.getSimpleUserList()
+    userList.value = result || []
   } catch (error) {
     console.error('加载用户列表失败:', error)
     ElMessage.error('加载用户列表失败')
+  }
+}
+
+// 初始化数据加载
+const initData = async () => {
+  dataLoading.value = true
+  try {
+    await Promise.all([loadDeptList(), loadUserList(), loadSupervisionTypes()])
+  } catch (error) {
+    console.error('初始化数据失败:', error)
+  } finally {
+    dataLoading.value = false
   }
 }
 
@@ -1005,6 +1151,7 @@ const initUserInfo = () => {
   const user = userStore.getUser
   if (user) {
     orderForm.supervisorName = user.nickname || user.username
+    orderForm.supervisorId = user.id
   }
 }
 
@@ -1016,7 +1163,146 @@ const removeDept = (deptName: string) => {
   const index = orderForm.collaborateDepts.indexOf(deptName)
   if (index > -1) {
     orderForm.collaborateDepts.splice(index, 1)
+    // 同时移除对应的ID
+    const dept = deptList.value.find(d => d.name === deptName)
+    if (dept) {
+      const idIndex = orderForm.collaborateDeptIds.indexOf(dept.id)
+      if (idIndex > -1) {
+        orderForm.collaborateDeptIds.splice(idIndex, 1)
+      }
+    }
   }
+}
+
+// 处理牵头单位变化
+const handleLeadDeptChange = (deptName: string) => {
+  const dept = deptList.value.find(d => d.name === deptName)
+  if (dept) {
+    orderForm.leadDeptId = dept.id
+    // 自动获取部门负责人信息和办公电话
+    getDeptLeaderAndPhoneInfo(dept.id)
+  }
+}
+
+// 处理协办单位变化
+const handleCollaborateDeptsChange = (deptNames: string[]) => {
+  orderForm.collaborateDeptIds = []
+  deptNames.forEach(name => {
+    const dept = deptList.value.find(d => d.name === name)
+    if (dept) {
+      orderForm.collaborateDeptIds.push(dept.id)
+    }
+  })
+}
+
+// 处理督办人变化
+const handleSupervisorChange = (userName: string) => {
+  const user = userList.value.find(u => (u.nickname || u.username) === userName)
+  if (user) {
+    orderForm.supervisorId = user.id
+    // 注意：办公电话应该根据牵头单位部门的phone来获取，而不是督办人的手机号
+    // 所以这里不设置办公电话，办公电话由牵头单位变化时自动获取
+  }
+}
+
+// 获取部门负责人信息和办公电话
+const getDeptLeaderAndPhoneInfo = async (deptId: number) => {
+  try {
+    const dept = await DeptApi.getDept(deptId)
+
+    // 处理分管领导信息
+    if (dept.leaderUserId) {
+      const leader = userList.value.find(u => u.id === dept.leaderUserId)
+      if (leader) {
+        orderForm.leader = leader.nickname || leader.username
+      } else {
+        // 如果在当前用户列表中没找到，清空分管领导字段
+        orderForm.leader = ''
+        console.warn('未找到部门负责人信息，leaderUserId:', dept.leaderUserId)
+      }
+    } else {
+      // 如果部门没有设置负责人，清空分管领导字段并提示用户
+      orderForm.leader = ''
+      console.warn('部门未设置负责人，deptId:', deptId)
+      ElMessage.warning('所选部门未设置负责人，提交时将使用督办人作为默认审批人')
+    }
+
+    // 处理办公电话信息
+    if (dept.phone) {
+      orderForm.officePhone = dept.phone
+    } else {
+      // 如果部门没有设置电话，清空办公电话字段
+      orderForm.officePhone = ''
+      console.warn('部门未设置办公电话，deptId:', deptId)
+    }
+  } catch (error) {
+    console.error('获取部门信息失败:', error)
+    orderForm.leader = ''
+    orderForm.officePhone = ''
+    ElMessage.error('获取部门信息失败，请重新选择')
+  }
+}
+
+// 数据转换辅助方法
+// 这些方法现在主要用于显示转换
+const getCategoryLabel = (value: string | number): string => {
+  // 如果是字符串，直接返回
+  if (typeof value === 'string') {
+    return value
+  }
+
+  // 如果是数字，尝试从当前加载的督办分类选项中查找
+  const option = supervisionTypeOptions.value.find(opt => opt.value === value)
+  if (option) {
+    return option.label
+  }
+
+  // 如果没找到，尝试从数据字典中查找（作为备用方案）
+  // 首先尝试从工作督办分类中查找
+  let dict = getIntDictOptions(DICT_TYPE.WORK_SUPERVISION_TYPE).find(d => d.value === value)
+  if (dict) {
+    return dict.label
+  }
+
+  // 如果没找到，尝试从专项督办分类中查找
+  dict = getIntDictOptions(DICT_TYPE.SPECIAL_SUPERVISION_TYPE).find(d => d.value === value)
+  if (dict) {
+    return dict.label
+  }
+
+  // 如果还没找到，尝试从通用督办分类中查找
+  dict = getIntDictOptions(DICT_TYPE.SUPERVISION_TYPE).find(d => d.value === value)
+  if (dict) {
+    return dict.label
+  }
+
+  // 如果都没找到，返回空字符串
+  return ''
+}
+
+const getReasonLabel = (value: number): string => {
+  const dict = getIntDictOptions(DICT_TYPE.SUPERVISION_REASON).find(d => d.value === value)
+  return dict?.label || ''
+}
+
+const getPriorityLabel = (value: number): string => {
+  const dict = getIntDictOptions(DICT_TYPE.SUPERVISION_PRIORITY_TYPE).find(d => d.value === value)
+  return dict?.label || ''
+}
+
+const getSignificanceLabel = (value: number): string => {
+  const dict = getIntDictOptions(DICT_TYPE.SUPERVISION_SIGNIFICANCE_TYPE).find(d => d.value === value)
+  return dict?.label || ''
+}
+
+const getApprovalLabel = (value: number): string => {
+  const dict = getIntDictOptions(DICT_TYPE.SUPERVISION_APPROVE_TYPE).find(d => d.value === value)
+  return dict?.label || ''
+}
+
+const getReapprovalLabel = (value: number): string => {
+  const dict = getIntDictOptions(DICT_TYPE.SUPERVISION_REAPPROVE_TYPE).find(d => d.value === value)
+  return dict?.label || ''
 }
 
 // 步骤控制方法
@@ -1032,20 +1318,137 @@ const goToPreview = () => {
   currentStep.value = 3
 }
 
-const completeOrder = () => {
-  ElMessage.success('督办单创建完成')
-  // 这里可以保存督办单或跳转到其他页面
+const completeOrder = async () => {
+  try {
+    submitLoading.value = true
+
+    // 生成概述信息字符串
+    const summaryContent = generateSummaryContent()
+
+    // 准备提交数据，转换为API需要的格式
+    const orderType = getSupervisionOrderType()
+
+    // 构建发起人自选审批人 Map
+    const startUserSelectAssignees: Record<string, number[]> = {}
+
+    // First 节点先写死为 212
+    startUserSelectAssignees['First'] = [212]
+
+    // 如果选择了牵头单位，需要获取该部门的负责人用户ID作为候选人
+    if (orderForm.leadDeptId) {
+      try {
+        // 获取部门详细信息
+        const deptDetail = await DeptApi.getDept(orderForm.leadDeptId)
+        if (deptDetail && deptDetail.leaderUserId) {
+          // 使用部门负责人的用户ID作为候选人
+          startUserSelectAssignees['Second'] = [deptDetail.leaderUserId]
+          console.log('使用部门负责人作为候选人，部门ID:', orderForm.leadDeptId, '负责人ID:', deptDetail.leaderUserId)
+        } else {
+          // 如果部门没有设置负责人，使用督办人作为默认候选人
+          console.warn('部门未设置负责人，使用督办人作为默认候选人，部门ID:', orderForm.leadDeptId)
+          if (orderForm.supervisorId) {
+            startUserSelectAssignees['Second'] = [orderForm.supervisorId]
+            ElMessage.warning('所选牵头单位未设置负责人，将使用督办人作为默认审批人')
+          } else {
+            ElMessage.error('牵头单位未设置负责人且督办人信息缺失，请重新选择')
+            return
+          }
+        }
+      } catch (error) {
+        console.error('获取部门负责人信息失败:', error)
+        // 如果获取失败，使用督办人作为默认候选人
+        if (orderForm.supervisorId) {
+          startUserSelectAssignees['Second'] = [orderForm.supervisorId]
+          ElMessage.warning('获取牵头单位负责人信息失败，将使用督办人作为默认审批人')
+        } else {
+          ElMessage.error('获取部门信息失败且督办人信息缺失，请重试')
+          return
+        }
+      }
+    }
+
+    const submitData: OrderVO = {
+      orderCode: orderForm.orderNumber,
+      orderTitle: orderForm.title,
+      type: orderType === 'special' ? 2 : 1, // 督办类型：1=工作督办, 2=专项督办
+      detailType: orderForm.category, // 督办具体分类（字符串）
+      orderType: orderType === 'special' ? 2 : 1, // 1=工作督办, 2=专项督办
+      reason: orderForm.basis, // 直接使用数字值
+      priority: orderForm.urgencyLevel,
+      deadline: orderForm.deadline,
+      leadDept: orderForm.leadDeptId,
+      significance: orderForm.importance, // 直接使用数字值
+      coDept: orderForm.collaborateDeptIds.join(','), // 协办单位ID用逗号分隔
+      supervisor: orderForm.supervisorId,
+      content: orderForm.content,
+      undertakeMatter: orderForm.tasks,
+      supervisionApprove: orderForm.inspectionApproval, // 直接使用数字值
+      leadDeptDetail: orderForm.handlingDetails,
+      supervisionReapprove: orderForm.supervisionReview, // 直接使用数字值
+      summary: summaryContent, // 添加概述信息字符串
+      startUserSelectAssignees: startUserSelectAssignees // 发起人自选审批人
+    }
+
+    console.log('提交督办单数据:', submitData)
+    console.log('概述信息:', summaryContent)
+    console.log('发起人自选审批人:', startUserSelectAssignees)
+
+    // 验证必要的ID字段
+    if (!submitData.leadDept || !submitData.supervisor) {
+      ElMessage.error('请确保已正确选择牵头单位和督办人')
+      return
+    }
+
+    // 调用API创建督办单
+    const result = await OrderApi.createOrder(submitData)
+
+    if (result) {
+      ElMessage.success('督办单创建成功')
+    } else {
+      throw new Error('创建督办单返回结果为空')
+    }
+
+    // 询问是否继续创建或返回列表
+    try {
+      await ElMessageBox.confirm('督办单已创建成功，是否继续创建新的督办单？', '操作成功', {
+        confirmButtonText: '继续创建',
+        cancelButtonText: '返回列表',
+        type: 'success'
+      })
+
+      // 重置表单继续创建
+      resetForm()
+      currentStep.value = 1 // 返回第一步
+    } catch {
+      // 返回对应的列表页
+      router.push(getReturnPath())
+    }
+  } catch (error) {
+    console.error('完成督办单创建失败:', error)
+    ElMessage.error('创建督办单失败，请重试')
+  } finally {
+    submitLoading.value = false
+  }
 }
 
 // 获取字段显示值
 const getFieldDisplayValue = (key: string) => {
   const value = orderForm[key as keyof typeof orderForm]
-  if (!value) return ''
+  if (value === undefined || value === null || value === '') return ''
 
   switch (key) {
+    case 'category':
+      return getCategoryLabel(value as string | number)
+    case 'basis':
+      return getReasonLabel(value as number)
     case 'urgencyLevel':
-      const urgencyMap = { 1: '一般', 2: '紧急', 3: '特急' }
-      return urgencyMap[value as keyof typeof urgencyMap] || ''
+      return getPriorityLabel(value as number)
+    case 'importance':
+      return getSignificanceLabel(value as number)
+    case 'inspectionApproval':
+      return getApprovalLabel(value as number)
+    case 'supervisionReview':
+      return getReapprovalLabel(value as number)
     case 'collaborateDepts':
       return Array.isArray(value) ? value.join('、') : ''
     default:
@@ -1067,17 +1470,42 @@ const selectedSummaryFields = computed(() => {
 // 获取概述字段的值
 const getSummaryFieldValue = (key: string) => {
   const value = orderForm[key as keyof typeof orderForm]
-  if (!value) return '无'
+  if (value === undefined || value === null || value === '') return '无'
 
   switch (key) {
+    case 'category':
+      return getCategoryLabel(value as string | number) || '无'
+    case 'basis':
+      return getReasonLabel(value as number) || '无'
     case 'urgencyLevel':
-      const urgencyMap = { 1: '一般', 2: '紧急', 3: '特急' }
-      return urgencyMap[value as keyof typeof urgencyMap] || '无'
+      return getPriorityLabel(value as number) || '无'
+    case 'importance':
+      return getSignificanceLabel(value as number) || '无'
+    case 'inspectionApproval':
+      return getApprovalLabel(value as number) || '无'
+    case 'supervisionReview':
+      return getReapprovalLabel(value as number) || '无'
     case 'collaborateDepts':
       return Array.isArray(value) && value.length > 0 ? value.join('、') : '无'
     default:
       return String(value)
   }
+}
+
+// 生成概述信息字符串
+const generateSummaryContent = () => {
+  const selectedFields = summaryFields.value.filter(field => field.checked)
+
+  if (selectedFields.length === 0) {
+    return '未选择任何概述内容'
+  }
+
+  const summaryItems = selectedFields.map(field => {
+    const value = getSummaryFieldValue(field.key)
+    return `${field.label}：${value}`
+  })
+
+  return summaryItems.join('\n')
 }
 
 const submitOrder = async () => {
@@ -1087,59 +1515,41 @@ const submitOrder = async () => {
 
     submitLoading.value = true
 
-    // 准备提交数据
-    const submitData = {
-      ...orderForm,
-      supervisorId: userStore.getUser?.id,
-      createTime: new Date().toISOString()
-    }
+    // 保存按钮只做表单验证和本地保存，不调用API
+    ElMessage.success('表单数据已保存，请继续完善概述信息')
 
-    console.log('提交督办单数据:', submitData)
+    // 可以在这里保存到本地存储（可选）
+    // localStorage.setItem('supervisionOrderDraft', JSON.stringify(orderForm))
 
-    // 这里调用API保存督办单
-    // await SupervisionOrderApi.createOrder(submitData)
-
-    ElMessage.success('督办单保存成功')
-
-    // 询问是否继续创建或返回列表
-    try {
-      await ElMessageBox.confirm('督办单已保存成功，是否继续创建新的督办单？', '操作成功', {
-        confirmButtonText: '继续创建',
-        cancelButtonText: '返回列表',
-        type: 'success'
-      })
-
-      // 重置表单继续创建
-      resetForm()
-    } catch {
-      // 返回列表页
-      router.push('/supervision/initiate')
-    }
   } catch (error) {
-    console.error('保存督办单失败:', error)
-    ElMessage.error('保存督办单失败，请重试')
+    console.error('保存表单失败:', error)
+    ElMessage.error('保存表单失败，请重试')
   } finally {
     submitLoading.value = false
   }
 }
 
-const resetForm = () => {
-  orderForm.orderNumber = generateOrderNumber()
+const resetForm = async () => {
+  await generateOrderNumber()
   orderForm.title = ''
-  orderForm.category = ''
-  orderForm.basis = ''
-  orderForm.urgencyLevel = 1
+  orderForm.category = undefined
+  orderForm.basis = undefined
+  orderForm.urgencyLevel = undefined
   orderForm.deadline = ''
   orderForm.leadDept = ''
-  orderForm.importance = '一般'
+  orderForm.leadDeptId = 0
+  orderForm.importance = undefined
   orderForm.collaborateDepts = []
+  orderForm.collaborateDeptIds = []
+  orderForm.supervisorName = ''
+  orderForm.supervisorId = 0
   orderForm.officePhone = ''
   orderForm.leader = ''
   orderForm.content = ''
   orderForm.tasks = ''
-  orderForm.inspectionApproval = '同意办结'
+  orderForm.inspectionApproval = undefined
   orderForm.handlingDetails = ''
-  orderForm.supervisionReview = '同意办结'
+  orderForm.supervisionReview = undefined
 
   // 保持督办人信息
   initUserInfo()
@@ -1177,18 +1587,28 @@ const handleCancel = async () => {
       confirmButtonText: '确定',
       cancelButtonText: '继续编辑'
     })
-    router.push('/supervision/initiate')
+    router.push(getReturnPath())
   } catch {
     // 用户取消，继续编辑
   }
 }
 
+// 初始化督办类型
+const initSupervisionType = () => {
+  const orderType = getSupervisionOrderType()
+  // 可以根据需要设置默认的分类值
+  // 这里暂时不设置默认值，让用户自己选择
+
+  // 确保已加载对应类型的督办分类列表
+  loadSupervisionTypes()
+}
+
 // 初始化
-onMounted(() => {
-  orderForm.orderNumber = generateOrderNumber()
+onMounted(async () => {
+  await generateOrderNumber()
   initUserInfo()
-  loadDeptList()
-  loadUserList()
+  await initData()
+  initSupervisionType()
 })
 </script>
 
