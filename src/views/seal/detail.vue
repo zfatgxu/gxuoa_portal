@@ -62,7 +62,7 @@
       <div class="form-section">
         <div class="section-header">材料类型</div>
         <div class="material-type-content">
-         {{ detail.materialType }}
+          {{ getDictLabel(DICT_TYPE.SEAL_APPLY_MATERIAL_TYPES, detail.materialType) }}
         </div>
       </div>
       <!-- 附件 -->
@@ -120,6 +120,8 @@ import { propTypes } from '@/utils/propTypes'
 import * as SealApi from '@/api/seal'
 import { formatDate } from '@/utils/formatTime'
 import { KKFileView } from '@/components/KKFileView'
+import { getDictLabel } from '@/utils/dict'
+import { DICT_TYPE } from '@/utils/dict'
 
 //由网上印章申请，用户：  ，时间：   ，编号：  
 const qrText = ref('')
