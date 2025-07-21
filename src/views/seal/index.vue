@@ -73,10 +73,13 @@
         <el-table-column align="center" label="材料类型" prop="materialType" />
         <el-table-column align="center" label="印章类型">
           <template #default="scope">
-            <div v-for="seal in (scope.row.sealTypes || [])" :key="seal.id">
-              {{ seal.name }} × {{ seal.quantity || 0 }}
+            <div v-if="scope.row.sealTypes && scope.row.sealTypes.length > 0">
+              <div v-for="seal in scope.row.sealTypes" :key="seal.id">
+                {{ seal.name }} × {{ seal.quantity || 0 }}
+              </div>
             </div>
-          </template>
+            <div v-else>无</div>
+          </template> 
         </el-table-column>
         <el-table-column align="center" label="申请单标题" prop="applyTitle" />
         <el-table-column align="center" label="联系方式" prop="phone" />
