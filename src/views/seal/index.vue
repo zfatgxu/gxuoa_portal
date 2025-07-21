@@ -62,7 +62,7 @@
               />
               <el-checkbox
                 :model-value="scope.row.sealState === 1"
-                :disabled="scope.row.status !== 2"
+                :disabled="scope.row.sealState == 1"
                 @change="(val) => handleSealStateChange(scope.row, val)"
                 style="margin-left: 6px;"
               />
