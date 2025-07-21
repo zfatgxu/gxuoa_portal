@@ -100,28 +100,26 @@
   <!-- 列表 -->
   <ContentWrap>
     <el-table v-loading="loading" :data="list">
-      <el-table-column align="center" label="流程" prop="processInstance.name" width="180" />
+      <el-table-column align="center" label="流程" prop="processInstance.name" />
       <el-table-column
         align="center"
         label="发起人"
         prop="processInstance.startUser.nickname"
-        width="100"
       />
       <el-table-column
         :formatter="dateFormatter"
         align="center"
         label="发起时间"
         prop="createTime"
-        width="180"
       />
-      <el-table-column align="center" label="当前任务" prop="name" width="180" />
+      <el-table-column align="center" label="当前任务" prop="name" />
       <el-table-column
         align="center"
-        label="流程编号"
-        prop="processInstanceId"
+        label="请假原因"
+        prop="reasons"
         :show-overflow-tooltip="true"
       />
-      <el-table-column align="center" label="操作" fixed="right" width="80">
+      <el-table-column align="center" label="操作" fixed="right">
         <template #default="scope">
           <el-button link type="primary" @click="handleAudit(scope.row)">办理</el-button>
         </template>
@@ -142,6 +140,7 @@ import { dateFormatter } from '@/utils/formatTime'
 import * as TaskApi from '@/api/bpm/task'
 import { CategoryApi, CategoryVO } from '@/api/bpm/category'
 import * as DefinitionApi from '@/api/bpm/definition'
+import { RegisterApi } from '@/api/leave/create/createForm'
 
 defineOptions({ name: 'BpmTodoTask' })
 
@@ -154,8 +153,6 @@ const processDefinitionList = ref<any[]>([]) // 流程定义列表
 const queryParams = reactive({
   pageNo: 1,
   pageSize: 10,
-  processDefinitionKey: 'oa_leaveRegister', // 直接指定用印申请流程的key
-  category: '请假登记'
 })
 const queryFormRef = ref() // 搜索的表单
 const categoryList = ref<CategoryVO[]>([]) // 流程分类列表
@@ -165,7 +162,7 @@ const showPopover = ref(false) // 高级筛选是否展示
 const getList = async () => {
   loading.value = true
   try {
-    const data = await TaskApi.getTaskTodoPage(queryParams)
+    const data = await RegisterApi.getRegisterTodoPage(queryParams)
     list.value = data.list
     total.value = data.total
   } finally {

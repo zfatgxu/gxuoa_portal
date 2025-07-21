@@ -400,7 +400,7 @@
                   accept=".jpg,.png,.pdf,.doc,.docx,.xls,.xlsx"
                   :disabled="isReadOnly"
                 >
-                  <el-button type="primary">点击上传</el-button>
+                  <el-button type="primary" :disabled="isReadOnly">点击上传</el-button>
                   <template #tip>
                     <div class="el-upload__tip">支持jpg/png/pdf/doc/docx/xls/xlsx格式，单个文件不超过10MB</div>
                   </template>

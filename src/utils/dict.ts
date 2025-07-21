@@ -228,6 +228,17 @@ export enum DICT_TYPE {
   AI_WRITE_TONE = 'ai_write_tone', // AI 写作语气
   AI_WRITE_LANGUAGE = 'ai_write_language', // AI 写作语言
 
+  // ========== SUPERVISION - 督办模块  ==========
+  SUPERVISION_TYPE = 'supervision_type', // 督办分类
+  WORK_SUPERVISION_TYPE = 'work_supervision_type', // 工作督办分类
+  SPECIAL_SUPERVISION_TYPE = 'special_supervision_type', // 专项督办分类
+  SUPERVISION_REASON = 'supervision_reason', // 督办依据
+  SUPERVISION_PRIORITY_TYPE = 'supervision_priority_type', // 紧急程度（优先级）
+  SUPERVISION_SIGNIFICANCE_TYPE = 'supervision_significance_type', // 重要程度
+  SUPERVISION_APPROVE_TYPE = 'supervision_approve_type', // 督察办审批状态
+  SUPERVISION_REAPPROVE_TYPE = 'supervision_reapprove_type', // 督察办复核状态
+  SUPERVISION_TASK_STATUS = 'supervision_task_status' ,// 督办任务状态
+
   // ========== IOT - 物联网模块  ==========
   IOT_NET_TYPE = 'iot_net_type', // IOT 联网方式
   IOT_VALIDATE_TYPE = 'iot_validate_type', // IOT 数据校验级别
