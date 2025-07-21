@@ -79,7 +79,7 @@
               </div>
             </div>
           </div>
-          <div v-else style="color:#888;">无附件</div>
+          <div v-else style="color:#888;">空</div>
         </div>
       </div>
       <!-- 申请摘要 -->
@@ -99,7 +99,7 @@
       </div>
 
       <!-- 二维码 -->
-      <div class="form-section qr-section">
+      <div class="form-section qr-section" v-if="status==2">
         <div class="qr-content">
           <Qrcode :text="qrText" :width="120" />
         </div>
