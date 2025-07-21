@@ -26,6 +26,16 @@ export const RegisterApi = {
     return await request.get({ url: `/leave/register/page`, params })
   },
 
+  // 查询请假待办分页
+  getRegisterTodoPage: async (params: any) => {
+    return await request.get({ url: `/leave/register/todo-page`, params })
+  },
+
+  // 查询请假待办分页
+  getRegisterDonePage: async (params: any) => {
+    return await request.get({ url: `/leave/register/done-page`, params })
+  },
+
   // 查询请假登记详情
   getRegister: async (id: number) => {
     return await request.get({ url: `/leave/register/get?id=` + id })
