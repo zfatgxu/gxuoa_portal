@@ -314,7 +314,13 @@ const handleLogin = async (params: any) => {
     if (redirect.value.indexOf('sso') !== -1) {
       window.location.href = window.location.href.replace('/login?redirect=', '')
     } else {
-      await push({ path: redirect.value || permissionStore.addRouters[0].path })
+      // 强制跳转到首页并刷新页面
+      redirect.value = '/'
+      await push({ path: '/' })
+      // 跳转完成后刷新页面
+      setTimeout(() => {
+        window.location.reload()
+      }, 100)
     }
   } finally {
     loginLoading.value = false
