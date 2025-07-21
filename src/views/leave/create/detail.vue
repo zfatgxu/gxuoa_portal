@@ -35,7 +35,7 @@
             <div class="date-range-picker">
               <el-date-picker
                 v-model="dateRange"
-                type="daterange"
+                type="datetimerange"
                 range-separator="至"
                 start-placeholder="开始日期"
                 end-placeholder="结束日期"
@@ -76,7 +76,7 @@
                     <span class="detail-label">开始时间</span>
                     <el-date-picker
                       v-model="researchStartDate"
-                      type="date"
+                      type="datetime"
                       placeholder="开始时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -87,7 +87,7 @@
                     <span class="detail-label">结束时间</span>
                     <el-date-picker
                       v-model="researchEndDate"
-                      type="date"
+                      type="datetime"
                       placeholder="结束时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -109,7 +109,7 @@
                     <span class="detail-label">开始时间</span>
                     <el-date-picker
                       v-model="trainingStartDate"
-                      type="date"
+                      type="datetime"
                       placeholder="开始时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -120,7 +120,7 @@
                     <span class="detail-label">结束时间</span>
                     <el-date-picker
                       v-model="trainingEndDate"
-                      type="date"
+                      type="datetime"
                       placeholder="结束时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -142,7 +142,7 @@
                     <span class="detail-label">开始时间</span>
                     <el-date-picker
                       v-model="businessStartDate"
-                      type="date"
+                      type="datetime"
                       placeholder="开始时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -153,7 +153,7 @@
                     <span class="detail-label">结束时间</span>
                     <el-date-picker
                       v-model="businessEndDate"
-                      type="date"
+                      type="datetime"
                       placeholder="结束时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -193,7 +193,7 @@
                       <span class="detail-label">开始时间</span>
                       <el-date-picker
                         v-model="meeting.academicStartDate"
-                        type="date"
+                        type="datetime"
                         placeholder="开始时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
@@ -204,7 +204,7 @@
                       <span class="detail-label">结束时间</span>
                       <el-date-picker
                         v-model="meeting.academicEndDate"
-                        type="date"
+                        type="datetime"
                         placeholder="结束时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
@@ -267,7 +267,7 @@
                     <span class="detail-label">开始时间</span>
                     <el-date-picker
                       v-model="personalStartDate"
-                      type="date"
+                      type="datetime"
                       placeholder="开始时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -278,7 +278,7 @@
                     <span class="detail-label">结束时间</span>
                     <el-date-picker
                       v-model="personalEndDate"
-                      type="date"
+                      type="datetime"
                       placeholder="结束时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
