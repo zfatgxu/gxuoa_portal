@@ -250,27 +250,37 @@
           </el-col>
         </el-row>
 
-        <!-- 附件上传区域 -->
+        <!-- 附件上传区域 - 使用自定义上传 -->
         <el-row :gutter="20" v-if="hasEditPermission">
           <el-col :span="24">
             <h3 class="section-title">附件管理</h3>
             <el-form-item label="上传附件：">
-              <UploadFile
-                v-model="attachmentFiles"
+              <el-upload
+                ref="uploadRef"
+                v-model:file-list="fileList"
+                :http-request="customUpload"
                 :limit="10"
-                :file-size="50"
-                :file-type="['doc', 'docx', 'pdf', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'txt']"
-                @upload-success="handleAttachmentUpload"
-                @remove="handleAttachmentRemove"
-              />
-              <div class="upload-tip">
-                <el-text type="info" size="small">
-                  支持上传 doc、docx、pdf、xls、xlsx、jpg、jpeg、png、txt 格式文件，单个文件不超过50MB，最多上传10个文件
-                </el-text>
-              </div>
+                :multiple="true"
+                :auto-upload="true"
+                :show-file-list="true"
+                :on-error="handleCustomUploadError"
+                :on-remove="handleFileRemove"
+                :before-upload="beforeUpload"
+                accept=".doc,.docx,.pdf,.xls,.xlsx,.jpg,.jpeg,.png,.txt"
+                action="#"
+              >
+                <el-button type="primary">选取文件</el-button>
+                <template #tip>
+                  <div class="el-upload__tip">
+                    支持上传 doc、docx、pdf、xls、xlsx、jpg、jpeg、png、txt 格式文件，单个文件不超过50MB，最多上传10个文件
+                  </div>
+                </template>
+              </el-upload>
             </el-form-item>
           </el-col>
         </el-row>
+
+
 
         <!-- 已有附件列表 -->
         <el-row :gutter="20" v-if="existingAttachments.length > 0">
@@ -316,13 +326,16 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { OrderApi, type OrderRespVO, type OrderSaveReqVO, type OrderWorkflowUpdateReqVO, type AttachmentFileInfo, AttachmentApi, type AttachmentRespVO } from '@/api/supervision'
+import { OrderApi, type OrderRespVO, type OrderSaveReqVO, type OrderWorkflowUpdateReqVO, type AttachmentFileInfo, type AttachmentRespVO } from '@/api/supervision'
 import { getSimpleDeptList, type DeptVO } from '@/api/system/dept'
+import { getSimpleUserList, type UserVO } from '@/api/system/user'
 import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
 import { formatDate as utilFormatDate } from '@/utils/formatTime'
 import { useUserStore } from '@/store/modules/user'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox, type UploadUserFile } from 'element-plus'
+import { WarningFilled } from '@element-plus/icons-vue'
 import { UploadFile } from '@/components/UploadFile'
+import * as FileApi from '@/api/infra/file'
 
 defineOptions({ name: 'SupervisionOrderDetail' })
 
@@ -333,10 +346,188 @@ const userStore = useUserStore()
 // 部门列表
 const deptList = ref<DeptVO[]>([])
 
+// 用户列表
+const userList = ref<UserVO[]>([])
+
 // 附件相关
-const attachmentFiles = ref<any[]>([])
-const existingAttachments = ref<AttachmentRespVO[]>([])
-const uploadingAttachments = ref(false)
+const attachmentFiles = ref<any[]>([])           // 通用附件文件列表
+const existingAttachments = ref<AttachmentRespVO[]>([])  // 已保存到数据库的附件
+const uploadingAttachments = ref(false)          // 上传状态标识
+
+// 自定义上传相关
+const hasAttachment = ref(false)                 // 是否有附件标识
+const fileList = ref<UploadUserFile[]>([])      // Element Plus上传组件的文件列表
+const dataFiles = ref<number[]>([])             // 文件ID数组
+const uploadedFileIds = ref<string[]>([])       // 已上传文件ID数组
+const uploadRef = ref()                         // 上传组件引用
+// 临时存储已上传但未保存到数据库的文件
+const pendingAttachments = ref<Array<{
+  name: string
+  url: string
+  size: number
+  // type: string
+}>>([])
+
+// 自定义上传方法
+const customUpload = async (options) => {
+  const { file, onSuccess, onError } = options
+  try {
+    // 创建 FormData
+    const formData = new FormData()
+    formData.append('file', file)
+
+    // 调用文件上传API
+    const result = await FileApi.updateFile(formData)
+
+    // 检查响应结果
+    if (result.code === 0) {
+      // 上传成功，设置文件URL
+      file.url = result.data
+
+      // 更新文件列表中对应文件的URL
+      const index = fileList.value.findIndex(item => item.uid === file.uid)
+      if (index !== -1) {
+        fileList.value[index].url = file.url
+      }
+
+      // 检查是否已存在相同URL的文件，避免重复添加
+      const existingFile = pendingAttachments.value.find(att => att.url === file.url)
+      if (!existingFile) {
+        pendingAttachments.value.push({
+          name: file.name,
+          url: file.url,
+          size: file.size
+          // type: file.type
+        })
+        console.log('文件已添加到待处理附件列表')
+      } else {
+        console.log('文件已存在于待处理附件列表中，跳过添加')
+      }
+
+      // 调用成功回调
+      onSuccess(result)
+
+      console.log('文件上传成功，URL:', result.data)
+      console.log('已添加到待处理附件列表:', pendingAttachments.value)
+      ElMessage.success(`文件 ${file.name} 上传成功，将在审批通过后保存`)
+    } else {
+      // 上传失败
+      const error = new Error(result.msg || '文件上传失败')
+
+      // 从文件列表中移除失败的文件
+      const index = fileList.value.findIndex(item => item.uid === file.uid)
+      if (index !== -1) {
+        fileList.value.splice(index, 1)
+      }
+
+      onError(error)
+      ElMessage.error(result.msg || '文件上传失败')
+    }
+  } catch (error) {
+    console.error('文件上传失败:', error)
+
+    // 从文件列表中移除失败的文件
+    const index = fileList.value.findIndex(item => item.uid === file.uid)
+    if (index !== -1) {
+      fileList.value.splice(index, 1)
+    }
+
+    onError(error)
+    ElMessage.error('文件上传失败，请重试')
+  }
+}
+
+
+
+// 处理自定义上传失败
+const handleCustomUploadError = (error: any, file: any) => {
+  console.error('自定义上传失败:', error, file)
+  ElMessage.error(`文件 ${file.name} 上传失败: ${error.message || '未知错误'}`)
+}
+
+// 获取已上传文件的URL列表
+const getUploadedFileUrls = (): string[] => {
+  return fileList.value
+    .filter(file => file.url)
+    .map(file => file.url!)
+}
+
+
+
+// 清理待处理的附件（在审批拒绝时调用）
+const clearPendingAttachments = () => {
+  pendingAttachments.value = []
+  fileList.value = []
+  console.log('已清理所有待处理附件')
+  ElMessage.info('已清理未保存的附件')
+}
+
+
+
+// 文件上传前的验证
+const beforeUpload = (file: any) => {
+  // 检查文件数量限制
+  if (fileList.value.length >= 10) {
+    ElMessage.error('上传文件数量不能超过10个!')
+    return false
+  }
+
+  // 检查文件类型
+  const allowedTypes = ['doc', 'docx', 'pdf', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'txt']
+  let fileExtension = ''
+  if (file.name.lastIndexOf('.') > -1) {
+    fileExtension = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase()
+  }
+
+  const isValidType = allowedTypes.includes(fileExtension) ||
+    allowedTypes.some(type => file.type.toLowerCase().includes(type))
+
+  if (!isValidType) {
+    ElMessage.error(`文件格式不正确, 请上传 ${allowedTypes.join('/')} 格式文件!`)
+    return false
+  }
+
+  // 检查文件大小 (50MB)
+  const isValidSize = file.size < 50 * 1024 * 1024
+  if (!isValidSize) {
+    ElMessage.error('上传文件大小不能超过50MB!')
+    return false
+  }
+
+  ElMessage.success('正在上传文件，请稍候...')
+  return true
+}
+
+// 处理文件移除
+const handleFileRemove = async (file: any) => {
+  try {
+    // 如果文件在临时数组中，从临时数组中移除
+    if (file.url) {
+      const pendingIndex = pendingAttachments.value.findIndex(att => att.url === file.url)
+      if (pendingIndex !== -1) {
+        pendingAttachments.value.splice(pendingIndex, 1)
+        ElMessage.success('文件已移除')
+        return
+      }
+
+      // 如果文件已经保存到数据库，提示用户通过工作流删除
+      const attachment = existingAttachments.value.find(att => att.url === file.url)
+      if (attachment) {
+        ElMessage.warning('已保存的附件需要通过工作流流程进行删除')
+        return
+      }
+    }
+
+    // 从文件列表中移除
+    const index = fileList.value.findIndex(item => item.uid === file.uid)
+    if (index !== -1) {
+      fileList.value.splice(index, 1)
+    }
+  } catch (error) {
+    console.error('删除附件失败:', error)
+    ElMessage.error('删除附件失败')
+  }
+}
 
 
 
@@ -387,11 +578,27 @@ const getDeptList = async () => {
   }
 }
 
+// 获取用户列表
+const getUserList = async () => {
+  try {
+    userList.value = await getSimpleUserList()
+  } catch (error) {
+    console.error('获取用户列表失败:', error)
+  }
+}
+
 // 根据部门ID获取部门名称
 const getDeptName = (deptId: number | null) => {
   if (!deptId) return '未分配'
   const dept = deptList.value.find(item => item.id === deptId)
   return dept?.name || '未知部门'
+}
+
+// 根据用户ID获取用户姓名
+const getUserName = (userId: number | null) => {
+  if (!userId) return '未分配'
+  const user = userList.value.find(item => item.id === userId)
+  return user?.nickname || user?.username || '未知用户'
 }
 
 // 根据流程实例ID获取督办单详情
@@ -405,6 +612,15 @@ const getOrderDetail = async (processInstanceId: string) => {
     editForm.value.coDept = data.coDept || ''
     editForm.value.collaborateDepts = getCollaborateDepts(data.coDept)
     editForm.value.leadDeptDetail = data.leadDeptDetail || ''
+
+    // 更新附件列表
+    if (data.attachments && data.attachments.length > 0) {
+      existingAttachments.value = data.attachments
+    } else {
+      existingAttachments.value = []
+    }
+
+    console.log('督办单详情加载成功，附件数量:', existingAttachments.value.length)
   } catch (error) {
     console.error('根据流程实例ID获取督办单详情失败:', error)
   } finally {
@@ -540,7 +756,7 @@ const parsedSummary = computed(() => {
 })
 
 // 获取督办单工作流更新数据（只传递修改的字段）
-const getSupervisionWorkflowUpdateData = (startUserSelectAssignees?: Record<string, number[]>) => {
+const getSupervisionWorkflowUpdateData = (startLeaderSelectAssignees?: Record<string, number[]>) => {
   const updateData: OrderWorkflowUpdateReqVO = {
     id: orderDetail.value.id // 督办单ID必传
   }
@@ -567,10 +783,10 @@ const getSupervisionWorkflowUpdateData = (startUserSelectAssignees?: Record<stri
 
     // 设置工作流自选审批人 - 使用普通对象而不是响应式对象
     if (coDeptArray.length > 0) {
-      updateData.startUserSelectAssignees = {
+      updateData.startLeaderSelectAssignees = {
         "Third": [...coDeptArray] // 使用展开运算符创建新数组
       }
-      console.log('设置 startUserSelectAssignees:', updateData.startUserSelectAssignees)
+      console.log('设置 startLeaderSelectAssignees:', updateData.startLeaderSelectAssignees)
     }
   }
 
@@ -579,13 +795,33 @@ const getSupervisionWorkflowUpdateData = (startUserSelectAssignees?: Record<stri
     updateData.deptDetail = editForm.value.leadDeptDetail
   }
 
-  // 添加附件列表信息
+  // 添加附件列表信息（包含已有附件和待处理附件）
+  const allAttachments: AttachmentFileInfo[] = []
+
+  // 添加已有附件
   if (existingAttachments.value.length > 0) {
-    updateData.fileLIst = existingAttachments.value.map(attachment => ({
+    allAttachments.push(...existingAttachments.value.map(attachment => ({
       id: attachment.id!,
       name: attachment.name,
-      url: attachment.url
-    }))
+      url: attachment.url,
+      size: attachment.size,
+      type: attachment.type
+    })))
+  }
+
+  // 添加待处理附件
+  if (pendingAttachments.value.length > 0) {
+    allAttachments.push(...pendingAttachments.value.map(attachment => ({
+      name: attachment.name,
+      url: attachment.url,
+      size: attachment.size,
+      // type: attachment.type
+    })))
+  }
+
+  // 如果有附件，添加到更新数据中
+  if (allAttachments.length > 0) {
+    updateData.fileLIst = allAttachments
   }
 
 
@@ -598,14 +834,14 @@ const getSupervisionWorkflowUpdateData = (startUserSelectAssignees?: Record<stri
   console.log('是否有协办单位编辑权限:', canEditCollaborateDepts.value)
   console.log('最终coDept:', updateData.coDept)
 
-  // 详细显示 startUserSelectAssignees 的内容
-  if (updateData.startUserSelectAssignees) {
-    console.log('startUserSelectAssignees 存在:', updateData.startUserSelectAssignees)
-    console.log('startUserSelectAssignees.Third:', updateData.startUserSelectAssignees.Third)
-    console.log('Third 数组长度:', updateData.startUserSelectAssignees.Third?.length)
-    console.log('Third 数组内容:', JSON.stringify(updateData.startUserSelectAssignees.Third))
+  // 详细显示 startLeaderSelectAssignees 的内容
+  if (updateData.startLeaderSelectAssignees) {
+    console.log('startLeaderSelectAssignees 存在:', updateData.startLeaderSelectAssignees)
+    console.log('startLeaderSelectAssignees.Third:', updateData.startLeaderSelectAssignees.Third)
+    console.log('Third 数组长度:', updateData.startLeaderSelectAssignees.Third?.length)
+    console.log('Third 数组内容:', JSON.stringify(updateData.startLeaderSelectAssignees.Third))
   } else {
-    console.log('startUserSelectAssignees 不存在或为空')
+    console.log('startLeaderSelectAssignees 不存在或为空')
   }
 
   console.log('最终更新数据 JSON:', JSON.stringify(updateData, null, 2))
@@ -615,15 +851,16 @@ const getSupervisionWorkflowUpdateData = (startUserSelectAssignees?: Record<stri
 }
 
 // 更新督办单数据（供工作流调用）
-const updateSupervisionOrder = async (startUserSelectAssignees?: Record<string, number[]>) => {
+const updateSupervisionOrder = async (startLeaderSelectAssignees?: Record<string, number[]>) => {
   try {
-    const updateData = getSupervisionWorkflowUpdateData(startUserSelectAssignees)
+    const updateData = getSupervisionWorkflowUpdateData(startLeaderSelectAssignees)
 
     // 只有当有实际修改的字段时才调用接口
     const hasChanges = (updateData.coDept !== undefined) ||
                       (updateData.deptDetail !== undefined) ||
-                      (updateData.startUserSelectAssignees !== undefined) ||
-                      (updateData.fileLIst !== undefined && updateData.fileLIst.length > 0)
+                      (updateData.startLeaderSelectAssignees !== undefined) ||
+                      (updateData.fileLIst !== undefined) ||
+                      (pendingAttachments.value.length > 0) // 有待处理附件时也需要更新
 
     if (hasChanges) {
       console.log('调用督办单更新接口，数据:', updateData)
@@ -637,6 +874,16 @@ const updateSupervisionOrder = async (startUserSelectAssignees?: Record<string, 
       if (canEditLeadDeptDetail.value && updateData.deptDetail !== undefined) {
         orderDetail.value.leadDeptDetail = editForm.value.leadDeptDetail
       }
+    }
+
+    // 审批通过时清空待处理的附件列表（因为已经在工作流更新中包含了）
+    if (pendingAttachments.value.length > 0) {
+      console.log('审批通过，待处理附件已通过工作流接口保存:', pendingAttachments.value)
+      pendingAttachments.value = []
+      console.log('待处理附件列表已清空')
+
+      // 重新加载附件列表以显示最新状态
+      await loadAttachments()
     }
 
     // 返回更新的数据，供工作流使用
@@ -704,44 +951,21 @@ const loadAttachments = async () => {
   if (!orderDetail.value.id) return
 
   try {
-    const attachments = await AttachmentApi.getAttachmentList(orderDetail.value.id, 'order')
-    existingAttachments.value = attachments
+    // 现在附件信息包含在督办单详情中，重新获取督办单详情
+    const processInstanceId = route.query.processInstanceId as string ||
+                             route.query.id as string
+    if (processInstanceId) {
+      await getOrderDetail(processInstanceId)
+    }
+    console.log('附件列表已通过督办单详情更新')
   } catch (error) {
     console.error('加载附件列表失败:', error)
   }
 }
 
-const handleAttachmentUpload = async (response: any, file: any) => {
-  try {
-    uploadingAttachments.value = true
-
-    // 调用督办附件API保存附件信息
-    const result = await AttachmentApi.createAttachment({
-      orderId: orderDetail.value.id,
-      name: file.name,
-      url: response.data,
-      size: file.size,
-      type: file.type,
-      category: 'order'
-    })
-
-    // 重新加载附件列表，确保获取到最新的附件ID
-    await loadAttachments()
-
-    console.log('附件上传成功，当前附件列表:', existingAttachments.value)
-    ElMessage.success('附件上传成功')
-  } catch (error) {
-    console.error('保存附件信息失败:', error)
-    ElMessage.error('保存附件信息失败')
-  } finally {
-    uploadingAttachments.value = false
-  }
-}
-
-const handleAttachmentRemove = (file: any) => {
-  // 处理附件移除
-  console.log('移除附件:', file)
-}
+// 以下方法已废弃，现在通过工作流更新接口处理附件
+// const handleAttachmentUpload = async (response: any, file: any) => { ... }
+// const handleAttachmentRemove = (file: any) => { ... }
 
 const downloadAttachment = (attachment: AttachmentRespVO) => {
   // 下载附件
@@ -750,20 +974,17 @@ const downloadAttachment = (attachment: AttachmentRespVO) => {
 
 const deleteAttachment = async (attachment: AttachmentRespVO) => {
   try {
-    await ElMessageBox.confirm('确定要删除这个附件吗？', '确认删除', {
-      type: 'warning',
-      confirmButtonText: '确定',
-      cancelButtonText: '取消'
-    })
-
-    await AttachmentApi.deleteAttachment(attachment.id!)
-    await loadAttachments()
-    ElMessage.success('附件删除成功')
+    await ElMessageBox.confirm(
+      '已保存的附件删除需要通过工作流流程处理，当前版本暂不支持直接删除。',
+      '提示',
+      {
+        type: 'info',
+        confirmButtonText: '我知道了',
+        showCancelButton: false
+      }
+    )
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('删除附件失败:', error)
-      ElMessage.error('删除附件失败')
-    }
+    // 用户点击了确定按钮，不需要处理
   }
 }
 
@@ -788,10 +1009,8 @@ onMounted(async () => {
                            route.query.id as string
 
   if (processInstanceId) {
-    // 直接使用流程实例ID获取督办单详情
+    // 直接使用流程实例ID获取督办单详情（包含附件信息）
     await getOrderDetail(processInstanceId)
-    // 加载附件列表
-    await loadAttachments()
   } else {
     console.error('缺少流程实例ID参数')
   }
@@ -800,7 +1019,9 @@ onMounted(async () => {
 // 暴露方法供外部调用
 defineExpose({
   updateSupervisionOrder,
-  hasEditPermission: computed(() => hasEditPermission.value)
+  clearPendingAttachments,
+  hasEditPermission: computed(() => hasEditPermission.value),
+  pendingAttachmentsCount: computed(() => pendingAttachments.value.length)
 })
 </script>
 
@@ -854,6 +1075,32 @@ defineExpose({
 
 .section-title {
   color: #303133;
+}
+
+/* 自定义上传样式 */
+.uploaded-urls {
+  margin-top: 16px;
+  padding: 12px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+}
+
+.uploaded-urls h4 {
+  margin: 0 0 8px 0;
+  color: #606266;
+  font-size: 14px;
+}
+
+.uploaded-urls ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.uploaded-urls li {
+  margin-bottom: 4px;
+  word-break: break-all;
+
   font-size: 16px;
   font-weight: 600;
   margin: 20px 0 15px 0;

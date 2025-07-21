@@ -31,3 +31,19 @@ textarea.el-textarea__inner[disabled] {
   background-color: #ffffff !important; /* 白色背景 */
   color: black !important;
 }
+
+/* 面包屑样式覆盖 */
+.el-breadcrumb__item {
+  font-size: 30px !important;
+}
+
+.el-breadcrumb__inner {
+  font-size: 30px !important;
+  font-weight: bold !important;
+}
+
+.el-breadcrumb__item:last-child .el-breadcrumb__inner {
+  font-size: 30px !important;
+  font-weight: bold !important;
+  color: #909399 !important;
+}

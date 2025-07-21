@@ -43,6 +43,11 @@
     <ContentWrap>
       <el-table v-loading="loading" :data="list">
         <el-table-column align="center" label="申请编号" prop="id" />
+        <el-table-column align="center" label="申请人">
+          <template #default>
+            {{ userStore.user.nickname }}
+          </template>
+        </el-table-column>
         <el-table-column align="center" label="审批状态" prop="status">
           <template #default="scope">
             <dict-tag :type="DICT_TYPE.SEAL_APPLY_STATE" :value="scope.row.status" />
@@ -51,13 +56,13 @@
         <el-table-column align="center" label="用印状态" prop="sealState">
           <template #default="scope">
             <div style="display: flex; align-items: center; justify-content: center;">
-              <dict-tag 
-                :type="DICT_TYPE.SEAL_STATE" 
-                :value="scope.row.sealState" 
+              <dict-tag
+                :type="DICT_TYPE.SEAL_STATE"
+                :value="scope.row.sealState"
               />
               <el-checkbox
                 :model-value="scope.row.sealState === 1"
-                :disabled="scope.row.status !== 2" 
+                :disabled="scope.row.sealState == 1"
                 @change="(val) => handleSealStateChange(scope.row, val)"
                 style="margin-left: 6px;"
               />
@@ -68,10 +73,13 @@
         <el-table-column align="center" label="材料类型" prop="materialType" />
         <el-table-column align="center" label="印章类型">
           <template #default="scope">
-            <div v-for="seal in (scope.row.sealTypes || [])" :key="seal.id">
-              {{ seal.name }} × {{ seal.quantity || 0 }}
+            <div v-if="scope.row.sealTypes && scope.row.sealTypes.length > 0">
+              <div v-for="seal in scope.row.sealTypes" :key="seal.id">
+                {{ seal.name }} × {{ seal.quantity || 0 }}
+              </div>
             </div>
-          </template>
+            <div v-else>无</div>
+          </template> 
         </el-table-column>
         <el-table-column align="center" label="申请单标题" prop="applyTitle" />
         <el-table-column align="center" label="联系方式" prop="phone" />
@@ -105,7 +113,10 @@
   import * as SealApi from '@/api/seal'
   import { ElMessageBox, ElMessage } from 'element-plus'
 
+  import { useUserStore } from '@/store/modules/user'
+
   const router = useRouter()
+  const userStore = useUserStore()
   const loading = ref(false)
   const list = ref([]) // 数据列表
   const total = ref(0) // 总条数
@@ -204,18 +215,18 @@
   const viewDetail = (row: any) => {
     router.push({ name: 'SealDetail', query: { id: row.processInstanceId } })
   }
-  
+
   // 处理用印状态变更
   const handleSealStateChange = (row: any, checked: boolean) => {
-    if (row.status !== 2) { 
+    if (row.status !== 2) {
       ElMessage.warning('只有审核通过的申请才能更改用印状态')
       return
     }
-    
+
     // 根据勾选状态确定新的状态码
     const newSealState = checked ? 1 : 2
     const stateText = checked ? '已用印' : '未用印'
-    
+
     ElMessageBox.confirm(
       `确认将此申请用印状态设为"${stateText}"？`,
       '提示',
@@ -232,7 +243,7 @@
             id: row.id,
             sealState: newSealState
           })
-          
+
           // 更新成功后更新本地数据
           row.sealState = newSealState
           ElMessage.success(`用印状态已更新为"${stateText}"`)
@@ -243,7 +254,7 @@
       })
       .catch(() => {})
   }
-  
+
   onMounted(() => {
     getSealApplicationPage(queryParams.value)
   })

@@ -31,17 +31,16 @@ export interface OrderWorkflowUpdateReqVO {
   id: number // 督办单ID（必传）
   coDept?: string // 协办单位ID（逗号分隔）
   deptDetail?: string // 牵头单位承办情况
-  startUserSelectAssignees?: Record<string, number[]> // 发起人自选审批人 Map，key为taskKey，value为用户ID数组
-  url?: string // 附件URL（可选，兼容旧版本）
-  name?: string // 附件名称（可选，兼容旧版本）
+  startLeaderSelectAssignees?: Record<string, number[]> // 发起人自选审批人 Map，key为taskKey，value为用户ID数组
   fileLIst?: AttachmentFileInfo[] // 附件列表
 }
 
 // 附件文件信息
 export interface AttachmentFileInfo {
-  id: number // 附件ID
+  id?: number // 附件ID（可选，新上传的文件没有ID）
   name: string // 文件名
   url: string // 文件URL
+  size: number // 文件大小（字节）
 }
 
 // 督办单完整信息（用于表单提交）
@@ -102,6 +101,9 @@ export interface OrderRespVO {
   creatorName?: string // 创建人姓名
   isOverdue?: boolean // 是否超期
   remainingDays?: number // 剩余天数
+
+  // 附件信息
+  attachments?: AttachmentRespVO[] // 附件列表
 }
 
 // 督办分类选项接口响应
