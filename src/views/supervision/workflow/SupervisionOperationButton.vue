@@ -793,21 +793,6 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
           }
 
           console.log('督办单数据更新成功，返回数据:', updateResult.data)
-
-          // 如果督办单更新返回了 startLeaderSelectAssignees，同步到 nextAssignees
-          if (updateResult.data && updateResult.data.startLeaderSelectAssignees) {
-            console.log('同步 startLeaderSelectAssignees 到 nextAssignees')
-            console.log('原 nextAssignees:', approveReasonForm.nextAssignees)
-
-            // 合并或覆盖 nextAssignees
-            approveReasonForm.nextAssignees = {
-              ...approveReasonForm.nextAssignees,
-              ...updateResult.data.startLeaderSelectAssignees
-            }
-
-            console.log('新 nextAssignees:', approveReasonForm.nextAssignees)
-          }
-
           console.log('督办单数据更新成功，继续工作流审批')
         } catch (error) {
           console.error('督办单数据更新失败:', error)
