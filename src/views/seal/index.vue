@@ -43,6 +43,11 @@
     <ContentWrap>
       <el-table v-loading="loading" :data="list">
         <el-table-column align="center" label="申请编号" prop="id" />
+        <el-table-column align="center" label="申请人">
+          <template #default>
+            {{ userStore.user.nickname }}
+          </template>
+        </el-table-column>
         <el-table-column align="center" label="审批状态" prop="status">
           <template #default="scope">
             <dict-tag :type="DICT_TYPE.SEAL_APPLY_STATE" :value="scope.row.status" />
@@ -92,8 +97,10 @@
   import { DICT_TYPE } from '@/utils/dict'
   import { getSimpleDeptList } from '@/api/system/dept'
   import * as SealApi from '@/api/seal'
+  import { useUserStore } from '@/store/modules/user'
   
   const router = useRouter()
+  const userStore = useUserStore()
   const loading = ref(false)
   const list = ref([]) // 数据列表
   const total = ref(0) // 总条数

@@ -21,17 +21,7 @@
         </div>
       </div>
 
-      <div class="form-section">
-        <div class="section-header required">请填写申请摘要</div>
-        <div class="notes-content">
-          <el-input
-            v-model="form.notes"
-            type="textarea"
-            :rows="4"
-            placeholder="请填写申请摘要"
-          />
-        </div>
-      </div>
+      
 
       <!-- 印章类型 -->
       <div class="form-section">
@@ -123,16 +113,16 @@
       <div class="form-section">
         <div class="section-header required">材料类型</div>
         <div class="material-type-content">
-          <el-checkbox-group v-model="form.selectedMaterialTypes">
-            <el-checkbox 
+          <el-radio-group v-model="form.selectedMaterialTypes">
+            <el-radio
               v-for="dict in getDictOptions(DICT_TYPE.SEAL_APPLY_MATERIAL_TYPES)" 
               :key="dict.value" 
               :label="dict.value"
               class="material-checkbox"
             >
               {{ dict.label }}
-            </el-checkbox>
-          </el-checkbox-group>
+            </el-radio>
+          </el-radio-group>
         </div>
       </div>
 
@@ -185,7 +175,17 @@
       </div>
 
       <!-- 注意事项 -->
-      
+      <div class="form-section">
+        <div class="section-header required">请填写备注</div>
+        <div class="notes-content">
+          <el-input
+            v-model="form.notes"
+            type="textarea"
+            :rows="4"
+            placeholder="请填写备注"
+          />
+        </div>
+      </div>
 
       <!-- 单位签字 -->
       <div class="form-section">
@@ -495,11 +495,11 @@ const submitForm = async () => {
     return
   }
   
-  // 获取选中的材料类型的名称并合并为字符串
-  const selectedMaterialTypeLabels = form.selectedMaterialTypes.map(value => {
-    const dict = getDictOptions(DICT_TYPE.SEAL_APPLY_MATERIAL_TYPES).find(item => item.value === value)
-    return dict ? dict.label : ''
-  }).filter(label => label !== '').join(',') // 使用逗号连接成字符串
+  // // 获取选中的材料类型的名称并合并为字符串
+  // const selectedMaterialTypeLabels = form.selectedMaterialTypes.map(value => {
+  //   const dict = getDictOptions(DICT_TYPE.SEAL_APPLY_MATERIAL_TYPES).find(item => item.value === value)
+  //   return dict ? dict.label : ''
+  // }).filter(label => label !== '').join(',') // 使用逗号连接成字符串
 
   // 处理文件数据，只保留名称、大小和URL
   const simplifiedFiles = uploadedFiles.map(file => ({
@@ -512,7 +512,7 @@ const submitForm = async () => {
     applyTitle: selectedUnit.value+'印章申请单',//表单标题
     materialName: form.materialName,//材料名称
     phone: form.contactPhone,//联系电话
-    materialTypes: selectedMaterialTypeLabels,//材料类型
+    materialTypes: form.selectedMaterialTypes,//材料类型
     attention: form.notes,//注意事项
     attachments: simplifiedFiles,//附件json，文件名，文件大小，文件路径
     
