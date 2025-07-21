@@ -75,15 +75,16 @@
                 <span class="file-name">{{ file.attachmentName }}</span>
                 <span class="file-size">{{ file.attachmentSize }}</span>
                 <a :href="file.attachmentUrl" target="_blank" style="margin-left:8px;">下载</a>
+                <a @click="previewFile(file)" style="margin-left:8px; cursor:pointer; color:#409EFF;">预览</a>
               </div>
             </div>
           </div>
-          <div v-else style="color:#888;">无附件</div>
+          <div v-else style="color:#888;">空</div>
         </div>
       </div>
       <!-- 申请摘要 -->
       <div class="form-section">
-        <div class="section-header">申请摘要</div>
+        <div class="section-header">申请备注</div>
         <div class="notes-content">
           <div style="white-space:pre-line; color:#333;">{{ detail.attention }}</div>
         </div>
@@ -98,7 +99,7 @@
       </div>
 
       <!-- 二维码 -->
-      <div class="form-section qr-section">
+      <div class="form-section qr-section" v-if="status==2">
         <div class="qr-content">
           <Qrcode :text="qrText" :width="120" />
         </div>
@@ -118,7 +119,7 @@ import { Qrcode } from '@/components/Qrcode'
 import { propTypes } from '@/utils/propTypes'
 import * as SealApi from '@/api/seal'
 import { formatDate } from '@/utils/formatTime'
-
+import { KKFileView } from '@/components/KKFileView'
 
 //由网上印章申请，用户：  ，时间：   ，编号：  
 const qrText = ref('')
@@ -203,6 +204,10 @@ onMounted(() => {
     updateQrText()
   })
 })
+
+const previewFile = (file) => {
+  KKFileView.preview(file.attachmentUrl)
+}
 </script>
 
 

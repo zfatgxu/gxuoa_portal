@@ -1,9 +1,20 @@
 <template>
   <div class="form-container">
     <div class="form-header">
-      <h1><el-select v-model="selectedUnit" placeholder="请选择一个单位申请印章" filterable style="width: 300px">
-        <el-option v-for="unit in unitList" :key="unit.id" :label="unit.name" :value="unit.name" />
-      </el-select> 用印申请单</h1>
+      <!-- 未选择单位时显示选择框 -->
+      <div v-if="!selectedUnit">
+        <el-select v-model="selectedUnit" placeholder="请选择一个单位申请印章" filterable style="width: 300px;">
+          <el-option v-for="unit in unitList" :key="unit.id" :label="unit.name" :value="unit.name" />
+        </el-select>
+      </div>
+      <!-- 选择单位后显示完整h1标题 -->
+      <div v-else class="title-with-edit">
+        <h1>{{ selectedUnit }} 用印申请单</h1>
+        <el-button type="primary" link @click="resetUnit" class="edit-unit-btn">
+          <el-icon><Edit /></el-icon> 更改单位
+        </el-button>
+      </div>
+      <h1 v-if="!selectedUnit && unitList.length > 0">用印申请单</h1>
     </div>
     
     <el-form :model="form" label-width="120px" class="seal-form">
@@ -21,17 +32,7 @@
         </div>
       </div>
 
-      <div class="form-section">
-        <div class="section-header required">请填写申请摘要</div>
-        <div class="notes-content">
-          <el-input
-            v-model="form.notes"
-            type="textarea"
-            :rows="4"
-            placeholder="请填写申请摘要"
-          />
-        </div>
-      </div>
+      
 
       <!-- 印章类型 -->
       <div class="form-section">
@@ -68,13 +69,13 @@
             <div class="seal-controls">
               <el-input-number
                 v-model="seal.quantity"
-                :min="0"
+                :min="1"
                 :max="99"
                 size="small"
                 class="quantity-input"
               />
               <span class="unit">个</span>
-              <el-button type="danger" link @click="removeCustomSeal(index)" size="small">
+              <el-button type="danger" link @click="removeCustomSeal(index)" size="large">
                 <el-icon><Close /></el-icon>
               </el-button>
             </div>
@@ -123,16 +124,16 @@
       <div class="form-section">
         <div class="section-header required">材料类型</div>
         <div class="material-type-content">
-          <el-checkbox-group v-model="form.selectedMaterialTypes">
-            <el-checkbox 
+          <el-radio-group v-model="form.selectedMaterialTypes">
+            <el-radio
               v-for="dict in getDictOptions(DICT_TYPE.SEAL_APPLY_MATERIAL_TYPES)" 
               :key="dict.value" 
               :label="dict.value"
               class="material-checkbox"
             >
               {{ dict.label }}
-            </el-checkbox>
-          </el-checkbox-group>
+            </el-radio>
+          </el-radio-group>
         </div>
       </div>
 
@@ -190,7 +191,6 @@
 
       <!-- 注意事项 -->
       
-
       <!-- 单位签字 -->
       <div class="form-section">
         <div class="section-header required">申请人联系电话</div>
@@ -201,6 +201,19 @@
           </div>
         </div>
       </div>
+
+      <div class="form-section">
+        <div class="section-header ">请填写备注</div>
+        <div class="notes-content">
+          <el-input
+            v-model="form.notes"
+            type="textarea"
+            :rows="4"
+            placeholder="请填写备注"
+          />
+        </div>
+      </div>
+
 
       <!-- 提交按钮 -->
       <div class="form-actions">
@@ -306,7 +319,7 @@ const sealTypeOptions = ref([])
 const getSealTypeOptions = async () => {
   try {
     // 从数据库获取印章类型选项
-    const res = await sealApi.getsealPage({ pageSize: 100 })
+    const res = await sealApi.getsealPage({ pageSize: 100, orgName: selectedUnit.value })
     
       sealTypeOptions.value = res.list.map(item => {
         return {
@@ -322,7 +335,7 @@ const getSealTypeOptions = async () => {
       //   { id: 3, name: '广西大学（钢印）' },
       //   { id: 4, name: '广西大学校长办公室（红印）' },
       //   { id: 5, name: '广西大学合同专用章（红印）' },
-      //]
+     //]
     
   } catch (error) {
     console.error('获取印章类型选项失败:', error)
@@ -355,8 +368,21 @@ const removeCustomSeal = (index) => {
   customSealTypes.value.splice(index, 1)
 }
 
+// 检查印章类型是否已被选择
+const isSealTypeSelected = (sealId) => {
+  return customSealTypes.value.some(seal => seal.id === sealId)
+}
+
 // 监听自定义印章类型的id变化，自动设置name
-const watchCustomSealId = (seal) => {
+const watchCustomSealId = (seal, index) => {
+  // 如果选择了已存在的印章类型，提示用户不允许重复选择
+  if (seal.id && customSealTypes.value.findIndex((s, i) => s.id === seal.id && i !== index) !== -1) {
+    ElMessage.warning('该印章类型已被选择，不允许重复选择，如果需要多个，请添加数量')
+    // 移除当前项
+    customSealTypes.value.splice(index, 1)
+    return
+  }
+  
   const selectedSeal = sealTypeOptions.value.find(option => option.id === seal.id)
   if (selectedSeal) {
     seal.name = selectedSeal.name
@@ -365,8 +391,8 @@ const watchCustomSealId = (seal) => {
 
 // 监听自定义印章类型的id变化
 watch(customSealTypes, (newVal) => {
-  newVal.forEach((seal) => {
-    watchCustomSealId(seal)
+  newVal.forEach((seal, index) => {
+    watchCustomSealId(seal, index)
   })
 }, { deep: true })
 
@@ -504,11 +530,11 @@ const submitForm = async () => {
     return
   }
   
-  // 获取选中的材料类型的名称并合并为字符串
-  const selectedMaterialTypeLabels = form.selectedMaterialTypes.map(value => {
-    const dict = getDictOptions(DICT_TYPE.SEAL_APPLY_MATERIAL_TYPES).find(item => item.value === value)
-    return dict ? dict.label : ''
-  }).filter(label => label !== '').join(',') // 使用逗号连接成字符串
+  // // 获取选中的材料类型的名称并合并为字符串
+  // const selectedMaterialTypeLabels = form.selectedMaterialTypes.map(value => {
+  //   const dict = getDictOptions(DICT_TYPE.SEAL_APPLY_MATERIAL_TYPES).find(item => item.value === value)
+  //   return dict ? dict.label : ''
+  // }).filter(label => label !== '').join(',') // 使用逗号连接成字符串
 
   // 处理文件数据，只保留名称、大小和URL
   const simplifiedFiles = uploadedFiles.map(file => ({
@@ -521,7 +547,7 @@ const submitForm = async () => {
     applyTitle: selectedUnit.value+'印章申请单',//表单标题
     materialName: form.materialName,//材料名称
     phone: form.contactPhone,//联系电话
-    materialTypes: selectedMaterialTypeLabels,//材料类型
+    materialTypes: form.selectedMaterialTypes,//材料类型
     attention: form.notes,//注意事项
     attachments: simplifiedFiles,//附件json，文件名，文件大小，文件路径
     
@@ -609,6 +635,20 @@ onMounted(async () => {
 const handleUpload = (options) => {
   return httpRequest(options)
 }
+
+// 重置单位选择并清空印章类型
+const resetUnit = () => {
+  selectedUnit.value = null
+  // 清空已选择的印章类型
+  customSealTypes.value = []
+}
+
+// 监听selectedUnit变化，当选择了单位时获取印章类型
+watch(selectedUnit, (newVal) => {
+  if (newVal) {
+    getSealTypeOptions()
+  }
+})
 </script>
 
 <style scoped>
@@ -636,6 +676,10 @@ const handleUpload = (options) => {
   border: 2px solid #409eff;
   border-radius: 8px;
   overflow: hidden;
+}
+
+.custom-select  .el-select__selection {
+  font-size: 30px;
 }
 
 .form-section {
@@ -857,5 +901,17 @@ const handleUpload = (options) => {
   margin-top: 10px;
   display: flex;
   justify-content: flex-start;
+}
+
+.title-with-edit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.edit-unit-btn {
+  font-size: 14px;
+  padding: 2px 5px;
 }
 </style>
