@@ -530,7 +530,7 @@ $prefix-cls: #{$namespace}-tags-view;
     height: calc(100% - 6px);
     padding-right: 15px;
     margin-left: 4px;
-    font-size: 12px;
+    font-size: 18px;
     cursor: pointer;
     border: 1px solid #d9d9d9;
     border-radius: 2px;

@@ -327,7 +327,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { OrderApi, type OrderRespVO, type OrderSaveReqVO, type OrderWorkflowUpdateReqVO, type AttachmentFileInfo, type AttachmentRespVO } from '@/api/supervision'
-import { getSimpleDeptList, type DeptVO } from '@/api/system/dept'
+import { getSimpleDeptList, getDept, type DeptVO } from '@/api/system/dept'
 import { getSimpleUserList, type UserVO } from '@/api/system/user'
 import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
 import { formatDate as utilFormatDate } from '@/utils/formatTime'
@@ -756,7 +756,7 @@ const parsedSummary = computed(() => {
 })
 
 // 获取督办单工作流更新数据（只传递修改的字段）
-const getSupervisionWorkflowUpdateData = (startLeaderSelectAssignees?: Record<string, number[]>) => {
+const getSupervisionWorkflowUpdateData = async (startLeaderSelectAssignees?: Record<string, number[]>) => {
   const updateData: OrderWorkflowUpdateReqVO = {
     id: orderDetail.value.id // 督办单ID必传
   }
@@ -781,12 +781,18 @@ const getSupervisionWorkflowUpdateData = (startLeaderSelectAssignees?: Record<st
       arrayLength: coDeptArray.length
     })
 
-    // 设置工作流自选审批人 - 使用普通对象而不是响应式对象
+    // 设置工作流自选审批人 - 传递协办部门的负责人ID而不是部门ID
     if (coDeptArray.length > 0) {
-      updateData.startLeaderSelectAssignees = {
-        "Third": [...coDeptArray] // 使用展开运算符创建新数组
+      // 使用await等待异步获取部门负责人ID
+      const leaderIds = await getDeptLeaderIds(coDeptArray)
+      if (leaderIds.length > 0) {
+        updateData.startLeaderSelectAssignees = {
+          "Third": [...leaderIds] // 使用部门负责人ID数组
+        }
+        console.log('设置 startLeaderSelectAssignees (负责人ID):', updateData.startLeaderSelectAssignees)
+      } else {
+        console.warn('协办部门没有找到对应的负责人，跳过设置 startLeaderSelectAssignees')
       }
-      console.log('设置 startLeaderSelectAssignees:', updateData.startLeaderSelectAssignees)
     }
   }
 
@@ -837,9 +843,9 @@ const getSupervisionWorkflowUpdateData = (startLeaderSelectAssignees?: Record<st
   // 详细显示 startLeaderSelectAssignees 的内容
   if (updateData.startLeaderSelectAssignees) {
     console.log('startLeaderSelectAssignees 存在:', updateData.startLeaderSelectAssignees)
-    console.log('startLeaderSelectAssignees.Third:', updateData.startLeaderSelectAssignees.Third)
-    console.log('Third 数组长度:', updateData.startLeaderSelectAssignees.Third?.length)
-    console.log('Third 数组内容:', JSON.stringify(updateData.startLeaderSelectAssignees.Third))
+    console.log('startLeaderSelectAssignees.Third (负责人ID数组):', updateData.startLeaderSelectAssignees.Third)
+    console.log('负责人ID数组长度:', updateData.startLeaderSelectAssignees.Third?.length)
+    console.log('负责人ID数组内容:', JSON.stringify(updateData.startLeaderSelectAssignees.Third))
   } else {
     console.log('startLeaderSelectAssignees 不存在或为空')
   }
@@ -853,7 +859,7 @@ const getSupervisionWorkflowUpdateData = (startLeaderSelectAssignees?: Record<st
 // 更新督办单数据（供工作流调用）
 const updateSupervisionOrder = async (startLeaderSelectAssignees?: Record<string, number[]>) => {
   try {
-    const updateData = getSupervisionWorkflowUpdateData(startLeaderSelectAssignees)
+    const updateData = await getSupervisionWorkflowUpdateData(startLeaderSelectAssignees)
 
     // 只有当有实际修改的字段时才调用接口
     const hasChanges = (updateData.coDept !== undefined) ||
@@ -913,6 +919,32 @@ const handleCollaborateDeptsChange = (deptNames: string[]) => {
   editForm.value.coDept = editForm.value.collaborateDeptIds.join(',')
 }
 
+// 获取部门负责人ID的辅助函数
+const getDeptLeaderIds = async (deptIds: number[]): Promise<number[]> => {
+  const leaderIds: number[] = []
+  
+  // 使用Promise.all并行获取所有部门详细信息
+  await Promise.all(deptIds.map(async (deptId) => {
+    try {
+      // 使用getDept API获取完整的部门信息
+      const deptInfo = await getDept(deptId)
+      console.log(`获取到部门ID:${deptId}的详细信息:`, deptInfo)
+      
+      if (deptInfo && deptInfo.leaderUserId) {
+        leaderIds.push(deptInfo.leaderUserId)
+        console.log(`部门 ${deptInfo.name}(ID:${deptId}) 的负责人ID: ${deptInfo.leaderUserId}`)
+      } else {
+        console.warn(`部门 ID:${deptId} 没有设置负责人`)
+      }
+    } catch (error) {
+      console.error(`获取部门ID:${deptId}的详细信息失败:`, error)
+    }
+  }))
+  
+  console.log('部门负责人ID列表:', leaderIds)
+  return leaderIds
+}
+
 // 确保协办单位数据格式一致性的辅助函数
 const ensureDataConsistency = (coDeptString: string): { coDeptString: string, coDeptArray: number[] } => {
   console.log('ensureDataConsistency 输入:', coDeptString, typeof coDeptString)
@@ -963,9 +995,7 @@ const loadAttachments = async () => {
   }
 }
 
-// 以下方法已废弃，现在通过工作流更新接口处理附件
-// const handleAttachmentUpload = async (response: any, file: any) => { ... }
-// const handleAttachmentRemove = (file: any) => { ... }
+
 
 const downloadAttachment = (attachment: AttachmentRespVO) => {
   // 下载附件
