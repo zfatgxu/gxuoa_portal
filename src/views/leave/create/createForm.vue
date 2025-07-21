@@ -35,7 +35,7 @@
             <div class="date-range-picker">
               <el-date-picker
                 v-model="dateRange"
-                type="daterange"
+                type="datetimerange"
                 range-separator="至"
                 start-placeholder="开始日期"
                 end-placeholder="结束日期"
@@ -75,7 +75,7 @@
                     <span class="detail-label">开始时间</span>
                     <el-date-picker
                       v-model="researchStartDate"
-                      type="date"
+                      type="datetime"
                       placeholder="开始时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -85,7 +85,7 @@
                     <span class="detail-label">结束时间</span>
                     <el-date-picker
                       v-model="researchEndDate"
-                      type="date"
+                      type="datetime"
                       placeholder="结束时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -106,7 +106,7 @@
                     <span class="detail-label">开始时间</span>
                     <el-date-picker
                       v-model="trainingStartDate"
-                      type="date"
+                      type="datetime"
                       placeholder="开始时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -116,7 +116,7 @@
                     <span class="detail-label">结束时间</span>
                     <el-date-picker
                       v-model="trainingEndDate"
-                      type="date"
+                      type="datetime"
                       placeholder="结束时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -137,7 +137,7 @@
                     <span class="detail-label">开始时间</span>
                     <el-date-picker
                       v-model="businessStartDate"
-                      type="date"
+                      type="datetime"
                       placeholder="开始时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -147,7 +147,7 @@
                     <span class="detail-label">结束时间</span>
                     <el-date-picker
                       v-model="businessEndDate"
-                      type="date"
+                      type="datetime"
                       placeholder="结束时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -186,7 +186,7 @@
                       <span class="detail-label">开始时间</span>
                       <el-date-picker
                         v-model="meeting.academicStartDate"
-                        type="date"
+                        type="datetime"
                         placeholder="开始时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
@@ -196,7 +196,7 @@
                       <span class="detail-label">结束时间</span>
                       <el-date-picker
                         v-model="meeting.academicEndDate"
-                        type="date"
+                        type="datetime"
                         placeholder="结束时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
@@ -258,7 +258,7 @@
                     <span class="detail-label">开始时间</span>
                     <el-date-picker
                       v-model="personalStartDate"
-                      type="date"
+                      type="datetime"
                       placeholder="开始时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -268,7 +268,7 @@
                     <span class="detail-label">结束时间</span>
                     <el-date-picker
                       v-model="personalEndDate"
-                      type="date"
+                      type="datetime"
                       placeholder="结束时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -462,6 +462,7 @@
               filterable
               placeholder="请选择代工人"
               class="signature-input"
+              :disabled="isReadOnly"
             >
               <el-option
                 v-for="user in userList"
@@ -901,6 +902,7 @@ const handleSubmit = async () => {
   }
 }
 // 获取请假人信息
+const isReadOnly = ref(false)
 const route = useRoute()
 const routeId = ref(route.query.id as string | undefined)
 const fetchUserProfile = async () => {
@@ -918,6 +920,7 @@ const fetchUserProfile = async () => {
         };
       }
     } else  {
+      isReadOnly.value = true;
       const res = await RegisterApi.getRegister(Number(routeId.value))
       const res1 = await RegisterFileApi.getRegisterFile(Number(routeId.value))
       const res2 = await ReasonFormApi.getReasonForm(Number(routeId.value))

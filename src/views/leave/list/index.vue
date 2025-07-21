@@ -30,7 +30,7 @@
         <el-date-picker
           v-model="queryParams.startDate"
           value-format="YYYY-MM-DD HH:mm:ss"
-          type="date"
+          type="datetime"
           start-placeholder="开始日期"
           class="!w-220px"
         />
@@ -39,7 +39,7 @@
         <el-date-picker
           v-model="queryParams.endDate"
           value-format="YYYY-MM-DD HH:mm:ss"
-          type="date"
+          type="datetime"
           end-placeholder="结束日期"
           class="!w-220px"
         />
@@ -155,18 +155,16 @@
       <el-table-column label="名称" align="center" prop="nickName" />
       <el-table-column label="来文单位" align="center" prop="deptName" />
       <el-table-column
-        label="开始日期"
+        label="开始时间"
         align="center"
         prop="startDate"
-        :formatter="dateFormatter2"
-        width="180px"
+        :formatter="dateFormatter"
       />
       <el-table-column
-        label="结束日期"
+        label="结束时间"
         align="center"
         prop="endDate"
-        :formatter="dateFormatter2"
-        width="180px"
+        :formatter="dateFormatter"
       />
       <!-- <el-table-column label="请假期间前往地点" align="center" prop="destination" />
       <el-table-column label="主持工作负责人安排" align="center" prop="hostArrangement" />
@@ -186,7 +184,7 @@
         :formatter="dateFormatter"
         width="180px"
       /> -->
-      <el-table-column label="操作" align="center" min-width="120px">
+      <el-table-column label="操作" align="center">
         <template #default="scope">
           <!-- 状态为待审批(2)时显示编辑和删除按钮 -->
           <template v-if="scope.row.status === 2">
@@ -241,7 +239,7 @@
 </template>
 
 <script setup lang="ts">
-import { dateFormatter2 } from '@/utils/formatTime'
+import { dateFormatter } from '@/utils/formatTime'
 import download from '@/utils/download'
 import { RegisterVO, RegisterApi } from '@/api/leave/create/createForm'
 import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
