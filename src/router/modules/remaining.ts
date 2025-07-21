@@ -137,7 +137,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
     children: [
       {
         path: 'index',
-        component: () => import('@/views/dcdb/index.vue'),
+        component: () => import('@/views/supervision/index.vue'),
         name: 'Dcdb',
         meta: {
           title: '督查督办',
@@ -150,7 +150,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
       },
       {
         path: '/dcdb/dept',
-        component: () => import('@/views/dcdb/dept/index.vue'),
+        component: () => import('@/views/supervision/dept/index.vue'),
         name: 'DcdbDept',
         meta: {
           title: '部门界面',
@@ -163,7 +163,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
       },
       {
         path: '/dcdb/leader',
-        component: () => import('@/views/dcdb/leader/index.vue'),
+        component: () => import('@/views/supervision/leader/index.vue'),
         name: 'DcdbLeader',
         meta: {
           title: '分管领导',
@@ -176,7 +176,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
       },
       {
         path: 'work_supervision',
-        component: () => import('@/views/dcdb/work_supervision.vue'),
+        component: () => import('@/views/supervision/work_supervision.vue'),
         name: 'DcdbWorkSupervision',
         meta: {
           title: '工作督办',
@@ -189,7 +189,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
       },
       {
         path: 'special_supervision',
-        component: () => import('@/views/dcdb/special_supervision.vue'),
+        component: () => import('@/views/supervision/special_supervision.vue'),
         name: 'DcdbSpecialSupervision',
         meta: {
           title: '专项督办',
@@ -202,11 +202,24 @@ const remainingRouter: AppRouteRecordRaw[] = [
       },
       {
         path: 'create',
-        component: () => import('@/views/dcdb/create.vue'),
+        component: () => import('@/views/supervision/create.vue'),
         name: 'DcdbCreate',
         meta: {
           title: '创建督办单',
           requiresAuth: true,
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: '',
+          activeMenu: '/dcdb'
+        }
+      },
+      {
+        path: 'workflow/detail/:id',
+        component: () => import('@/views/supervision/workflow/detail.vue'),
+        name: 'SupervisionWorkflowDetail',
+        meta: {
+          title: '督办工作流详情',
           noCache: true,
           hidden: true,
           canTo: true,

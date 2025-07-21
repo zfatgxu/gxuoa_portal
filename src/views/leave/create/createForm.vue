@@ -25,7 +25,7 @@
         <div class="divider">
           <span class="divider-text">行程</span>
         </div>
-        <el-descriptions 
+        <el-descriptions
           border
           :column="1"
           class="approval-descriptions"
@@ -46,12 +46,12 @@
           <!-- 事由 -->
           <el-descriptions-item label="请示请假事由(必填)" label-class-name="approval-label">
             <div class="reason-options">
-              <div 
-                v-for="reason in getIntDictOptions(DICT_TYPE.LEAVE_TYPE)" 
-                :key="reason.value" 
+              <div
+                v-for="reason in getIntDictOptions(DICT_TYPE.LEAVE_TYPE)"
+                :key="reason.value"
               >
                 <el-checkbox-group v-model="selectedReasons">
-                  <el-checkbox 
+                  <el-checkbox
                     :label="reason.value"
                   >
                     {{ reason.label }}
@@ -169,9 +169,9 @@
                     <div class="detail-item">
                       <span class="detail-label">会议性质</span>
                       <el-radio-group v-model="meeting.academicNature">
-                        <el-radio 
+                        <el-radio
                           v-for="dict in getIntDictOptions(DICT_TYPE.ACADEMIC_NATURE)"
-                          :key="dict.value" 
+                          :key="dict.value"
                           :label="dict.value"
                         >
                           {{ dict.label }}
@@ -205,9 +205,9 @@
                     <div class="detail-item">
                       <span class="detail-label">受邀作报告</span>
                       <el-radio-group v-model="meeting.isPresentation">
-                        <el-radio 
+                        <el-radio
                           v-for="dict in getIntDictOptions(DICT_TYPE.IS_PRESENTATION)"
-                          :key="dict.value" 
+                          :key="dict.value"
                           :label="dict.value"
                         >
                           {{ dict.label }}
@@ -217,9 +217,9 @@
                     <div v-if="meeting.isPresentation === 2" class="detail-item">
                       <span class="detail-label">报告类型</span>
                       <el-radio-group v-model="meeting.reportType">
-                        <el-radio 
+                        <el-radio
                           v-for="dict in getIntDictOptions(DICT_TYPE.REPORT_TYPE)"
-                          :key="dict.value" 
+                          :key="dict.value"
                           :label="dict.value"
                         >
                           {{ dict.label }}
@@ -246,10 +246,10 @@
                   <div class="detail-item">
                     <span class="detail-label">请假类型</span>
                     <el-select v-model="personalType" placeholder="请选择请假类型" clearable>
-                      <el-option 
+                      <el-option
                         v-for="dict in getIntDictOptions(DICT_TYPE.PERSONAL_TYPE)"
-                        :key="dict.value" 
-                        :label="dict.label" 
+                        :key="dict.value"
+                        :label="dict.label"
                         :value="dict.value"
                       />
                     </el-select>
@@ -302,10 +302,10 @@
                     <div class="detail-item">
                       <span class="detail-label">探亲类别</span>
                       <el-select v-model="personalVisitType" placeholder="请选择探亲类别" clearable>
-                        <el-option 
+                        <el-option
                           v-for="dict in getIntDictOptions(DICT_TYPE.PERSONAL_VISIT_TYPE)"
-                          :key="dict.value" 
-                          :label="dict.label" 
+                          :key="dict.value"
+                          :label="dict.label"
                           :value="dict.value"
                         />
                       </el-select>
@@ -317,10 +317,10 @@
                     <div class="detail-item">
                       <span class="detail-label">婚姻状况</span>
                       <el-select v-model="personalMaritalStatus" placeholder="请选择婚姻状况" clearable>
-                        <el-option 
+                        <el-option
                           v-for="dict in getIntDictOptions(DICT_TYPE.MARITAL_STATUS)"
-                          :key="dict.value" 
-                          :label="dict.label" 
+                          :key="dict.value"
+                          :label="dict.label"
                           :value="dict.value"
                         />
                       </el-select>
@@ -330,10 +330,10 @@
                     <div class="detail-item">
                       <span class="detail-label">生育次数</span>
                       <el-select v-model="personalParity" placeholder="请选择生育次数" clearable>
-                        <el-option 
+                        <el-option
                           v-for="dict in getIntDictOptions(DICT_TYPE.PARITY)"
-                          :key="dict.value" 
-                          :label="dict.label" 
+                          :key="dict.value"
+                          :label="dict.label"
                           :value="dict.value"
                         />
                       </el-select>
@@ -341,10 +341,10 @@
                     <div class="detail-item">
                       <span class="detail-label">是否多胞胎</span>
                       <el-select v-model="personalMultiple" placeholder="请选择是否多胞胎" clearable>
-                        <el-option 
+                        <el-option
                           v-for="dict in getIntDictOptions(DICT_TYPE.IS_PRESENTATION)"
-                          :key="dict.value" 
-                          :label="dict.label" 
+                          :key="dict.value"
+                          :label="dict.label"
                           :value="dict.value"
                         />
                       </el-select>
@@ -352,10 +352,10 @@
                     <div class="detail-item">
                       <span class="detail-label">是否难产</span>
                       <el-select v-model="personalDystocia" placeholder="请选择是否难产" clearable>
-                        <el-option 
+                        <el-option
                           v-for="dict in getIntDictOptions(DICT_TYPE.IS_PRESENTATION)"
-                          :key="dict.value" 
-                          :label="dict.label" 
+                          :key="dict.value"
+                          :label="dict.label"
                           :value="dict.value"
                         />
                       </el-select>
@@ -432,7 +432,7 @@
         <div class="divider">
           <span class="divider-text">审批意见</span>
         </div>
-        <el-descriptions 
+        <el-descriptions
           border
           :column="1"
           class="approval-descriptions"
@@ -455,21 +455,22 @@
           <span style="font-size: 14px;margin-bottom: 5px;">请假期间主持工作负责人会签</span>
         </div>
         <div class="action-item">
-          <div v-for="userTask in startUserSelectTasks" :key="userTask.id" style="width: 120px">
-              <el-select
-                v-model="startUserSelectAssignees[userTask.id]"
-                multiple
-                placeholder="请选择审批人"
-                class="signature-input"
-              >
-                <el-option
-                  v-for="user in userList"
-                  :key="user.id"
-                  :label="user.nickname"
-                  :value="user.id"
-                />
-              </el-select>
-            </div>
+          <div v-for="userTask in startUserSelectTasks" :key="userTask.id" style="width: 200px">
+            <el-select
+              v-model="startUserSelectAssignees[userTask.id]"
+              multiple
+              filterable
+              placeholder="请选择代工人"
+              class="signature-input"
+            >
+              <el-option
+                v-for="user in userList"
+                :key="user.id"
+                :label="user.nickname"
+                :value="user.id"
+              />
+            </el-select>
+          </div>
         </div>
         <div class="action-item">
           <el-button type="primary" @click="handleSubmit">提交流程</el-button>
@@ -487,8 +488,7 @@ import { pcaTextArr } from "element-china-area-data";
 import { ElMessage, ElMessageBox } from 'element-plus';
 import type { UploadFile, UploadUserFile } from 'element-plus';
 import { getUserProfile } from '@/api/system/user/profile'
-import { UserVO } from '@/api/system/user'
-import { RegisterApi, RegisterFileApi, ReasonFormApi } from '@/api/leave/create/createForm' 
+import { RegisterApi, RegisterFileApi, ReasonFormApi } from '@/api/leave/create/createForm'
 import { useRoute } from 'vue-router'
 import dayjs from 'dayjs'
 import * as FileApi from '@/api/infra/file'
@@ -601,9 +601,11 @@ watch(dateRange, (newVal) => {
 }, { deep: true });
 
 const selectedReasons = ref<number[]>([]);
+const dataReasons = ref<{id: number, type: number}[]>([]);
 // 附件
 const hasAttachment = ref(false);
 const fileList = ref<UploadUserFile[]>([]);
+const dataFiles = ref<number[]>([]);
 const uploadedFileIds = ref<string[]>([]);
 const uploadRef = ref()
 const customUpload = async (options) => {
@@ -647,7 +649,7 @@ const handlePreview = (file) => {
     window.open(file.url, '_blank');
     return;
   }
-  
+
   // 如果没有，则尝试从 fileList 中查找
   const fileInList = fileList.value.find(item => item.uid === file.uid);
   if (fileInList?.url) {
@@ -725,7 +727,6 @@ const handleSubmit = async () => {
       destination: String(destination.value), // 前往地点
       hostArrangement: workArrangement.value, // 工作安排
       remark: remarks.value, // 备注
-      status: 1, // 状态：1-待审批
       personId: Number(personnel.value.id), // 请假人ID
       deptId: Number(personnel.value.deptId), // 部门ID
       leaderOpinion: '', // 领导意见，初始为空
@@ -738,19 +739,19 @@ const handleSubmit = async () => {
     let leaveRegisterId = Number()
     if (routeId.value) {
       formData.id = Number(routeId.value)
-      await RegisterApi.updateRegister(formData)
+      response = await RegisterApi.updateRegister(formData)
       leaveRegisterId = Number(routeId.value)
     } else {
       response = await RegisterApi.createRegister(formData)
       leaveRegisterId = Number(response)
     }
-     // 获取主表ID
-    
+    // 获取主表ID
+
     // 2. 提交请假事由（每个事由单独提交）
     const reasonPromises = selectedReasons.value.flatMap(reason => {
-        // 如果是学术会议（type=5），为每个会议创建一条记录
-        if (reason === 5) {
-          return academicMeetings.value.flatMap(meeting => {
+      // 如果是学术会议（type=5），为每个会议创建一条记录
+      if (reason === 5) {
+        return academicMeetings.value.flatMap(meeting => {
           const reasonData = {
             id: academicID.value,
             leaveRegisterId: leaveRegisterId,
@@ -765,7 +766,7 @@ const handleSubmit = async () => {
             reportTitle: meeting.reportTitle,
             reportPaperCount: meeting.academicPaperCount
           };
-          if (routeId.value) {
+          if (academicID.value) {
             return ReasonFormApi.updateReasonForm(reasonData);
           } else {
             return ReasonFormApi.createReasonForm(reasonData);
@@ -782,10 +783,10 @@ const handleSubmit = async () => {
           startDate: researchStartDate.value,
           endDate: researchEndDate.value,
         }
-        if (routeId.value) {
-            return ReasonFormApi.updateReasonForm(reasonData);
+        if (researchID.value) {
+          return ReasonFormApi.updateReasonForm(reasonData);
         } else {
-            return ReasonFormApi.createReasonForm(reasonData);
+          return ReasonFormApi.createReasonForm(reasonData);
         }
       } else if (reason === 2) {
         const reasonData = {
@@ -797,10 +798,10 @@ const handleSubmit = async () => {
           startDate: trainingStartDate.value,
           endDate: trainingEndDate.value,
         }
-        if (routeId.value) {
-            return ReasonFormApi.updateReasonForm(reasonData);
+        if (trainingID.value) {
+          return ReasonFormApi.updateReasonForm(reasonData);
         } else {
-            return ReasonFormApi.createReasonForm(reasonData);
+          return ReasonFormApi.createReasonForm(reasonData);
         }
       } else if (reason === 3) {
         const reasonData = {
@@ -812,10 +813,10 @@ const handleSubmit = async () => {
           startDate: businessStartDate.value,
           endDate: businessEndDate.value,
         }
-        if (routeId.value) {
-            return ReasonFormApi.updateReasonForm(reasonData);
+        if (businessID.value) {
+          return ReasonFormApi.updateReasonForm(reasonData);
         } else {
-            return ReasonFormApi.createReasonForm(reasonData);
+          return ReasonFormApi.createReasonForm(reasonData);
         }
       } else if (reason === 4) {
         const reasonData = {
@@ -838,10 +839,10 @@ const handleSubmit = async () => {
           registeredAddress: personalVisitAddress.value,
           maritalStatus: personalMaritalStatus.value,
         }
-        if (routeId.value) {
-            return ReasonFormApi.updateReasonForm(reasonData);
+        if (personalID.value) {
+          return ReasonFormApi.updateReasonForm(reasonData);
         } else {
-            return ReasonFormApi.createReasonForm(reasonData);
+          return ReasonFormApi.createReasonForm(reasonData);
         }
       } else if (reason === 6) {
         const reasonData = {
@@ -850,28 +851,48 @@ const handleSubmit = async () => {
           type: reason,
           detail: otherReason.value,
         }
-        if (routeId.value) {
-            return ReasonFormApi.updateReasonForm(reasonData);
+        if (otherID.value) {
+          return ReasonFormApi.updateReasonForm(reasonData);
         } else {
-            return ReasonFormApi.createReasonForm(reasonData);
+          return ReasonFormApi.createReasonForm(reasonData);
         }
       }
     })
-
+    // 更新时删除取消了的事由
+    if (routeId.value) {
+      const deletedReasons = dataReasons.value.filter(reason => !selectedReasons.value.includes(reason.type));
+      const deletedReasonPromises = deletedReasons.map(reason => {
+        return ReasonFormApi.deleteReasonForm(reason.id);
+      });
+      await Promise.all(deletedReasonPromises);
+    }
     // 3. 提交附件（每个附件单独提交）
     const filePromises = fileList.value.flatMap(file => {
       const fileData = {
+        id: file.id,
         leaveRegisterId: Number(leaveRegisterId),
         leaveFileUrl: String(file.url),
         leaveFileName: String(file.name),
         leaveFileSize: Number(file.size)
       }
-      return RegisterFileApi.createRegisterFile(fileData)
+      if (file.id) {
+        return RegisterFileApi.updateRegisterFile(fileData);
+      } else {
+        return RegisterFileApi.createRegisterFile(fileData);
+      }
     })
+    // 更新时删除取消了的附件
+    if (routeId.value) {
+      const deletedFiles = dataFiles.value.filter(id => !fileList.value.map(file => file.id).includes(id));
+      const deletedFilePromises = deletedFiles.map(id => {
+        return RegisterFileApi.deleteRegisterFile(id);
+      });
+      await Promise.all(deletedFilePromises);
+    }
 
     // 等待所有请求完成
     await Promise.all([...reasonPromises, ...filePromises])
-    
+
     ElMessage.success('提交成功')
     // 提交成功后跳转到列表页
     router.push('/leave/list/index')
@@ -902,82 +923,86 @@ const fetchUserProfile = async () => {
       const res2 = await ReasonFormApi.getReasonForm(Number(routeId.value))
       if (res1.length > 0){
         hasAttachment.value = true;
+        dataFiles.value = res1.map(file => file.id);
         fileList.value = res1.map(file => ({
           ...file,
+          id: file.id,
           name: file.leaveFileName, // 使用后端返回的文件名字段
           status: 'success', // 确保状态为成功
-          url: file.leaveFileUrl // 如果有预览地址的话
+          url: file.leaveFileUrl, // 如果有预览地址的话
+          size: file.leaveFileSize
         }));
       }
       if (res2 && Array.isArray(res2)) {
-  res2.forEach(item => {
-    // 根据类型设置选中的事由
-    if (!selectedReasons.value.includes(item.type)) {
-      selectedReasons.value.push(item.type);
-    }
+        res2.forEach(item => {
+          // 根据类型设置选中的事由
+          if (!selectedReasons.value.includes(item.type)) {
+            selectedReasons.value.push(item.type);
+            dataReasons.value.push({id: item.id, type: item.type});
+          }
 
-    // 根据不同类型设置对应的表单字段
-    switch (item.type) {
-      case 1: // 调研
-        researchID.value = item.id;
-        researchTopic.value = item.subject;
-        researchPurpose.value = item.purpose;
-        researchUnit.value = item.unit;
-        researchStartDate.value = dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss');
-        researchEndDate.value = dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss');
-        break;
-      case 2: // 培训
-        trainingID.value = item.id;
-        trainingTopic.value = item.subject;
-        trainingUnit.value = item.unit;
-        trainingStartDate.value = dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss');
-        trainingEndDate.value = dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss');
-        break;
-      case 3: // 公务
-        businessID.value = item.id;
-        businessTopic.value = item.subject;
-        businessUnit.value = item.unit;
-        businessStartDate.value = dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss');
-        businessEndDate.value = dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss');
-        break;
-      case 4: // 因私
-        personalID.value = item.id;
-        personalType.value = Number(item.privateType);
-        personalStartDate.value = dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss');
-        personalEndDate.value = dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss');
-        personalTotalDays.value = item.totalDays;
-        personalPhone.value = item.phone;
-        personalParity.value = item.birthCount?.toString();
-        personalDystocia.value = item.difficultBirth;
-        personalMultiple.value = item.multipleBirth;
-        personalVisitAddress.value = item.registeredAddress;
-        personalRelation.value = item.relationship;
-        personalRoute.value = item.visitRoute;
-        personalVisitName.value = item.visitedPersonName;
-        personalVisitType.value = item.visitType;
-        personalReason.value = item.reason;
-        break;
-      case 5: // 学术会议
-        academicID.value = item.id;
-        // 清空现有会议
-        academicMeetings.value = [];
-        // 添加新的会议数据
-        academicMeetings.value.push({
-          academicTopic: item.subject,
-          academicNature: item.meetingNature,
-          academicUnit: item.unit,
-          academicStartDate: dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss'),
-          academicEndDate: dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss'),
-          isPresentation: item.isPresentation,
-          reportTitle: item.reportTitle,
-          reportType: item.reportType,
-          academicPaperCount: item.academicPaperCount
-        });
-        break;
-      case 6: // 其他
-        otherID.value = item.id;
-        otherReason.value = item.detail;
-        break;
+          // 根据不同类型设置对应的表单字段
+          switch (item.type) {
+            case 1: // 调研
+              researchID.value = item.id;
+              researchTopic.value = item.subject;
+              researchPurpose.value = item.purpose;
+              researchUnit.value = item.unit;
+              researchStartDate.value = dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss');
+              researchEndDate.value = dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss');
+              break;
+            case 2: // 培训
+              trainingID.value = item.id;
+              trainingTopic.value = item.subject;
+              trainingUnit.value = item.unit;
+              trainingStartDate.value = dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss');
+              trainingEndDate.value = dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss');
+              break;
+            case 3: // 公务
+              businessID.value = item.id;
+              businessTopic.value = item.subject;
+              businessUnit.value = item.unit;
+              businessStartDate.value = dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss');
+              businessEndDate.value = dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss');
+              break;
+            case 4: // 因私
+              personalID.value = item.id;
+              personalType.value = Number(item.privateType);
+              personalStartDate.value = dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss');
+              personalEndDate.value = dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss');
+              personalTotalDays.value = item.totalDays;
+              personalPhone.value = item.phone;
+              personalParity.value = item.birthCount?.toString();
+              personalDystocia.value = item.difficultBirth;
+              personalMultiple.value = item.multipleBirth;
+              personalVisitAddress.value = item.registeredAddress;
+              personalRelation.value = item.relationship;
+              personalRoute.value = item.visitRoute;
+              personalVisitName.value = item.visitedPersonName;
+              personalVisitType.value = item.visitType;
+              personalReason.value = item.reason;
+              break;
+            case 5: // 学术会议
+              academicID.value = item.id;
+              // 清空现有会议
+              academicMeetings.value = [];
+              // 添加新的会议数据
+              academicMeetings.value.push({
+                academicTopic: item.subject,
+                academicNature: item.meetingNature,
+                academicUnit: item.unit,
+                academicStartDate: dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss'),
+                academicEndDate: dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss'),
+                isPresentation: item.isPresentation,
+                reportTitle: item.reportTitle,
+                reportType: item.reportType,
+                academicPaperCount: item.academicPaperCount
+              });
+              break;
+            case 6: // 其他
+              otherID.value = item.id;
+              otherReason.value = item.detail;
+              break;
           }
         });
       }
@@ -1023,14 +1048,14 @@ onMounted(async () => {
       ElMessage.error('请假申请的流程模型未配置，请检查！')
       return
     }
-    
+
     //获取指定审批人
     if (processDefinitionDetail.bpmnXml) {
       bpmnXml.value = processDefinitionDetail.bpmnXml
-      
+
       try {
         startUserSelectTasks.value = await parseHostSignTasks(bpmnXml.value)
-        
+
         // 设置指定审批人
         if (startUserSelectTasks.value?.length > 0) {
           // 设置校验规则
@@ -1106,7 +1131,7 @@ fetchUserProfile();
 
 .reason-options .el-checkbox {
   display: block;
-  width: 100%;            
+  width: 100%;
 }
 
 .reason-options .el-checkbox__label {
@@ -1136,7 +1161,7 @@ fetchUserProfile();
   margin-top: 30px;
   padding: 15px 0;
   border-top: 1px solid #ebeef5;
-  justify-content: flex-end; 
+  justify-content: flex-end;
 }
 
 .action-item {

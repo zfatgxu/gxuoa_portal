@@ -451,7 +451,7 @@
     </el-popover> -->
 
     <!--【取消】按钮 这个对应发起人的取消, 只有发起人可以取消 -->
-     <el-popover
+    <!-- <el-popover
       :visible="popOverVisible.cancel"
       placement="top-start"
       :width="420"
@@ -492,7 +492,7 @@
           </el-form-item>
         </el-form>
       </div>
-    </el-popover>
+    </el-popover> -->
     <!-- 【再次提交】 按钮-->
     <!-- <div
       @click="handleReCreate()"
@@ -524,11 +524,11 @@ import {
 } from '@/components/SimpleProcessDesignerV2/src/consts'
 import { BpmModelFormType, BpmProcessInstanceStatus } from '@/utils/constants'
 import type { FormInstance, FormRules } from 'element-plus'
-import SignDialog from './SignDialog.vue'
-import ProcessInstanceTimeline from '../detail/ProcessInstanceTimeline.vue'
+import SignDialog from '@/views/bpm/processInstance/detail/SignDialog.vue'
+import ProcessInstanceTimeline from '@/views/bpm/processInstance/detail/ProcessInstanceTimeline.vue'
 import { isEmpty } from '@/utils/is'
 
-defineOptions({ name: 'ProcessInstanceBtnContainer' })
+defineOptions({ name: 'SupervisionOperationButton' })
 
 const router = useRouter() // 路由
 const message = useMessage() // 消息弹窗
@@ -544,6 +544,7 @@ const props = defineProps<{
   normalForm: any // 流程表单 formCreate
   normalFormApi: any // 流程表单 formCreate Api
   writableFields: string[] // 流程表单可以编辑的字段
+  supervisionDetailRef?: any // 督办详情组件引用
 }>()
 
 const formLoading = ref(false) // 表单加载中
@@ -780,6 +781,41 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
     if (pass) {
       const nextAssigneesValid = validateNextAssignees()
       if (!nextAssigneesValid) return
+
+      // 督办单专用逻辑：先更新督办单数据
+      if (props.supervisionDetailRef && props.supervisionDetailRef.hasEditPermission) {
+        try {
+          // 传递工作流自选审批人数据
+          const updateResult = await props.supervisionDetailRef.updateSupervisionOrder(approveReasonForm.nextAssignees)
+          if (!updateResult.success) {
+            message.error('更新督办单失败，无法继续审批')
+            return
+          }
+
+          console.log('督办单数据更新成功，返回数据:', updateResult.data)
+
+          // 如果督办单更新返回了 startUserSelectAssignees，同步到 nextAssignees
+          if (updateResult.data && updateResult.data.startUserSelectAssignees) {
+            console.log('同步 startUserSelectAssignees 到 nextAssignees')
+            console.log('原 nextAssignees:', approveReasonForm.nextAssignees)
+
+            // 合并或覆盖 nextAssignees
+            approveReasonForm.nextAssignees = {
+              ...approveReasonForm.nextAssignees,
+              ...updateResult.data.startUserSelectAssignees
+            }
+
+            console.log('新 nextAssignees:', approveReasonForm.nextAssignees)
+          }
+
+          console.log('督办单数据更新成功，继续工作流审批')
+        } catch (error) {
+          console.error('督办单数据更新失败:', error)
+          message.error('更新督办单失败，无法继续审批')
+          return
+        }
+      }
+
       const variables = getUpdatedProcessInstanceVariables()
       // 审批通过数据
       const data = {
@@ -800,7 +836,10 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
         // @ts-ignore
         data.variables = approveForm.value.value
       }
+
+      console.log('开始执行工作流审批，数据:', data)
       await TaskApi.approveTask(data)
+
       popOverVisible.value.approve = false
       nextAssigneesActivityNode.value = []
       message.success('审批通过成功')

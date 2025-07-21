@@ -3,13 +3,13 @@
     <ContentWrap>
       <el-form :inline="true" :model="queryParams" @submit.prevent>
         <el-form-item label="材料名称">
-          <el-input v-model="queryParams.materialName" placeholder="请输入材料名称" clearable />
+          <el-input v-model="queryParams.materialName" placeholder="请输入材料名称" clearable style="width: 220px" />
         </el-form-item>
         <el-form-item label="材料类型">
-          <el-select v-model="queryParams.materialType" clearable placeholder="请选择材料类型">
-            <el-option label="合同类材料" value="合同类材料" />
-            <el-option label="合同类材料，未经过法务审核" value="合同类材料，未经过法务审核" />
-            <el-option label="合同类材料，经过法务分室" value="合同类材料，经过法务分室" />
+          <el-select v-model="queryParams.materialType" clearable placeholder="请选择材料类型" style="width: 280px">
+            <el-option label="非合同类" value="非合同类" />
+            <el-option label="合同类材料，未经法务办审核" value="合同类材料，未经法务办审核" />
+            <el-option label="合同类材料，经法务办审查" value="合同类材料，经法务办审查" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -55,7 +55,18 @@
         </el-table-column>
         <el-table-column align="center" label="用印状态" prop="sealState">
           <template #default="scope">
-            <dict-tag :type="DICT_TYPE.SEAL_STATE" :value="scope.row.sealState" />
+            <div style="display: flex; align-items: center; justify-content: center;">
+              <dict-tag
+                :type="DICT_TYPE.SEAL_STATE"
+                :value="scope.row.sealState"
+              />
+              <el-checkbox
+                :model-value="scope.row.sealState === 1"
+                :disabled="scope.row.status !== 2"
+                @change="(val) => handleSealStateChange(scope.row, val)"
+                style="margin-left: 6px;"
+              />
+            </div>
           </template>
         </el-table-column>
         <el-table-column align="center" label="材料名称" prop="materialName" />
@@ -97,8 +108,10 @@
   import { DICT_TYPE } from '@/utils/dict'
   import { getSimpleDeptList } from '@/api/system/dept'
   import * as SealApi from '@/api/seal'
+  import { ElMessageBox, ElMessage } from 'element-plus'
+
   import { useUserStore } from '@/store/modules/user'
-  
+
   const router = useRouter()
   const userStore = useUserStore()
   const loading = ref(false)
@@ -199,6 +212,46 @@
   const viewDetail = (row: any) => {
     router.push({ name: 'SealDetail', query: { id: row.processInstanceId } })
   }
+
+  // 处理用印状态变更
+  const handleSealStateChange = (row: any, checked: boolean) => {
+    if (row.status !== 2) {
+      ElMessage.warning('只有审核通过的申请才能更改用印状态')
+      return
+    }
+
+    // 根据勾选状态确定新的状态码
+    const newSealState = checked ? 1 : 2
+    const stateText = checked ? '已用印' : '未用印'
+
+    ElMessageBox.confirm(
+      `确认将此申请用印状态设为"${stateText}"？`,
+      '提示',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+      .then(async () => {
+        try {
+          // 调用API更新用印状态，传递申请表单id和sealState
+          await SealApi.updateSealState({
+            id: row.id,
+            sealState: newSealState
+          })
+
+          // 更新成功后更新本地数据
+          row.sealState = newSealState
+          ElMessage.success(`用印状态已更新为"${stateText}"`)
+        } catch (error) {
+          ElMessage.error('更新用印状态失败，请重试')
+          console.error('更新用印状态失败:', error)
+        }
+      })
+      .catch(() => {})
+  }
+
   onMounted(() => {
     getSealApplicationPage(queryParams.value)
   })

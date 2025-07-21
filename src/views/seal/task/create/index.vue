@@ -135,7 +135,8 @@
             :http-request="handleUpload"
             :on-success="handleUploadSuccess"
             :on-error="handleUploadError"
-            :file-list="fileList"
+            :file-list="[]"
+            :show-file-list="false"
             multiple
             :headers="{ Authorization: 'Bearer ' + getAccessToken() }"
             name="file"
@@ -150,7 +151,7 @@
           <div class="file-list" v-if="uploadedFiles.length > 0">
             <div class="file-item" v-for="(file, index) in uploadedFiles" :key="index">
               <div class="file-info">
-                <el-icon class="file-icon" :class="file.type === 'excel' ? 'excel-icon' : 'pdf-icon'">
+                <el-icon class="file-icon" :class="file.type === 'excel' ? 'excel-icon' : (file.type === 'pdf' ? 'pdf-icon' : 'document-icon')">
                   <document />
                 </el-icon>
                 <span class="file-name">{{ file.name }}</span>
@@ -165,6 +166,9 @@
                   <el-icon><close /></el-icon>
                   上传失败
                 </el-tag>
+                <el-button type="primary" link size="small" @click="viewFile(file)">
+                  查看
+                </el-button>
                 <el-button type="primary" link size="small" @click="removeFile(index)">
                   删除
                 </el-button>
@@ -410,6 +414,11 @@ const getFileType = (filename) => {
   if (['xls', 'xlsx'].includes(ext)) return 'excel'
   if (['pdf'].includes(ext)) return 'pdf'
   return 'document'
+}
+
+// 查看文件
+const viewFile = (file) => {
+  window.open(file.url, '_blank')
 }
 
 // 提交表单
@@ -788,6 +797,10 @@ const handleUpload = (options) => {
 
 .pdf-icon {
   color: #f56c6c;
+}
+
+.document-icon {
+  color: #909399;
 }
 
 .file-name {

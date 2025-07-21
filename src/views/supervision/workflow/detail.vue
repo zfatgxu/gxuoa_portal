@@ -59,7 +59,26 @@
                       </el-col>
                       <!-- 情况二：业务表单 -->
                       <div v-if="processDefinition?.formType === BpmModelFormType.CUSTOM">
-                        <BusinessFormComponent :id="processInstance.businessKey" :activity-nodes="activityNodes" :apply-user="applyUser" :apply-time="applyTime" :status="processInstance.status"/>
+                        <!-- 督办单详情 -->
+                        <component
+                          v-if="processDefinition?.formCustomViewPath?.includes('supervision')"
+                          :is="BusinessFormComponent"
+                          ref="supervisionDetailRef"
+                          :id="processInstance.businessKey"
+                          :activity-nodes="activityNodes"
+                          :apply-user="applyUser"
+                          :apply-time="applyTime"
+                          :status="processInstance.status"
+                        />
+                        <!-- 其他业务表单 -->
+                        <BusinessFormComponent
+                          v-else
+                          :id="processInstance.businessKey"
+                          :activity-nodes="activityNodes"
+                          :apply-user="applyUser"
+                          :apply-time="applyTime"
+                          :status="processInstance.status"
+                        />
                       </div>
                     </div>
                   </el-col>
@@ -73,24 +92,24 @@
           </el-tab-pane>
 
           <!-- 流程图 -->
-<!--          <el-tab-pane label="流程图" name="diagram">-->
-<!--            <div class="form-scroll-area">-->
-<!--              <ProcessInstanceSimpleViewer-->
-<!--                v-show="-->
-<!--                  processDefinition.modelType && processDefinition.modelType === BpmModelType.SIMPLE-->
-<!--                "-->
-<!--                :loading="processInstanceLoading"-->
-<!--                :model-view="processModelView"-->
-<!--              />-->
-<!--              <ProcessInstanceBpmnViewer-->
-<!--                v-show="-->
-<!--                  processDefinition.modelType && processDefinition.modelType === BpmModelType.BPMN-->
-<!--                "-->
-<!--                :loading="processInstanceLoading"-->
-<!--                :model-view="processModelView"-->
-<!--              />-->
-<!--            </div>-->
-<!--          </el-tab-pane>-->
+          <el-tab-pane label="流程图" name="diagram">
+            <div class="form-scroll-area">
+              <ProcessInstanceSimpleViewer
+                v-show="
+                  processDefinition.modelType && processDefinition.modelType === BpmModelType.SIMPLE
+                "
+                :loading="processInstanceLoading"
+                :model-view="processModelView"
+              />
+              <ProcessInstanceBpmnViewer
+                v-show="
+                  processDefinition.modelType && processDefinition.modelType === BpmModelType.BPMN
+                "
+                :loading="processInstanceLoading"
+                :model-view="processModelView"
+              />
+            </div>
+          </el-tab-pane>
 
           <!-- 流转记录 -->
           <el-tab-pane label="流转记录" name="record">
@@ -111,7 +130,7 @@
 
         <div class="b-t-solid border-t-1px border-[var(--el-border-color)]">
           <!-- 操作栏按钮 -->
-          <ProcessInstanceOperationButton
+          <SupervisionOperationButton
             ref="operationButtonRef"
             :process-instance="processInstance"
             :process-definition="processDefinition"
@@ -119,6 +138,7 @@
             :normal-form="detailForm"
             :normal-form-api="fApi"
             :writable-fields="writableFields"
+            :supervision-detail-ref="supervisionDetailRef"
             @success="refresh"
           />
         </div>
@@ -126,6 +146,7 @@
     </div>
   </ContentWrap>
 </template>
+
 <script lang="ts" setup>
 import { formatDate } from '@/utils/formatTime'
 import { DICT_TYPE } from '@/utils/dict'
@@ -135,11 +156,11 @@ import { registerComponent } from '@/utils/routerHelper'
 import type { ApiAttrs } from '@form-create/element-ui/types/config'
 import * as ProcessInstanceApi from '@/api/bpm/processInstance'
 import * as UserApi from '@/api/system/user'
-import ProcessInstanceBpmnViewer from './ProcessInstanceBpmnViewer.vue'
-import ProcessInstanceSimpleViewer from './ProcessInstanceSimpleViewer.vue'
-import ProcessInstanceTaskList from './ProcessInstanceTaskList.vue'
-import ProcessInstanceOperationButton from './ProcessInstanceOperationButton.vue'
-import ProcessInstanceTimeline from './ProcessInstanceTimeline.vue'
+import ProcessInstanceBpmnViewer from '@/views/bpm/processInstance/detail/ProcessInstanceBpmnViewer.vue'
+import ProcessInstanceSimpleViewer from '@/views/bpm/processInstance/detail/ProcessInstanceSimpleViewer.vue'
+import ProcessInstanceTaskList from '@/views/bpm/processInstance/detail/ProcessInstanceTaskList.vue'
+import SupervisionOperationButton from './SupervisionOperationButton.vue'
+import ProcessInstanceTimeline from '@/views/bpm/processInstance/detail/ProcessInstanceTimeline.vue'
 import { FieldPermissionType } from '@/components/SimpleProcessDesignerV2/src/consts'
 import { TaskStatusEnum } from '@/api/bpm/task'
 import runningSvg from '@/assets/svgs/bpm/running.svg'
@@ -147,18 +168,19 @@ import approveSvg from '@/assets/svgs/bpm/approve.svg'
 import rejectSvg from '@/assets/svgs/bpm/reject.svg'
 import cancelSvg from '@/assets/svgs/bpm/cancel.svg'
 
-defineOptions({ name: 'BpmProcessInstanceDetail' })
-const props = defineProps<{
-  id: string // 流程实例的编号
-  taskId?: string // 任务编号
-  activityId?: string //流程活动编号，用于抄送查看
-}>()
+defineOptions({ name: 'SupervisionWorkflowDetail' })
+
+const route = useRoute()
 const message = useMessage() // 消息弹窗
+const id = route.params.id as string // 流程实例的编号
+const taskId = route.query.taskId as string // 任务编号
+const activityId = route.query.activityId as string // 流程活动编号，用于抄送查看
 const processInstanceLoading = ref(false) // 流程实例的加载中
 const processInstance = ref<any>({}) // 流程实例
 const processDefinition = ref<any>({}) // 流程定义
 const processModelView = ref<any>({}) // 流程模型视图
 const operationButtonRef = ref() // 操作按钮组件 ref
+const supervisionDetailRef = ref() // 督办详情组件 ref
 const auditIconsMap = {
   [TaskStatusEnum.RUNNING]: runningSvg,
   [TaskStatusEnum.APPROVE]: approveSvg,
@@ -176,7 +198,6 @@ const detailForm = ref({
 
 //申请人名字
 const applyUser = ref('')
-
 
 //申请时间
 const applyTime = ref('')
@@ -198,9 +219,9 @@ const getApprovalDetail = async () => {
   processInstanceLoading.value = true
   try {
     const param = {
-      processInstanceId: props.id,
-      activityId: props.activityId,
-      taskId: props.taskId
+      processInstanceId: id,
+      activityId: activityId,
+      taskId: taskId
     }
     const data = await ProcessInstanceApi.getApprovalDetail(param)
     if (!data) {
@@ -274,7 +295,7 @@ const getProcessModelView = async () => {
       bpmnXml: ''
     }
   }
-  const data = await ProcessInstanceApi.getProcessInstanceBpmnModelView(props.id)
+  const data = await ProcessInstanceApi.getProcessInstanceBpmnModelView(id)
   if (data) {
     processModelView.value = data
   }

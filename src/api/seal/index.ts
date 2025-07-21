@@ -41,3 +41,14 @@ export const getSealDonePage = async (data: any) => {
     params: data
   })
 }
+
+// 更新用印状态
+export const updateSealState = async (data: { id: number | string, sealState: number }) => {
+  return await request.post({
+    url: '/bpm/seal/update-seal-state',
+    data: data,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+}

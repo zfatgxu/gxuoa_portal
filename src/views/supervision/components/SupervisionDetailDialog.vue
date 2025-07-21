@@ -142,8 +142,8 @@
                 <div v-for="file in record.attachments" :key="file.name" class="attachment-item">
                   <Icon icon="ep:document" class="attachment-icon" />
                   <span class="attachment-name">{{ file.name }}</span>
-                  <span class="attachment-date">{{ record.time }}</span>
                 </div>
+                <div class="attachment-time">{{ record.time }}</div>
               </div>
             </div>
           </div>
@@ -973,10 +973,11 @@ const formatDateTime = (date: Date) => {
   color: #409eff;
 }
 
-.attachment-date {
+.attachment-time {
   color: #909399;
   font-size: 14px;
-  margin-left: 8px;
+  margin-top: 8px;
+  text-align: right;
 }
 
 /* 更多历史记录按钮样式 */

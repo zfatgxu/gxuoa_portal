@@ -60,7 +60,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
-import { getUserListByDeptName } from '@/api/system/user'
+import { getSimpleUserList } from '@/api/system/user'
 import { useRouter } from 'vue-router'
 defineOptions({ name: 'Mailbox' })
 
@@ -81,8 +81,8 @@ const loading = reactive({
 const fetchSecretaryList = async () => {
   loading.secretary = true
   try {
-    const res = await getUserListByDeptName('书记')
-    secretaryList.value = res || []
+    const res = await getSimpleUserList()
+    secretaryList.value = (res || []).filter(user => user.deptName?.includes('书记'))
   } catch (error) {
     console.error('获取书记列表失败:', error)
   } finally {
@@ -94,8 +94,8 @@ const fetchSecretaryList = async () => {
 const fetchPresidentList = async () => {
   loading.president = true
   try {
-    const res = await getUserListByDeptName('校长')
-    presidentList.value = res || []
+    const res = await getSimpleUserList()
+    presidentList.value = (res || []).filter(user => user.deptName?.includes('校长'))
   } catch (error) {
     console.error('获取校长列表失败:', error)
   } finally {
