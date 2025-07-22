@@ -301,3 +301,209 @@ export const mockAddTaskProgress = (taskId: number, data: { description: string,
     }
   })
 }
+
+// ========== 督办总览相关mock函数 ==========
+
+// 督办任务统计数据结构
+interface SupervisionTaskStats {
+  total: number
+  workSupervision: number
+  specialSupervision: number
+}
+
+// 督办任务状态统计数据结构
+interface SupervisionStatusStats {
+  total: number
+  fast: number
+  consulting: number
+  slow: number
+  completed: number
+}
+
+// 月度统计数据结构
+interface MonthlyStats {
+  newTasks: number
+  inProgress: number
+  completed: number
+  overdue: number
+}
+
+// 督办任务项数据结构
+export interface SupervisionTaskVO {
+  id: number
+  title: string
+  description: string
+  leadDepartment: string
+  assistDepartments: string[]
+  createdDate: string
+  deadline: string
+  supervisor: string
+  priority: string
+  status: string
+  overdueDays?: number
+  daysRemaining?: number
+  isOverdue: boolean
+  type: 'work' | 'special'
+}
+
+// 生成督办任务统计数据
+export const mockTaskStats = (): Promise<SupervisionTaskStats> => {
+  const workSupervision = Mock.Random.integer(1500, 2500)
+  const specialSupervision = Mock.Random.integer(5000, 7000)
+  
+  const data = {
+    total: workSupervision + specialSupervision,
+    workSupervision,
+    specialSupervision
+  }
+  
+  return mockApiResponse(data)
+}
+
+// 生成督办任务状态统计数据
+export const mockStatusStats = (): Promise<SupervisionStatusStats> => {
+  const fast = Mock.Random.integer(7000, 9000)
+  const consulting = Mock.Random.integer(3000, 5000)
+  const slow = Mock.Random.integer(2000, 3000)
+  const completed = Mock.Random.integer(1000, 2000)
+  
+  const data = {
+    total: fast + consulting + slow + completed,
+    fast,
+    consulting,
+    slow,
+    completed
+  }
+  
+  return mockApiResponse(data)
+}
+
+// 生成月度统计数据
+export const mockMonthlyStats = (): Promise<MonthlyStats> => {
+  const data = {
+    newTasks: Mock.Random.integer(10, 20),
+    inProgress: Mock.Random.integer(5, 15),
+    completed: Mock.Random.integer(8, 15),
+    overdue: Mock.Random.integer(3, 10)
+  }
+  
+  return mockApiResponse(data)
+}
+
+// 生成督办任务列表
+export const mockSupervisionTasks = (count: number = 10): Promise<SupervisionTaskVO[]> => {
+  const tasks: SupervisionTaskVO[] = []
+  
+  for (let i = 0; i < count; i++) {
+    // 任务类型
+    const type = Mock.Random.pick(['work', 'special']) as 'work' | 'special'
+    
+    // 随机标题
+    const titles = {
+      work: [
+        '关于加强校园管理工作的督查',
+        '校园安全隐患排查整治',
+        '师资队伍建设督办工作',
+        '教学质量评估督办',
+        '校园基础设施建设督办',
+        '财务规范化管理督办'
+      ],
+      special: [
+        '教学质量提升专项督查',
+        '数字化校园建设推进',
+        '学科评估整改专项督办',
+        '新生入学工作专项督办',
+        '毕业生就业工作专项督办',
+        '校园文化建设专项督办'
+      ]
+    }
+    
+    // 随机描述
+    const descriptions = {
+      work: [
+        '检查学生宿舍管理制度落实情况，督促完善宿舍安全设施，提升宿舍管理服务水平。',
+        '全面排查校园安全隐患，重点检查消防设施、用电安全、食品安全等关键环节，确保师生安全。',
+        '围绕提高教师教学能力和科研水平，督促各部门完善师资队伍建设方案，优化教师培养体系。',
+        '针对教学质量评估结果，督促相关单位制定整改措施，提升教育教学质量。',
+        '督促校园基础设施建设进度，确保工程质量和安全，改善校园环境。',
+        '规范学校财务管理，督促各部门合理使用经费，提高资金使用效益。'
+      ],
+      special: [
+        '围绕提高教学质量，督办各学院制定教学改革方案，完善教学评价体系，提升师资队伍建设。',
+        '推进智慧校园平台建设，完善教学管理系统，提升校园信息化水平，优化师生服务体验。',
+        '针对学科评估结果，督办相关学院落实整改措施，提升学科竞争力。',
+        '协调各部门做好新生入学准备工作，确保新生报到、入学教育等工作顺利进行。',
+        '督促各学院落实就业指导措施，拓展就业渠道，提高毕业生就业质量。',
+        '围绕校园文化建设，督促相关部门完善文化活动方案，丰富校园文化生活。'
+      ]
+    }
+    
+    // 随机部门
+    const leadDept = Mock.Random.pick(departments)
+    const assistCount = Mock.Random.integer(0, 3)
+    const assistDepts: string[] = []
+    
+    for (let j = 0; j < assistCount; j++) {
+      const dept = Mock.Random.pick(departments)
+      if (!assistDepts.includes(dept) && dept !== leadDept) {
+        assistDepts.push(dept)
+      }
+    }
+    
+    // 随机日期
+    const createdDaysAgo = Mock.Random.integer(1, 60)
+    const deadlineDaysLater = Mock.Random.integer(-10, 60)
+    const createdDate = getFutureDateString(-createdDaysAgo)
+    const deadline = getFutureDateString(deadlineDaysLater)
+    
+    // 随机状态
+    let status: string
+    let isOverdue = false
+    let daysRemaining: number | undefined = undefined
+    let overdueDays: number | undefined = undefined
+    
+    if (deadlineDaysLater < 0) {
+      // 已超过截止日期
+      status = Mock.Random.boolean(0.7) ? '已超时' : '已完成'
+      isOverdue = status === '已超时'
+      if (isOverdue) {
+        overdueDays = -deadlineDaysLater
+      }
+    } else {
+      // 未超过截止日期
+      status = Mock.Random.pick(['进行中', '会商解决', '进展滞后', '进展较快', '已完成'])
+      daysRemaining = deadlineDaysLater
+    }
+    
+    // 随机优先级
+    const priority = Mock.Random.pick(['高优先级', '中优先级', '一般优先'])
+    
+    // 随机督办人
+    const supervisors = [
+      '张副校长',
+      '李校长',
+      '王主任',
+      '赵副校长',
+      '刘处长'
+    ]
+    
+    tasks.push({
+      id: 1000 + i,
+      title: Mock.Random.pick(titles[type]),
+      description: Mock.Random.pick(descriptions[type]),
+      leadDepartment: leadDept,
+      assistDepartments: assistDepts,
+      createdDate,
+      deadline,
+      supervisor: Mock.Random.pick(supervisors),
+      priority,
+      status,
+      overdueDays,
+      daysRemaining,
+      isOverdue,
+      type
+    })
+  }
+  
+  return mockApiResponse(tasks)
+}
