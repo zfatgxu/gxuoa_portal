@@ -363,6 +363,73 @@ export const AttachmentApi = {
   }
 }
 
+// ========== 部门详情相关 ==========
+
+// 部门详情统计数据响应
+export interface DeptStatisticsRespVO {
+  myTaskCount: number      // 我的任务数量
+  ongoingCount: number     // 进行中任务数量 
+  completedCount: number   // 已完成任务数量
+  overdueCount: number     // 超时任务数量
+}
+
+// 部门任务项响应
+export interface DeptTaskRespVO {
+  id: number               // 任务ID
+  title: string            // 任务标题
+  description?: string     // 任务描述
+  instruction?: string     // 领导批示
+  issuer: string           // 下发单位
+  collaborators: string[]  // 协办部门
+  supervisor: string       // 分管领导
+  deadline: string         // 截止日期
+  createTime: string       // 创建时间
+  remainingDays: number    // 剩余天数
+  priority: string         // 优先级
+  status: string           // 状态
+  mainContent?: string     // 主要内容
+  undertakingContent?: string  // 承办内容
+}
+
+// 部门任务分页查询参数
+export interface DeptTaskPageReqVO extends PageParam {
+  keyword?: string         // 搜索关键词
+  department?: string      // 部门筛选
+  status?: string          // 状态筛选
+  tab?: string             // 当前选项卡
+}
+
+// 部门详情相关API
+export const DeptApi = {
+  // 获取部门统计数据
+  getDeptStatistics: async (): Promise<DeptStatisticsRespVO> => {
+    return await request.get({ url: `/supervision/dept/statistics` })
+  },
+
+  // 获取部门任务列表（分页）
+  getDeptTaskPage: async (params: DeptTaskPageReqVO): Promise<PageResult<DeptTaskRespVO>> => {
+    return await request.get({ url: `/supervision/dept/task/page`, params })
+  },
+  
+  // 获取部门任务详情
+  getDeptTask: async (id: number): Promise<DeptTaskRespVO> => {
+    return await request.get({ url: `/supervision/dept/task/detail`, params: { id } })
+  },
+  
+  // 添加任务进度
+  addTaskProgress: async (taskId: number, data: { description: string, percentage: number }) => {
+    return await request.post({ url: `/supervision/dept/task/progress`, data: { taskId, ...data } })
+  }
+}
+
+// 分页结果基类
+export interface PageResult<T> {
+  list: T[]                // 数据列表
+  total: number            // 总数据条数
+  pageNo: number           // 当前页码
+  pageSize: number         // 每页大小
+}
+
 // ========== 通用类型定义 ==========
 
 // 分页参数基类

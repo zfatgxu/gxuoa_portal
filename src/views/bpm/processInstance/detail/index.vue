@@ -59,7 +59,14 @@
                       </el-col>
                       <!-- 情况二：业务表单 -->
                       <div v-if="processDefinition?.formType === BpmModelFormType.CUSTOM">
-                        <BusinessFormComponent :id="processInstance.businessKey" :activity-nodes="activityNodes" :apply-user="applyUser" :apply-time="applyTime" :status="processInstance.status"/>
+                        <BusinessFormComponent 
+                          v-if="BusinessFormComponent" 
+                          :id="processInstance.businessKey" 
+                          :activity-nodes="activityNodes" 
+                          :apply-user="applyUser" 
+                          :apply-time="applyTime" 
+                          :status="processInstance.status"
+                        />
                       </div>
                     </div>
                   </el-col>
@@ -214,12 +221,17 @@ const getApprovalDetail = async () => {
     processInstance.value = data.processInstance
     if (processInstance.value.startUser) {
       applyUser.value = processInstance.value.startUser.nickname
+      console.log('applyUser.value', applyUser.value)
     }
     if (processInstance.value.startTime) {
       applyTime.value = processInstance.value.startTime
+      console.log('applyTime.value', applyTime.value)
     }
     console.log('processInstance.businessKey', processInstance.value.businessKey)
     console.log('processInstance.id', processInstance.value.id)
+    console.log('processInstance.status', processInstance.value.status)
+    
+    
     processDefinition.value = data.processDefinition
 
     // 设置表单信息
@@ -258,6 +270,7 @@ const getApprovalDetail = async () => {
 
     // 获取审批节点，显示 Timeline 的数据
     activityNodes.value = data.activityNodes
+    console.log('activityNodes.value', activityNodes.value)
 
     // 获取待办任务显示操作按钮
     operationButtonRef.value?.loadTodoTask(data.todoTask)
