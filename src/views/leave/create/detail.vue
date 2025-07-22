@@ -818,10 +818,10 @@ const getApprovalOpinions = async () => {
       // 处理审批意见数据
       data.activityNodes.forEach(node => {
         // 根据节点类型或名称判断是校领导意见还是主持人会签
-        if (node.id==='leader_sign') {
+        if (node.id==='leader_sign' && node.tasks && node.tasks.length > 0) {
           leaderApproval.value = node.tasks[0].reason || '';
         } 
-        if (node.id==='host_sign') {
+        if (node.id==='host_sign' && node.tasks && node.tasks.length > 0) {
           hostApproval.value = node.tasks[0].reason || '';
         }
       });

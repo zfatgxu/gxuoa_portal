@@ -455,7 +455,7 @@
           <span style="font-size: 14px;margin-bottom: 5px;">请假期间主持工作负责人会签</span>
         </div>
         <div class="action-item">
-          <div v-for="userTask in startUserSelectTasks" :key="userTask.id" style="width: 200px">
+          <div v-for="userTask in startUserSelectTasks.filter(task => task.id === 'host_sign')" :key="userTask.id" style="width: 200px">
             <el-select
               v-model="startUserSelectAssignees[userTask.id]"
               multiple
