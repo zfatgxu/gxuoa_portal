@@ -793,21 +793,6 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
           }
 
           console.log('督办单数据更新成功，返回数据:', updateResult.data)
-
-          // 如果督办单更新返回了 startUserSelectAssignees，同步到 nextAssignees
-          if (updateResult.data && updateResult.data.startUserSelectAssignees) {
-            console.log('同步 startUserSelectAssignees 到 nextAssignees')
-            console.log('原 nextAssignees:', approveReasonForm.nextAssignees)
-
-            // 合并或覆盖 nextAssignees
-            approveReasonForm.nextAssignees = {
-              ...approveReasonForm.nextAssignees,
-              ...updateResult.data.startUserSelectAssignees
-            }
-
-            console.log('新 nextAssignees:', approveReasonForm.nextAssignees)
-          }
-
           console.log('督办单数据更新成功，继续工作流审批')
         } catch (error) {
           console.error('督办单数据更新失败:', error)
@@ -844,6 +829,16 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
       nextAssigneesActivityNode.value = []
       message.success('审批通过成功')
     } else {
+      // 督办单专用逻辑：审批拒绝时清理待处理的附件
+      if (props.supervisionDetailRef && props.supervisionDetailRef.clearPendingAttachments) {
+        try {
+          props.supervisionDetailRef.clearPendingAttachments()
+          console.log('已清理待处理的附件')
+        } catch (error) {
+          console.error('清理待处理附件失败:', error)
+        }
+      }
+
       // 审批不通过数据
       const data = {
         id: runningTask.value.id,

@@ -292,7 +292,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import {
 Calendar,
 Clock,
@@ -307,16 +307,17 @@ User,
 AlertTriangle
 } from 'lucide-vue-next'
 import SupervisionDetailDialog from './components/SupervisionDetailDialog.vue'
+import { SupervisionIndexApi } from '@/api/supervision/index'
+import { ElMessage } from 'element-plus'
 
 // Reactive data
 const activeTab = ref('work')
 const searchQuery = ref('')
 const selectedDepartment = ref('')
 const selectedStatus = ref('')
-
-// 弹框相关状态
 const detailDialogVisible = ref(false)
 const selectedTask = ref(null)
+const loading = ref(false)
 
 // Static data
 const tabs = [
@@ -325,122 +326,111 @@ const tabs = [
 ]
 
 const departments = ['学生处', '保卫处', '后勤处', '教务处', '人事处']
-const statuses = ['进行中', '已完成', '已超时', '待开始']
+const statuses = ['进行中', '已完成', '已超时', '已终结']
 
 // Statistics data
 const taskStats = ref({
-total: 7868,
-workSupervision: 1852,
-specialSupervision: 6016
+  total: 0,
+  workSupervision: 0,
+  specialSupervision: 0
 })
 
 const statusStats = ref({
-total: 16000,
-fast: 8000,
-consulting: 4000,
-slow: 2500,
-completed: 1500
+  total: 0,
+  fast: 0,
+  consulting: 0,
+  slow: 0,
+  completed: 0
 })
 
 const monthlyStats = ref({
-newTasks: 16,
-inProgress: 8,
-completed: 10,
-overdue: 7
+  newTasks: 0,
+  inProgress: 0,
+  completed: 0,
+  overdue: 0
 })
 
-// Mock task data
-const tasks = ref([
-{
-    id: 1,
-    title: '关于加强校园管理工作的督查',
-    description: '检查学生宿舍管理制度落实情况，督促完善宿舍安全设施，提升宿舍管理服务水平。',
-    leadDepartment: '学生处',
-    assistDepartments: ['保卫处', '后勤处'],
-    createdDate: '2025-06-30',
-    deadline: '2025-07-02',
-    supervisor: '张副校长',
-    priority: '高优先级',
-    status: '已超时',
-    overdueDays: 2,
-    isOverdue: true,
-    type: 'work'
-},
-{
-    id: 2,
-    title: '12234554478',
-    description: '41257855gtrehtshjttjndtm......',
-    leadDepartment: '保卫处',
-    assistDepartments: ['学生处', '后勤处'],
-    createdDate: '2025-06-30',
-    deadline: '2025-08-24',
-    supervisor: '张副校长',
-    priority: '一般优先',
-    status: '进行中',
-    isOverdue: false,
-    daysRemaining: 15,
-    type: 'work'
-},
-{
-    id: 3,
-    title: '教学质量提升专项督查',
-    description: '围绕提高教学质量，督办各学院制定教学改革方案，完善教学评价体系，提升师资队伍建设。',
-    leadDepartment: '教务处',
-    assistDepartments: ['人事处'],
-    createdDate: '2025-06-30',
-    deadline: '2025-06-24',
-    supervisor: '张副校长',
-    priority: '中优先级',
-    status: '已终结',
-    isOverdue: false,
-    type: 'special'
-},
-{
-    id: 4,
-    title: '校园安全隐患排查整治',
-    description: '全面排查校园安全隐患，重点检查消防设施、用电安全、食品安全等关键环节，确保师生安全。',
-    leadDepartment: '保卫处',
-    assistDepartments: ['后勤处', '学生处'],
-    createdDate: '2025-06-28',
-    deadline: '2025-07-15',
-    supervisor: '李副校长',
-    priority: '高优先级',
-    status: '进行中',
-    isOverdue: false,
-    daysRemaining: 4,
-    type: 'work'
-},
-{
-    id: 5,
-    title: '数字化校园建设推进',
-    description: '推进智慧校园平台建设，完善教学管理系统，提升校园信息化水平，优化师生服务体验。',
-    leadDepartment: '信息中心',
-    assistDepartments: ['教务处', '学生处'],
-    createdDate: '2025-06-25',
-    deadline: '2025-08-30',
-    supervisor: '王副校长',
-    priority: '中优先级',
-    status: '进行中',
-    isOverdue: false,
-    daysRemaining: 50,
-    type: 'special'
+// 任务列表数据
+const tasks = ref([])
+
+// 获取数据
+const fetchData = async () => {
+  loading.value = true
+  try {
+    const response = await SupervisionIndexApi.getIndexData()
+
+    console.log('获取督办数据成功', response)
+    console.log('response.data:', response.data)
+    console.log('response类型:', typeof response)
+    console.log('response的所有键:', Object.keys(response))
+
+    // 灵活处理不同的响应结构
+    let data
+    if (response.data && response.data.data) {
+      // 如果是嵌套结构：{ data: { code: 0, msg: "success", data: {...} } }
+      data = response.data.data
+    } else if (response.data) {
+      // 如果是标准结构：{ data: {...} }
+      data = response.data
+    } else if (response.code === 0 && response.data) {
+      // 如果响应直接是API格式：{ code: 0, msg: "success", data: {...} }
+      data = response.data
+    } else {
+      // 如果响应就是数据本身
+      data = response
+    }
+
+    console.log('处理后的data:', data)
+
+    // 设置统计数据
+    taskStats.value = data.taskStats
+    statusStats.value = data.statusStats
+    monthlyStats.value = data.monthlyStats
+
+    // 设置任务列表
+    tasks.value = data.tasks.map(task => ({
+      id: task.id,
+      title: task.applyTitle,
+      description: task.materialName,
+      leadDepartment: task.orgName,
+      assistDepartments: task.assistDepartments || [],
+      createdDate: task.createdDate,
+      deadline: task.deadline,
+      supervisor: task.signers,
+      priority: task.priority,
+      status: task.sealState,
+      overdueDays: task.overdueDays,
+      isOverdue: task.isOverdue,
+      daysRemaining: task.daysRemaining,
+      type: task.type === 1 ? 'work' : 'special'
+    }))
+  } catch (error) {
+    console.error('获取督办数据失败', error)
+    ElMessage.error('获取督办数据失败')
+  } finally {
+    loading.value = false
+  }
 }
-])
+
+// 页面加载时获取数据
+onMounted(() => {
+  fetchData()
+})
 
 // Computed properties
 const filteredTasks = computed(() => {
-return tasks.value.filter(task => {
-    const matchesTab = activeTab.value === 'work' ? task.type === 'work' : task.type === 'special'
-    const matchesSearch = !searchQuery.value || 
-    task.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-    task.description.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const matchesDepartment = !selectedDepartment.value || 
-    task.leadDepartment === selectedDepartment.value ||
-    task.assistDepartments.includes(selectedDepartment.value)
+  return tasks.value.filter(task => {
+    const matchesTab = activeTab.value === task.type
+    const matchesSearch = !searchQuery.value ||
+      task.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      task.description.toLowerCase().includes(searchQuery.value.toLowerCase())
+    const matchesDepartment = !selectedDepartment.value ||
+      task.leadDepartment === selectedDepartment.value ||
+      task.assistDepartments.includes(selectedDepartment.value)
     const matchesStatus = !selectedStatus.value || task.status === selectedStatus.value
-    
+
     return matchesTab && matchesSearch && matchesDepartment && matchesStatus
-})
+  })
 })
 
 // 打开详情弹框

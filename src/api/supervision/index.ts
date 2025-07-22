@@ -31,17 +31,16 @@ export interface OrderWorkflowUpdateReqVO {
   id: number // 督办单ID（必传）
   coDept?: string // 协办单位ID（逗号分隔）
   deptDetail?: string // 牵头单位承办情况
-  startUserSelectAssignees?: Record<string, number[]> // 发起人自选审批人 Map，key为taskKey，value为用户ID数组
-  url?: string // 附件URL（可选，兼容旧版本）
-  name?: string // 附件名称（可选，兼容旧版本）
+  startLeaderSelectAssignees?: Record<string, number[]> // 发起人自选审批人 Map，key为taskKey，value为用户ID数组
   fileLIst?: AttachmentFileInfo[] // 附件列表
 }
 
 // 附件文件信息
 export interface AttachmentFileInfo {
-  id: number // 附件ID
+  id?: number // 附件ID（可选，新上传的文件没有ID）
   name: string // 文件名
   url: string // 文件URL
+  size: number // 文件大小（字节）
 }
 
 // 督办单完整信息（用于表单提交）
@@ -102,6 +101,9 @@ export interface OrderRespVO {
   creatorName?: string // 创建人姓名
   isOverdue?: boolean // 是否超期
   remainingDays?: number // 剩余天数
+
+  // 附件信息
+  attachments?: AttachmentRespVO[] // 附件列表
 }
 
 // 督办分类选项接口响应
@@ -358,6 +360,61 @@ export const AttachmentApi = {
   // 导出附件 Excel
   exportAttachment: async (params: AttachmentPageReqVO) => {
     return await request.download({ url: `/supervision/attachment/export-excel`, params })
+  }
+}
+
+// ========== 督办首页相关 ==========
+
+// 首页统计数据响应接口
+export interface SupervisionIndexRespVO {
+  taskStats: {
+    total: number
+    workSupervision: number
+    specialSupervision: number
+  }
+  statusStats: {
+    total: number
+    fast: number
+    consulting: number
+    slow: number
+    completed: number
+  }
+  monthlyStats: {
+    newTasks: number
+    inProgress: number
+    completed: number
+    overdue: number
+  }
+  tasks: SupervisionTaskItemVO[]
+}
+
+// 督办任务项
+export interface SupervisionTaskItemVO {
+  id: number
+  applyTitle: string // 任务标题
+  materialName: string // 任务描述
+  signers: string // 分管领导
+  phone: string
+  sealStatus: boolean
+  orgName: string // 牵头部门
+  deleted: number
+  sealState: string // 状态
+  applyId: string
+  assistDepartments: string[] // 协办部门
+  createdDate: string // 创建时间
+  deadline: string // 截止时间
+  priority: string // 优先级
+  overdueDays: number | null // 超时天数
+  isOverdue: boolean // 是否超时
+  daysRemaining: number | null // 剩余天数
+  type: number // 任务类型：1=工作督办，2=专项督办
+}
+
+// 督办首页API
+export const SupervisionIndexApi = {
+  // 获取督办首页数据
+  getIndexData(): Promise<SupervisionIndexRespVO> {
+    return request.get({ url: 'http://127.0.0.1:4523/m1/6215417-5908881-default/dcdb/getIndex' })
   }
 }
 

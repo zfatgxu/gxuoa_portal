@@ -103,7 +103,6 @@
               <span class="required">{{ userTask.name }}</span>
               <el-select
                 v-model="startUserSelectAssignees[userTask.id]"
-                multiple
                 placeholder="请选择审批人"
                 class="signature-input"
                 filterable
@@ -524,11 +523,7 @@ const submitForm = async () => {
     return
   }
   
-  // 验证摘要
-  if (!form.notes) {
-    ElMessage.error('请填写申请摘要')
-    return
-  }
+  
   
   // // 获取选中的材料类型的名称并合并为字符串
   // const selectedMaterialTypeLabels = form.selectedMaterialTypes.map(value => {

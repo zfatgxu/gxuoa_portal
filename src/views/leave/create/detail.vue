@@ -35,7 +35,7 @@
             <div class="date-range-picker">
               <el-date-picker
                 v-model="dateRange"
-                type="daterange"
+                type="datetimerange"
                 range-separator="至"
                 start-placeholder="开始日期"
                 end-placeholder="结束日期"
@@ -76,7 +76,7 @@
                     <span class="detail-label">开始时间</span>
                     <el-date-picker
                       v-model="researchStartDate"
-                      type="date"
+                      type="datetime"
                       placeholder="开始时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -87,7 +87,7 @@
                     <span class="detail-label">结束时间</span>
                     <el-date-picker
                       v-model="researchEndDate"
-                      type="date"
+                      type="datetime"
                       placeholder="结束时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -109,7 +109,7 @@
                     <span class="detail-label">开始时间</span>
                     <el-date-picker
                       v-model="trainingStartDate"
-                      type="date"
+                      type="datetime"
                       placeholder="开始时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -120,7 +120,7 @@
                     <span class="detail-label">结束时间</span>
                     <el-date-picker
                       v-model="trainingEndDate"
-                      type="date"
+                      type="datetime"
                       placeholder="结束时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -142,7 +142,7 @@
                     <span class="detail-label">开始时间</span>
                     <el-date-picker
                       v-model="businessStartDate"
-                      type="date"
+                      type="datetime"
                       placeholder="开始时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -153,7 +153,7 @@
                     <span class="detail-label">结束时间</span>
                     <el-date-picker
                       v-model="businessEndDate"
-                      type="date"
+                      type="datetime"
                       placeholder="结束时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -193,7 +193,7 @@
                       <span class="detail-label">开始时间</span>
                       <el-date-picker
                         v-model="meeting.academicStartDate"
-                        type="date"
+                        type="datetime"
                         placeholder="开始时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
@@ -204,7 +204,7 @@
                       <span class="detail-label">结束时间</span>
                       <el-date-picker
                         v-model="meeting.academicEndDate"
-                        type="date"
+                        type="datetime"
                         placeholder="结束时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
@@ -267,7 +267,7 @@
                     <span class="detail-label">开始时间</span>
                     <el-date-picker
                       v-model="personalStartDate"
-                      type="date"
+                      type="datetime"
                       placeholder="开始时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -278,7 +278,7 @@
                     <span class="detail-label">结束时间</span>
                     <el-date-picker
                       v-model="personalEndDate"
-                      type="date"
+                      type="datetime"
                       placeholder="结束时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -414,6 +414,7 @@
             <div class="detail-item">
               <!-- <span class="detail-label">国内</span> -->
               <el-cascader :options="pcaTextArr" v-model="destination" style="width: 100%" :disabled="isReadOnly"/>
+              <el-input v-model="destinationDetail" placeholder="可选填写详细地址（如门牌号、楼层等）" clearable style="margin-left: 10px;" :disabled="isReadOnly"/>
             </div>
             <!-- <div class="detail-item">
               <span class="detail-label">国外</span>
@@ -455,10 +456,10 @@
           class="approval-descriptions"
         >
           <el-descriptions-item label="校领导意见" label-class-name="approval-label">
-            <div></div>
+            <div>{{ leaderApproval }}</div>
           </el-descriptions-item>
           <el-descriptions-item label="请假期间主持工作负责人会签" label-class-name="approval-label">
-            <div></div>
+            <div>{{ hostApproval }}</div>
           </el-descriptions-item>
         </el-descriptions>
       </div>
@@ -483,6 +484,7 @@ import * as FileApi from '@/api/infra/file'
 import * as DefinitionApi from '@/api/bpm/definition'
 import * as UserApi from '@/api/system/user'
 import { propTypes } from '@/utils/propTypes'
+import * as ProcessInstanceApi from '@/api/bpm/processInstance'
 const props = defineProps({
   id: propTypes.number.def(undefined)
 })
@@ -670,9 +672,9 @@ const beforeRemove = (file: UploadFile) => {
 };
 // 表单数据
 const destination = ref('');
+const destinationDetail = ref('');
 const workArrangement = ref('');
 const remarks = ref('');
-
 // 获取请假人信息
 const routeId = ref(props.id || queryId)
 const fetchUserProfile = async () => {
@@ -779,7 +781,15 @@ const fetchUserProfile = async () => {
         dateRange.value = [dayjs(res.startDate).format('YYYY-MM-DD HH:mm:ss'), dayjs(res.endDate).format('YYYY-MM-DD HH:mm:ss')];
         workArrangement.value = res.hostArrangement;
         remarks.value = res.remark;
-        destination.value = res.destination.split(',');
+        const destParts = res.destination.split(',');
+        // 如果地点数据包含超过省市区的部分，则最后一部分为详细地址
+        if (destParts.length > 3) {
+          destination.value = destParts.slice(0, 3);
+          destinationDetail.value = destParts.slice(3).join(',');
+        } else {
+          destination.value = destParts;
+          destinationDetail.value = '';
+        }
         personnel.value = {
           id: res.personId,
           deptId: res.deptId || '',
@@ -788,10 +798,46 @@ const fetchUserProfile = async () => {
           title: res.postName || '',
           position: res.nickName || '',
         };
+        processInstanceId.value = res.processInstanceId;
+      }
+      if (processInstanceId.value) {
+        getApprovalOpinions();
       }
     }
   } catch (error) {
     ElMessage.error('获取用户信息失败');
+  }
+};
+// 审批意见数据
+const leaderApproval = ref('');
+const hostApproval = ref('');
+
+// 获取审批意见
+const processInstanceId = ref('');
+const getApprovalOpinions = async () => {
+  try {
+    
+    const param = {
+      processInstanceId: processInstanceId.value
+    };
+    const data = await ProcessInstanceApi.getApprovalDetail(param);
+    console.log('审批详情数据:', data);
+    
+    if (data && data.activityNodes) {
+      // 处理审批意见数据
+      data.activityNodes.forEach(node => {
+        // 根据节点类型或名称判断是校领导意见还是主持人会签
+        if (node.id==='leader_sign' && node.tasks && node.tasks.length > 0) {
+          leaderApproval.value = node.tasks[0].reason || '';
+        } 
+        if (node.id==='host_sign' && node.tasks && node.tasks.length > 0) {
+          hostApproval.value = node.tasks[0].reason || '';
+        }
+      });
+    }
+  } catch (error) {
+    console.error('获取审批意见失败:', error);
+    ElMessage.error('获取审批意见失败');
   }
 };
 
