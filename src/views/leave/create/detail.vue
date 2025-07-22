@@ -414,6 +414,7 @@
             <div class="detail-item">
               <!-- <span class="detail-label">国内</span> -->
               <el-cascader :options="pcaTextArr" v-model="destination" style="width: 100%" :disabled="isReadOnly"/>
+              <el-input v-model="destinationDetail" placeholder="可选填写详细地址（如门牌号、楼层等）" clearable style="margin-left: 10px;" :disabled="isReadOnly"/>
             </div>
             <!-- <div class="detail-item">
               <span class="detail-label">国外</span>
@@ -671,9 +672,9 @@ const beforeRemove = (file: UploadFile) => {
 };
 // 表单数据
 const destination = ref('');
+const destinationDetail = ref('');
 const workArrangement = ref('');
 const remarks = ref('');
-
 // 获取请假人信息
 const routeId = ref(props.id || queryId)
 const fetchUserProfile = async () => {
@@ -780,7 +781,15 @@ const fetchUserProfile = async () => {
         dateRange.value = [dayjs(res.startDate).format('YYYY-MM-DD HH:mm:ss'), dayjs(res.endDate).format('YYYY-MM-DD HH:mm:ss')];
         workArrangement.value = res.hostArrangement;
         remarks.value = res.remark;
-        destination.value = res.destination.split(',');
+        const destParts = res.destination.split(',');
+        // 如果地点数据包含超过省市区的部分，则最后一部分为详细地址
+        if (destParts.length > 3) {
+          destination.value = destParts.slice(0, 3);
+          destinationDetail.value = destParts.slice(3).join(',');
+        } else {
+          destination.value = destParts;
+          destinationDetail.value = '';
+        }
         personnel.value = {
           id: res.personId,
           deptId: res.deptId || '',
@@ -818,10 +827,10 @@ const getApprovalOpinions = async () => {
       // 处理审批意见数据
       data.activityNodes.forEach(node => {
         // 根据节点类型或名称判断是校领导意见还是主持人会签
-        if (node.id==='leader_sign') {
+        if (node.id==='leader_sign' && node.tasks && node.tasks.length > 0) {
           leaderApproval.value = node.tasks[0].reason || '';
         } 
-        if (node.id==='host_sign') {
+        if (node.id==='host_sign' && node.tasks && node.tasks.length > 0) {
           hostApproval.value = node.tasks[0].reason || '';
         }
       });
