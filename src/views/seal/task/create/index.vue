@@ -103,7 +103,6 @@
               <span class="required">{{ userTask.name }}</span>
               <el-select
                 v-model="startUserSelectAssignees[userTask.id]"
-                multiple
                 placeholder="请选择审批人"
                 class="signature-input"
                 filterable
