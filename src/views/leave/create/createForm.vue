@@ -35,7 +35,7 @@
             <div class="date-range-picker">
               <el-date-picker
                 v-model="dateRange"
-                type="datetimerange"
+                type="daterange"
                 range-separator="至"
                 start-placeholder="开始日期"
                 end-placeholder="结束日期"
@@ -75,20 +75,22 @@
                     <span class="detail-label">开始时间</span>
                     <el-date-picker
                       v-model="researchStartDate"
-                      type="datetime"
+                      type="date"
                       placeholder="开始时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
+                      :disabled-date="disabledDate"
                     />
                   </div>
                   <div class="detail-item">
                     <span class="detail-label">结束时间</span>
                     <el-date-picker
                       v-model="researchEndDate"
-                      type="datetime"
+                      type="date"
                       placeholder="结束时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
+                      :disabled-date="disabledDate"
                     />
                   </div>
                 </div>
@@ -106,20 +108,22 @@
                     <span class="detail-label">开始时间</span>
                     <el-date-picker
                       v-model="trainingStartDate"
-                      type="datetime"
+                      type="date"
                       placeholder="开始时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
+                      :disabled-date="disabledDate"
                     />
                   </div>
                   <div class="detail-item">
                     <span class="detail-label">结束时间</span>
                     <el-date-picker
                       v-model="trainingEndDate"
-                      type="datetime"
+                      type="date"
                       placeholder="结束时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
+                      :disabled-date="disabledDate"
                     />
                   </div>
                 </div>
@@ -137,20 +141,22 @@
                     <span class="detail-label">开始时间</span>
                     <el-date-picker
                       v-model="businessStartDate"
-                      type="datetime"
+                      type="date"
                       placeholder="开始时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
+                      :disabled-date="disabledDate"
                     />
                   </div>
                   <div class="detail-item">
                     <span class="detail-label">结束时间</span>
                     <el-date-picker
                       v-model="businessEndDate"
-                      type="datetime"
+                      type="date"
                       placeholder="结束时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
+                      :disabled-date="disabledDate"
                     />
                   </div>
                 </div>
@@ -186,20 +192,22 @@
                       <span class="detail-label">开始时间</span>
                       <el-date-picker
                         v-model="meeting.academicStartDate"
-                        type="datetime"
+                        type="date"
                         placeholder="开始时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
+                        :disabled-date="disabledDate"
                       />
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">结束时间</span>
                       <el-date-picker
                         v-model="meeting.academicEndDate"
-                        type="datetime"
+                        type="date"
                         placeholder="结束时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
+                        :disabled-date="disabledDate"
                       />
                     </div>
                     <div class="detail-item">
@@ -214,7 +222,7 @@
                         </el-radio>
                       </el-radio-group>
                     </div>
-                    <div v-if="meeting.isPresentation === 2" class="detail-item">
+                    <div v-if="meeting.isPresentation === 1" class="detail-item">
                       <span class="detail-label">报告类型</span>
                       <el-radio-group v-model="meeting.reportType">
                         <el-radio
@@ -226,7 +234,7 @@
                         </el-radio>
                       </el-radio-group>
                     </div>
-                    <div class="detail-item">
+                    <div v-if="meeting.isPresentation === 1" class="detail-item">
                       <span class="detail-label">报告题目</span>
                       <el-input v-model="meeting.reportTitle" placeholder="请输入报告题目"/>
                     </div>
@@ -258,20 +266,22 @@
                     <span class="detail-label">开始时间</span>
                     <el-date-picker
                       v-model="personalStartDate"
-                      type="datetime"
+                      type="date"
                       placeholder="开始时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
+                      :disabled-date="disabledDate"
                     />
                   </div>
                   <div class="detail-item">
                     <span class="detail-label">结束时间</span>
                     <el-date-picker
                       v-model="personalEndDate"
-                      type="datetime"
+                      type="date"
                       placeholder="结束时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
+                      :disabled-date="disabledDate"
                     />
                   </div>
                   <div class="detail-item">
@@ -396,10 +406,28 @@
 
           <!-- 前往地点 -->
           <el-descriptions-item label="前往地点(必填)" label-class-name="approval-label">
-            <div class="detail-item">
+            <div v-for="(loc, index) in destinations" :key="index" class="detail-item">
               <!-- <span class="detail-label">国内</span> -->
-              <el-cascader :options="pcaTextArr" v-model="destination" clearable style="width: 100%;"/>
-              <el-input v-model="destinationDetail" placeholder="可选填写详细地址（如门牌号、楼层等）" clearable style="margin-left: 10px;"/>
+              <el-cascader :options="pcaTextArr" v-model="loc.destination" clearable style="width: 100%;"/>
+              <el-input v-model="loc.destinationDetail" placeholder="可选填写详细地址（如门牌号、楼层等）" clearable style="margin-left: 10px;"/>
+              <el-button 
+                v-if="index === destinations.length - 1" 
+                type="primary" 
+                circle 
+                style="margin-left: 10px;"
+                @click="addDestination"
+              >
+                <el-icon><Plus /></el-icon>
+              </el-button>
+              <el-button 
+                v-if="destinations.length > 1" 
+                type="danger" 
+                circle 
+                style="margin-left: 10px;"
+                @click="removeDestination(index)"
+              >
+                <el-icon><Minus /></el-icon>
+              </el-button>
             </div>
             <!-- <div class="detail-item">
               <span class="detail-label">国外</span>
@@ -497,6 +525,7 @@ import * as FileApi from '@/api/infra/file'
 import * as DefinitionApi from '@/api/bpm/definition'
 import * as UserApi from '@/api/system/user'
 import { parseHostSignTasks } from '@/utils/parseBpmnleave'
+import { number } from 'vue-types';
 // 人员信息
 const personnel = ref({
   id: '',
@@ -535,7 +564,7 @@ const academicMeetings = ref([{
   academicUnit: '',
   academicStartDate: '',
   academicEndDate: '',
-  isPresentation: '',
+  isPresentation: null,
   reportType: '',
   reportTitle: '',
   academicPaperCount: 0
@@ -547,7 +576,7 @@ const addAcademicMeeting = () => {
     academicUnit: '',
     academicStartDate: '',
     academicEndDate: '',
-    isPresentation: '',
+    isPresentation: null,
     reportType: '',
     reportTitle: '',
     academicPaperCount: 0
@@ -680,9 +709,21 @@ const beforeRemove = (file: UploadFile) => {
 // 表单数据
 const destination = ref('');
 const destinationDetail = ref('');
+const destinations = ref([{ destination: '', destinationDetail: '' }]);
 const workArrangement = ref('');
 const remarks = ref('');
 const router = useRouter()
+// 添加目的地
+const addDestination = () => {
+  destinations.value.push({ destination: '', detail: '' });
+};
+
+// 删除目的地
+const removeDestination = (index) => {
+  if (destinations.value.length > 1) {
+    destinations.value.splice(index, 1);
+  }
+};
 // 提交流程
 const handleSubmit = async () => {
   try {
@@ -707,8 +748,10 @@ const handleSubmit = async () => {
       return
     }
 
-    if (!destination.value) {
-      ElMessage.warning('请填写前往地点')
+    // 检查是否至少有一个有效的目的地
+    const hasValidDestination = destinations.value.some(loc => loc.destination);
+    if (!hasValidDestination) {
+      ElMessage.warning('请至少填写一个前往地点')
       return
     }
 
@@ -721,7 +764,15 @@ const handleSubmit = async () => {
       ElMessage.warning('请选择签办人')
       return
     }
-    const fullDestination = String(destination.value) + (destinationDetail.value ? ',' + destinationDetail.value : '');
+    // 拼接所有目的地为一个字符串，使用 ||| 作为分隔符
+    const fullDestination = destinations.value
+      .filter(loc => loc.destination) // 过滤掉没有填写的地点
+      .map(loc => {
+        const destStr = String(loc.destination);
+        const detailStr = loc.destinationDetail ? loc.destinationDetail : '';
+        return destStr + (detailStr ? ',' + detailStr : '');
+      })
+      .join('|||');
     // 2. 准备提交数据
     const formData = {
       id: Number(),
@@ -765,8 +816,8 @@ const handleSubmit = async () => {
             subject: meeting.academicTopic,
             meetingNature: Number(meeting.academicNature),
             unit: meeting.academicUnit,
-            reportType: meeting.isPresentation ? meeting.reportType : null,
-            reportTitle: meeting.reportTitle,
+            reportType: meeting.isPresentation === 1 ? meeting.reportType : '',
+            reportTitle: meeting.isPresentation === 1 ? meeting.reportTitle : '',
             reportPaperCount: meeting.academicPaperCount
           };
           if (academicID.value) {
@@ -998,9 +1049,9 @@ const fetchUserProfile = async () => {
                 academicUnit: item.unit,
                 academicStartDate: dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss'),
                 academicEndDate: dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss'),
-                isPresentation: item.isPresentation,
+                isPresentation: item.reportTitle||item.reportType?1:0,
                 reportTitle: item.reportTitle,
-                reportType: item.reportType,
+                reportType: Number(item.reportType),
                 academicPaperCount: item.academicPaperCount
               });
               break;
@@ -1016,14 +1067,43 @@ const fetchUserProfile = async () => {
         workArrangement.value = res.hostArrangement;
         remarks.value = res.remark;
         startUserSelectAssignees.value.host_sign[0]=res.personAdmitId
-        const destParts = res.destination.split(',');
-        // 如果地点数据包含超过省市区的部分，则最后一部分为详细地址
-        if (destParts.length > 3) {
-          destination.value = destParts.slice(0, 3);
-          destinationDetail.value = destParts.slice(3).join(',');
+        // 解析目的地数据
+        if (res.destination) {
+          // 首先尝试使用 ||| 分隔符解析（新格式）
+          if (res.destination.includes('|||')) {
+            const multiDestinations = res.destination.split('|||');
+            destinations.value = multiDestinations.map(dest => {
+              // 对每个地点，使用逗号分隔省市区和详细地址
+              const parts = dest.split(',');
+              return {
+                destination: parts.slice(0, 3), 
+                destinationDetail: parts.slice(3).join(',')
+              };
+            });
+          console.log(destinations.value)
+          } else {
+            // 兼容旧格式（只使用逗号分隔）
+            const destParts = res.destination.split(',');
+            // 如果地点数据包含超过省市区的部分，则最后一部分为详细地址
+            if (destParts.length > 3) {
+              destinations.value = [{
+                destination: destParts.slice(0, 3), 
+                destinationDetail: destParts.slice(3).join(',')
+              }];
+            } else {
+              destinations.value = [{
+                destination: destParts.join(','), 
+                destinationDetail: ''
+              }];
+            }
+          }
+          // 如果没有解析出有效地点，添加一个空地点
+          if (destinations.value.length === 0) {
+            destinations.value = [{ destination: '', destinationDetail: '' }];
+          }
         } else {
-          destination.value = destParts;
-          destinationDetail.value = '';
+          // 如果没有地点数据，初始化为一个空地点
+          destinations.value = [{ destination: '', destinationDetail: '' }];
         }
         personnel.value = {
           id: res.personId,
@@ -1039,7 +1119,25 @@ const fetchUserProfile = async () => {
     ElMessage.error('获取用户信息失败');
   }
 };
-
+// 限制日期选择
+const disabledDate = (time) => {
+  if (!dateRange.value || dateRange.value.length !== 2) {
+    return false;
+  }
+  
+  const startDate = new Date(dateRange.value[0]);
+  const endDate = new Date(dateRange.value[1]);
+  
+  // 移除时间部分，只比较日期
+  startDate.setHours(0, 0, 0, 0);
+  endDate.setHours(0, 0, 0, 0);
+  
+  const currentDate = new Date(time);
+  currentDate.setHours(0, 0, 0, 0);
+  
+  // 对于开始日期和结束日期，都不能超出主日期范围
+  return currentDate < startDate || currentDate > endDate;
+};
 // 指定审批人
 const processDefineKey = 'oa_leaveRegister' // 流程定义 Key
 const startUserSelectTasks = ref([]) // 发起人需要选择审批人的用户任务列表

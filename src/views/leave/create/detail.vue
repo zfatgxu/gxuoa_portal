@@ -35,7 +35,7 @@
             <div class="date-range-picker">
               <el-date-picker
                 v-model="dateRange"
-                type="datetimerange"
+                type="daterange"
                 range-separator="至"
                 start-placeholder="开始日期"
                 end-placeholder="结束日期"
@@ -76,7 +76,7 @@
                     <span class="detail-label">开始时间</span>
                     <el-date-picker
                       v-model="researchStartDate"
-                      type="datetime"
+                      type="date"
                       placeholder="开始时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -87,7 +87,7 @@
                     <span class="detail-label">结束时间</span>
                     <el-date-picker
                       v-model="researchEndDate"
-                      type="datetime"
+                      type="date"
                       placeholder="结束时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -109,7 +109,7 @@
                     <span class="detail-label">开始时间</span>
                     <el-date-picker
                       v-model="trainingStartDate"
-                      type="datetime"
+                      type="date"
                       placeholder="开始时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -120,7 +120,7 @@
                     <span class="detail-label">结束时间</span>
                     <el-date-picker
                       v-model="trainingEndDate"
-                      type="datetime"
+                      type="date"
                       placeholder="结束时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -142,7 +142,7 @@
                     <span class="detail-label">开始时间</span>
                     <el-date-picker
                       v-model="businessStartDate"
-                      type="datetime"
+                      type="date"
                       placeholder="开始时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -153,7 +153,7 @@
                     <span class="detail-label">结束时间</span>
                     <el-date-picker
                       v-model="businessEndDate"
-                      type="datetime"
+                      type="date"
                       placeholder="结束时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -193,7 +193,7 @@
                       <span class="detail-label">开始时间</span>
                       <el-date-picker
                         v-model="meeting.academicStartDate"
-                        type="datetime"
+                        type="date"
                         placeholder="开始时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
@@ -204,7 +204,7 @@
                       <span class="detail-label">结束时间</span>
                       <el-date-picker
                         v-model="meeting.academicEndDate"
-                        type="datetime"
+                        type="date"
                         placeholder="结束时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
@@ -223,7 +223,7 @@
                         </el-radio>
                       </el-radio-group>
                     </div>
-                    <div v-if="meeting.isPresentation === 2" class="detail-item">
+                    <div v-if="meeting.isPresentation === 1" class="detail-item">
                       <span class="detail-label">报告类型</span>
                       <el-radio-group v-model="meeting.reportType" :disabled="isReadOnly">
                         <el-radio 
@@ -235,7 +235,7 @@
                         </el-radio>
                       </el-radio-group>
                     </div>
-                    <div class="detail-item">
+                    <div v-if="meeting.isPresentation === 1" class="detail-item">
                       <span class="detail-label">报告题目</span>
                       <el-input v-model="meeting.reportTitle" :disabled="isReadOnly" placeholder="请输入报告题目"/>
                     </div>
@@ -267,7 +267,7 @@
                     <span class="detail-label">开始时间</span>
                     <el-date-picker
                       v-model="personalStartDate"
-                      type="datetime"
+                      type="date"
                       placeholder="开始时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -278,7 +278,7 @@
                     <span class="detail-label">结束时间</span>
                     <el-date-picker
                       v-model="personalEndDate"
-                      type="datetime"
+                      type="date"
                       placeholder="结束时间"
                       value-format="YYYY-MM-DD HH:mm:ss"
                       style="width: 100%;"
@@ -764,7 +764,7 @@ const fetchUserProfile = async () => {
           academicUnit: item.unit,
           academicStartDate: dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss'),
           academicEndDate: dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss'),
-          isPresentation: item.isPresentation,
+          isPresentation: item.reportTitle||item.reportType?1:0,
           reportTitle: item.reportTitle,
           reportType: item.reportType,
           academicPaperCount: item.academicPaperCount
