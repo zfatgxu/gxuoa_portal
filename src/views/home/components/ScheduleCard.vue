@@ -257,6 +257,8 @@ onMounted(() => {
   list-style: none;
   padding: 0;
   margin: 0;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .schedule-item {
@@ -344,10 +346,12 @@ onMounted(() => {
 .card {
   border-radius: 5px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
+  margin-bottom: 0;
   background-color: white;
   border: none;
-  height: 100%;
+  height: calc(100vh - 150px);
+  display: flex;
+  flex-direction: column;
 }
 
 .card-header {
@@ -358,6 +362,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
 }
 
 .card-header .title {
@@ -387,5 +392,9 @@ onMounted(() => {
 
 .card-body {
   padding: 15px 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
 }
 </style>

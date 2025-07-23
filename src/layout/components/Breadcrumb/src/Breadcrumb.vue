@@ -37,16 +37,40 @@ export default defineComponent({
     })
 
     const getBreadcrumb = () => {
-      const currentPath = currentRoute.value.matched.slice(-1)[0].path
-
-      levelList.value = filter<AppRouteRecordRaw>(unref(menuRouters), (node: AppRouteRecordRaw) => {
-        return node.path === currentPath
-      })
+      const matched = currentRoute.value.matched.filter(item => item.meta && item.meta.title)
+      
+      // 构建完整的面包屑路径
+      levelList.value = []
+      
+      // 遍历匹配的路由，构建层级结构
+      for (let i = 0; i < matched.length; i++) {
+        const route = matched[i]
+        const meta = route.meta as RouteMeta
+        
+        // 跳过隐藏的路由（除非设置了canTo）
+        if (meta.hidden && !meta.canTo) {
+          continue
+        }
+        
+        // 跳过不显示在面包屑中的路由
+        if (meta.breadcrumb === false) {
+          continue
+        }
+        
+        // 构建面包屑项
+        const breadcrumbItem: AppRouteRecordRaw = {
+          path: route.path,
+          name: route.name,
+          meta: route.meta,
+          redirect: route.redirect
+        }
+        
+        levelList.value.push(breadcrumbItem)
+      }
     }
 
     const renderBreadcrumb = () => {
-      const breadcrumbList = treeToList<AppRouteRecordRaw[]>(unref(levelList))
-      return breadcrumbList.map((v) => {
+      return levelList.value.map((v) => {
         const disabled = !v.redirect || v.redirect === 'noredirect'
         const meta = v.meta as RouteMeta
         return (

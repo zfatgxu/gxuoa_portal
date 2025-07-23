@@ -63,12 +63,13 @@ export const updateAvatar = (avatarFile: File) => {
 }
 
 // 用户密码重置
-export const updateUserPassword = (oldPassword: string, newPassword: string) => {
+export const updateUserPassword = (oldPassword: string, newPassword: string, code?: string) => {
   return request.put({
     url: '/app/user/profile/update-password',
     data: {
       oldPassword: oldPassword,
-      newPassword: newPassword
+      newPassword: newPassword,
+      code: code // 添加验证码参数
     }
   })
 }
