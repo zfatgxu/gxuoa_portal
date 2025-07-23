@@ -136,13 +136,14 @@ onMounted(() => {
 /* 快捷入口布局 */
 .entry-container {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   flex-wrap: nowrap;
   padding: 5px;
   overflow-x: auto;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE and Edge */
+  gap: 70px;
 }
 
 .entry-container::-webkit-scrollbar {
@@ -157,7 +158,7 @@ onMounted(() => {
   transition: all 0.3s;
   padding: 3px;
   border-radius: 5px;
-  flex: 1;
+  flex: 0 0 auto;
   min-width: 60px;
   max-width: 80px;
 }

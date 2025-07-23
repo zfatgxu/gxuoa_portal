@@ -135,7 +135,6 @@ const remainingRouter: AppRouteRecordRaw[] = [
       hidden: true
     },
     children: [
-
       {
         path: 'create',
         component: () => import('@/views/supervision/create.vue'),
@@ -460,6 +459,27 @@ const remainingRouter: AppRouteRecordRaw[] = [
           canTo: true,
           title: '查看印章详情',  
           activeMenu: '/seal'
+        }
+      }
+    ]
+  },
+  {
+    path: '/mail',
+    component: Layout,
+    redirect: '/mail/write',
+    name: 'Mail',
+    meta: {
+      title: '内部邮件',
+      icon: 'ep:message',
+      orderNo: 5000
+    },
+    children: [
+      {
+        path: 'write',
+        component: () => import('@/views/mail/write.vue'),
+        name: 'MailWrite',
+        meta: {
+          title: '写信'
         }
       }
     ]
