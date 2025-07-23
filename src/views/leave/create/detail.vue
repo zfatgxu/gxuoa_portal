@@ -164,11 +164,6 @@
                 <!-- 学术会议事由 -->
                 <div v-if="reason.value === 5 && selectedReasons.includes(5)" style="padding: 15px 10px;">
                   <div v-for="(meeting, index) in academicMeetings" :key="index">
-                    <div class="add-meeting">
-                      <el-button v-if="index > 0" circle type="danger" @click="removeAcademicMeeting(index)">
-                        <el-icon><Minus /></el-icon>
-                      </el-button>
-                    </div>
                     <div class="detail-item">
                       <span class="detail-label">会议名称</span>
                       <el-input v-model="meeting.academicTopic" :disabled="isReadOnly" placeholder="请输入会议名称"/>
@@ -243,11 +238,6 @@
                       <span class="detail-label">交流论文数</span>
                       <el-input v-model="meeting.academicPaperCount" :disabled="isReadOnly" placeholder="请输入交流论文数"/>
                     </div>
-                  </div>
-                  <div class="add-meeting">
-                    <el-button type="primary" circle :disabled="isReadOnly" @click="addAcademicMeeting">
-                      <el-icon><Plus /></el-icon>
-                    </el-button>
                   </div>
                 </div>
                 <!-- 因私事由 -->
@@ -411,10 +401,10 @@
 
           <!-- 前往地点 -->
           <el-descriptions-item label="前往地点(必填)" label-class-name="approval-label">
-            <div class="detail-item">
+            <div v-for="(loc, index) in destinations" :key="index" class="detail-item">
               <!-- <span class="detail-label">国内</span> -->
-              <el-cascader :options="pcaTextArr" v-model="destination" style="width: 100%" :disabled="isReadOnly"/>
-              <el-input v-model="destinationDetail" placeholder="可选填写详细地址（如门牌号、楼层等）" clearable style="margin-left: 10px;" :disabled="isReadOnly"/>
+              <el-cascader :options="pcaTextArr" v-model="loc.destination" :disabled="isReadOnly" clearable style="width: 100%;"/>
+              <el-input v-model="loc.destinationDetail" placeholder="可选填写详细地址（如门牌号、楼层等）" clearable style="margin-left: 10px;" :disabled="isReadOnly"/>
             </div>
             <!-- <div class="detail-item">
               <span class="detail-label">国外</span>
@@ -535,29 +525,7 @@ const academicMeetings = ref([{
   reportTitle: '',
   academicPaperCount: 0
 }]);
-const addAcademicMeeting = () => {
-  academicMeetings.value.push({
-    academicTopic: '',
-    academicNature: '',
-    academicUnit: '',
-    academicStartDate: '',
-    academicEndDate: '',
-    isPresentation: '',
-    reportType: '',
-    reportTitle: '',
-    academicPaperCount: 0
-  });
-};
-const removeAcademicMeeting = (index) => {
-  if (academicMeetings.value.length > 1) {
-    academicMeetings.value.splice(index, 1);
-  } else {
-    // 如果是最后一个，清空数据而不是删除
-    Object.keys(academicMeetings.value[0]).forEach(key => {
-      academicMeetings.value[0][key] = '';
-    });
-  }
-};
+
 // 因私事由信息
 const personalID = ref();
 const personalType = ref<number>();
@@ -671,10 +639,14 @@ const beforeRemove = (file: UploadFile) => {
   );
 };
 // 表单数据
-const destination = ref('');
-const destinationDetail = ref('');
 const workArrangement = ref('');
 const remarks = ref('');
+const destinations = ref([
+  {
+    destination: '',
+    destinationDetail: ''
+  }
+]);
 // 获取请假人信息
 const routeId = ref(props.id || queryId)
 const fetchUserProfile = async () => {
@@ -781,14 +753,36 @@ const fetchUserProfile = async () => {
         dateRange.value = [dayjs(res.startDate).format('YYYY-MM-DD HH:mm:ss'), dayjs(res.endDate).format('YYYY-MM-DD HH:mm:ss')];
         workArrangement.value = res.hostArrangement;
         remarks.value = res.remark;
-        const destParts = res.destination.split(',');
-        // 如果地点数据包含超过省市区的部分，则最后一部分为详细地址
-        if (destParts.length > 3) {
-          destination.value = destParts.slice(0, 3);
-          destinationDetail.value = destParts.slice(3).join(',');
-        } else {
-          destination.value = destParts;
-          destinationDetail.value = '';
+        // 解析目的地数据
+        if (res.destination) {
+          // 首先尝试使用 ||| 分隔符解析（新格式）
+          if (res.destination.includes('|||')) {
+            const multiDestinations = res.destination.split('|||');
+            destinations.value = multiDestinations.map(dest => {
+              // 对每个地点，使用逗号分隔省市区和详细地址
+              const parts = dest.split(',');
+              return {
+                destination: parts.slice(0, 3), 
+                destinationDetail: parts.slice(3).join(',')
+              };
+            });
+          console.log(destinations.value)
+          } else {
+            // 兼容旧格式（只使用逗号分隔）
+            const destParts = res.destination.split(',');
+            // 如果地点数据包含超过省市区的部分，则最后一部分为详细地址
+            if (destParts.length > 3) {
+              destinations.value = [{
+                destination: destParts.slice(0, 3), 
+                destinationDetail: destParts.slice(3).join(',')
+              }];
+            } else {
+              destinations.value = [{
+                destination: destParts, 
+                destinationDetail: ''
+              }];
+            }
+          }
         }
         personnel.value = {
           id: res.personId,

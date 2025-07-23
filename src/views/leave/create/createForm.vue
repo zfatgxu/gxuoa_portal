@@ -40,6 +40,7 @@
                 start-placeholder="开始日期"
                 end-placeholder="结束日期"
                 value-format="YYYY-MM-DD HH:mm:ss"
+                :disabled-date="pickerOptions"
               />
             </div>
           </el-descriptions-item>
@@ -707,15 +708,13 @@ const beforeRemove = (file: UploadFile) => {
   );
 };
 // 表单数据
-const destination = ref('');
-const destinationDetail = ref('');
 const destinations = ref([{ destination: '', destinationDetail: '' }]);
 const workArrangement = ref('');
 const remarks = ref('');
 const router = useRouter()
 // 添加目的地
 const addDestination = () => {
-  destinations.value.push({ destination: '', detail: '' });
+  destinations.value.push({ destination: '', destinationDetail: '' });
 };
 
 // 删除目的地
@@ -1097,13 +1096,6 @@ const fetchUserProfile = async () => {
               }];
             }
           }
-          // 如果没有解析出有效地点，添加一个空地点
-          if (destinations.value.length === 0) {
-            destinations.value = [{ destination: '', destinationDetail: '' }];
-          }
-        } else {
-          // 如果没有地点数据，初始化为一个空地点
-          destinations.value = [{ destination: '', destinationDetail: '' }];
         }
         personnel.value = {
           id: res.personId,
@@ -1119,7 +1111,11 @@ const fetchUserProfile = async () => {
     ElMessage.error('获取用户信息失败');
   }
 };
-// 限制日期选择
+const pickerOptions =(time) => {
+  // 禁用今天之前的日期
+  return time.getTime() < Date.now() - 8.64e7; // 8.64e7 是一天的毫秒数
+};
+// 限制在开始日期至结束日期范围内
 const disabledDate = (time) => {
   if (!dateRange.value || dateRange.value.length !== 2) {
     return false;
