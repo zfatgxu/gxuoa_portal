@@ -295,7 +295,7 @@
                   </div>
                   <div class="detail-item">
                     <span class="detail-label">联系电话</span>
-                    <el-input v-model="personalPhone" placeholder="请输入联系电话"/>
+                    <el-input v-model="personalPhone" placeholder="请输入联系电话" :maxlength="11" @blur="validatePhone"/>
                   </div>
                   <div v-if="personalType === 6">
                     <div class="detail-item">
@@ -721,6 +721,16 @@ const addDestination = () => {
 const removeDestination = (index) => {
   if (destinations.value.length > 1) {
     destinations.value.splice(index, 1);
+  }
+};
+// 手机号验证
+const validatePhone = () => {
+  if (!personalPhone.value) return;
+  
+  const phoneRegex = /^1[3-9]\d{9}$/;
+  if (!phoneRegex.test(personalPhone.value)) {
+    ElMessage.warning('请输入正确的11位手机号码');
+    personalPhone.value = '';
   }
 };
 // 提交流程
@@ -1173,7 +1183,7 @@ onMounted(async () => {
             ]
           }
           // 加载用户列表
-          userList.value = await UserApi.getSimpleUserList()
+          userList.value = await UserApi.getUserListByDeptId(Number(personnel.value.deptId))
         }
       } catch (error) {
         ElMessage.error('解析流程定义失败，请联系管理员')
