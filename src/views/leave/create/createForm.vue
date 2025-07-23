@@ -398,7 +398,8 @@
           <el-descriptions-item label="前往地点(必填)" label-class-name="approval-label">
             <div class="detail-item">
               <!-- <span class="detail-label">国内</span> -->
-              <el-cascader :options="pcaTextArr" v-model="destination" style="width: 100%"/>
+              <el-cascader :options="pcaTextArr" v-model="destination" clearable style="width: 100%;"/>
+              <el-input v-model="destinationDetail" placeholder="可选填写详细地址（如门牌号、楼层等）" clearable style="margin-left: 10px;"/>
             </div>
             <!-- <div class="detail-item">
               <span class="detail-label">国外</span>
@@ -455,7 +456,7 @@
           <span style="font-size: 14px;margin-bottom: 5px;">请假期间主持工作负责人会签</span>
         </div>
         <div class="action-item">
-          <div v-for="userTask in startUserSelectTasks" :key="userTask.id" style="width: 200px">
+          <div v-for="userTask in startUserSelectTasks.filter(task => task.id === 'host_sign')" :key="userTask.id" style="width: 200px">
             <el-select
               v-model="startUserSelectAssignees[userTask.id]"
               multiple
@@ -678,6 +679,7 @@ const beforeRemove = (file: UploadFile) => {
 };
 // 表单数据
 const destination = ref('');
+const destinationDetail = ref('');
 const workArrangement = ref('');
 const remarks = ref('');
 const router = useRouter()
@@ -719,13 +721,13 @@ const handleSubmit = async () => {
       ElMessage.warning('请选择签办人')
       return
     }
-
+    const fullDestination = String(destination.value) + (destinationDetail.value ? ',' + destinationDetail.value : '');
     // 2. 准备提交数据
     const formData = {
       id: Number(),
       startDate: dateRange.value[0], // 开始日期
       endDate: dateRange.value[1],   // 结束日期
-      destination: String(destination.value), // 前往地点
+      destination: String(fullDestination), // 前往地点
       hostArrangement: workArrangement.value, // 工作安排
       remark: remarks.value, // 备注
       personId: Number(personnel.value.id), // 请假人ID
@@ -1014,7 +1016,15 @@ const fetchUserProfile = async () => {
         workArrangement.value = res.hostArrangement;
         remarks.value = res.remark;
         startUserSelectAssignees.value.host_sign[0]=res.personAdmitId
-        destination.value = res.destination.split(',');
+        const destParts = res.destination.split(',');
+        // 如果地点数据包含超过省市区的部分，则最后一部分为详细地址
+        if (destParts.length > 3) {
+          destination.value = destParts.slice(0, 3);
+          destinationDetail.value = destParts.slice(3).join(',');
+        } else {
+          destination.value = destParts;
+          destinationDetail.value = '';
+        }
         personnel.value = {
           id: res.personId,
           deptId: res.deptId || '',

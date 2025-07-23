@@ -363,71 +363,59 @@ export const AttachmentApi = {
   }
 }
 
-// ========== 部门详情相关 ==========
+// ========== 督办首页相关 ==========
 
-// 部门详情统计数据响应
-export interface DeptStatisticsRespVO {
-  myTaskCount: number      // 我的任务数量
-  ongoingCount: number     // 进行中任务数量 
-  completedCount: number   // 已完成任务数量
-  overdueCount: number     // 超时任务数量
-}
-
-// 部门任务项响应
-export interface DeptTaskRespVO {
-  id: number               // 任务ID
-  title: string            // 任务标题
-  description?: string     // 任务描述
-  instruction?: string     // 领导批示
-  issuer: string           // 下发单位
-  collaborators: string[]  // 协办部门
-  supervisor: string       // 分管领导
-  deadline: string         // 截止日期
-  createTime: string       // 创建时间
-  remainingDays: number    // 剩余天数
-  priority: string         // 优先级
-  status: string           // 状态
-  mainContent?: string     // 主要内容
-  undertakingContent?: string  // 承办内容
-}
-
-// 部门任务分页查询参数
-export interface DeptTaskPageReqVO extends PageParam {
-  keyword?: string         // 搜索关键词
-  department?: string      // 部门筛选
-  status?: string          // 状态筛选
-  tab?: string             // 当前选项卡
-}
-
-// 部门详情相关API
-export const DeptApi = {
-  // 获取部门统计数据
-  getDeptStatistics: async (): Promise<DeptStatisticsRespVO> => {
-    return await request.get({ url: `/supervision/dept/statistics` })
-  },
-
-  // 获取部门任务列表（分页）
-  getDeptTaskPage: async (params: DeptTaskPageReqVO): Promise<PageResult<DeptTaskRespVO>> => {
-    return await request.get({ url: `/supervision/dept/task/page`, params })
-  },
-  
-  // 获取部门任务详情
-  getDeptTask: async (id: number): Promise<DeptTaskRespVO> => {
-    return await request.get({ url: `/supervision/dept/task/detail`, params: { id } })
-  },
-  
-  // 添加任务进度
-  addTaskProgress: async (taskId: number, data: { description: string, percentage: number }) => {
-    return await request.post({ url: `/supervision/dept/task/progress`, data: { taskId, ...data } })
+// 首页统计数据响应接口
+export interface SupervisionIndexRespVO {
+  taskStats: {
+    total: number
+    workSupervision: number
+    specialSupervision: number
   }
+  statusStats: {
+    total: number
+    fast: number
+    consulting: number
+    slow: number
+    completed: number
+  }
+  monthlyStats: {
+    newTasks: number
+    inProgress: number
+    completed: number
+    overdue: number
+  }
+  tasks: SupervisionTaskItemVO[]
 }
 
-// 分页结果基类
-export interface PageResult<T> {
-  list: T[]                // 数据列表
-  total: number            // 总数据条数
-  pageNo: number           // 当前页码
-  pageSize: number         // 每页大小
+// 督办任务项
+export interface SupervisionTaskItemVO {
+  id: number
+  applyTitle: string // 任务标题
+  materialName: string // 任务描述
+  signers: string // 分管领导
+  phone: string
+  sealStatus: boolean
+  orgName: string // 牵头部门
+  deleted: number
+  sealState: string // 状态
+  applyId: string
+  assistDepartments: string[] // 协办部门
+  createdDate: string // 创建时间
+  deadline: string // 截止时间
+  priority: string // 优先级
+  overdueDays: number | null // 超时天数
+  isOverdue: boolean // 是否超时
+  daysRemaining: number | null // 剩余天数
+  type: number // 任务类型：1=工作督办，2=专项督办
+}
+
+// 督办首页API
+export const SupervisionIndexApi = {
+  // 获取督办首页数据
+  getIndexData(): Promise<SupervisionIndexRespVO> {
+    return request.get({ url: 'http://127.0.0.1:4523/m1/6215417-5908881-default/dcdb/getIndex' })
+  }
 }
 
 // ========== 通用类型定义 ==========
