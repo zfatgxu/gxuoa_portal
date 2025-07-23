@@ -130,7 +130,7 @@ export default {
     otherLogin: '其他登录方式',
     register: '注册',
     checkPassword: '确认密码',
-    remember: '记住我',
+    remember: '记住账号',
     hasUser: '已有账号？去登录',
     forgetPassword: '忘记密码?',
     tenantNamePlaceholder: '请输入租户名称',
@@ -383,7 +383,7 @@ export default {
       scanSign: `扫码后点击"确认"，即可完成登录`,
       loginButton: '登录',
       registerButton: '注册',
-      rememberMe: '记住我',
+      rememberMe: '记住账号',
       forgetPassword: '忘记密码?',
       otherSignIn: '其他登录方式',
       // notify
