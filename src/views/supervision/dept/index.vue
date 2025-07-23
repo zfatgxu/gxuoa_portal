@@ -189,7 +189,7 @@ import {
   ArrowRight, OfficeBuilding, User
 } from '@element-plus/icons-vue'
 import SupervisionDetailDialog from '../components/SupervisionDetailDialog.vue'
-import { DeptApi } from '@/api/supervision/index'
+import * as DeptApi from '@/api/system/dept'
 import { mockDeptStatistics, mockDeptTaskPage, mockDeptTaskDetail, mockAddTaskProgress } from '@/api/supervision/mock'
 import { ElMessage } from 'element-plus'
 
