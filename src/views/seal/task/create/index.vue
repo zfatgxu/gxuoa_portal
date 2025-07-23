@@ -102,8 +102,8 @@
             <div class="signature-row" v-for="userTask in startUserSelectTasks" :key="userTask.id">
               <span class="required">{{ userTask.name }}</span>
               <el-select
-                v-model="startUserSelectAssignees[userTask.id]"
-                multiple
+                :model-value="getSelectedUserId(userTask.id)"
+                @update:model-value="(value) => handleUserSelect(userTask.id, value)"
                 placeholder="请选择审批人"
                 class="signature-input"
                 filterable
@@ -524,11 +524,7 @@ const submitForm = async () => {
     return
   }
   
-  // 验证摘要
-  if (!form.notes) {
-    ElMessage.error('请填写申请摘要')
-    return
-  }
+  
   
   // // 获取选中的材料类型的名称并合并为字符串
   // const selectedMaterialTypeLabels = form.selectedMaterialTypes.map(value => {
@@ -649,6 +645,17 @@ watch(selectedUnit, (newVal) => {
     getSealTypeOptions()
   }
 })
+
+// 获取选中的审批人ID
+const getSelectedUserId = (taskId) => {
+  const assignees = startUserSelectAssignees.value[taskId]
+  return assignees && assignees.length > 0 ? assignees[0] : ''
+}
+
+// 处理审批人选择变化
+const handleUserSelect = (taskId, value) => {
+  startUserSelectAssignees.value[taskId] = [value]
+}
 </script>
 
 <style scoped>

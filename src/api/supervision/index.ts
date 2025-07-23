@@ -374,6 +374,61 @@ export const AttachmentApi = {
 
 
 
+// ========== 督办首页相关 ==========
+
+// 首页统计数据响应接口
+export interface SupervisionIndexRespVO {
+  taskStats: {
+    total: number
+    workSupervision: number
+    specialSupervision: number
+  }
+  statusStats: {
+    total: number
+    fast: number
+    consulting: number
+    slow: number
+    completed: number
+  }
+  monthlyStats: {
+    newTasks: number
+    inProgress: number
+    completed: number
+    overdue: number
+  }
+  tasks: SupervisionTaskItemVO[]
+}
+
+// 督办任务项
+export interface SupervisionTaskItemVO {
+  id: number
+  applyTitle: string // 任务标题
+  materialName: string // 任务描述
+  signers: string // 分管领导
+  phone: string
+  sealStatus: boolean
+  orgName: string // 牵头部门
+  deleted: number
+  sealState: string // 状态
+  applyId: string
+  assistDepartments: string[] // 协办部门
+  createdDate: string // 创建时间
+  deadline: string // 截止时间
+  priority: string // 优先级
+  overdueDays: number | null // 超时天数
+  isOverdue: boolean // 是否超时
+  daysRemaining: number | null // 剩余天数
+  type: number // 任务类型：1=工作督办，2=专项督办
+}
+
+// 督办首页API
+export const SupervisionIndexApi = {
+  // 获取督办首页数据
+  getIndexData(): Promise<SupervisionIndexRespVO> {
+    return request.get({ url: 'http://127.0.0.1:4523/m1/6215417-5908881-default/dcdb/getIndex' })
+  }
+}
+
 // ========== 通用类型定义 ==========
 
 // 分页参数基类

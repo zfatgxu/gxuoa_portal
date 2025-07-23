@@ -70,7 +70,12 @@
           </template>
         </el-table-column>
         <el-table-column align="center" label="材料名称" prop="materialName" />
-        <el-table-column align="center" label="材料类型" prop="materialType" />
+        <el-table-column align="center" label="材料类型" >
+          <template #default="scope">
+            {{ getDictLabel(DICT_TYPE.SEAL_APPLY_MATERIAL_TYPES, scope.row.materialType) }}
+          </template>
+        </el-table-column>
+
         <el-table-column align="center" label="印章类型">
           <template #default="scope">
             <div v-if="scope.row.sealTypes && scope.row.sealTypes.length > 0">
@@ -114,6 +119,8 @@
   import { ElMessageBox, ElMessage } from 'element-plus'
 
   import { useUserStore } from '@/store/modules/user'
+  import { getDictLabel } from '@/utils/dict'
+
 
   const router = useRouter()
   const userStore = useUserStore()
