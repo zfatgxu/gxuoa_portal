@@ -14,6 +14,8 @@ export default {
     back: '返回',
     ok: '确定',
     save: '保存',
+    resetPassword: '重置密码',
+    clearInput: '清空输入框',
     cancel: '取消',
     close: '关闭',
     reload: '重新加载',
@@ -436,9 +438,15 @@ export default {
       oldPassword: '旧密码',
       newPassword: '新密码',
       confirmPassword: '确认密码',
+      smsCode: '手机验证码', // 新增
       oldPwdMsg: '请输入旧密码',
       newPwdMsg: '请输入新密码',
       cfPwdMsg: '请输入确认密码',
+      smsCodeMsg: '请输入手机验证码', // 新增
+      smsPlaceholder: '请输入验证码', // 新增
+      getSmsCode: '获取验证码', // 新增
+      smsCodeSent: '验证码已发送', // 新增
+      smsCodeFormat: '验证码格式不正确，请输入6位数字', // 新增
       pwdRules: '长度在 6 到 20 个字符',
       diffPwd: '两次输入密码不一致'
     }

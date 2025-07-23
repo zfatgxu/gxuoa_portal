@@ -30,8 +30,8 @@
         <el-date-picker
           v-model="queryParams.startDate"
           value-format="YYYY-MM-DD HH:mm:ss"
-          type="datetime"
-          start-placeholder="开始日期"
+          type="date"
+          placeholder="请选择开始日期"
           class="!w-220px"
         />
       </el-form-item>
@@ -39,8 +39,8 @@
         <el-date-picker
           v-model="queryParams.endDate"
           value-format="YYYY-MM-DD HH:mm:ss"
-          type="datetime"
-          end-placeholder="结束日期"
+          type="date"
+          placeholder="请选择结束日期"
           class="!w-220px"
         />
       </el-form-item>
@@ -158,13 +158,13 @@
         label="开始时间"
         align="center"
         prop="startDate"
-        :formatter="dateFormatter"
+        :formatter="dateFormatter2"
       />
       <el-table-column
         label="结束时间"
         align="center"
         prop="endDate"
-        :formatter="dateFormatter"
+        :formatter="dateFormatter2"
       />
       <!-- <el-table-column label="请假期间前往地点" align="center" prop="destination" />
       <el-table-column label="主持工作负责人安排" align="center" prop="hostArrangement" />
@@ -239,7 +239,7 @@
 </template>
 
 <script setup lang="ts">
-import { dateFormatter } from '@/utils/formatTime'
+import { dateFormatter2 } from '@/utils/formatTime'
 import download from '@/utils/download'
 import { RegisterVO, RegisterApi } from '@/api/leave/create/createForm'
 import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'

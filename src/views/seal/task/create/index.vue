@@ -4,12 +4,12 @@
       <!-- 未选择单位时显示选择框 -->
       <div v-if="!selectedUnit">
         <el-select v-model="selectedUnit" placeholder="请选择一个单位申请印章" filterable style="width: 300px;">
-          <el-option v-for="unit in unitList" :key="unit.id" :label="unit.name" :value="unit.name" />
+          <el-option v-for="unit in unitList" :key="unit.id" :label="unit.name" :value="unit" />
         </el-select>
       </div>
       <!-- 选择单位后显示完整h1标题 -->
       <div v-else class="title-with-edit">
-        <h1>{{ selectedUnit }} 用印申请单</h1>
+        <h1>{{ selectedUnit.name }} 用印申请单</h1>
         <el-button type="primary" link @click="resetUnit" class="edit-unit-btn">
           <el-icon><Edit /></el-icon> 更改单位
         </el-button>
@@ -102,13 +102,14 @@
             <div class="signature-row" v-for="userTask in startUserSelectTasks" :key="userTask.id">
               <span class="required">{{ userTask.name }}</span>
               <el-select
-                v-model="startUserSelectAssignees[userTask.id]"
+                :model-value="getSelectedUserId(userTask.id)"
+                @update:model-value="(value) => handleUserSelect(userTask.id, value)"
                 placeholder="请选择审批人"
                 class="signature-input"
                 filterable
               >
                 <el-option
-                  v-for="user in userList"
+                  v-for="user in (userTask.name === '经办人签字' ? userList : auditUserList)"
                   :key="user.id"
                   :label="user.nickname"
                   :value="user.id"
@@ -318,7 +319,7 @@ const sealTypeOptions = ref([])
 const getSealTypeOptions = async () => {
   try {
     // 从数据库获取印章类型选项
-    const res = await sealApi.getsealPage({ pageSize: 100, orgName: selectedUnit.value })
+    const res = await sealApi.getsealPage({ pageSize: 100, orgName: selectedUnit.value.name })
     
       sealTypeOptions.value = res.list.map(item => {
         return {
@@ -539,7 +540,7 @@ const submitForm = async () => {
   }))
   // 构建符合后端要求的数据结构
   const submitData = {
-    applyTitle: selectedUnit.value+'印章申请单',//表单标题
+    applyTitle: selectedUnit.value.name+'印章申请单',//表单标题
     materialName: form.materialName,//材料名称
     phone: form.contactPhone,//联系电话
     materialTypes: form.selectedMaterialTypes,//材料类型
@@ -569,6 +570,9 @@ const submitForm = async () => {
 }
 
 const bpmnXml = ref('')
+
+//审核人和单位负责人列表
+const auditUserList = ref<Array<any>>([])
 
 onMounted(async () => {
   await fetchUnitList()
@@ -607,7 +611,7 @@ onMounted(async () => {
               { required: true, message: '请选择审批人', trigger: 'blur' }
             ]
           }
-          // 加载用户列表
+          // 加载经办人用户列表
           userList.value = await UserApi.getSimpleUserList()
         }
       } catch (error) {
@@ -636,14 +640,37 @@ const resetUnit = () => {
   selectedUnit.value = null
   // 清空已选择的印章类型
   customSealTypes.value = []
+  // 清空审核人列表
+  auditUserList.value = []
 }
 
 // 监听selectedUnit变化，当选择了单位时获取印章类型
-watch(selectedUnit, (newVal) => {
+watch(selectedUnit, async (newVal) => {
   if (newVal) {
     getSealTypeOptions()
+    // 更新审核人列表
+    try {
+      auditUserList.value = await UserApi.getUserListByDeptId(newVal.id)
+    } catch (error) {
+      console.error('获取审核人列表失败:', error)
+      ElMessage.error('获取审核人列表失败')
+    }
+  } else {
+    // 清空审核人列表
+    auditUserList.value = []
   }
 })
+
+// 获取选中的审批人ID
+const getSelectedUserId = (taskId) => {
+  const assignees = startUserSelectAssignees.value[taskId]
+  return assignees && assignees.length > 0 ? assignees[0] : ''
+}
+
+// 处理审批人选择变化
+const handleUserSelect = (taskId, value) => {
+  startUserSelectAssignees.value[taskId] = [value]
+}
 </script>
 
 <style scoped>

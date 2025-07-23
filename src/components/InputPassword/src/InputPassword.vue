@@ -47,11 +47,18 @@ watch(
   }
 )
 
-// 获取密码强度
+// 获取密码强度 - 映射为三格强度
 const getPasswordStrength = computed(() => {
   const value = unref(valueRef)
+  if (!value) return -1
+  
   const zxcvbnRef = zxcvbn(unref(valueRef)) as ZxcvbnResult
-  return value ? zxcvbnRef.score : -1
+  const originalScore = zxcvbnRef.score // 0-4
+  
+  // 将 0-4 的强度映射为 0-2 的三格强度
+  if (originalScore <= 1) return 0 // 弱
+  if (originalScore <= 2) return 1 // 中
+  return 2 // 强
 })
 
 const getIconName = computed(() => (unref(textType) === 'password' ? 'ep:hide' : 'ep:view'))
@@ -91,7 +98,7 @@ $prefix-cls: #{$namespace}-input-password;
       position: absolute;
       z-index: 10;
       display: block;
-      width: 20%;
+      width: 33.33%;
       height: inherit;
       background-color: transparent;
       border-color: var(--el-color-white);
@@ -101,11 +108,11 @@ $prefix-cls: #{$namespace}-input-password;
     }
 
     &::before {
-      left: 20%;
+      left: 33.33%;
     }
 
     &::after {
-      right: 20%;
+      right: 33.33%;
     }
 
     &--fill {
@@ -119,26 +126,16 @@ $prefix-cls: #{$namespace}-input-password;
         background 0.25s;
 
       &[data-score='0'] {
-        width: 20%;
+        width: 33.33%;
         background-color: var(--el-color-danger);
       }
 
       &[data-score='1'] {
-        width: 40%;
-        background-color: var(--el-color-danger);
-      }
-
-      &[data-score='2'] {
-        width: 60%;
+        width: 66.66%;
         background-color: var(--el-color-warning);
       }
 
-      &[data-score='3'] {
-        width: 80%;
-        background-color: var(--el-color-success);
-      }
-
-      &[data-score='4'] {
+      &[data-score='2'] {
         width: 100%;
         background-color: var(--el-color-success);
       }

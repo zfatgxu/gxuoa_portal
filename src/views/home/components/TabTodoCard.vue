@@ -501,15 +501,18 @@ onMounted(() => {
 .card {
   border-radius: 5px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
+  margin-bottom: 0;
   background-color: white;
   border: none;
+  height: calc(100vh - 300px);
+  display: flex;
+  flex-direction: column;
 }
-
 .card-tabs {
   display: flex;
   border-bottom: 1px solid #e6e6e6;
   position: relative;
+  flex-shrink: 0;
 }
 
 .tab-item {
@@ -552,16 +555,24 @@ onMounted(() => {
 
 .card-body {
   padding: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .tab-content {
   min-height: 200px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .todo-list {
   list-style: none;
   padding: 0;
   margin: 0;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .todo-item {

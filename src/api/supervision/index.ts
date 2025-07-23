@@ -7,7 +7,7 @@ export interface OrderPageReqVO extends PageParam {
   content?: string // 督办内容（模糊查询）
   orderCode?: string // 督办编号（精确查询）
   leadDept?: string // 承办单位（模糊查询）
-  orderType?: number // 督办类型：1=工作督办，2=专项督办
+  type?: number // 督办类型：1=工作督办，2=专项督办
 }
 
 // 督办单保存请求
@@ -86,9 +86,12 @@ export interface OrderRespVO {
   supervisionApprove: number | null // 督察办审批状态
   leadDeptDetail: string | null // 牵头单位承办情况
   supervisionReapprove: number | null // 督察办复核状态
+  supervisionStatus?: string // 督办状态：processing=流程中，completed=结办文件，rejected=否决文件
   summary?: string // 概述信息
   officePhone?: string // 办公电话
   leader?: string // 分管领导
+  leadDeptLeader?: string // 牵头单位负责人
+  supervisorPhone?: string // 督办人电话（后端返回字段）
   processInstanceId: string // 流程实例ID
   createTime: number // 创建时间（时间戳）
 
@@ -156,12 +159,17 @@ export const OrderApi = {
 
   // 查询督办单分页
   getOrderPage: async (params: OrderPageReqVO) => {
-    return await request.get({ url: `/supervision/order/page`, params })
+    return await request.get({ url: `bpm/supervision/page-with-participants`, params })
   },
 
   // 导出督办单 Excel
   exportOrder: async (params: OrderPageReqVO) => {
     return await request.download({ url: `/supervision/order/export-excel`, params })
+  },
+
+  // 根据督办人ID获取手机号
+  getSupervisorPhone: async (supervisorId: number): Promise<string> => {
+    return await request.get({ url: `/bpm/supervision/getSupervisorPhone/${supervisorId}` })
   }
 }
 
@@ -362,6 +370,9 @@ export const AttachmentApi = {
     return await request.download({ url: `/supervision/attachment/export-excel`, params })
   }
 }
+
+
+
 
 // ========== 督办首页相关 ==========
 

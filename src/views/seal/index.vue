@@ -7,9 +7,12 @@
         </el-form-item>
         <el-form-item label="材料类型">
           <el-select v-model="queryParams.materialType" clearable placeholder="请选择材料类型" style="width: 280px">
-            <el-option label="非合同类" value="非合同类" />
-            <el-option label="合同类材料，未经法务办审核" value="合同类材料，未经法务办审核" />
-            <el-option label="合同类材料，经法务办审查" value="合同类材料，经法务办审查" />
+            <el-option 
+              v-for="dict in getDictOptions(DICT_TYPE.SEAL_APPLY_MATERIAL_TYPES)" 
+              :key="dict.value" 
+              :label="dict.label" 
+              :value="dict.value" 
+            />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -119,7 +122,7 @@
   import { ElMessageBox, ElMessage } from 'element-plus'
 
   import { useUserStore } from '@/store/modules/user'
-  import { getDictLabel } from '@/utils/dict'
+  import { getDictLabel, getDictOptions } from '@/utils/dict'
 
 
   const router = useRouter()

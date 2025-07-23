@@ -47,7 +47,7 @@
   </div> -->
 
   <!-- 主要内容区域 - 左右布局 -->
-  <el-row class="mt-8px" :gutter="16" type="flex" align="top">
+  <el-row class="mt-2px" :gutter="16" type="flex" align="top">
     <!-- 左侧卡片区域 -->
     <el-col :xl="19" :lg="19" :md="24" :sm="24" :xs="24">
       <!-- 快捷入口卡片 -->

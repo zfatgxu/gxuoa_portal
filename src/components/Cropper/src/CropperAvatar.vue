@@ -132,11 +132,16 @@ $prefix-cls: #{$namespace}--cropper-avatar;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-style: normal;
-  line-height: 110px;
+  line-height: 120px;
   color: #eee;
   cursor: pointer;
   background: rgb(0 0 0 / 50%);
   border-radius: 50%;
   content: '+';
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

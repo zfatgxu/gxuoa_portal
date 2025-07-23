@@ -29,10 +29,20 @@
             </div>
             <div class="search-item">
               <span class="search-label">承办单位:</span>
-              <el-select v-model="searchForm.unit" placeholder="全部" style="width: 120px;">
+              <el-select
+                v-model="searchForm.unit"
+                placeholder="全部"
+                style="width: 180px;"
+                popper-class="dept-select-dropdown"
+                :teleported="false"
+              >
                 <el-option label="全部" value="all" />
-                <el-option label="11部门" value="dept11" />
-                <el-option label="12部门" value="dept12" />
+                <el-option
+                  v-for="dept in deptList"
+                  :key="dept.id"
+                  :label="dept.name"
+                  :value="dept.id"
+                />
               </el-select>
             </div>
             <el-button type="primary" @click="handleSearch">搜索</el-button>
@@ -66,20 +76,20 @@
           </div>
         </div>
   
-        <!-- 数据表格 --> 
-        <el-table :data="currentTableData" style="width: 100%" @selection-change="handleSelectionChange" v-loading="loading">
+        <!-- 数据表格 -->
+        <el-table :data="currentPageData" style="width: 100%" @selection-change="handleSelectionChange" v-loading="loading">
           <el-table-column type="selection" width="55" />
           <el-table-column prop="id" label="序号" width="80" />
           <el-table-column prop="orderCode" label="督办编号" min-width="120" />
           <el-table-column prop="orderTitle" label="督办内容" min-width="150" />
           <el-table-column label="承办单位" min-width="100">
             <template #default="{ row }">
-              {{ row.leadDeptName || '未分配' }}
+              {{ getDeptName(row.leadDept) }}
             </template>
           </el-table-column>
           <el-table-column prop="deadline" label="完成期限" min-width="120">
             <template #default="{ row }">
-              {{ formatDate(row.deadline) }}
+              {{ row.deadline ? formatDate(row.deadline) : '-' }}
             </template>
           </el-table-column>
           <el-table-column prop="createTime" label="登记日期" min-width="100">
@@ -87,7 +97,11 @@
               {{ formatDate(row.createTime) }}
             </template>
           </el-table-column>
-          <el-table-column prop="supervisorName" label="督办人" min-width="120" />
+          <el-table-column label="处理用户" min-width="120">
+            <template #default="{ row }">
+              {{ getParticipantUsers(row.participantUsers) }}
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="80" fixed="right">
             <template #default>
               <el-button type="primary" link>详情</el-button>
@@ -98,14 +112,14 @@
         <!-- 分页 -->
         <div class="pagination-wrapper">
           <div class="pagination-info">
-            共 {{ pagination.total }} 条记录 第 {{ pagination.pageNo }} / {{ Math.ceil(pagination.total / pagination.pageSize) || 1 }} 页
+            {{ currentTabStats.tabName }}: {{ currentTabTotal }} 条 | 全部: {{ allData.length }} 条 | 第 {{ pagination.pageNo }} / {{ Math.ceil(currentTabTotal / pagination.pageSize) || 1 }} 页
           </div>
           <el-pagination
             v-model:current-page="pagination.pageNo"
             v-model:page-size="pagination.pageSize"
             :page-sizes="[5, 10, 20, 50]"
             layout="prev, pager, next, sizes, jumper"
-            :total="pagination.total"
+            :total="currentTabTotal"
             @size-change="handleSizeChange"
             @current-change="handleCurrentChange"
           />
@@ -123,6 +137,7 @@ import { Plus, Edit, Delete, Download, Bell } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { OrderApi } from '@/api/supervision'
 import type { OrderPageReqVO, OrderRespVO } from '@/api/supervision'
+import { getSimpleDeptList, type DeptVO } from '@/api/system/dept'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
@@ -148,6 +163,9 @@ const pageSize = ref(20)
 // 数据加载状态
 const loading = ref(false)
 
+// 部门列表
+const deptList = ref<DeptVO[]>([])
+
 // 日期格式化函数
 const formatDate = (timestamp: number | string) => {
   if (!timestamp) return '-'
@@ -159,6 +177,34 @@ const formatDate = (timestamp: number | string) => {
   })
 }
 
+// 根据部门ID获取部门名称
+const getDeptName = (deptId: number | null) => {
+  if (!deptId) return '未分配'
+  const dept = deptList.value.find(item => item.id === deptId)
+  return dept?.name || '未知部门'
+}
+
+// 获取处理用户显示文本
+const getParticipantUsers = (participantUsers: any[]) => {
+  if (!participantUsers || participantUsers.length === 0) {
+    return '无处理用户'
+  }
+
+  // 提取所有用户的nickname并用逗号连接
+  const nicknames = participantUsers.map(user => user.nickname).filter(Boolean)
+
+  if (nicknames.length === 0) {
+    return '无处理用户'
+  }
+
+  // 如果用户较多，只显示前3个，后面用省略号
+  if (nicknames.length > 3) {
+    return nicknames.slice(0, 3).join(', ') + '...'
+  }
+
+  return nicknames.join(', ')
+}
+
 // 所有数据
 const allData = ref<OrderRespVO[]>([])
 
@@ -168,6 +214,16 @@ const pagination = reactive({
   pageNo: 1,
   pageSize: 20
 })
+// 获取部门列表
+const fetchDeptList = async () => {
+  try {
+    deptList.value = await getSimpleDeptList()
+  } catch (error) {
+    console.error('获取部门列表失败:', error)
+    ElMessage.error('获取部门列表失败')
+  }
+}
+
 // 获取督办单数据
 const fetchOrderData = async () => {
   try {
@@ -176,7 +232,7 @@ const fetchOrderData = async () => {
     const params: OrderPageReqVO = {
       pageNo: pagination.pageNo,
       pageSize: pagination.pageSize,
-      orderType: 2 // 专项督办类型
+      type: 2 // 专项督办类型
     }
 
     // 添加搜索条件
@@ -190,9 +246,7 @@ const fetchOrderData = async () => {
       params.leadDept = searchForm.unit
     }
 
-    // 根据当前标签页添加状态过滤条件
-    // 注意：这里需要后端支持状态过滤参数，如果后端不支持，则保持前端过滤
-    // 暂时保持现有逻辑，但移除重复的type过滤
+    // 不向后端传递状态过滤参数，在前端处理
 
     const response = await OrderApi.getOrderPage(params)
 
@@ -213,31 +267,45 @@ const fetchOrderData = async () => {
   }
 }
 
-// 根据状态过滤数据
+// 根据状态过滤数据（前端过滤）
 const getDataByStatus = (status: string) => {
+  const statusMap = {
+    'processing': '流程中',
+    'completed': '结办文件',
+    'rejected': '否决文件'
+  }
   return allData.value.filter(item => {
-    // 后端已经按orderType=2过滤了专项督办，这里不需要再次过滤type
-    switch (status) {
-      case 'processing':
-        // 流程中：supervision_approve为1(同意)或未设置，且supervision_reapprove不为1
-        return (item.supervisionApprove === 1 || !item.supervisionApprove) && item.supervisionReapprove !== 1
-      case 'completed':
-        // 结办文件：supervision_reapprove为1(同意结办)
-        return item.supervisionReapprove === 1
-      case 'rejected':
-        // 否决文件：supervision_approve为2(不同意)
-        return item.supervisionApprove === 2
-      default:
-        return true
-    }
+    return item.supervisionStatus === statusMap[status]
   })
 }
 
 // 根据当前标签页显示对应数据
 const currentTableData = computed(() => {
-  // 暂时直接返回后端数据，避免前端过滤导致分页不准确
-  // 后续可以考虑将状态过滤逻辑移到后端
-  return allData.value
+  return getDataByStatus(activeTab.value)
+})
+
+// 当前标签页的分页数据
+const currentPageData = computed(() => {
+  const filteredData = currentTableData.value
+  const startIndex = (pagination.pageNo - 1) * pagination.pageSize
+  const endIndex = startIndex + pagination.pageSize
+  return filteredData.slice(startIndex, endIndex)
+})
+
+// 当前标签页的总数据量
+const currentTabTotal = computed(() => {
+  return currentTableData.value.length
+})
+
+// 当前标签页数据统计
+const currentTabStats = computed(() => {
+  return {
+    tabName: {
+      'processing': '流程中',
+      'completed': '结办文件',
+      'rejected': '否决文件'
+    }[activeTab.value] || '全部'
+  }
 })
 // 选中的行
 const selectedRows = ref([])
@@ -252,14 +320,14 @@ const handleSizeChange = (size) => {
   pageSize.value = size
   pagination.pageSize = size
   pagination.pageNo = 1
-  fetchOrderData()
+  // 不需要重新获取数据，只需要重新计算分页
 }
 
 // 处理当前页变化
 const handleCurrentChange = (page) => {
   currentPage.value = page
   pagination.pageNo = page
-  fetchOrderData()
+  // 不需要重新获取数据，只需要重新计算分页
 }
 
 // 处理搜索
@@ -271,7 +339,7 @@ const handleSearch = () => {
 // 处理新建督办单
 const handleCreate = () => {
   router.push({
-    path: '/dcdb/create',
+    path: '/supervision/create',
     query: {
       from: 'special_supervision',
       type: 'special'
@@ -281,14 +349,14 @@ const handleCreate = () => {
 
 // 监听标签页变化
 watch(activeTab, () => {
-  // 标签页变化时重新获取数据，确保分页准确
+  // 标签页变化时重置到第一页
   pagination.pageNo = 1
-  fetchOrderData()
 })
 
 // 组件挂载时获取数据
-onMounted(() => {
-  fetchOrderData()
+onMounted(async () => {
+  await fetchDeptList()
+  await fetchOrderData()
 })
 </script>
 <style scoped>
@@ -335,8 +403,9 @@ onMounted(() => {
     display: flex;
     align-items: center;
     gap: 6px;
+    position: relative;
   }
-  
+
   .search-label {
     white-space: nowrap;
     color: #666;
@@ -425,6 +494,15 @@ onMounted(() => {
   
   :deep(.el-table th) {
     background-color: #fafafa;
+  }
+
+  /* 修复承办单位下拉框定位问题 */
+  :deep(.dept-select-dropdown) {
+    z-index: 9999 !important;
+  }
+
+  :deep(.el-select-dropdown) {
+    z-index: 9999 !important;
   }
   
   @media (max-width: 768px) {

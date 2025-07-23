@@ -128,82 +128,17 @@ const remainingRouter: AppRouteRecordRaw[] = [
     ]
   },
   {
-    path: '/dcdb',
+    path: '/supervision',
     component: Layout,
-    name: 'dcdb',
+    name: 'supervision',
     meta: {
       hidden: true
     },
     children: [
       {
-        path: 'index',
-        component: () => import('@/views/supervision/index.vue'),
-        name: 'Dcdb',
-        meta: {
-          title: '督查督办',
-          noCache: true,
-          hidden: true,
-          canTo: true,
-          icon: '',
-          activeMenu: '/dcdb'
-        }
-      },
-      {
-        path: '/dcdb/dept',
-        component: () => import('@/views/supervision/dept/index.vue'),
-        name: 'DcdbDept',
-        meta: {
-          title: '部门界面',
-          noCache: true,
-          hidden: true,
-          canTo: true,
-          icon: '',
-          activeMenu: '/dcdb/dept'
-        }
-      },
-      {
-        path: '/dcdb/leader',
-        component: () => import('@/views/supervision/leader/index.vue'),
-        name: 'DcdbLeader',
-        meta: {
-          title: '分管领导',
-          noCache: true,
-          hidden: true,
-          canTo: true,
-          icon: '',
-          activeMenu: '/dcdb/dept'
-        }
-      },
-      {
-        path: 'work_supervision',
-        component: () => import('@/views/supervision/work_supervision.vue'),
-        name: 'DcdbWorkSupervision',
-        meta: {
-          title: '工作督办',
-          noCache: true,
-          hidden: true,
-          canTo: true,
-          icon: '',
-          activeMenu: '/dcdb'
-        }
-      },
-      {
-        path: 'special_supervision',
-        component: () => import('@/views/supervision/special_supervision.vue'),
-        name: 'DcdbSpecialSupervision',
-        meta: {
-          title: '专项督办',
-          noCache: true,
-          hidden: true,
-          canTo: true,
-          icon: '',
-          activeMenu: '/dcdb'
-        }
-      },
-      {
         path: 'create',
         component: () => import('@/views/supervision/create.vue'),
-        name: 'DcdbCreate',
+        name: 'SupervisionCreate',
         meta: {
           title: '创建督办单',
           requiresAuth: true,
@@ -211,7 +146,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
           hidden: true,
           canTo: true,
           icon: '',
-          activeMenu: '/dcdb'
+          activeMenu: '/supervision'
         }
       },
       {
@@ -224,7 +159,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
           hidden: true,
           canTo: true,
           icon: '',
-          activeMenu: '/dcdb'
+          activeMenu: '/supervision'
         }
       }
     ]
@@ -524,6 +459,27 @@ const remainingRouter: AppRouteRecordRaw[] = [
           canTo: true,
           title: '查看印章详情',  
           activeMenu: '/seal'
+        }
+      }
+    ]
+  },
+  {
+    path: '/mail',
+    component: Layout,
+    redirect: '/mail/write',
+    name: 'Mail',
+    meta: {
+      title: '内部邮件',
+      icon: 'ep:message',
+      orderNo: 5000
+    },
+    children: [
+      {
+        path: 'write',
+        component: () => import('@/views/mail/write.vue'),
+        name: 'MailWrite',
+        meta: {
+          title: '写信'
         }
       }
     ]
