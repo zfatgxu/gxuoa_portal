@@ -128,9 +128,9 @@ const remainingRouter: AppRouteRecordRaw[] = [
     ]
   },
   {
-    path: '/dcdb',
+    path: '/supervision',
     component: Layout,
-    name: 'dcdb',
+    name: 'supervision',
     meta: {
       hidden: true
     },
@@ -138,7 +138,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
       {
         path: 'create',
         component: () => import('@/views/supervision/create.vue'),
-        name: 'DcdbCreate',
+        name: 'SupervisionCreate',
         meta: {
           title: '创建督办单',
           requiresAuth: true,
@@ -146,7 +146,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
           hidden: true,
           canTo: true,
           icon: '',
-          activeMenu: '/dcdb'
+          activeMenu: '/supervision'
         }
       },
       {
@@ -159,7 +159,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
           hidden: true,
           canTo: true,
           icon: '',
-          activeMenu: '/dcdb'
+          activeMenu: '/supervision'
         }
       }
     ]

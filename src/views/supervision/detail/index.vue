@@ -3,7 +3,7 @@
     <div class="supervision-order-detail">
       <!-- 页面标题和操作按钮 -->
       <div class="page-header mb-6">
-        <div class="flex justify-between items-center">
+        <div class="flex justify-center items-center">
           <h2 class="text-2xl font-bold text-red-600">督办单详情</h2>
 
         </div>
@@ -134,7 +134,7 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="办公电话：">
-              <el-input :value="orderDetail.officePhone || '(自动生成)'" readonly />
+              <el-input :value="orderDetail.officePhone || getUserMobile(orderDetail.supervisor) || '未设置'" readonly />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -187,7 +187,7 @@
 
         <!-- 牵头单位承办情况 -->
         <div class="section-title">
-          <h3 class="text-lg font-medium text-red-600 mb-4">牵头单位承办情况：</h3>
+          <h3 class="text-lg font-medium text-red-600 mb-4">单位承办情况：</h3>
         </div>
 
         <!-- 承办状况 -->
@@ -253,7 +253,7 @@
         <!-- 附件上传区域 - 使用自定义上传 -->
         <el-row :gutter="20" v-if="hasEditPermission">
           <el-col :span="24">
-            <h3 class="section-title">附件管理</h3>
+            <h3 class="section-title attachment-title">附件管理</h3>
             <el-form-item label="上传附件：">
               <el-upload
                 ref="uploadRef"
@@ -285,7 +285,7 @@
         <!-- 已有附件列表 -->
         <el-row :gutter="20" v-if="existingAttachments.length > 0">
           <el-col :span="24">
-            <h3 class="section-title">已有附件</h3>
+            <h3 class="section-title attachment-title">已有附件</h3>
             <el-table :data="existingAttachments" style="width: 100%">
               <el-table-column prop="name" label="文件名" min-width="200" />
               <el-table-column prop="size" label="文件大小" width="120">
@@ -324,7 +324,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { OrderApi, type OrderRespVO, type OrderSaveReqVO, type OrderWorkflowUpdateReqVO, type AttachmentFileInfo, type AttachmentRespVO } from '@/api/supervision'
 import { getSimpleDeptList, getDept, type DeptVO } from '@/api/system/dept'
@@ -399,16 +399,12 @@ const customUpload = async (options) => {
           size: file.size
           // type: file.type
         })
-        console.log('文件已添加到待处理附件列表')
       } else {
         console.log('文件已存在于待处理附件列表中，跳过添加')
       }
 
       // 调用成功回调
       onSuccess(result)
-
-      console.log('文件上传成功，URL:', result.data)
-      console.log('已添加到待处理附件列表:', pendingAttachments.value)
       ElMessage.success(`文件 ${file.name} 上传成功，将在审批通过后保存`)
     } else {
       // 上传失败
@@ -452,17 +448,12 @@ const getUploadedFileUrls = (): string[] => {
     .map(file => file.url!)
 }
 
-
-
 // 清理待处理的附件（在审批拒绝时调用）
 const clearPendingAttachments = () => {
   pendingAttachments.value = []
   fileList.value = []
-  console.log('已清理所有待处理附件')
   ElMessage.info('已清理未保存的附件')
 }
-
-
 
 // 文件上传前的验证
 const beforeUpload = (file: any) => {
@@ -601,12 +592,43 @@ const getUserName = (userId: number | null) => {
   return user?.nickname || user?.username || '未知用户'
 }
 
+// 根据用户ID获取用户手机号
+const getUserMobile = (userId: number | null) => {
+  if (!userId) return ''
+  const user = userList.value.find(item => item.id === userId)
+  return user?.mobile || ''
+}
+
 // 根据流程实例ID获取督办单详情
 const getOrderDetail = async (processInstanceId: string) => {
   try {
     loading.value = true
     const data = await OrderApi.getOrderByProcessInstanceId(processInstanceId)
-    orderDetail.value = data
+
+    // 处理字段映射，确保前端显示正确
+    const processedData = {
+      ...data,
+      // 督办人姓名映射：如果没有supervisorName，根据supervisor ID获取
+      supervisorName: data.supervisorName || getUserName(data.supervisor),
+      // 办公电话映射：优先使用后端返回的办公电话，其次使用督办人手机号
+      officePhone:  data.supervisorPhone || getUserMobile(data.supervisor) || '',
+      // 分管领导映射：leadDeptLeader -> leader
+      leader: data.leader || data.leadDeptLeader || ''
+    }
+
+    // 如果没有办公电话，尝试通过新接口获取督办人手机号
+    if (!processedData.officePhone && data.supervisor) {
+      try {
+        const phoneData = await OrderApi.getSupervisorPhone(data.supervisor)
+        if (phoneData && typeof phoneData === 'string' && phoneData.trim() !== '') {
+          processedData.officePhone = phoneData.trim()
+        }
+      } catch (error) {
+        console.error('获取督办人手机号失败:', error)
+      }
+    }
+
+    orderDetail.value = processedData
 
     // 初始化编辑表单数据
     editForm.value.coDept = data.coDept || ''
@@ -620,7 +642,7 @@ const getOrderDetail = async (processInstanceId: string) => {
       existingAttachments.value = []
     }
 
-    console.log('督办单详情加载成功，附件数量:', existingAttachments.value.length)
+
   } catch (error) {
     console.error('根据流程实例ID获取督办单详情失败:', error)
   } finally {
@@ -703,32 +725,111 @@ const getSupervisionReapprovalText = (reapprove: number | null) => {
   return '未知状态'
 }
 
-// 权限控制计算属性
-const canEditCollaborateDepts = computed(() => {
-  // 牵头单位可以编辑协办单位
-  return userStore.getUser.deptId === orderDetail.value.leadDept
-})
+// 部门详情缓存
+const deptDetailsCache = ref<Map<number, any>>(new Map())
 
-const canEditLeadDeptDetail = computed(() => {
-  // 牵头单位和协办单位都可以编辑承办情况
-  const userDeptId = userStore.getUser.deptId
-  const leadDeptId = orderDetail.value.leadDept
+// 权限状态
+const canEditCollaborateDepts = ref(false)
+const canEditLeadDeptDetail = ref(false)
 
-  // 检查是否是牵头单位
-  if (userDeptId === leadDeptId) return true
-
-  // 检查是否是协办单位
-  if (orderDetail.value.coDept) {
-    const coDeptIds = orderDetail.value.coDept.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))
-    return coDeptIds.includes(userDeptId)
+// 获取部门详情（带缓存）
+const getDeptDetail = async (deptId: number) => {
+  if (deptDetailsCache.value.has(deptId)) {
+    return deptDetailsCache.value.get(deptId)
   }
 
-  return false
-})
+  try {
+    const deptDetail = await getDept(deptId)
+    deptDetailsCache.value.set(deptId, deptDetail)
+    return deptDetail
+  } catch (error) {
+    console.error(`获取部门详情失败 (ID: ${deptId}):`, error)
+    return null
+  }
+}
+
+// 检查协办单位编辑权限
+const checkCollaborateDeptsPermission = async () => {
+  // 牵头单位负责人可以编辑协办单位
+  const currentUser = userStore.getUser
+  const currentUserId = currentUser?.id
+  const leadDeptId = orderDetail.value.leadDept
+
+  if (!currentUserId || !leadDeptId) {
+    canEditCollaborateDepts.value = false
+    return
+  }
+
+  // 通过接口获取牵头单位部门详情
+  const leadDeptDetail = await getDeptDetail(leadDeptId)
+  if (!leadDeptDetail) {
+    canEditCollaborateDepts.value = false
+    return
+  }
+
+  const hasPermission = leadDeptDetail.leaderUserId === currentUserId
+
+  canEditCollaborateDepts.value = hasPermission
+}
+
+// 检查承办状况编辑权限
+const checkLeadDeptDetailPermission = async () => {
+  // 牵头单位负责人和协办单位负责人都可以编辑承办情况
+  const currentUser = userStore.getUser
+  const currentUserId = currentUser?.id
+  const leadDeptId = orderDetail.value.leadDept
+
+  if (!currentUserId) {
+    canEditLeadDeptDetail.value = false
+    return
+  }
+
+  // 检查是否是牵头单位负责人
+  if (leadDeptId) {
+    const leadDeptDetail = await getDeptDetail(leadDeptId)
+    if (leadDeptDetail && leadDeptDetail.leaderUserId === currentUserId) {
+      canEditLeadDeptDetail.value = true
+      return
+    }
+  }
+
+  // 检查是否是协办单位负责人
+  if (orderDetail.value.coDept) {
+    const coDeptIds = orderDetail.value.coDept.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))
+
+    for (const coDeptId of coDeptIds) {
+      const coDeptDetail = await getDeptDetail(coDeptId)
+      if (coDeptDetail && coDeptDetail.leaderUserId === currentUserId) {
+        canEditLeadDeptDetail.value = true
+        return
+      }
+    }
+  }
+  canEditLeadDeptDetail.value = false
+}
 
 const hasEditPermission = computed(() => {
   return canEditCollaborateDepts.value || canEditLeadDeptDetail.value
 })
+
+// 权限检查函数
+const checkAllPermissions = async () => {
+  await Promise.all([
+    checkCollaborateDeptsPermission(),
+    checkLeadDeptDetailPermission()
+  ])
+}
+
+// 监听督办单数据变化，重新检查权限
+watch(
+  () => [orderDetail.value.leadDept, orderDetail.value.coDept],
+  async () => {
+    if (orderDetail.value.id && orderDetail.value.leadDept) {
+      await checkAllPermissions()
+    }
+  },
+  { deep: true }
+)
 
 // 解析概述信息
 const parsedSummary = computed(() => {
@@ -774,13 +875,6 @@ const getSupervisionWorkflowUpdateData = async (startLeaderSelectAssignees?: Rec
     const { coDeptString, coDeptArray } = ensureDataConsistency(coDeptSource)
     updateData.coDept = coDeptString
 
-    console.log('处理协办单位数据:', {
-      coDeptSource,
-      coDeptString,
-      coDeptArray,
-      arrayLength: coDeptArray.length
-    })
-
     // 设置工作流自选审批人 - 传递协办部门的负责人ID而不是部门ID
     if (coDeptArray.length > 0) {
       // 使用await等待异步获取部门负责人ID
@@ -789,7 +883,6 @@ const getSupervisionWorkflowUpdateData = async (startLeaderSelectAssignees?: Rec
         updateData.startLeaderSelectAssignees = {
           "Third": [...leaderIds] // 使用部门负责人ID数组
         }
-        console.log('设置 startLeaderSelectAssignees (负责人ID):', updateData.startLeaderSelectAssignees)
       } else {
         console.warn('协办部门没有找到对应的负责人，跳过设置 startLeaderSelectAssignees')
       }
@@ -831,27 +924,7 @@ const getSupervisionWorkflowUpdateData = async (startLeaderSelectAssignees?: Rec
   }
 
 
-  // 调试信息
-  console.log('=== 督办单工作流更新数据 ===')
-  console.log('督办单ID:', orderDetail.value.id)
-  console.log('协办单位原始数据:', orderDetail.value.coDept)
-  console.log('编辑表单协办单位:', editForm.value.coDept)
-  console.log('协办单位数据源:', coDeptSource)
-  console.log('是否有协办单位编辑权限:', canEditCollaborateDepts.value)
-  console.log('最终coDept:', updateData.coDept)
 
-  // 详细显示 startLeaderSelectAssignees 的内容
-  if (updateData.startLeaderSelectAssignees) {
-    console.log('startLeaderSelectAssignees 存在:', updateData.startLeaderSelectAssignees)
-    console.log('startLeaderSelectAssignees.Third (负责人ID数组):', updateData.startLeaderSelectAssignees.Third)
-    console.log('负责人ID数组长度:', updateData.startLeaderSelectAssignees.Third?.length)
-    console.log('负责人ID数组内容:', JSON.stringify(updateData.startLeaderSelectAssignees.Third))
-  } else {
-    console.log('startLeaderSelectAssignees 不存在或为空')
-  }
-
-  console.log('最终更新数据 JSON:', JSON.stringify(updateData, null, 2))
-  console.log('================================')
 
   return updateData
 }
@@ -869,9 +942,7 @@ const updateSupervisionOrder = async (startLeaderSelectAssignees?: Record<string
                       (pendingAttachments.value.length > 0) // 有待处理附件时也需要更新
 
     if (hasChanges) {
-      console.log('调用督办单更新接口，数据:', updateData)
       await OrderApi.updateOrderInWorkflow(updateData)
-      console.log('督办单更新接口调用成功')
 
       // 更新本地数据
       if (canEditCollaborateDepts.value && updateData.coDept !== undefined) {
@@ -884,9 +955,7 @@ const updateSupervisionOrder = async (startLeaderSelectAssignees?: Record<string
 
     // 审批通过时清空待处理的附件列表（因为已经在工作流更新中包含了）
     if (pendingAttachments.value.length > 0) {
-      console.log('审批通过，待处理附件已通过工作流接口保存:', pendingAttachments.value)
       pendingAttachments.value = []
-      console.log('待处理附件列表已清空')
 
       // 重新加载附件列表以显示最新状态
       await loadAttachments()
@@ -922,17 +991,15 @@ const handleCollaborateDeptsChange = (deptNames: string[]) => {
 // 获取部门负责人ID的辅助函数
 const getDeptLeaderIds = async (deptIds: number[]): Promise<number[]> => {
   const leaderIds: number[] = []
-  
+
   // 使用Promise.all并行获取所有部门详细信息
   await Promise.all(deptIds.map(async (deptId) => {
     try {
       // 使用getDept API获取完整的部门信息
       const deptInfo = await getDept(deptId)
-      console.log(`获取到部门ID:${deptId}的详细信息:`, deptInfo)
-      
+
       if (deptInfo && deptInfo.leaderUserId) {
         leaderIds.push(deptInfo.leaderUserId)
-        console.log(`部门 ${deptInfo.name}(ID:${deptId}) 的负责人ID: ${deptInfo.leaderUserId}`)
       } else {
         console.warn(`部门 ID:${deptId} 没有设置负责人`)
       }
@@ -940,17 +1007,13 @@ const getDeptLeaderIds = async (deptIds: number[]): Promise<number[]> => {
       console.error(`获取部门ID:${deptId}的详细信息失败:`, error)
     }
   }))
-  
-  console.log('部门负责人ID列表:', leaderIds)
+
   return leaderIds
 }
 
 // 确保协办单位数据格式一致性的辅助函数
 const ensureDataConsistency = (coDeptString: string): { coDeptString: string, coDeptArray: number[] } => {
-  console.log('ensureDataConsistency 输入:', coDeptString, typeof coDeptString)
-
   if (!coDeptString || coDeptString.trim() === '') {
-    console.log('ensureDataConsistency 输入为空，返回空数组')
     return { coDeptString: '', coDeptArray: [] }
   }
 
@@ -959,18 +1022,11 @@ const ensureDataConsistency = (coDeptString: string): { coDeptString: string, co
     .map(id => {
       const trimmed = id.trim()
       const parsed = parseInt(trimmed)
-      console.log(`转换 "${trimmed}" -> ${parsed}, isNaN: ${isNaN(parsed)}`)
       return parsed
     })
     .filter(id => !isNaN(id))
 
   const consistentString = coDeptArray.join(',')
-
-  console.log('ensureDataConsistency 输出:', {
-    输入: coDeptString,
-    数组: coDeptArray,
-    字符串: consistentString
-  })
 
   return {
     coDeptString: consistentString,
@@ -989,13 +1045,14 @@ const loadAttachments = async () => {
     if (processInstanceId) {
       await getOrderDetail(processInstanceId)
     }
-    console.log('附件列表已通过督办单详情更新')
   } catch (error) {
     console.error('加载附件列表失败:', error)
   }
 }
 
-
+// 以下方法已废弃，现在通过工作流更新接口处理附件
+// const handleAttachmentUpload = async (response: any, file: any) => { ... }
+// const handleAttachmentRemove = (file: any) => { ... }
 
 const downloadAttachment = (attachment: AttachmentRespVO) => {
   // 下载附件
@@ -1030,8 +1087,11 @@ const formatFileSize = (bytes: number): string => {
 
 // 初始化
 onMounted(async () => {
-  // 先获取部门列表
-  await getDeptList()
+  // 先获取部门列表和用户列表，确保字段映射能正确工作
+  await Promise.all([
+    getDeptList(),
+    getUserList()
+  ])
 
   // 获取流程实例ID，支持多种传参方式
   const processInstanceId = route.query.processInstanceId as string ||
@@ -1041,6 +1101,9 @@ onMounted(async () => {
   if (processInstanceId) {
     // 直接使用流程实例ID获取督办单详情（包含附件信息）
     await getOrderDetail(processInstanceId)
+
+    // 数据加载完成后，检查权限
+    await checkAllPermissions()
   } else {
     console.error('缺少流程实例ID参数')
   }
@@ -1073,6 +1136,7 @@ defineExpose({
   margin: 30px 0 20px 0;
   padding-top: 20px;
   border-top: 1px solid #ebeef5;
+  color: #303133;
 }
 
 :deep(.el-form-item__label) {
@@ -1101,10 +1165,6 @@ defineExpose({
 /* 附件上传样式 */
 .upload-tip {
   margin-top: 8px;
-}
-
-.section-title {
-  color: #303133;
 }
 
 /* 自定义上传样式 */
@@ -1173,6 +1233,12 @@ defineExpose({
 .dept-tag {
   margin-right: 8px;
   margin-bottom: 4px;
+}
+
+/* 附件管理标题样式 */
+.attachment-title {
+  color: #dc2626 !important;
+  font-weight: 600;
 }
 
 /* 操作按钮样式 */
