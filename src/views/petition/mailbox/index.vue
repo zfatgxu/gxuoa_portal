@@ -1,8 +1,8 @@
 <template>
   <div class="mailbox-container">
-    <div class="banner">
+    <!-- <div class="banner">
       <img src="/src/assets/imgs/petition/mailbox-banner.jpg" alt="信箱横幅" />
-    </div>
+    </div> -->
 
     <div class="mailbox-content">
       <div class="mailbox-section">
@@ -19,7 +19,7 @@
                 <el-avatar :size="80" :src="leader.avatar || defaultAvatar" />
               </div>
               <div class="leader-info">
-                <h3>{{ leader.nickname }} {{ leader.postName }}</h3>
+                <h3>{{ leader.nickname }}</h3>
                 <p>{{ leader.remark || '主持学校党委全面工作。' }}</p>
                 <el-button type="primary" @click="handleWriteLetter(leader)">
                   我要给{{ leader.nickname }}书记写信
@@ -44,7 +44,7 @@
                 <el-avatar :size="80" :src="leader.avatar || defaultAvatar" />
               </div>
               <div class="leader-info">
-                <h3>{{ leader.nickname }} {{ leader.postName }}</h3>
+                <h3>{{ leader.nickname }}</h3>
                 <p>{{ leader.remark || '主持学校行政全面工作。' }}</p>
                 <el-button type="primary" @click="handleWriteLetter(leader)">
                   我要给{{ leader.nickname }}校长写信
@@ -61,6 +61,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { getSimpleUserList } from '@/api/system/user'
+import type { UserVO } from '@/api/system/user'
 import { useRouter } from 'vue-router'
 defineOptions({ name: 'Mailbox' })
 
@@ -68,8 +69,8 @@ const defaultAvatar = '/src/assets/imgs/avatar.jpg'
 const router = useRouter()
 
 // 领导列表数据
-const secretaryList = ref([])
-const presidentList = ref([])
+const secretaryList = ref<UserVO[]>([])
+const presidentList = ref<UserVO[]>([])
 
 // 加载状态
 const loading = reactive({
@@ -82,7 +83,7 @@ const fetchSecretaryList = async () => {
   loading.secretary = true
   try {
     const res = await getSimpleUserList()
-    secretaryList.value = (res || []).filter(user => user.deptName?.includes('书记'))
+    secretaryList.value = (res || []).filter(user => user.nickname?.includes('书记'))
   } catch (error) {
     console.error('获取书记列表失败:', error)
   } finally {
@@ -95,7 +96,7 @@ const fetchPresidentList = async () => {
   loading.president = true
   try {
     const res = await getSimpleUserList()
-    presidentList.value = (res || []).filter(user => user.deptName?.includes('校长'))
+    presidentList.value = (res || []).filter(user => user.nickname?.includes('校长'))
   } catch (error) {
     console.error('获取校长列表失败:', error)
   } finally {
