@@ -10,11 +10,11 @@
     size="large"
   >
     <el-row style="margin-right: -10px; margin-left: -10px">
-      <el-col :span="24" style="padding-right: 10px; padding-left: 10px">
+      <!-- <el-col :span="24" style="padding-right: 10px; padding-left: 10px">
         <el-form-item>
           <LoginFormTitle style="width: 100%" />
         </el-form-item>
-      </el-col>
+      </el-col> -->
       <el-col :span="24" style="padding-right: 10px; padding-left: 10px">
         <el-form-item v-if="registerData.tenantEnable === 'true'" prop="tenantName">
           <el-input
@@ -24,6 +24,7 @@
             link
             type="primary"
             size="large"
+            class="rounded-input"
           />
         </el-form-item>
       </el-col>
@@ -34,6 +35,7 @@
             :placeholder="t('login.username')"
             size="large"
             :prefix-icon="iconAvatar"
+            class="rounded-input"
           />
         </el-form-item>
       </el-col>
@@ -44,6 +46,7 @@
             placeholder="昵称"
             size="large"
             :prefix-icon="iconAvatar"
+            class="rounded-input"
           />
         </el-form-item>
       </el-col>
@@ -57,6 +60,7 @@
             size="large"
             :prefix-icon="iconLock"
             show-password
+            class="rounded-input"
           />
         </el-form-item>
       </el-col>
@@ -70,6 +74,7 @@
             :placeholder="t('login.checkPassword')"
             :prefix-icon="iconLock"
             show-password
+            class="rounded-input"
           />
         </el-form-item>
       </el-col>
@@ -80,6 +85,7 @@
             :title="t('login.register')"
             class="w-[100%]"
             type="primary"
+            :round="true"
             @click="getCode()"
           />
         </el-form-item>
@@ -93,7 +99,7 @@
         @success="handleRegister"
       />
     </el-row>
-    <XButton :title="t('login.hasUser')" class="w-[100%]" @click="handleBackLogin()" />
+    <XButton :title="t('login.hasUser')" class="w-[100%]" :round="true" @click="handleBackLogin()" />
   </el-form>
 </template>
 <script lang="ts" setup>
@@ -275,6 +281,13 @@ onMounted(() => {
     max-width: 100px;
     vertical-align: middle;
     cursor: pointer;
+  }
+}
+
+/* 圆角输入框样式 */
+.rounded-input {
+  :deep(.el-input__wrapper) {
+    border-radius: 20px;
   }
 }
 </style>

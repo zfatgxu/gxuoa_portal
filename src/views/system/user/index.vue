@@ -292,7 +292,7 @@ const handleStatusChange = async (row: UserApi.UserVO) => {
   try {
     // 修改状态的二次确认
     const text = row.status === CommonStatusEnum.ENABLE ? '启用' : '停用'
-    await message.confirm('确认要"' + text + '""' + row.username + '"用户吗?')
+    await message.confirm('确认要"' + text + '"用户"' + row.username + '"吗?')
     // 发起修改状态
     await UserApi.updateUserStatus(row.id, row.status)
     // 刷新列表
@@ -373,7 +373,7 @@ const handleResetPwd = async (row: UserApi.UserVO) => {
   try {
     // 重置的二次确认
     const result = await message.prompt(
-      '请输入"' + row.username + '"的新密码',
+      '请输入用户"' + row.username + '"的新密码',
       t('common.reminder')
     )
     const password = result.value

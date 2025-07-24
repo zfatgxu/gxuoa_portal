@@ -11,11 +11,11 @@
   >
     <el-row style="margin-right: -10px; margin-left: -10px">
       <!-- 租户名 -->
-      <el-col :span="24" style="padding-right: 10px; padding-left: 10px">
+      <!-- <el-col :span="24" style="padding-right: 10px; padding-left: 10px">
         <el-form-item>
           <LoginFormTitle style="width: 100%" />
         </el-form-item>
-      </el-col>
+      </el-col> -->
       <el-col :span="24" style="padding-right: 10px; padding-left: 10px">
         <el-form-item v-if="resetPasswordData.tenantEnable === 'true'" prop="tenantName">
           <el-input
@@ -24,6 +24,7 @@
             :prefix-icon="iconHouse"
             type="primary"
             link
+            class="rounded-input"
           />
         </el-form-item>
       </el-col>
@@ -34,6 +35,7 @@
             v-model="resetPasswordData.mobile"
             :placeholder="t('login.mobileNumberPlaceholder')"
             :prefix-icon="iconCellphone"
+            class="rounded-input"
           />
         </el-form-item>
       </el-col>
@@ -53,6 +55,7 @@
                 v-model="resetPasswordData.code"
                 :placeholder="t('login.codePlaceholder')"
                 :prefix-icon="iconCircleCheck"
+                class="rounded-input"
               >
                 <template #append>
                   <span
@@ -80,6 +83,7 @@
             :placeholder="t('login.passwordPlaceholder')"
             style="width: 100%"
             strength="true"
+            class="rounded-input"
           />
         </el-form-item>
       </el-col>
@@ -90,6 +94,7 @@
             :placeholder="t('login.checkPassword')"
             style="width: 100%"
             strength="true"
+            class="rounded-input"
           />
         </el-form-item>
       </el-col>
@@ -101,6 +106,7 @@
             :title="t('login.resetPassword')"
             class="w-[100%]"
             type="primary"
+            :round="true"
             @click="resetPassword()"
           />
         </el-form-item>
@@ -111,6 +117,7 @@
             :loading="loginLoading"
             :title="t('login.backLogin')"
             class="w-[100%]"
+            :round="true"
             @click="handleBackLogin()"
           />
         </el-form-item>
@@ -274,5 +281,55 @@ const resetPassword = async () => {
 
 .smsbtn {
   margin-top: 33px;
+}
+
+/* 圆角输入框样式 */
+.rounded-input {
+  :deep(.el-input__wrapper) {
+    border-radius: 20px;
+  }
+}
+
+/* 获取验证码按钮样式 */
+.getMobileCode {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0 12px;
+  background-color: #409eff;
+  color: white;
+  border: none;
+  border-radius: 0 20px 20px 0;
+  font-size: 12px;
+  font-weight: 400;
+  text-align: center;
+  line-height: 38px;
+  transition: all 0.2s ease;
+  user-select: none;
+  outline: none;
+  cursor: pointer;
+  
+  &:hover {
+    background-color: #337ecc;
+  }
+  
+  &:active {
+    background-color: #2b6cb0;
+  }
+}
+</style>
+
+<style>
+/* 全局样式强制覆盖输入框圆角 */
+.el-input-group .el-input__wrapper {
+  border-radius: 20px 0 0 20px !important;
+  border-right: none !important;
+}
+
+.el-input-group__append {
+  border-radius: 0 20px 20px 0 !important;
+  border-left: none !important;
+  padding: 0 !important;
+  background: transparent !important;
 }
 </style>

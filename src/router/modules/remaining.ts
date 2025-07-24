@@ -429,6 +429,43 @@ const remainingRouter: AppRouteRecordRaw[] = [
       }
     ]
   },
+  // 请假
+  {
+    path: '/leave',
+    component: Layout,
+    name: 'leave',
+    meta: {
+      hidden: true
+    },
+    children: [
+      {
+        path: 'create',
+        component: () => import('@/views/leave/create/createForm.vue'),
+        name: 'LeaveCreate',
+        meta: {
+          title: '新增请假表单',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: 'ep:edit',
+          activeMenu: '/leave'
+        }
+      },
+      {
+        path: 'detailed',
+        component: () => import('@/views/leave/create/detail.vue'),
+        name: 'LeaveDetail',
+        meta: {
+          title: '查看请假详情',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: 'ep:edit',
+          activeMenu: '/leave'
+        }
+      }
+    ]
+  },
   {
     path: '/seal',
     component: Layout,

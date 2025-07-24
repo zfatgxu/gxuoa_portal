@@ -10,11 +10,11 @@
     size="large"
   >
     <el-row style="margin-right: -10px; margin-left: -10px">
-      <el-col :span="24" style="padding-right: 10px; padding-left: 10px">
+      <!-- <el-col :span="24" style="padding-right: 10px; padding-left: 10px">
         <el-form-item>
           <LoginFormTitle style="width: 100%" />
         </el-form-item>
-      </el-col>
+      </el-col> -->
       <el-col :span="24" style="padding-right: 10px; padding-left: 10px">
 <!--        <el-form-item v-if="loginData.tenantEnable === 'true'" prop="tenantName">-->
 <!--          <el-input-->
@@ -26,23 +26,29 @@
 <!--          />-->
 <!--        </el-form-item>-->
       </el-col>
-      <el-col :span="24" style="padding-right: 10px; padding-left: 10px">
-        <el-form-item prop="username">
+      <el-col :span="24" style=" padding-left: 10px">
+        <el-form-item prop="username" class="custom-form-item">
+          <div class="icon-box">
+            <component :is="iconAvatar" :size="28" />
+          </div>
           <el-input
             v-model="loginData.loginForm.username"
             :placeholder="t('login.usernamePlaceholder')"
-            :prefix-icon="iconAvatar"
+            class="rounded-input"
           />
         </el-form-item>
       </el-col>
-      <el-col :span="24" style="padding-right: 10px; padding-left: 10px">
-        <el-form-item prop="password">
+      <el-col :span="24" style="padding-left: 10px">
+        <el-form-item prop="password" class="custom-form-item">
+          <div class="icon-box">
+            <component :is="iconLock" :size="28" />
+          </div>
           <el-input
             v-model="loginData.loginForm.password"
             :placeholder="t('login.passwordPlaceholder')"
-            :prefix-icon="iconLock"
             show-password
             type="password"
+            class="rounded-input"
             @keyup.enter="getCode()"
           />
         </el-form-item>
@@ -60,23 +66,32 @@
             </el-col>
             <el-col :offset="6" :span="12">
               <el-link
-                style="float: right"
+                style="float: right; margin-left: 15px;"
                 type="primary"
                 @click="setLoginState(LoginStateEnum.RESET_PASSWORD)"
               >
                 {{ t('login.forgetPassword') }}
               </el-link>
+
+              <el-link
+                style="float: right"
+                type="primary"
+                @click="setLoginState(LoginStateEnum.REGISTER)"
+              >
+                {{ t('login.btnRegister') }}
+              </el-link>
             </el-col>
           </el-row>
         </el-form-item>
       </el-col>
-      <el-col :span="24" style="padding-right: 10px; padding-left: 10px">
+      <el-col :span="24" style="padding-right: 10px; padding-left: 10px; margin-bottom: -20px">
         <el-form-item>
           <XButton
             :loading="loginLoading"
             :title="t('login.login')"
-            class="w-[100%]"
+            class="w-[60%] mx-auto"
             type="primary"
+            :round="true"
             @click="getCode()"
           />
         </el-form-item>
@@ -89,9 +104,10 @@
         mode="pop"
         @success="handleLogin"
       />
-      <el-col :span="24" style="padding-right: 10px; padding-left: 10px">
+      <el-col :span="24" style="padding-right: 10px; padding-left: 10px;  margin-bottom: -20px">
+        <el-divider>其他登录方式</el-divider>
         <el-form-item>
-          <el-row :gutter="5" justify="space-between" style="width: 100%">
+          <!-- <el-row :gutter="5" justify="space-between" style="width: 100%">
             <el-col :span="8">
               <XButton
                 :title="t('login.btnMobile')"
@@ -113,7 +129,21 @@
                 @click="setLoginState(LoginStateEnum.REGISTER)"
               />
             </el-col>
-          </el-row>
+          </el-row> -->
+          <div class="social-login-container" style="margin-top: -5px">
+            <div class="social-icon" @click="handleSocialLogin('微信')">
+              <img src="@/assets/svgs/wechat.svg" alt="微信" width="30" height="30" />
+            </div>
+            <div class="social-icon" @click="handleSocialLogin('钉钉')">
+              <img src="@/assets/svgs/dingtalk.svg" alt="钉钉" width="30" height="30" />
+            </div>
+            <div class="social-icon" @click="handleSocialLogin('Github')">
+              <img src="@/assets/svgs/github.svg" alt="Github" width="30" height="30" />
+            </div>
+            <div class="social-icon" @click="handleSocialLogin('支付宝')">
+              <img src="@/assets/svgs/alipay.svg" alt="支付宝" width="30" height="30" />
+            </div>
+          </div>
         </el-form-item>
       </el-col>
       <!-- <el-divider content-position="center">{{ t('login.otherLogin') }}</el-divider>
@@ -158,7 +188,6 @@ import type { RouteLocationNormalizedLoaded } from 'vue-router'
 import { useIcon } from '@/hooks/web/useIcon'
 
 import * as authUtil from '@/utils/auth'
-import { usePermissionStore } from '@/store/modules/permission'
 import * as LoginApi from '@/api/login'
 import { LoginStateEnum, useFormValid, useLoginState } from './useLogin'
 import { getUserSetting } from '@/api/system/user/setting'
@@ -175,7 +204,6 @@ const formLogin = ref()
 const { validForm } = useFormValid(formLogin)
 const { setLoginState, getLoginState } = useLoginState()
 const { currentRoute, push } = useRouter()
-const permissionStore = usePermissionStore()
 const redirect = ref<string>('')
 const loginLoading = ref(false)
 const verify = ref()
@@ -362,6 +390,9 @@ const doSocialLogin = async (type: number) => {
     window.location.href = await LoginApi.socialAuthRedirect(type, encodeURIComponent(redirectUri))
   }
 }
+const handleSocialLogin = (platform) => {
+  ElMessage.info(`使用${platform}登录`)
+}
 watch(
   () => currentRoute.value,
   (route: RouteLocationNormalizedLoaded) => {
@@ -384,6 +415,34 @@ onMounted(() => {
   }
 }
 
+/* 自定义表单项样式，用于外置图标 */
+.custom-form-item {
+  position: relative;
+  padding-left: 40px; /* 增加图标预留空间 */
+  
+  .icon-box {
+    position: absolute;
+    left: -40px; /* 将图标往左移动 */
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    color: #909399;
+    z-index: 1;
+  }
+  
+  /* 圆角输入框样式 */
+  .rounded-input {
+    width: 90%; /* 调整输入框长度 */
+    :deep(.el-input__wrapper) {
+      border-radius: 20px;
+    }
+  }
+}
+
 .login-code {
   float: right;
   width: 100%;
@@ -396,5 +455,46 @@ onMounted(() => {
     vertical-align: middle;
     cursor: pointer;
   }
+}
+.social-login-container {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.social-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: #f5f7fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    background-color: #409eff;
+    color: white;
+    transform: translateY(-2px);
+  }
+}
+
+.social-icon:nth-child(1):hover {
+  background-color: #07c160;
+}
+
+.social-icon:nth-child(2):hover {
+  background-color: #12b7f5;
+}
+
+.social-icon:nth-child(3):hover {
+  background-color: #333;
+}
+
+.social-icon:nth-child(4):hover {
+  background-color: #409eff;
 }
 </style>
