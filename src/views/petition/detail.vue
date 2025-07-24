@@ -205,7 +205,7 @@
         
         <el-tab-pane label="流程图解">
           <div class="process-diagram">
-            <img src="@/assets/images/petition/process-diagram.png" alt="流程图解" />
+<!--            <img src="@/assets/images/petition/process-diagram.png" alt="流程图解" />-->
           </div>
         </el-tab-pane>
         

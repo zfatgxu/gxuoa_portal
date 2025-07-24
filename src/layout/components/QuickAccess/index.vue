@@ -48,32 +48,32 @@ const quickItems = [
   {
     icon: new URL('@/assets/imgs/shortcuts/document.png', import.meta.url).href,
     label: '文档中心',
-    //path: '/document/my'
+    path: '/wjgl/xuexiaowenjian'
   },
   {
     icon: new URL('@/assets/imgs/shortcuts/leave.png', import.meta.url).href,
     label: '请假申请',
-    //path: '/calendar'
+    path: '/leave/list/index'
   },
   {
     icon: new URL('@/assets/imgs/shortcuts/office.png', import.meta.url).href,
     label: '会议室申请',
-    //path: '/notice'
+    path: '/xzsp/meetingroom/apply'
   },
   {
     icon: new URL('@/assets/imgs/shortcuts/sms.png', import.meta.url).href,
     label: '即时通讯',
-    //path: '/user/profile'
+    path: '/mail/write'
   },
   {
     icon: new URL('@/assets/imgs/shortcuts/setting.png', import.meta.url).href,
     label: '系统设置',
-    //path: '/system/setting'
+    path: '/user/profile'
   },
   {
     icon: new URL('@/assets/imgs/shortcuts/help.png', import.meta.url).href,
     label: '帮助中心',
-    //path: '/help'
+    path: '/help'
   }
 ]
 

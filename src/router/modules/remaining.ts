@@ -464,27 +464,6 @@ const remainingRouter: AppRouteRecordRaw[] = [
     ]
   },
   {
-    path: '/mail',
-    component: Layout,
-    redirect: '/mail/write',
-    name: 'Mail',
-    meta: {
-      title: '内部邮件',
-      icon: 'ep:message',
-      orderNo: 5000
-    },
-    children: [
-      {
-        path: 'write',
-        component: () => import('@/views/mail/write.vue'),
-        name: 'MailWrite',
-        meta: {
-          title: '写信'
-        }
-      }
-    ]
-  },
-  {
     path: '/mall/product', // 商品中心
     component: Layout,
     name: 'ProductCenter',
@@ -834,6 +813,29 @@ const remainingRouter: AppRouteRecordRaw[] = [
     ]
   },
   {
+    path: '/help',
+    component: Layout,
+    name: 'HelpCenter',
+    meta: {
+      hidden: true
+    },
+    children: [
+      {
+        path: '',
+        name: 'HelpCenterIndex',
+        component: () => import('@/layout/components/QuickAccess/HelpCenter.vue'),
+        meta: {
+          requiresAuth: true,
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          title: '帮助中心',
+          activeMenu: '/help'
+        }
+      }
+    ]
+  },
+  {
     path: '/iot',
     component: Layout,
     name: 'IOT',
@@ -915,6 +917,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
       activeMenu: '/document/presentation-view'
     }
   },
+  
 
 ]
 
