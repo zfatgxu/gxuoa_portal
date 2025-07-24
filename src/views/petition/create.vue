@@ -186,7 +186,7 @@
                 <el-input
                   v-model="formData.attendees"
                   type="textarea"
-                  placeholder="请输入列席人员，以、分隔"
+                  placeholder="请输入列席人员，以'、'分隔"
                   :rows="3"
                 />
               </el-form-item>
