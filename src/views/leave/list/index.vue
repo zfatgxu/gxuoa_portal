@@ -130,7 +130,7 @@
         <el-button
           type="primary"
           plain
-          @click="openForm('create/createForm')"
+          @click="openForm('create')"
           v-hasPermi="['leave:register:create']"
         >
           <Icon icon="ep:plus" class="mr-5px" /> 新增
@@ -191,7 +191,7 @@
             <el-button
               link
               type="primary"
-              @click="openForm('create/createForm', scope.row.id)"
+              @click="openForm('create', scope.row.id)"
               v-hasPermi="['leave:register:update']"
             >
               编辑
@@ -222,6 +222,13 @@
               查看详情
             </el-button>
           </template>
+          <el-button v-if="hasDone(scope.row.status)" link type="primary" @click="handleFinance(scope.row)">提交财务报销</el-button>
+          <el-button 
+            v-if="hasAcademicMeeting(scope.row.reasons)" 
+            link 
+            type="primary" 
+            @click="handleUploadToResearch(scope.row)"
+          >上传科研院</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -337,6 +344,29 @@ const handleExport = async () => {
   } finally {
     exportLoading.value = false
   }
+}
+
+/** 判断是否完成 */
+const hasDone = (status: number): boolean => {
+  return status === 3;
+};
+
+/** 判断是否包含学术会议 */
+const hasAcademicMeeting = (reasons: string): boolean => {
+  if (!reasons) return false;
+  // 将原因字符串按"、"分割，检查是否包含"学术会议"
+  const reasonList = reasons.split('、');
+  return reasonList.some(reason => reason.includes('学术会议'));
+};
+
+/** 上传科研院 */
+const handleUploadToResearch = (row: any) => {
+  ElMessage.error('上传科研院功能开发中');
+};
+
+/** 提交财务报销 */
+const handleFinance=(row:any)=>{
+  ElMessage.error('功能开发中')
 }
 
 /** 初始化 **/
