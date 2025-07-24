@@ -1,6 +1,6 @@
 <template>
   <div class="content-section">
-    <NavBar :modelValue="currentComponent" @update:modelValue="handleComponentChange" />
+<!--    <NavBar :modelValue="currentComponent" @update:modelValue="handleComponentChange" />-->
     
     <!-- 根据当前选中的组件显示不同的内容 -->
     <div v-if="currentComponent === 'DeptDocComponent'" class="content-body">

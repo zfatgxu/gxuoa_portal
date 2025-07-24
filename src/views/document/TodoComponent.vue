@@ -1,6 +1,6 @@
 <template>
   <div class="content-section">
-    <NavBar :modelValue="currentComponent" @update:modelValue="handleComponentChange" />
+    <!-- <NavBar :modelValue="currentComponent" @update:modelValue="handleComponentChange" /> -->
     
     <!-- 根据当前选中的组件显示不同的内容 -->
     <div v-if="currentComponent === 'TodoComponent'" class="content-body">
@@ -99,7 +99,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import NavBar from '@/components/Document/NavBar.vue'
+// import NavBar from '@/components/Document/NavBar.vue'
 import SearchBar from '@/components/Document/SearchBar.vue'
 import * as circulationApi from '@/api/document/circulation'
 import * as circulationPostApi from '@/api/document/circulationPost'

@@ -1,6 +1,6 @@
 <template>
   <div class="content-section">
-    <NavBar :modelValue="currentComponent" @update:modelValue="handleComponentChange" />
+<!--    <NavBar :modelValue="currentComponent" @update:modelValue="handleComponentChange" />-->
     <div class="content-body">
       
       <!-- 搜索组件 -->
