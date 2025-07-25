@@ -49,6 +49,7 @@ const emit = defineEmits<{
 }>()
 const { t } = useI18n() // 国际
 const message = useMessage() // 消息弹窗
+const treeRef = ref() // 添加树组件的引用
 const deptTree = ref<Tree[]>([]) // 部门树形结构化
 const deptList = ref<any[]>([]) // 保存扁平化的部门列表数据
 const userList = ref<UserApi.UserVO[]>([]) // 所有用户列表
@@ -75,18 +76,37 @@ const transferUserList = computed(() => {
 })
 
 /** 打开弹窗 */
-const open = async (id: number, selectedList?: any[]) => {
+const open = async (id: any, deptId?: number| number[], selectedList?: any[]) => {
   activityId.value = id
   resetForm()
-
+  // 将单个部门ID转换为数组
+  const deptIdArray = deptId ? (Array.isArray(deptId) ? deptId : [deptId]) : []
   // 加载部门、用户列表
   const deptData = await DeptApi.getSimpleDeptList()
   deptList.value = deptData // 保存扁平结构的部门数据
   deptTree.value = handleTree(deptData) // 转换成树形结构
   userList.value = await UserApi.getSimpleUserList()
 
-  // 初始状态下，过滤列表等于所有用户列表
-  filteredUserList.value = [...userList.value]
+  // 如果有部门ID，则过滤部门和用户
+  if (deptIdArray.length > 0) {
+    // 过滤部门树，只保留指定的部门
+    const filteredDepts = deptData.filter(dept => deptIdArray.includes(dept.id))
+    deptList.value = filteredDepts // 保存过滤后的扁平结构部门数据
+    deptTree.value = handleTree(filteredDepts) // 转换成树形结构
+
+    // 过滤用户列表，只保留这些部门的用户
+    filteredUserList.value = userList.value.filter(user => deptIdArray.includes(user.deptId))
+    
+    // 自动选中第一个部门节点
+    if (treeRef.value && deptTree.value.length > 0) {
+      treeRef.value.setCurrentKey(deptTree.value[0].id)
+    }
+  } else {
+    // 如果没有指定部门ID，则显示所有部门和用户
+    deptList.value = deptData
+    deptTree.value = handleTree(deptData)
+    filteredUserList.value = [...userList.value]
+  }
   selectedUserIdList.value = selectedList?.map((item: any) => item.id) || []
   dialogVisible.value = true
 }
