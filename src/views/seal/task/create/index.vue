@@ -135,11 +135,18 @@
             multiple
             :headers="{ Authorization: 'Bearer ' + getAccessToken() }"
             name="file"
+            :before-upload="beforeUpload"
+            :on-exceed="handleExceed"
           >
             <el-button type="primary">
               <el-icon style="vertical-align: middle; margin-right: 4px;"><Paperclip /></el-icon>
               添加附件
             </el-button>
+            <template #tip>
+              <div class="el-upload__tip">
+                仅支持常见文件类型（doc/docx/xls/xlsx/pdf/jpg/png等），单个文件不超过20MB，最多上传10个文件
+              </div>
+            </template>
           </el-upload>
 
           <!-- 文件列表 -->
@@ -672,6 +679,40 @@ const getSelectedUserId = (taskId) => {
 // 处理审批人选择变化
 const handleUserSelect = (taskId, value) => {
   startUserSelectAssignees.value[taskId] = [value]
+}
+
+// 文件上传前的验证钩子
+const beforeUpload = (file) => {
+  // 检查文件大小
+  const isLt20M = file.size / 1024 / 1024 < 20
+  if (!isLt20M) {
+    ElMessage.error('上传文件大小不能超过 20MB!')
+    return false
+  }
+
+  // 检查文件类型
+  const fileName = file.name.toLowerCase()
+  const extension = fileName.substring(fileName.lastIndexOf('.') + 1)
+  const allowedTypes = ['doc', 'docx', 'xls', 'xlsx', 'pdf', 'jpg', 'jpeg', 'png', 'txt', 'ppt', 'pptx']
+  const isAllowedType = allowedTypes.includes(extension)
+
+  if (!isAllowedType) {
+    ElMessage.error(`不支持的文件类型: ${extension}，请上传常见文件类型!`)
+    return false
+  }
+
+  // 检查上传数量
+  if (uploadedFiles.length >= 10) {
+    ElMessage.error('最多只能上传10个文件!')
+    return false
+  }
+
+  return true
+}
+
+// 超出限制处理函数
+const handleExceed = () => {
+  ElMessage.warning('最多只能上传 10 个文件!')
 }
 </script>
 
