@@ -485,7 +485,7 @@
           </el-descriptions-item>
 
           <!-- 请假期间主持工作负责人安排 -->
-          <el-descriptions-item label="请假期间主持工作负责人安排(必填)" label-class-name="approval-label">
+          <el-descriptions-item v-if="personnel.level === 2" label="请假期间主持工作负责人安排(必填)" label-class-name="approval-label">
             <el-input
               v-model="workArrangement"
               type="textarea"
@@ -518,7 +518,7 @@
           <el-descriptions-item label="校领导意见" label-class-name="approval-label">
             <div></div>
           </el-descriptions-item>
-          <el-descriptions-item label="请假期间主持工作负责人会签" label-class-name="approval-label">
+          <el-descriptions-item v-if="personnel.level === 2" label="请假期间主持工作负责人会签" label-class-name="approval-label">
             <div></div>
           </el-descriptions-item>
         </el-descriptions>
@@ -530,8 +530,8 @@
           <span style="font-size: 14px;margin-bottom: 5px;">下一步</span>
         </div>
         <div class="action-item">
-          <span style="font-size: 14px;margin-bottom: 5px;">请假期间主持工作负责人会签</span>
-          <span style="font-size: 14px;margin-bottom: 5px;">单位负责人签字</span>
+          <span v-if="personnel.level === 2" style="font-size: 14px;margin-bottom: 5px;">请假期间主持工作负责人会签</span>
+          <span v-if="personnel.level === 1" style="font-size: 14px;margin-bottom: 5px;">单位负责人签字</span>
         </div>
         <div class="action-item">
           <div v-for="userTask in startUserSelectTasks.filter(task => task.id === 'host_sign')" :key="userTask.id">
@@ -600,7 +600,7 @@
                   </div>
                 </div>
               </el-popover>
-              <el-button type="primary" link @click="openApprovalUserSelect">
+              <el-button type="primary" link @click="openApprovalUserSelect" :disabled="isReadOnly">
                 <Icon icon="ep:plus" />选择人员
               </el-button>
             </div>
@@ -641,7 +641,8 @@ const personnel = ref({
   name: '',
   department: '',
   title: '',
-  position: ''
+  position: '',
+  level: ''
 });
 // 日期范围
 const dateRange = ref([]);
@@ -1212,6 +1213,7 @@ const fetchUserProfile = async () => {
           department: res.dept?.name || '',
           title: res.posts?.[0]?.name || '',
           position: res.nickname || '',
+          level: res.level || '',
         };
       }
     } else  {
@@ -1361,6 +1363,7 @@ const fetchUserProfile = async () => {
           department: res.deptName || '',
           title: res.postName || '',
           position: res.nickName || '',
+          level: res.level || '',
         };
       }
     }
@@ -1399,6 +1402,9 @@ const openApprovalUserSelect = () => {
 
 /** 移除签办人 */
 const handleRemoveApprovalUser = (user: UserVO) => {
+  if (isReadOnly.value) {
+    return
+  }
   startUserSelectAssignees.value['host_sign'] = startUserSelectAssignees.value['host_sign'].filter((u) => u.id !== user.id)
 }
 
