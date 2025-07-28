@@ -506,7 +506,7 @@
         </el-descriptions>
       </div>
       <!-- 审批意见 -->
-      <div class="approval-section">
+      <div v-if="personnel.level !== 3" class="approval-section">
         <div class="divider">
           <span class="divider-text">审批意见</span>
         </div>
@@ -600,7 +600,7 @@
                   </div>
                 </div>
               </el-popover>
-              <el-button type="primary" link @click="openApprovalUserSelect" :disabled="isReadOnly">
+              <el-button v-if="personnel.level === 2" type="primary" link @click="openApprovalUserSelect" :disabled="isReadOnly">
                 <Icon icon="ep:plus" />选择人员
               </el-button>
             </div>
@@ -991,14 +991,18 @@ const handleSubmit = async () => {
       return
     }
 
-    if (!workArrangement.value) {
-      ElMessage.warning('请填写请假期间工作安排')
-      return
+    if (personnel.value.level === 2) {
+      if (!workArrangement.value) {
+        ElMessage.warning('请填写请假期间工作安排')
+        return
+      }
     }
 
-    if (startUserSelectAssignees.value === '') {
-      ElMessage.warning('请选择签办人')
-      return
+    if (personnel.value.level === 2) {
+      if (startUserSelectAssignees.value === '') {
+        ElMessage.warning('请选择签办人')
+        return
+      }
     }
     // 拼接所有目的地为一个字符串，使用 ||| 作为分隔符
     const fullDestination = destinations.value
