@@ -443,7 +443,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
         component: () => import('@/views/leave/create/createForm.vue'),
         name: 'LeaveCreate',
         meta: {
-          title: '新增请假表单',
+          title: '请假表单',
           noCache: true,
           hidden: true,
           canTo: true,
