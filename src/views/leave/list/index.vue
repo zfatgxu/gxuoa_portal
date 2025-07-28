@@ -30,8 +30,8 @@
         <el-date-picker
           v-model="queryParams.startDate"
           value-format="YYYY-MM-DD HH:mm:ss"
-          type="datetime"
-          start-placeholder="开始日期"
+          type="date"
+          placeholder="请选择开始日期"
           class="!w-220px"
         />
       </el-form-item>
@@ -39,8 +39,8 @@
         <el-date-picker
           v-model="queryParams.endDate"
           value-format="YYYY-MM-DD HH:mm:ss"
-          type="datetime"
-          end-placeholder="结束日期"
+          type="date"
+          placeholder="请选择结束日期"
           class="!w-220px"
         />
       </el-form-item>
@@ -130,7 +130,7 @@
         <el-button
           type="primary"
           plain
-          @click="openForm('create/createForm')"
+          @click="openForm('create')"
           v-hasPermi="['leave:register:create']"
         >
           <Icon icon="ep:plus" class="mr-5px" /> 新增
@@ -158,13 +158,13 @@
         label="开始时间"
         align="center"
         prop="startDate"
-        :formatter="dateFormatter"
+        :formatter="dateFormatter2"
       />
       <el-table-column
         label="结束时间"
         align="center"
         prop="endDate"
-        :formatter="dateFormatter"
+        :formatter="dateFormatter2"
       />
       <!-- <el-table-column label="请假期间前往地点" align="center" prop="destination" />
       <el-table-column label="主持工作负责人安排" align="center" prop="hostArrangement" />
@@ -186,12 +186,12 @@
       /> -->
       <el-table-column label="操作" align="center">
         <template #default="scope">
-          <!-- 状态为待审批(2)时显示编辑和删除按钮 -->
-          <template v-if="scope.row.status === 2">
+          <!-- 状态为待会签(1)时显示编辑和删除按钮 -->
+          <template v-if="scope.row.status === 1">
             <el-button
               link
               type="primary"
-              @click="openForm('create/createForm', scope.row.id)"
+              @click="openForm('create', scope.row.id)"
               v-hasPermi="['leave:register:update']"
             >
               编辑
@@ -222,6 +222,13 @@
               查看详情
             </el-button>
           </template>
+          <el-button v-if="hasDone(scope.row.status)" link type="primary" @click="handleFinance(scope.row)">提交财务报销</el-button>
+          <el-button 
+            v-if="hasAcademicMeeting(scope.row.reasons)" 
+            link 
+            type="primary" 
+            @click="handleUploadToResearch(scope.row)"
+          >上传科研院</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -239,17 +246,12 @@
 </template>
 
 <script setup lang="ts">
-import { dateFormatter } from '@/utils/formatTime'
-import download from '@/utils/download'
+import { dateFormatter2 } from '@/utils/formatTime'
 import { RegisterVO, RegisterApi } from '@/api/leave/create/createForm'
 import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '@/store/modules/user'
 /** 请假登记 列表 */
 defineOptions({ name: 'Register' })
-
-const message = useMessage() // 消息弹窗
-const { t } = useI18n() // 国际化
 
 const loading = ref(true) // 列表的加载中
 const list = ref<RegisterVO[]>([]) // 列表的数据
@@ -271,7 +273,7 @@ const queryParams = reactive({
   createTime: [],
 })
 const queryFormRef = ref() // 搜索的表单
-const exportLoading = ref(false) // 导出的加载
+
 /** 查询列表 */
 const getList = async () => {
   loading.value = true
@@ -311,32 +313,27 @@ const handleDetail = (row: any) => {
   })
 }
 
-/** 删除按钮操作 */
-const handleDelete = async (id: number) => {
-  try {
-    // 删除的二次确认
-    await message.delConfirm()
-    // 发起删除
-    await RegisterApi.deleteRegister(id)
-    message.success(t('common.delSuccess'))
-    // 刷新列表
-    await getList()
-  } catch {}
-}
+/** 判断是否完成 */
+const hasDone = (status: number): boolean => {
+  return status === 3;
+};
 
-/** 导出按钮操作 */
-const handleExport = async () => {
-  try {
-    // 导出的二次确认
-    await message.exportConfirm()
-    // 发起导出
-    exportLoading.value = true
-    const data = await RegisterApi.exportRegister(queryParams)
-    download.excel(data, '请假登记.xls')
-  } catch {
-  } finally {
-    exportLoading.value = false
-  }
+/** 判断是否包含学术会议 */
+const hasAcademicMeeting = (reasons: string): boolean => {
+  if (!reasons) return false;
+  // 将原因字符串按"、"分割，检查是否包含"学术会议"
+  const reasonList = reasons.split('、');
+  return reasonList.some(reason => reason.includes('学术会议'));
+};
+
+/** 上传科研院 */
+const handleUploadToResearch = (row: any) => {
+  ElMessage.error('上传科研院功能开发中');
+};
+
+/** 提交财务报销 */
+const handleFinance=(row:any)=>{
+  ElMessage.error('功能开发中')
 }
 
 /** 初始化 **/

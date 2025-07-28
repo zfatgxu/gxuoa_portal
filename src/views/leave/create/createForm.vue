@@ -35,11 +35,12 @@
             <div class="date-range-picker">
               <el-date-picker
                 v-model="dateRange"
-                type="datetimerange"
+                type="daterange"
                 range-separator="至"
                 start-placeholder="开始日期"
                 end-placeholder="结束日期"
                 value-format="YYYY-MM-DD HH:mm:ss"
+                :disabled-date="pickerOptions"
               />
             </div>
           </el-descriptions-item>
@@ -50,7 +51,7 @@
                 v-for="reason in getIntDictOptions(DICT_TYPE.LEAVE_TYPE)"
                 :key="reason.value"
               >
-                <el-checkbox-group v-model="selectedReasons">
+                <el-checkbox-group v-model="selectedReasons" @change="handleReasonChange">
                   <el-checkbox
                     :label="reason.value"
                   >
@@ -59,99 +60,141 @@
                 </el-checkbox-group>
                 <!-- 调研展开内容 -->
                 <div v-if="reason.value === 1 && selectedReasons.includes(1)" style="padding: 15px 10px;">
-                  <div class="detail-item">
-                    <span class="detail-label">调研主题</span>
-                    <el-input v-model="researchTopic" placeholder="请输入调研主题"/>
+                  <div v-for="(research, index) in researchList" :key="index">
+                    <div class="add-meeting">
+                    <el-button v-if="index > 0" type="danger" circle @click="removeResearch(index)">
+                      <el-icon><Minus /></el-icon>
+                    </el-button>
                   </div>
-                  <div class="detail-item">
-                    <span class="detail-label">调研目的</span>
-                    <el-input v-model="researchPurpose" placeholder="请输入调研目的"/>
+                    <div class="detail-item">
+                      <span class="detail-label">调研主题</span>
+                      <el-input v-model="research.researchTopic" placeholder="请输入调研主题"/>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">调研目的</span>
+                      <el-input v-model="research.researchPurpose" placeholder="请输入调研目的"/>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">调研单位</span>
+                      <el-input v-model="research.researchUnit" placeholder="请输入调研单位"/>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">开始时间</span>
+                      <el-date-picker
+                        v-model="research.researchStartDate"
+                        type="date"
+                        placeholder="开始时间"
+                        value-format="YYYY-MM-DD HH:mm:ss"
+                        style="width: 100%;"
+                        :disabled-date="disabledDate"
+                      />
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">结束时间</span>
+                      <el-date-picker
+                        v-model="research.researchEndDate"
+                        type="date"
+                        placeholder="结束时间"
+                        value-format="YYYY-MM-DD HH:mm:ss"
+                        style="width: 100%;"
+                        :disabled-date="disabledDate"
+                      />
+                    </div>
+                    <div class="add-meeting">
+                    <el-button type="primary" circle @click="addResearch">
+                      <el-icon><Plus /></el-icon>
+                    </el-button>
                   </div>
-                  <div class="detail-item">
-                    <span class="detail-label">调研单位</span>
-                    <el-input v-model="researchUnit" placeholder="请输入调研单位"/>
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">开始时间</span>
-                    <el-date-picker
-                      v-model="researchStartDate"
-                      type="datetime"
-                      placeholder="开始时间"
-                      value-format="YYYY-MM-DD HH:mm:ss"
-                      style="width: 100%;"
-                    />
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">结束时间</span>
-                    <el-date-picker
-                      v-model="researchEndDate"
-                      type="datetime"
-                      placeholder="结束时间"
-                      value-format="YYYY-MM-DD HH:mm:ss"
-                      style="width: 100%;"
-                    />
                   </div>
                 </div>
                 <!-- 培训事由 -->
                 <div v-if="reason.value === 2 && selectedReasons.includes(2)" style="padding: 15px 10px;">
-                  <div class="detail-item">
-                    <span class="detail-label">培训主题</span>
-                    <el-input v-model="trainingTopic" placeholder="请输入培训主题"/>
+                  <div v-for="(meeting, index) in trainingList" :key="index">
+                    <div class="add-meeting">
+                    <el-button v-if="index > 0" type="danger" circle @click="removeTraining(index)">
+                      <el-icon><Minus /></el-icon>
+                    </el-button>
                   </div>
-                  <div class="detail-item">
-                    <span class="detail-label">举办单位</span>
-                    <el-input v-model="trainingUnit" placeholder="请输入举办单位"/>
+                    <div class="detail-item">
+                      <span class="detail-label">培训主题</span>
+                      <el-input v-model="meeting.trainingTopic" placeholder="请输入培训主题"/>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">举办单位</span>
+                      <el-input v-model="meeting.trainingUnit" placeholder="请输入举办单位"/>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">开始时间</span>
+                      <el-date-picker
+                        v-model="meeting.trainingStartDate"
+                        type="date"
+                        placeholder="开始时间"
+                        value-format="YYYY-MM-DD HH:mm:ss"
+                        style="width: 100%;"
+                        :disabled-date="disabledDate"
+                      />
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">结束时间</span>
+                      <el-date-picker
+                        v-model="meeting.trainingEndDate"
+                        type="date"
+                        placeholder="结束时间"
+                        value-format="YYYY-MM-DD HH:mm:ss"
+                        style="width: 100%;"
+                        :disabled-date="disabledDate"
+                      />
+                    </div>
+                    <div class="add-meeting">
+                    <el-button type="primary" circle @click="addTraining">
+                      <el-icon><Plus /></el-icon>
+                    </el-button>
                   </div>
-                  <div class="detail-item">
-                    <span class="detail-label">开始时间</span>
-                    <el-date-picker
-                      v-model="trainingStartDate"
-                      type="datetime"
-                      placeholder="开始时间"
-                      value-format="YYYY-MM-DD HH:mm:ss"
-                      style="width: 100%;"
-                    />
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">结束时间</span>
-                    <el-date-picker
-                      v-model="trainingEndDate"
-                      type="datetime"
-                      placeholder="结束时间"
-                      value-format="YYYY-MM-DD HH:mm:ss"
-                      style="width: 100%;"
-                    />
                   </div>
                 </div>
                 <!-- 公务事由 -->
                 <div v-if="reason.value === 3 && selectedReasons.includes(3)" style="padding: 15px 10px;">
-                  <div class="detail-item">
-                    <span class="detail-label">会议名称</span>
-                    <el-input v-model="businessTopic" placeholder="请输入会议名称"/>
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">举办单位</span>
-                    <el-input v-model="businessUnit" placeholder="请输入举办单位"/>
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">开始时间</span>
-                    <el-date-picker
-                      v-model="businessStartDate"
-                      type="datetime"
-                      placeholder="开始时间"
-                      value-format="YYYY-MM-DD HH:mm:ss"
-                      style="width: 100%;"
-                    />
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">结束时间</span>
-                    <el-date-picker
-                      v-model="businessEndDate"
-                      type="datetime"
-                      placeholder="结束时间"
-                      value-format="YYYY-MM-DD HH:mm:ss"
-                      style="width: 100%;"
-                    />
+                  <div v-for="(meeting, index) in businessList" :key="index">
+                    <div class="add-meeting">
+                      <el-button v-if="index > 0" circle type="danger" @click="removeBusiness(index)">
+                        <el-icon><Minus /></el-icon>
+                      </el-button>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">会议名称</span>
+                      <el-input v-model="meeting.businessTopic" placeholder="请输入会议名称"/>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">举办单位</span>
+                      <el-input v-model="meeting.businessUnit" placeholder="请输入举办单位"/>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">开始时间</span>
+                      <el-date-picker
+                        v-model="meeting.businessStartDate"
+                        type="date"
+                        placeholder="开始时间"
+                        value-format="YYYY-MM-DD HH:mm:ss"
+                        style="width: 100%;"
+                        :disabled-date="disabledDate"
+                      />
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">结束时间</span>
+                      <el-date-picker
+                        v-model="meeting.businessEndDate"
+                        type="date"
+                        placeholder="结束时间"
+                        value-format="YYYY-MM-DD HH:mm:ss"
+                        style="width: 100%;"
+                        :disabled-date="disabledDate"
+                      />
+                    </div>
+                    <div class="add-meeting">
+                      <el-button type="primary" circle @click="addBusiness">
+                        <el-icon><Plus /></el-icon>
+                      </el-button>
+                    </div>
                   </div>
                 </div>
                 <!-- 学术会议事由 -->
@@ -186,20 +229,22 @@
                       <span class="detail-label">开始时间</span>
                       <el-date-picker
                         v-model="meeting.academicStartDate"
-                        type="datetime"
+                        type="date"
                         placeholder="开始时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
+                        :disabled-date="disabledDate"
                       />
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">结束时间</span>
                       <el-date-picker
                         v-model="meeting.academicEndDate"
-                        type="datetime"
+                        type="date"
                         placeholder="结束时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
+                        :disabled-date="disabledDate"
                       />
                     </div>
                     <div class="detail-item">
@@ -214,7 +259,7 @@
                         </el-radio>
                       </el-radio-group>
                     </div>
-                    <div v-if="meeting.isPresentation === 2" class="detail-item">
+                    <div v-if="meeting.isPresentation === 1" class="detail-item">
                       <span class="detail-label">报告类型</span>
                       <el-radio-group v-model="meeting.reportType">
                         <el-radio
@@ -226,7 +271,7 @@
                         </el-radio>
                       </el-radio-group>
                     </div>
-                    <div class="detail-item">
+                    <div v-if="meeting.isPresentation === 1" class="detail-item">
                       <span class="detail-label">报告题目</span>
                       <el-input v-model="meeting.reportTitle" placeholder="请输入报告题目"/>
                     </div>
@@ -243,122 +288,136 @@
                 </div>
                 <!-- 因私事由 -->
                 <div v-if="reason.value === 4 && selectedReasons.includes(4)" style="padding: 15px 10px;">
-                  <div class="detail-item">
-                    <span class="detail-label">请假类型</span>
-                    <el-select v-model="personalType" placeholder="请选择请假类型" clearable>
-                      <el-option
-                        v-for="dict in getIntDictOptions(DICT_TYPE.PERSONAL_TYPE)"
-                        :key="dict.value"
-                        :label="dict.label"
-                        :value="dict.value"
+                  <div v-for="(personal, index) in personalList" :key="index">
+                    <div class="add-meeting">
+                      <el-button v-if="index > 0" type="danger" circle @click="removePersonal(index)">
+                        <el-icon><Minus /></el-icon>
+                      </el-button>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">请假类型</span>
+                      <el-select v-model="personal.personalType" placeholder="请选择请假类型" clearable>
+                        <el-option
+                          v-for="dict in getIntDictOptions(DICT_TYPE.PERSONAL_TYPE)"
+                          :key="dict.value"
+                          :label="dict.label"
+                          :value="dict.value"
+                        />
+                      </el-select>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">开始时间</span>
+                      <el-date-picker
+                        v-model="personal.personalStartDate"
+                        type="date"
+                        placeholder="开始时间"
+                        value-format="YYYY-MM-DD HH:mm:ss"
+                        style="width: 100%;"
+                        :disabled-date="disabledDate"
                       />
-                    </el-select>
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">开始时间</span>
-                    <el-date-picker
-                      v-model="personalStartDate"
-                      type="datetime"
-                      placeholder="开始时间"
-                      value-format="YYYY-MM-DD HH:mm:ss"
-                      style="width: 100%;"
-                    />
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">结束时间</span>
-                    <el-date-picker
-                      v-model="personalEndDate"
-                      type="datetime"
-                      placeholder="结束时间"
-                      value-format="YYYY-MM-DD HH:mm:ss"
-                      style="width: 100%;"
-                    />
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">总计天数</span>
-                    <el-input v-model="personalTotalDays" placeholder="请输入总计天数"/>
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">请假详情</span>
-                    <el-input v-model="personalReason" type="textarea" :rows="3" placeholder="请输入请假详情"/>
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">联系电话</span>
-                    <el-input v-model="personalPhone" placeholder="请输入联系电话"/>
-                  </div>
-                  <div v-if="personalType === 6">
-                    <div class="detail-item">
-                      <span class="detail-label">探亲路线</span>
-                      <el-input v-model="personalRoute" placeholder="请输入探亲路线"/>
                     </div>
                     <div class="detail-item">
-                      <span class="detail-label">与探望人关系</span>
-                      <el-input v-model="personalRelation" placeholder="请输入与探望人关系"/>
+                      <span class="detail-label">结束时间</span>
+                      <el-date-picker
+                        v-model="personal.personalEndDate"
+                        type="date"
+                        placeholder="结束时间"
+                        value-format="YYYY-MM-DD HH:mm:ss"
+                        style="width: 100%;"
+                        :disabled-date="disabledDate"
+                      />
                     </div>
                     <div class="detail-item">
-                      <span class="detail-label">被探望人姓名</span>
-                      <el-input v-model="personalVisitName" placeholder="请输入被探望人姓名"/>
+                      <span class="detail-label">总计天数</span>
+                      <el-input v-model="personal.personalTotalDays" placeholder="请输入总计天数"/>
                     </div>
                     <div class="detail-item">
-                      <span class="detail-label">探亲类别</span>
-                      <el-select v-model="personalVisitType" placeholder="请选择探亲类别" clearable>
-                        <el-option
-                          v-for="dict in getIntDictOptions(DICT_TYPE.PERSONAL_VISIT_TYPE)"
-                          :key="dict.value"
-                          :label="dict.label"
-                          :value="dict.value"
-                        />
-                      </el-select>
+                      <span class="detail-label">请假详情</span>
+                      <el-input v-model="personal.personalReason" type="textarea" :rows="3" placeholder="请输入请假详情"/>
                     </div>
                     <div class="detail-item">
-                      <span class="detail-label">户口所在地或地址</span>
-                      <el-input v-model="personalVisitAddress" placeholder="请输入户口所在地或地址"/>
+                      <span class="detail-label">联系电话</span>
+                      <el-input v-model="personal.personalPhone" placeholder="请输入联系电话" :maxlength="11" @blur="validatePhone(personal.personalPhone)"/>
                     </div>
-                    <div class="detail-item">
-                      <span class="detail-label">婚姻状况</span>
-                      <el-select v-model="personalMaritalStatus" placeholder="请选择婚姻状况" clearable>
-                        <el-option
-                          v-for="dict in getIntDictOptions(DICT_TYPE.MARITAL_STATUS)"
-                          :key="dict.value"
-                          :label="dict.label"
-                          :value="dict.value"
-                        />
-                      </el-select>
+                    <div v-if="personal.personalType === 6">
+                      <div class="detail-item">
+                        <span class="detail-label">探亲路线</span>
+                        <el-input v-model="personal.personalRoute" placeholder="请输入探亲路线"/>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">与探望人关系</span>
+                        <el-input v-model="personal.personalRelation" placeholder="请输入与探望人关系"/>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">被探望人姓名</span>
+                        <el-input v-model="personal.personalVisitName" placeholder="请输入被探望人姓名"/>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">探亲类别</span>
+                        <el-select v-model="personal.personalVisitType" placeholder="请选择探亲类别" clearable>
+                          <el-option
+                            v-for="dict in getIntDictOptions(DICT_TYPE.PERSONAL_VISIT_TYPE)"
+                            :key="dict.value"
+                            :label="dict.label"
+                            :value="dict.value"
+                          />
+                        </el-select>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">户口所在地或地址</span>
+                        <el-input v-model="personal.personalVisitAddress" placeholder="请输入户口所在地或地址"/>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">婚姻状况</span>
+                        <el-select v-model="personal.personalMaritalStatus" placeholder="请选择婚姻状况" clearable>
+                          <el-option
+                            v-for="dict in getIntDictOptions(DICT_TYPE.MARITAL_STATUS)"
+                            :key="dict.value"
+                            :label="dict.label"
+                            :value="dict.value"
+                          />
+                        </el-select>
+                      </div>
                     </div>
-                  </div>
-                  <div v-if="personalType === 11">
-                    <div class="detail-item">
-                      <span class="detail-label">生育次数</span>
-                      <el-select v-model="personalParity" placeholder="请选择生育次数" clearable>
-                        <el-option
-                          v-for="dict in getIntDictOptions(DICT_TYPE.PARITY)"
-                          :key="dict.value"
-                          :label="dict.label"
-                          :value="dict.value"
-                        />
-                      </el-select>
+                    <div v-if="personal.personalType === 11">
+                      <div class="detail-item">
+                        <span class="detail-label">生育次数</span>
+                        <el-select v-model="personal.personalParity" placeholder="请选择生育次数" clearable>
+                          <el-option
+                            v-for="dict in getIntDictOptions(DICT_TYPE.PARITY)"
+                            :key="dict.value"
+                            :label="dict.label"
+                            :value="dict.value"
+                          />
+                        </el-select>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">是否多胞胎</span>
+                        <el-select v-model="personal.personalMultiple" placeholder="请选择是否多胞胎" clearable>
+                          <el-option
+                            v-for="dict in getIntDictOptions(DICT_TYPE.IS_PRESENTATION)"
+                            :key="dict.value"
+                            :label="dict.label"
+                            :value="dict.value"
+                          />
+                        </el-select>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">是否难产</span>
+                        <el-select v-model="personal.personalDystocia" placeholder="请选择是否难产" clearable>
+                          <el-option
+                            v-for="dict in getIntDictOptions(DICT_TYPE.IS_PRESENTATION)"
+                            :key="dict.value"
+                            :label="dict.label"
+                            :value="dict.value"
+                          />
+                        </el-select>
+                      </div>
                     </div>
-                    <div class="detail-item">
-                      <span class="detail-label">是否多胞胎</span>
-                      <el-select v-model="personalMultiple" placeholder="请选择是否多胞胎" clearable>
-                        <el-option
-                          v-for="dict in getIntDictOptions(DICT_TYPE.IS_PRESENTATION)"
-                          :key="dict.value"
-                          :label="dict.label"
-                          :value="dict.value"
-                        />
-                      </el-select>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">是否难产</span>
-                      <el-select v-model="personalDystocia" placeholder="请选择是否难产" clearable>
-                        <el-option
-                          v-for="dict in getIntDictOptions(DICT_TYPE.IS_PRESENTATION)"
-                          :key="dict.value"
-                          :label="dict.label"
-                          :value="dict.value"
-                        />
-                      </el-select>
+                    <div class="add-meeting">
+                      <el-button type="primary" circle @click="addPersonal">
+                        <el-icon><Plus /></el-icon>
+                      </el-button>
                     </div>
                   </div>
                 </div>
@@ -396,10 +455,28 @@
 
           <!-- 前往地点 -->
           <el-descriptions-item label="前往地点(必填)" label-class-name="approval-label">
-            <div class="detail-item">
+            <div v-for="(loc, index) in destinations" :key="index" class="detail-item">
               <!-- <span class="detail-label">国内</span> -->
-              <el-cascader :options="pcaTextArr" v-model="destination" clearable style="width: 100%;"/>
-              <el-input v-model="destinationDetail" placeholder="可选填写详细地址（如门牌号、楼层等）" clearable style="margin-left: 10px;"/>
+              <el-cascader :options="pcaTextArr" v-model="loc.destination" clearable style="width: 100%;"/>
+              <el-input v-model="loc.destinationDetail" placeholder="可选填写详细地址（如门牌号、楼层等）" clearable style="margin-left: 10px;"/>
+              <el-button 
+                v-if="index === destinations.length - 1" 
+                type="primary" 
+                circle 
+                style="margin-left: 10px;"
+                @click="addDestination"
+              >
+                <el-icon><Plus /></el-icon>
+              </el-button>
+              <el-button 
+                v-if="destinations.length > 1" 
+                type="danger" 
+                circle 
+                style="margin-left: 10px;"
+                @click="removeDestination(index)"
+              >
+                <el-icon><Minus /></el-icon>
+              </el-button>
             </div>
             <!-- <div class="detail-item">
               <span class="detail-label">国外</span>
@@ -408,7 +485,7 @@
           </el-descriptions-item>
 
           <!-- 请假期间主持工作负责人安排 -->
-          <el-descriptions-item label="请假期间主持工作负责人安排(必填)" label-class-name="approval-label">
+          <el-descriptions-item v-if="Number(personnel.level) >= 24 && Number(personnel.level) !== 100" label="请假期间主持工作负责人安排(必填)" label-class-name="approval-label">
             <el-input
               v-model="workArrangement"
               type="textarea"
@@ -429,7 +506,7 @@
         </el-descriptions>
       </div>
       <!-- 审批意见 -->
-      <div class="approval-section">
+      <div v-if="Number(personnel.level) != 100" class="approval-section">
         <div class="divider">
           <span class="divider-text">审批意见</span>
         </div>
@@ -438,10 +515,10 @@
           :column="1"
           class="approval-descriptions"
         >
-          <el-descriptions-item label="校领导意见" label-class-name="approval-label">
+          <el-descriptions-item label="领导意见" label-class-name="approval-label">
             <div></div>
           </el-descriptions-item>
-          <el-descriptions-item label="请假期间主持工作负责人会签" label-class-name="approval-label">
+          <el-descriptions-item v-if="Number(personnel.level) >= 24" label="请假期间主持工作负责人会签" label-class-name="approval-label">
             <div></div>
           </el-descriptions-item>
         </el-descriptions>
@@ -453,25 +530,80 @@
           <span style="font-size: 14px;margin-bottom: 5px;">下一步</span>
         </div>
         <div class="action-item">
-          <span style="font-size: 14px;margin-bottom: 5px;">请假期间主持工作负责人会签</span>
+          <span v-if="Number(personnel.level) >= 24 && Number(personnel.level) != 100" style="font-size: 14px;margin-bottom: 5px;">请假期间主持工作负责人会签</span>
+          <span v-if="Number(personnel.level) < 24" style="font-size: 14px;margin-bottom: 5px;">单位负责人签字</span>
         </div>
         <div class="action-item">
-          <div v-for="userTask in startUserSelectTasks.filter(task => task.id === 'host_sign')" :key="userTask.id" style="width: 200px">
-            <el-select
-              v-model="startUserSelectAssignees[userTask.id]"
-              multiple
-              filterable
-              placeholder="请选择代工人"
-              class="signature-input"
-              :disabled="isReadOnly"
-            >
-              <el-option
-                v-for="user in userList"
-                :key="user.id"
-                :label="user.nickname"
-                :value="user.id"
-              />
-            </el-select>
+          <div v-for="userTask in startUserSelectTasks.filter(task => task.id === 'host_sign')" :key="userTask.id">
+            <div class="flex flex-wrap gap-2">
+              <!-- 始终显示一个用户 -->
+              <div
+                v-if="startUserSelectAssignees['host_sign'].length > 0"
+                :key="startUserSelectAssignees['host_sign'][0].id"
+                class="bg-gray-100 h-35px rounded-3xl flex items-center pr-8px dark:color-gray-600"
+              >
+                <el-avatar class="!m-5px" :size="28">
+                  {{ startUserSelectAssignees['host_sign'][0].nickname.substring(0, 1) }}
+                </el-avatar>
+                {{ startUserSelectAssignees['host_sign'][0].nickname }}
+                <Icon
+                  icon="ep:close"
+                  class="ml-2 cursor-pointer hover:text-red-500"
+                  @click="handleRemoveApprovalUser(startUserSelectAssignees['host_sign'][0])"
+                />
+              </div>
+              <!-- 显示第二个用户（当只有两个人时） -->
+              <div
+                v-if="startUserSelectAssignees['host_sign'].length === 2"
+                :key="startUserSelectAssignees['host_sign'][1].id"
+                class="bg-gray-100 h-35px rounded-3xl flex items-center pr-8px dark:color-gray-600"
+              >
+                <el-avatar class="!m-5px" :size="28">
+                  {{ startUserSelectAssignees['host_sign'][1].nickname.substring(0, 1) }}
+                </el-avatar>
+                {{ startUserSelectAssignees['host_sign'][1].nickname }}
+                <Icon
+                  icon="ep:close"
+                  class="ml-2 cursor-pointer hover:text-red-500"
+                  @click="handleRemoveApprovalUser(startUserSelectAssignees['host_sign'][1])"
+                />
+              </div>
+
+              <!-- 显示省略号及下拉框（当超过两个人时） -->
+              <el-popover
+                v-if="startUserSelectAssignees['host_sign'].length > 2"
+                placement="bottom"
+                trigger="hover"
+                :width="200"
+              >
+                <template #reference>
+                  <div class="bg-gray-100 h-35px rounded-3xl flex items-center px-3 cursor-pointer">
+                    等{{ startUserSelectAssignees['host_sign'].length - 1 }}人
+                  </div>
+                </template>
+
+                <div class="p-2 max-h-300px overflow-auto">
+                  <div
+                    v-for="user in startUserSelectAssignees['host_sign'].slice(1)"
+                    :key="user.id"
+                    class="flex items-center py-1 px-2 hover:bg-gray-100 rounded"
+                  >
+                    <el-avatar class="!m-5px" :size="28">
+                      {{ user.nickname.substring(0, 1) }}
+                    </el-avatar>
+                    <span class="ml-1 flex-1">{{ user.nickname }}</span>
+                    <Icon
+                      icon="ep:close"
+                      class="ml-2 cursor-pointer hover:text-red-500"
+                      @click="handleRemoveApprovalUser(user)"
+                    />
+                  </div>
+                </div>
+              </el-popover>
+              <el-button v-if="Number(personnel.level) >= 24 && Number(personnel.level) != 100" type="primary" link @click="openApprovalUserSelect" :disabled="isReadOnly">
+                <Icon icon="ep:plus" />选择人员
+              </el-button>
+            </div>
           </div>
         </div>
         <div class="action-item">
@@ -480,6 +612,8 @@
       </div>
     </el-card>
   </div>
+  <!-- 用户选择弹窗 -->
+  <UserSelectForm ref="userSelectFormRef" @confirm="handleUserSelectConfirm" />
 </template>
 
 <script lang="ts" setup>
@@ -497,51 +631,125 @@ import * as FileApi from '@/api/infra/file'
 import * as DefinitionApi from '@/api/bpm/definition'
 import * as UserApi from '@/api/system/user'
 import { parseHostSignTasks } from '@/utils/parseBpmnleave'
-// 人员信息
+import { number } from 'vue-types';
+import UserSelectForm from '@/components/UserSelectForm/index.vue'; // 导入 UserSelectForm 组件
+import { UserVO } from '@/api/system/user'
+// 当前登录人员信息
 const personnel = ref({
   id: '',
   deptId: '',
   name: '',
   department: '',
   title: '',
-  position: ''
+  position: '',
+  level: ''
 });
 // 日期范围
 const dateRange = ref([]);
 // 调研事由信息
-const researchID = ref();
-const researchTopic = ref('');
-const researchPurpose = ref('');
-const researchUnit = ref('');
-const researchStartDate = ref('');
-const researchEndDate = ref('');
+const researchList = ref([
+  {
+    id: '',
+    researchTopic: '',
+    researchPurpose: '',
+    researchUnit: '',
+    researchStartDate: '',
+    researchEndDate: ''
+  }
+]);
+const addResearch = () => {
+  researchList.value.push({
+    id: '',
+    researchTopic: '',
+    researchPurpose: '',
+    researchUnit: '',
+    researchStartDate: '',
+    researchEndDate: ''
+  });
+};
+const removeResearch = (index) => {
+  if (researchList.value.length > 1) {
+    researchList.value.splice(index, 1);
+  } else {
+    Object.keys(researchList.value[0]).forEach(key => {
+      researchList.value[0][key] = '';
+    });
+  }
+};
 // 培训事由信息
-const trainingID = ref();
-const trainingTopic = ref('');
-const trainingUnit = ref('');
-const trainingStartDate = ref('');
-const trainingEndDate = ref('');
+const trainingList = ref([
+  {
+    id: '',
+    trainingTopic: '',
+    trainingUnit: '',
+    trainingStartDate: '',
+    trainingEndDate: ''
+  }
+]);
+const addTraining = () => {
+  trainingList.value.push({
+    id: '',
+    trainingTopic: '',
+    trainingUnit: '',
+    trainingStartDate: '',
+    trainingEndDate: ''
+  });
+};
+const removeTraining = (index) => {
+  if (trainingList.value.length > 1) {
+    trainingList.value.splice(index, 1);
+  } else {
+    Object.keys(trainingList.value[0]).forEach(key => {
+      trainingList.value[0][key] = '';
+    });
+  }
+};
 // 公务事由信息
-const businessID = ref();
-const businessTopic = ref('');
-const businessUnit = ref('');
-const businessStartDate = ref('');
-const businessEndDate = ref('');
+const businessList = ref([
+  {
+    id: '',
+    businessTopic: '',
+    businessUnit: '',
+    businessStartDate: '',
+    businessEndDate: ''
+  }
+]);
+const addBusiness = () => {
+  businessList.value.push({
+    id: '',
+    businessTopic: '',
+    businessUnit: '',
+    businessStartDate: '',
+    businessEndDate: ''
+  });
+};
+const removeBusiness = (index) => {
+  if (businessList.value.length > 1) {
+    businessList.value.splice(index, 1);
+  } else {
+    Object.keys(businessList.value[0]).forEach(key => {
+      businessList.value[0][key] = '';
+    });
+  }
+};
 // 学术会议事由信息
-const academicID = ref();
-const academicMeetings = ref([{
-  academicTopic: '',
-  academicNature: '',
-  academicUnit: '',
-  academicStartDate: '',
-  academicEndDate: '',
-  isPresentation: '',
-  reportType: '',
-  reportTitle: '',
-  academicPaperCount: 0
-}]);
+const academicMeetings = ref([
+  {
+    id: '',
+    academicTopic: '',
+    academicNature: '',
+    academicUnit: '',
+    academicStartDate: '',
+    academicEndDate: '',
+    isPresentation: '',
+    reportType: '',
+    reportTitle: '',
+    academicPaperCount: 0
+  }
+]);
 const addAcademicMeeting = () => {
   academicMeetings.value.push({
+    id: '',
     academicTopic: '',
     academicNature: '',
     academicUnit: '',
@@ -564,41 +772,82 @@ const removeAcademicMeeting = (index) => {
   }
 };
 // 因私事由信息
-const personalID = ref();
-const personalType = ref<number>();
-const personalStartDate = ref('');
-const personalEndDate = ref('');
-const personalTotalDays = ref<number>(0);
-const personalReason = ref('');
-const personalPhone = ref('');
-const personalRoute = ref('');
-const personalRelation = ref('');
-const personalVisitName = ref('');
-const personalVisitType = ref<number>();
-const personalVisitAddress = ref('');
-const personalMaritalStatus = ref<number>();
-const personalParity = ref<number>();
-const personalMultiple = ref<number>();
-const personalDystocia = ref<number>();
+const personalList = ref([
+  {
+    id: '',
+    personalType: '',
+    personalStartDate: '',
+    personalEndDate: '',
+    personalTotalDays: 0,
+    personalReason: '',
+    personalPhone: '',
+    personalRoute: '',
+    personalRelation: '',
+    personalVisitName: '',
+    personalVisitType: '',
+    personalVisitAddress: '',
+    personalMaritalStatus: '',
+    personalParity: '',
+    personalMultiple: '',
+    personalDystocia: ''
+  }
+]);
+const addPersonal = () => {
+  personalList.value.push({
+    id: '',
+    personalType: '',
+    personalStartDate: '',
+    personalEndDate: '',
+    personalTotalDays: 0,
+    personalReason: '',
+    personalPhone: '',
+    personalRoute: '',
+    personalRelation: '',
+    personalVisitName: '',
+    personalVisitType: '',
+    personalVisitAddress: '',
+    personalMaritalStatus: '',
+    personalParity: '',
+    personalMultiple: '',
+    personalDystocia: ''
+  });
+};
+const removePersonal = (index: number) => {
+  if (personalList.value.length > 1) {
+    personalList.value.splice(index, 1);
+  } else {
+    Object.keys(personalList.value[0]).forEach(key => {
+      personalList.value[0][key] = '';
+    });
+  }
+};
 // 其他事由
 const otherID = ref();
 const otherReason = ref('');
 // 监听日期范围变化
 watch(dateRange, (newVal) => {
   if (newVal && newVal.length === 2) {
-    researchStartDate.value = newVal[0];
-    researchEndDate.value = newVal[1];
-    trainingStartDate.value = newVal[0];
-    trainingEndDate.value = newVal[1];
-    businessStartDate.value = newVal[0];
-    businessEndDate.value = newVal[1];
+    researchList.value.forEach(meeting => {
+      meeting.researchStartDate = newVal[0];
+      meeting.researchEndDate = newVal[1];
+    });
+    trainingList.value.forEach(meeting => {
+      meeting.trainingStartDate = newVal[0];
+      meeting.trainingEndDate = newVal[1];
+    });
+    businessList.value.forEach(meeting => {
+      meeting.businessStartDate = newVal[0];
+      meeting.businessEndDate = newVal[1];
+    });
     academicMeetings.value.forEach(meeting => {
       meeting.academicStartDate = newVal[0];
       meeting.academicEndDate = newVal[1];
     });
-    personalStartDate.value = newVal[0];
-    personalEndDate.value = newVal[1];
-    personalTotalDays.value = Math.ceil((new Date(newVal[1]).getTime() - new Date(newVal[0]).getTime()) / (1000 * 60 * 60 * 24))+1;
+    personalList.value.forEach(meeting => {
+      meeting.personalStartDate = newVal[0];
+      meeting.personalEndDate = newVal[1];
+      meeting.personalTotalDays = Math.ceil((new Date(newVal[1]).getTime() - new Date(newVal[0]).getTime()) / (1000 * 60 * 60 * 24))+1;
+    });
   }
 }, { deep: true });
 
@@ -677,12 +926,40 @@ const beforeRemove = (file: UploadFile) => {
     }
   );
 };
+// 起止日期为空时，清空事由
+const handleReasonChange = () => {
+  if (!dateRange.value || dateRange.value.length === 0) {
+    selectedReasons.value = [];
+    ElMessage.warning('请先选择起止日期');
+  }
+};
+
 // 表单数据
-const destination = ref('');
-const destinationDetail = ref('');
+const destinations = ref([{ destination: '', destinationDetail: '' }]);
 const workArrangement = ref('');
 const remarks = ref('');
 const router = useRouter()
+// 添加目的地
+const addDestination = () => {
+  destinations.value.push({ destination: '', destinationDetail: '' });
+};
+
+// 删除目的地
+const removeDestination = (index) => {
+  if (destinations.value.length > 1) {
+    destinations.value.splice(index, 1);
+  }
+};
+// 手机号验证
+const validatePhone = (personalPhone) => {
+  if (!personalPhone.value) return;
+  
+  const phoneRegex = /^1[3-9]\d{9}$/;
+  if (!phoneRegex.test(personalPhone.value)) {
+    ElMessage.warning('请输入正确的11位手机号码');
+    personalPhone.value = '';
+  }
+};
 // 提交流程
 const handleSubmit = async () => {
   try {
@@ -707,21 +984,35 @@ const handleSubmit = async () => {
       return
     }
 
-    if (!destination.value) {
-      ElMessage.warning('请填写前往地点')
+    // 检查是否至少有一个有效的目的地
+    const hasValidDestination = destinations.value.some(loc => loc.destination);
+    if (!hasValidDestination) {
+      ElMessage.warning('请至少填写一个前往地点')
       return
     }
 
-    if (!workArrangement.value) {
-      ElMessage.warning('请填写请假期间工作安排')
-      return
+    if (personnel.value.level === 2) {
+      if (!workArrangement.value) {
+        ElMessage.warning('请填写请假期间工作安排')
+        return
+      }
     }
 
-    if (startUserSelectAssignees.value === '') {
-      ElMessage.warning('请选择签办人')
-      return
+    if (personnel.value.level === 2) {
+      if (startUserSelectAssignees.value === '') {
+        ElMessage.warning('请选择签办人')
+        return
+      }
     }
-    const fullDestination = String(destination.value) + (destinationDetail.value ? ',' + destinationDetail.value : '');
+    // 拼接所有目的地为一个字符串，使用 ||| 作为分隔符
+    const fullDestination = destinations.value
+      .filter(loc => loc.destination) // 过滤掉没有填写的地点
+      .map(loc => {
+        const destStr = String(loc.destination);
+        const detailStr = loc.destinationDetail ? loc.destinationDetail : '';
+        return destStr + (detailStr ? ',' + detailStr : '');
+      })
+      .join('|||');
     // 2. 准备提交数据
     const formData = {
       id: Number(),
@@ -734,7 +1025,7 @@ const handleSubmit = async () => {
       deptId: Number(personnel.value.deptId), // 部门ID
       leaderOpinion: '', // 领导意见，初始为空
       hostId: '',
-      personAdmitId: startUserSelectAssignees.value.host_sign[0]
+      personAdmitId: startUserSelectAssignees.value['host_sign'].map((user) => user.id).join(',')
     }
 
     // 1. 提交主表数据
@@ -752,101 +1043,108 @@ const handleSubmit = async () => {
 
     // 2. 提交请假事由（每个事由单独提交）
     const reasonPromises = selectedReasons.value.flatMap(reason => {
-      // 如果是学术会议（type=5），为每个会议创建一条记录
       if (reason === 5) {
         return academicMeetings.value.flatMap(meeting => {
           const reasonData = {
-            id: academicID.value,
+            id: meeting.id,
             leaveRegisterId: leaveRegisterId,
             type: reason,
-            startDate: meeting.academicStartDate || dateRange.value[0],
-            endDate: meeting.academicEndDate || dateRange.value[1],
+            startDate: meeting.academicStartDate,
+            endDate: meeting.academicEndDate,
             // 可以添加其他会议相关字段
             subject: meeting.academicTopic,
             meetingNature: Number(meeting.academicNature),
             unit: meeting.academicUnit,
-            reportType: meeting.isPresentation ? meeting.reportType : null,
-            reportTitle: meeting.reportTitle,
+            reportType: meeting.isPresentation === 1 ? meeting.reportType : '',
+            reportTitle: meeting.isPresentation === 1 ? meeting.reportTitle : '',
             reportPaperCount: meeting.academicPaperCount
           };
-          if (academicID.value) {
+          if (meeting.id) {
             return ReasonFormApi.updateReasonForm(reasonData);
           } else {
             return ReasonFormApi.createReasonForm(reasonData);
           }
         });
       } else if (reason === 1) {
-        const reasonData = {
-          id: researchID.value,
-          leaveRegisterId: leaveRegisterId,
-          type: reason,
-          subject: researchTopic.value,
-          purpose: researchPurpose.value,
-          unit: researchUnit.value,
-          startDate: researchStartDate.value,
-          endDate: researchEndDate.value,
-        }
-        if (researchID.value) {
-          return ReasonFormApi.updateReasonForm(reasonData);
-        } else {
-          return ReasonFormApi.createReasonForm(reasonData);
-        }
+        return researchList.value.flatMap(research => {
+          const reasonData = {
+            id: research.id,
+            leaveRegisterId: leaveRegisterId,
+            type: reason,
+            subject: research.researchTopic,
+            purpose: research.researchPurpose,
+            unit: research.researchUnit,
+            startDate: research.researchStartDate,
+            endDate: research.researchEndDate,
+          }
+          if (research.id) {
+            return ReasonFormApi.updateReasonForm(reasonData);
+          } else {
+            return ReasonFormApi.createReasonForm(reasonData);
+          }
+        });
       } else if (reason === 2) {
-        const reasonData = {
-          id: trainingID.value,
-          leaveRegisterId: leaveRegisterId,
-          type: reason,
-          subject: trainingTopic.value,
-          unit: trainingUnit.value,
-          startDate: trainingStartDate.value,
-          endDate: trainingEndDate.value,
-        }
-        if (trainingID.value) {
-          return ReasonFormApi.updateReasonForm(reasonData);
-        } else {
-          return ReasonFormApi.createReasonForm(reasonData);
-        }
+        return trainingList.value.flatMap(training => {
+          const reasonData = {
+            id: training.id,
+            leaveRegisterId: leaveRegisterId,
+            type: reason,
+            subject: training.trainingTopic,
+            unit: training.trainingUnit,
+            startDate: training.trainingStartDate,
+            endDate: training.trainingEndDate,
+          }
+          if (training.id) {
+            return ReasonFormApi.updateReasonForm(reasonData);
+          } else {
+            return ReasonFormApi.createReasonForm(reasonData);
+          }
+        });
       } else if (reason === 3) {
-        const reasonData = {
-          id: businessID.value,
-          leaveRegisterId: leaveRegisterId,
-          type: reason,
-          subject: businessTopic.value,
-          unit: businessUnit.value,
-          startDate: businessStartDate.value,
-          endDate: businessEndDate.value,
-        }
-        if (businessID.value) {
-          return ReasonFormApi.updateReasonForm(reasonData);
-        } else {
-          return ReasonFormApi.createReasonForm(reasonData);
-        }
+        return businessList.value.flatMap(business => {
+          const reasonData = {
+            id: business.id,
+            leaveRegisterId: leaveRegisterId,
+            type: reason,
+            subject: business.businessTopic,
+            unit: business.businessUnit,
+            startDate: business.businessStartDate,
+            endDate: business.businessEndDate,
+          }
+          if (business.id) {
+            return ReasonFormApi.updateReasonForm(reasonData);
+          } else {
+            return ReasonFormApi.createReasonForm(reasonData);
+          }
+        });
       } else if (reason === 4) {
+        return personalList.value.flatMap(personal => {
         const reasonData = {
-          id: personalID.value,
+          id: personal.id,
           leaveRegisterId: leaveRegisterId,
           type: reason,
-          privateType: personalType.value,
-          startDate: personalStartDate.value,
-          endDate: personalEndDate.value,
-          totalDays: personalTotalDays.value,
-          birthCount: personalParity.value,
-          difficultBirth: personalDystocia.value,
-          multipleBirth: personalMultiple.value,
-          reason: personalReason.value,
-          phone: personalPhone.value,
-          visitRoute: personalRoute.value,
-          relationship: personalRelation.value,
-          visitedPersonName: personalVisitName.value,
-          visitType: personalVisitType.value,
-          registeredAddress: personalVisitAddress.value,
-          maritalStatus: personalMaritalStatus.value,
+          privateType: personal.personalType,
+          startDate: personal.personalStartDate,
+          endDate: personal.personalEndDate,
+          totalDays: personal.personalTotalDays,
+          birthCount: personal.personalParity,
+          difficultBirth: personal.personalDystocia,
+          multipleBirth: personal.personalMultiple,
+          reason: personal.personalReason,
+          phone: personal.personalPhone,
+          visitRoute: personal.personalRoute,
+          relationship: personal.personalRelation,
+          visitedPersonName: personal.personalVisitName,
+          visitType: personal.personalVisitType,
+          registeredAddress: personal.personalVisitAddress,
+          maritalStatus: personal.personalMaritalStatus,
         }
-        if (personalID.value) {
+        if (personal.id) {
           return ReasonFormApi.updateReasonForm(reasonData);
         } else {
           return ReasonFormApi.createReasonForm(reasonData);
         }
+      })
       } else if (reason === 6) {
         const reasonData = {
           id: otherID.value,
@@ -919,6 +1217,7 @@ const fetchUserProfile = async () => {
           department: res.dept?.name || '',
           title: res.posts?.[0]?.name || '',
           position: res.nickname || '',
+          level: res.level || '',
         };
       }
     } else  {
@@ -949,58 +1248,63 @@ const fetchUserProfile = async () => {
           // 根据不同类型设置对应的表单字段
           switch (item.type) {
             case 1: // 调研
-              researchID.value = item.id;
-              researchTopic.value = item.subject;
-              researchPurpose.value = item.purpose;
-              researchUnit.value = item.unit;
-              researchStartDate.value = dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss');
-              researchEndDate.value = dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss');
+              researchList.value.push({
+                id: item.id,
+                researchTopic: item.subject,
+                researchPurpose: item.purpose,
+                researchUnit: item.unit,
+                researchStartDate: dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss'),
+                researchEndDate: dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss'),
+              });
               break;
             case 2: // 培训
-              trainingID.value = item.id;
-              trainingTopic.value = item.subject;
-              trainingUnit.value = item.unit;
-              trainingStartDate.value = dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss');
-              trainingEndDate.value = dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss');
+              trainingList.value.push({
+                id: item.id,
+                trainingTopic: item.subject,
+                trainingUnit: item.unit,
+                trainingStartDate: dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss'),
+                trainingEndDate: dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss'),
+              });
               break;
             case 3: // 公务
-              businessID.value = item.id;
-              businessTopic.value = item.subject;
-              businessUnit.value = item.unit;
-              businessStartDate.value = dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss');
-              businessEndDate.value = dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss');
+              businessList.value.push({
+                id: item.id,
+                businessTopic: item.subject,
+                businessUnit: item.unit,
+                businessStartDate: dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss'),
+                businessEndDate: dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss'),
+              });
               break;
             case 4: // 因私
-              personalID.value = item.id;
-              personalType.value = Number(item.privateType);
-              personalStartDate.value = dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss');
-              personalEndDate.value = dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss');
-              personalTotalDays.value = item.totalDays;
-              personalPhone.value = item.phone;
-              personalParity.value = item.birthCount?.toString();
-              personalDystocia.value = item.difficultBirth;
-              personalMultiple.value = item.multipleBirth;
-              personalVisitAddress.value = item.registeredAddress;
-              personalRelation.value = item.relationship;
-              personalRoute.value = item.visitRoute;
-              personalVisitName.value = item.visitedPersonName;
-              personalVisitType.value = item.visitType;
-              personalReason.value = item.reason;
+              personalList.value.push({
+                id: item.id,
+                personalType: Number(item.privateType),
+                personalStartDate: dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss'),
+                personalEndDate: dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss'),
+                personalTotalDays: item.totalDays,
+                personalPhone: item.phone,
+                personalParity: item.birthCount?.toString(),
+                personalDystocia: item.difficultBirth,
+                personalMultiple: item.multipleBirth,
+                personalVisitAddress: item.registeredAddress,
+                personalRelation: item.relationship,
+                personalRoute: item.visitRoute,
+                personalVisitName: item.visitedPersonName,
+                personalVisitType: item.visitType,
+                personalReason: item.reason,
+              });
               break;
             case 5: // 学术会议
-              academicID.value = item.id;
-              // 清空现有会议
-              academicMeetings.value = [];
-              // 添加新的会议数据
               academicMeetings.value.push({
+                id: item.id,
                 academicTopic: item.subject,
                 academicNature: item.meetingNature,
                 academicUnit: item.unit,
                 academicStartDate: dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss'),
                 academicEndDate: dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss'),
-                isPresentation: item.isPresentation,
+                isPresentation: item.reportTitle||item.reportType?1:0,
                 reportTitle: item.reportTitle,
-                reportType: item.reportType,
+                reportType: Number(item.reportType),
                 academicPaperCount: item.academicPaperCount
               });
               break;
@@ -1015,15 +1319,46 @@ const fetchUserProfile = async () => {
         dateRange.value = [dayjs(res.startDate).format('YYYY-MM-DD HH:mm:ss'), dayjs(res.endDate).format('YYYY-MM-DD HH:mm:ss')];
         workArrangement.value = res.hostArrangement;
         remarks.value = res.remark;
-        startUserSelectAssignees.value.host_sign[0]=res.personAdmitId
-        const destParts = res.destination.split(',');
-        // 如果地点数据包含超过省市区的部分，则最后一部分为详细地址
-        if (destParts.length > 3) {
-          destination.value = destParts.slice(0, 3);
-          destinationDetail.value = destParts.slice(3).join(',');
+        // 解析 personAdmitId 字符串为用户对象数组
+        if (res.personAdmitId) {
+          const userIds = res.personAdmitId.split(',').map(id => Number(id));
+          // 将 ID 转换为用户对象数组
+          startUserSelectAssignees.value['host_sign'] = userList.value.filter((user: any) =>
+            userIds.includes(user.id)
+          )
         } else {
-          destination.value = destParts;
-          destinationDetail.value = '';
+          startUserSelectAssignees.value['host_sign'] = [];
+        }
+        // 解析目的地数据
+        if (res.destination) {
+          // 首先尝试使用 ||| 分隔符解析（新格式）
+          if (res.destination.includes('|||')) {
+            const multiDestinations = res.destination.split('|||');
+            destinations.value = multiDestinations.map(dest => {
+              // 对每个地点，使用逗号分隔省市区和详细地址
+              const parts = dest.split(',');
+              return {
+                destination: parts.slice(0, 3), 
+                destinationDetail: parts.slice(3).join(',')
+              };
+            });
+          console.log(destinations.value)
+          } else {
+            // 兼容旧格式（只使用逗号分隔）
+            const destParts = res.destination.split(',');
+            // 如果地点数据包含超过省市区的部分，则最后一部分为详细地址
+            if (destParts.length > 3) {
+              destinations.value = [{
+                destination: destParts.slice(0, 3), 
+                destinationDetail: destParts.slice(3).join(',')
+              }];
+            } else {
+              destinations.value = [{
+                destination: destParts, 
+                destinationDetail: ''
+              }];
+            }
+          }
         }
         personnel.value = {
           id: res.personId,
@@ -1032,6 +1367,7 @@ const fetchUserProfile = async () => {
           department: res.deptName || '',
           title: res.postName || '',
           position: res.nickName || '',
+          level: res.level || '',
         };
       }
     }
@@ -1039,6 +1375,47 @@ const fetchUserProfile = async () => {
     ElMessage.error('获取用户信息失败');
   }
 };
+const pickerOptions =(time) => {
+  // 禁用今天之前的日期
+  return time.getTime() < Date.now() - 8.64e7; // 8.64e7 是一天的毫秒数
+};
+// 限制在开始日期至结束日期范围内
+const disabledDate = (time) => {
+  if (!dateRange.value || dateRange.value.length !== 2) {
+    return false;
+  }
+  
+  const startDate = new Date(dateRange.value[0]);
+  const endDate = new Date(dateRange.value[1]);
+  
+  // 移除时间部分，只比较日期
+  startDate.setHours(0, 0, 0, 0);
+  endDate.setHours(0, 0, 0, 0);
+  
+  const currentDate = new Date(time);
+  currentDate.setHours(0, 0, 0, 0);
+  
+  // 对于开始日期和结束日期，都不能超出主日期范围
+  return currentDate < startDate || currentDate > endDate;
+};
+/** 打开签办人选择 */
+const openApprovalUserSelect = () => {
+  userSelectFormRef.value?.open(startUserSelectTasks.value['host_sign'],personnel.value.deptId,startUserSelectAssignees.value['host_sign']); // 修改为使用 UserSelectForm 组件
+}
+
+
+/** 移除签办人 */
+const handleRemoveApprovalUser = (user: UserVO) => {
+  if (isReadOnly.value) {
+    return
+  }
+  startUserSelectAssignees.value['host_sign'] = startUserSelectAssignees.value['host_sign'].filter((u) => u.id !== user.id)
+}
+
+/** 用户选择确认 */
+const handleUserSelectConfirm = (_, users: UserVO[]) => {
+  startUserSelectAssignees.value['host_sign'] = users
+}
 
 // 指定审批人
 const processDefineKey = 'oa_leaveRegister' // 流程定义 Key
@@ -1048,9 +1425,8 @@ const startUserSelectAssigneesFormRef = ref() // 发起人选择审批人的表�
 const startUserSelectAssigneesFormRules = ref({}) // 发起人选择审批人的表单 Rules
 const userList = ref<Array<any>>([])
 const bpmnXml = ref('')
-// 获取用户信息
-onMounted(async () => {
-
+const userSelectFormRef = ref() // 添加 ref 引用
+const fetchProcessDefinition = async () => {
   try {
     //获取流程定义
     const processDefinitionDetail = await DefinitionApi.getProcessDefinition(
@@ -1078,8 +1454,6 @@ onMounted(async () => {
               { required: true, message: '请选择审批人', trigger: 'blur' }
             ]
           }
-          // 加载用户列表
-          userList.value = await UserApi.getSimpleUserList()
         }
       } catch (error) {
         ElMessage.error('解析流程定义失败，请联系管理员')
@@ -1090,10 +1464,14 @@ onMounted(async () => {
   } catch (error) {
     ElMessage.error('获取流程定义失败，请联系管理员')
   }
-});
-
-fetchUserProfile();
-
+}
+// 获取用户信息
+onMounted(async () => {
+// 加载用户列表
+userList.value = await UserApi.getSimpleUserList()
+await fetchProcessDefinition()
+await fetchUserProfile()
+})
 </script>
 
 <style scoped>

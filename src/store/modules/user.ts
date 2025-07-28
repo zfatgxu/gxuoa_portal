@@ -11,6 +11,7 @@ interface UserVO {
   avatar: string
   nickname: string
   deptId: number
+  mobile: string
 }
 
 interface UserInfoVO {
@@ -30,7 +31,8 @@ export const useUserStore = defineStore('admin-user', {
       id: 0,
       avatar: '',
       nickname: '',
-      deptId: 0
+      deptId: 0,
+      mobile: ''
     }
   }),
   getters: {
@@ -83,6 +85,13 @@ export const useUserStore = defineStore('admin-user', {
       userInfo.user.nickname = nickname
       wsCache.set(CACHE_KEY.USER, userInfo)
     },
+    async setUserMobileAction(mobile: string) {
+      const userInfo = wsCache.get(CACHE_KEY.USER)
+      // NOTE: 是否需要像`setUserInfoAction`一样判断`userInfo != null`
+      this.user.mobile = mobile
+      userInfo.user.mobile = mobile
+      wsCache.set(CACHE_KEY.USER, userInfo)
+    },
     async loginOut() {
       await loginOut()
       removeToken()
@@ -97,7 +106,8 @@ export const useUserStore = defineStore('admin-user', {
         id: 0,
         avatar: '',
         nickname: '',
-        deptId: 0
+        deptId: 0,
+        mobile: ''
       }
     }
   }

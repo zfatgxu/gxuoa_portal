@@ -135,7 +135,6 @@ const remainingRouter: AppRouteRecordRaw[] = [
       hidden: true
     },
     children: [
-
       {
         path: 'create',
         component: () => import('@/views/supervision/create.vue'),
@@ -426,6 +425,43 @@ const remainingRouter: AppRouteRecordRaw[] = [
           canTo: true,
           title: '修改流程',
           activeMenu: '/bpm/manager/model'
+        }
+      }
+    ]
+  },
+  // 请假
+  {
+    path: '/leave',
+    component: Layout,
+    name: 'leave',
+    meta: {
+      hidden: true
+    },
+    children: [
+      {
+        path: 'create',
+        component: () => import('@/views/leave/create/createForm.vue'),
+        name: 'LeaveCreate',
+        meta: {
+          title: '新增请假表单',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: 'ep:edit',
+          activeMenu: '/leave'
+        }
+      },
+      {
+        path: 'detailed',
+        component: () => import('@/views/leave/create/detail.vue'),
+        name: 'LeaveDetail',
+        meta: {
+          title: '查看请假详情',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: 'ep:edit',
+          activeMenu: '/leave'
         }
       }
     ]
@@ -814,6 +850,29 @@ const remainingRouter: AppRouteRecordRaw[] = [
     ]
   },
   {
+    path: '/help',
+    component: Layout,
+    name: 'HelpCenter',
+    meta: {
+      hidden: true
+    },
+    children: [
+      {
+        path: '',
+        name: 'HelpCenterIndex',
+        component: () => import('@/layout/components/QuickAccess/HelpCenter.vue'),
+        meta: {
+          requiresAuth: true,
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          title: '帮助中心',
+          activeMenu: '/help'
+        }
+      }
+    ]
+  },
+  {
     path: '/iot',
     component: Layout,
     name: 'IOT',
@@ -895,6 +954,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
       activeMenu: '/document/presentation-view'
     }
   },
+  
 
 ]
 

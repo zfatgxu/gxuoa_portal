@@ -501,15 +501,18 @@ onMounted(() => {
 .card {
   border-radius: 5px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
+  margin-bottom: 0;
   background-color: white;
   border: none;
+  height: calc(100vh - 300px);
+  display: flex;
+  flex-direction: column;
 }
-
 .card-tabs {
   display: flex;
   border-bottom: 1px solid #e6e6e6;
   position: relative;
+  flex-shrink: 0;
 }
 
 .tab-item {
@@ -542,7 +545,7 @@ onMounted(() => {
   top: 50%;
   transform: translateY(-50%);
   color: #999;
-  font-size: 12px;
+  font-size: 14px;
   cursor: pointer;
 }
 
@@ -552,16 +555,24 @@ onMounted(() => {
 
 .card-body {
   padding: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .tab-content {
   min-height: 200px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .todo-list {
   list-style: none;
   padding: 0;
   margin: 0;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .todo-item {
@@ -594,7 +605,7 @@ onMounted(() => {
 }
 
 .todo-title {
-  font-size: 14px;
+  font-size: 16px;
   color: #303133;
   white-space: nowrap;
   overflow: hidden;
@@ -609,10 +620,10 @@ onMounted(() => {
 }
 
 .todo-type {
-  width: 60px;
+  width: 70px;
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 14px;
   color: white;
   background-color: #409EFF;
   text-align: center;
@@ -646,13 +657,13 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   color: #909399;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .todo-date {
-  width: 70px;
+  width: 130px;
   color: #909399;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .todo-actions {

@@ -1,7 +1,7 @@
 <template>
   <div class="mailbox-container">
     <div class="banner">
-      <img src="/src/assets/imgs/petition/mailbox-banner.jpg" alt="信箱横幅" />
+      <img src="/src/assets/imgs/petition/mailbox-banner.svg" alt="信箱横幅" />
     </div>
 
     <div class="mailbox-content">

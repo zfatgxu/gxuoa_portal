@@ -18,11 +18,13 @@
     <div class="login-right">
       <div class="login-form-container">
         <div class="login-box">
-          <div class="corner-decoration"></div>
+          <div class="corner-decoration" @click="setLoginState(LoginStateEnum.QR_CODE)">
+            <img src="@/assets/svgs/qrcode.svg" alt="二维码" class="qrcode-icon" />
+          </div>
           <div class="login-tabs">
-            <el-tabs v-model="activeTab">
+            <el-tabs v-model="activeTab" class="login-tab-component" @tab-click="handleTabClick">
               <el-tab-pane label="密码登录" name="account">
-                <LoginForm />
+                <LoginForm v-show="getLoginState === LoginStateEnum.LOGIN" />
               </el-tab-pane>
               <el-tab-pane label="验证码登录" name="mobile">
                 <MobileForm v-show="getLoginState === LoginStateEnum.MOBILE" />
@@ -31,8 +33,12 @@
           </div>
           
           <ForgetPasswordForm />
+          <RegisterForm />
           
-          <el-alert
+          <!-- 二维码登录组件 -->
+          <QrCodeForm v-show="getLoginState === LoginStateEnum.QR_CODE" />
+          
+          <!-- <el-alert
             title="温馨提示"
             type="info"
             :closable="false"
@@ -44,7 +50,7 @@
                 <el-tag size="small" type="success">谷歌</el-tag>
               </p>
             </div>
-          </el-alert>
+          </el-alert> -->
         </div>
       </div>
     </div>
@@ -58,16 +64,28 @@
 
 <script lang="ts" setup>
 import { ref } from 'vue'
-import { LoginForm, MobileForm, ForgetPasswordForm } from './components'
+import { LoginForm, MobileForm, ForgetPasswordForm, QrCodeForm, RegisterForm } from './components'
 import { LoginStateEnum, useLoginState } from './components/useLogin'
 
 defineOptions({ name: 'Login' })
-
-const { getLoginState } = useLoginState()
+const { setLoginState, getLoginState } = useLoginState()
 const activeTab = ref('account')
+
+// 处理标签页切换
+const handleTabClick = (tab) => {
+  if (tab.props.name === 'account') {
+    setLoginState(LoginStateEnum.LOGIN)
+  } else if (tab.props.name === 'mobile') {
+    setLoginState(LoginStateEnum.MOBILE)
+  }
+}
 </script>
 
 <style>
+/* 全局覆盖Element Plus标签样式 */
+.el-tabs__item {
+  font-size: 20px !important;
+}
 /* login page */
 .login-page {
   height: 100vh;
@@ -108,7 +126,7 @@ const activeTab = ref('account')
   left: 0;
   width: 100%;
   height: 80px;
-  background-color: rgba(0, 120, 212, 0.98);
+  background-color: rgba(54, 163, 247, 1);
   z-index: -1;
 }
 
@@ -120,7 +138,7 @@ const activeTab = ref('account')
   left: 0;
   width: 100%;
   height: 60px;
-  background-color: rgba(0, 120, 212, 0.98);
+  background-color: rgba(54, 163, 247, 1);
   pointer-events: none;
 }
 
@@ -264,7 +282,7 @@ const activeTab = ref('account')
 /* 登录表单容器 */
 .login-form-container {
   width: 100%;
-  max-width: 400px;
+  max-width: 550px;
   padding: 0 20px;
   z-index: 10;
 }
@@ -272,7 +290,7 @@ const activeTab = ref('account')
 .login-box {
   position: relative;
   width: 100%;
-  padding: 30px;
+  padding: 20px 30px;
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
@@ -284,13 +302,41 @@ const activeTab = ref('account')
   right: 0;
   width: 80px;
   height: 80px;
-  background: linear-gradient(135deg, transparent 50%, rgba(0, 120, 212, 0.1) 50%);
-  border-top-right-radius: 4px;
+  overflow: hidden;
+  border-top-right-radius: 8px;
+  cursor: pointer;
+  background-color: rgba(0, 120, 212, 0.05);
+}
+
+.corner-decoration::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(45deg, #fff 50%, transparent 50%);
+  z-index: 1;
+}
+
+.qrcode-icon {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 60px;
+  height: 60px;
+  z-index: 0;
+  opacity: 0.8;
 }
 
 /* 登录选项卡 */
 .login-tabs {
   margin-bottom: 20px;
+}
+
+/* 标签文字大小 */
+.login-tab-component :deep(.el-tabs__item) {
+  font-size: 20px;
 }
 
 :deep(.demo-tabs .el-tabs__item) {

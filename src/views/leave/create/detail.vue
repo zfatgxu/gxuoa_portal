@@ -35,7 +35,7 @@
             <div class="date-range-picker">
               <el-date-picker
                 v-model="dateRange"
-                type="datetimerange"
+                type="daterange"
                 range-separator="至"
                 start-placeholder="开始日期"
                 end-placeholder="结束日期"
@@ -47,12 +47,12 @@
           <!-- 事由 -->
           <el-descriptions-item label="请示请假事由(必填)" label-class-name="approval-label">
             <div class="reason-options">
-              <div 
-                v-for="reason in getIntDictOptions(DICT_TYPE.LEAVE_TYPE)" 
-                :key="reason.value" 
+              <div
+                v-for="reason in getIntDictOptions(DICT_TYPE.LEAVE_TYPE)"
+                :key="reason.value"
               >
                 <el-checkbox-group v-model="selectedReasons" :disabled="isReadOnly">
-                  <el-checkbox 
+                  <el-checkbox
                     :label="reason.value"
                   >
                     {{ reason.label }}
@@ -60,125 +60,126 @@
                 </el-checkbox-group>
                 <!-- 调研展开内容 -->
                 <div v-if="reason.value === 1 && selectedReasons.includes(1)" style="padding: 15px 10px;">
-                  <div class="detail-item">
-                    <span class="detail-label">调研主题</span>
-                    <el-input v-model="researchTopic" :disabled="isReadOnly" placeholder="请输入调研主题"/>
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">调研目的</span>
-                    <el-input v-model="researchPurpose" :disabled="isReadOnly" placeholder="请输入调研目的"/>
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">调研单位</span>
-                    <el-input v-model="researchUnit" :disabled="isReadOnly" placeholder="请输入调研单位"/>
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">开始时间</span>
-                    <el-date-picker
-                      v-model="researchStartDate"
-                      type="datetime"
-                      placeholder="开始时间"
-                      value-format="YYYY-MM-DD HH:mm:ss"
-                      style="width: 100%;"
-                      :disabled="isReadOnly"
-                    />
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">结束时间</span>
-                    <el-date-picker
-                      v-model="researchEndDate"
-                      type="datetime"
-                      placeholder="结束时间"
-                      value-format="YYYY-MM-DD HH:mm:ss"
-                      style="width: 100%;"
-                      :disabled="isReadOnly"
-                    />
+                  <div v-for="(research, index) in researchList" :key="index">
+                    <div class="detail-item">
+                      <span class="detail-label">调研主题</span>
+                      <el-input v-model="research.researchTopic" placeholder="请输入调研主题" :disabled="isReadOnly"/>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">调研目的</span>
+                      <el-input v-model="research.researchPurpose" placeholder="请输入调研目的" :disabled="isReadOnly"/>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">调研单位</span>
+                      <el-input v-model="research.researchUnit" placeholder="请输入调研单位" :disabled="isReadOnly"/>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">开始时间</span>
+                      <el-date-picker
+                        v-model="research.researchStartDate"
+                        type="date"
+                        placeholder="开始时间"
+                        value-format="YYYY-MM-DD HH:mm:ss"
+                        style="width: 100%;"
+                        :disabled="isReadOnly"
+                      />
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">结束时间</span>
+                      <el-date-picker
+                        v-model="research.researchEndDate"
+                        type="date"
+                        placeholder="结束时间"
+                        value-format="YYYY-MM-DD HH:mm:ss"
+                        style="width: 100%;"
+                        :disabled="isReadOnly"
+                      />
+                    </div>
                   </div>
                 </div>
                 <!-- 培训事由 -->
                 <div v-if="reason.value === 2 && selectedReasons.includes(2)" style="padding: 15px 10px;">
-                  <div class="detail-item">
-                    <span class="detail-label">培训主题</span>
-                    <el-input v-model="trainingTopic" :disabled="isReadOnly" placeholder="请输入培训主题"/>
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">举办单位</span>
-                    <el-input v-model="trainingUnit" :disabled="isReadOnly" placeholder="请输入举办单位"/>
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">开始时间</span>
-                    <el-date-picker
-                      v-model="trainingStartDate"
-                      type="datetime"
-                      placeholder="开始时间"
-                      value-format="YYYY-MM-DD HH:mm:ss"
-                      style="width: 100%;"
-                      :disabled="isReadOnly"
-                    />
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">结束时间</span>
-                    <el-date-picker
-                      v-model="trainingEndDate"
-                      type="datetime"
-                      placeholder="结束时间"
-                      value-format="YYYY-MM-DD HH:mm:ss"
-                      style="width: 100%;"
-                      :disabled="isReadOnly"
-                    />
+                  <div v-for="(meeting, index) in trainingList" :key="index">
+                    <div class="detail-item">
+                      <span class="detail-label">培训主题</span>
+                      <el-input v-model="meeting.trainingTopic" placeholder="请输入培训主题" :disabled="isReadOnly"/>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">举办单位</span>
+                      <el-input v-model="meeting.trainingUnit" placeholder="请输入举办单位" :disabled="isReadOnly"/>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">开始时间</span>
+                      <el-date-picker
+                        v-model="meeting.trainingStartDate"
+                        type="date"
+                        placeholder="开始时间"
+                        value-format="YYYY-MM-DD HH:mm:ss"
+                        style="width: 100%;"
+                        :disabled="isReadOnly"
+                      />
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">结束时间</span>
+                      <el-date-picker
+                        v-model="meeting.trainingEndDate"
+                        type="date"
+                        placeholder="结束时间"
+                        value-format="YYYY-MM-DD HH:mm:ss"
+                        style="width: 100%;"
+                        :disabled="isReadOnly"
+                      />
+                    </div>
                   </div>
                 </div>
                 <!-- 公务事由 -->
                 <div v-if="reason.value === 3 && selectedReasons.includes(3)" style="padding: 15px 10px;">
-                  <div class="detail-item">
-                    <span class="detail-label">会议名称</span>
-                    <el-input v-model="businessTopic" :disabled="isReadOnly" placeholder="请输入会议名称"/>
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">举办单位</span>
-                    <el-input v-model="businessUnit" :disabled="isReadOnly" placeholder="请输入举办单位"/>
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">开始时间</span>
-                    <el-date-picker
-                      v-model="businessStartDate"
-                      type="datetime"
-                      placeholder="开始时间"
-                      value-format="YYYY-MM-DD HH:mm:ss"
-                      style="width: 100%;"
-                      :disabled="isReadOnly"
-                    />
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">结束时间</span>
-                    <el-date-picker
-                      v-model="businessEndDate"
-                      type="datetime"
-                      placeholder="结束时间"
-                      value-format="YYYY-MM-DD HH:mm:ss"
-                      style="width: 100%;"
-                      :disabled="isReadOnly"
-                    />
+                  <div v-for="(meeting, index) in businessList" :key="index">
+                    <div class="detail-item">
+                      <span class="detail-label">会议名称</span>
+                      <el-input v-model="meeting.businessTopic" placeholder="请输入会议名称" :disabled="isReadOnly"/>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">举办单位</span>
+                      <el-input v-model="meeting.businessUnit" placeholder="请输入举办单位" :disabled="isReadOnly"/>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">开始时间</span>
+                      <el-date-picker
+                        v-model="meeting.businessStartDate"
+                        type="date"
+                        placeholder="开始时间"
+                        value-format="YYYY-MM-DD HH:mm:ss"
+                        style="width: 100%;"
+                        :disabled="isReadOnly"
+                      />
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">结束时间</span>
+                      <el-date-picker
+                        v-model="meeting.businessEndDate"
+                        type="date"
+                        placeholder="结束时间"
+                        value-format="YYYY-MM-DD HH:mm:ss"
+                        style="width: 100%;"
+                        :disabled="isReadOnly"
+                      />
+                    </div>
                   </div>
                 </div>
                 <!-- 学术会议事由 -->
                 <div v-if="reason.value === 5 && selectedReasons.includes(5)" style="padding: 15px 10px;">
                   <div v-for="(meeting, index) in academicMeetings" :key="index">
-                    <div class="add-meeting">
-                      <el-button v-if="index > 0" circle type="danger" @click="removeAcademicMeeting(index)">
-                        <el-icon><Minus /></el-icon>
-                      </el-button>
-                    </div>
                     <div class="detail-item">
                       <span class="detail-label">会议名称</span>
-                      <el-input v-model="meeting.academicTopic" :disabled="isReadOnly" placeholder="请输入会议名称"/>
+                      <el-input v-model="meeting.academicTopic" placeholder="请输入会议名称" :disabled="isReadOnly"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">会议性质</span>
                       <el-radio-group v-model="meeting.academicNature" :disabled="isReadOnly">
-                        <el-radio 
+                        <el-radio
                           v-for="dict in getIntDictOptions(DICT_TYPE.ACADEMIC_NATURE)"
-                          :key="dict.value" 
+                          :key="dict.value"
                           :label="dict.value"
                         >
                           {{ dict.label }}
@@ -187,13 +188,13 @@
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">主办方</span>
-                      <el-input v-model="meeting.academicUnit" :disabled="isReadOnly" placeholder="请输入主办方"/>
+                      <el-input v-model="meeting.academicUnit" placeholder="请输入主办方" :disabled="isReadOnly"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">开始时间</span>
                       <el-date-picker
                         v-model="meeting.academicStartDate"
-                        type="datetime"
+                        type="date"
                         placeholder="开始时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
@@ -204,7 +205,7 @@
                       <span class="detail-label">结束时间</span>
                       <el-date-picker
                         v-model="meeting.academicEndDate"
-                        type="datetime"
+                        type="date"
                         placeholder="结束时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
@@ -214,164 +215,159 @@
                     <div class="detail-item">
                       <span class="detail-label">受邀作报告</span>
                       <el-radio-group v-model="meeting.isPresentation" :disabled="isReadOnly">
-                        <el-radio 
+                        <el-radio
                           v-for="dict in getIntDictOptions(DICT_TYPE.IS_PRESENTATION)"
-                          :key="dict.value" 
+                          :key="dict.value"
                           :label="dict.value"
                         >
                           {{ dict.label }}
                         </el-radio>
                       </el-radio-group>
                     </div>
-                    <div v-if="meeting.isPresentation === 2" class="detail-item">
+                    <div v-if="meeting.isPresentation === 1" class="detail-item">
                       <span class="detail-label">报告类型</span>
                       <el-radio-group v-model="meeting.reportType" :disabled="isReadOnly">
-                        <el-radio 
+                        <el-radio
                           v-for="dict in getIntDictOptions(DICT_TYPE.REPORT_TYPE)"
-                          :key="dict.value" 
+                          :key="dict.value"
                           :label="dict.value"
                         >
                           {{ dict.label }}
                         </el-radio>
                       </el-radio-group>
                     </div>
-                    <div class="detail-item">
+                    <div v-if="meeting.isPresentation === 1" class="detail-item">
                       <span class="detail-label">报告题目</span>
-                      <el-input v-model="meeting.reportTitle" :disabled="isReadOnly" placeholder="请输入报告题目"/>
+                      <el-input v-model="meeting.reportTitle" placeholder="请输入报告题目" :disabled="isReadOnly"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">交流论文数</span>
-                      <el-input v-model="meeting.academicPaperCount" :disabled="isReadOnly" placeholder="请输入交流论文数"/>
+                      <el-input v-model="meeting.academicPaperCount" placeholder="请输入交流论文数" :disabled="isReadOnly"/>
                     </div>
-                  </div>
-                  <div class="add-meeting">
-                    <el-button type="primary" circle :disabled="isReadOnly" @click="addAcademicMeeting">
-                      <el-icon><Plus /></el-icon>
-                    </el-button>
                   </div>
                 </div>
                 <!-- 因私事由 -->
                 <div v-if="reason.value === 4 && selectedReasons.includes(4)" style="padding: 15px 10px;">
-                  <div class="detail-item">
-                    <span class="detail-label">请假类型</span>
-                    <el-select v-model="personalType" :disabled="isReadOnly" placeholder="请选择请假类型" clearable>
-                      <el-option 
-                        v-for="dict in getIntDictOptions(DICT_TYPE.PERSONAL_TYPE)"
-                        :key="dict.value" 
-                        :label="dict.label" 
-                        :value="dict.value"
+                  <div v-for="(personal, index) in personalList" :key="index">
+                    <div class="detail-item">
+                      <span class="detail-label">请假类型</span>
+                      <el-select v-model="personal.personalType" placeholder="请选择请假类型" clearable :disabled="isReadOnly">
+                        <el-option
+                          v-for="dict in getIntDictOptions(DICT_TYPE.PERSONAL_TYPE)"
+                          :key="dict.value"
+                          :label="dict.label"
+                          :value="dict.value"
+                        />
+                      </el-select>
+                    </div>
+                    <div class="detail-item">
+                      <span class="detail-label">开始时间</span>
+                      <el-date-picker
+                        v-model="personal.personalStartDate"
+                        type="date"
+                        placeholder="开始时间"
+                        value-format="YYYY-MM-DD HH:mm:ss"
+                        style="width: 100%;"
+                        :disabled="isReadOnly"
                       />
-                    </el-select>
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">开始时间</span>
-                    <el-date-picker
-                      v-model="personalStartDate"
-                      type="datetime"
-                      placeholder="开始时间"
-                      value-format="YYYY-MM-DD HH:mm:ss"
-                      style="width: 100%;"
-                      :disabled="isReadOnly"
-                    />
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">结束时间</span>
-                    <el-date-picker
-                      v-model="personalEndDate"
-                      type="datetime"
-                      placeholder="结束时间"
-                      value-format="YYYY-MM-DD HH:mm:ss"
-                      style="width: 100%;"
-                      :disabled="isReadOnly"
-                    />
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">总计天数</span>
-                    <el-input v-model="personalTotalDays" :disabled="isReadOnly" placeholder="请输入总计天数"/>
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">请假详情</span>
-                    <el-input v-model="personalReason" type="textarea" :rows="3" placeholder="请输入请假详情"/>
-                  </div>
-                  <div class="detail-item">
-                    <span class="detail-label">联系电话</span>
-                    <el-input v-model="personalPhone" :disabled="isReadOnly" placeholder="请输入联系电话"/>
-                  </div>
-                  <div v-if="personalType === 6">
-                    <div class="detail-item">
-                      <span class="detail-label">探亲路线</span>
-                      <el-input v-model="personalRoute" :disabled="isReadOnly" placeholder="请输入探亲路线"/>
                     </div>
                     <div class="detail-item">
-                      <span class="detail-label">与探望人关系</span>
-                      <el-input v-model="personalRelation" :disabled="isReadOnly" placeholder="请输入与探望人关系"/>
+                      <span class="detail-label">结束时间</span>
+                      <el-date-picker
+                        v-model="personal.personalEndDate"
+                        type="date"
+                        placeholder="结束时间"
+                        value-format="YYYY-MM-DD HH:mm:ss"
+                        style="width: 100%;"
+                        :disabled="isReadOnly"
+                      />
                     </div>
                     <div class="detail-item">
-                      <span class="detail-label">被探望人姓名</span>
-                      <el-input v-model="personalVisitName" :disabled="isReadOnly" placeholder="请输入被探望人姓名"/>
+                      <span class="detail-label">总计天数</span>
+                      <el-input v-model="personal.personalTotalDays" placeholder="请输入总计天数" :disabled="isReadOnly"/>
                     </div>
                     <div class="detail-item">
-                      <span class="detail-label">探亲类别</span>
-                      <el-select v-model="personalVisitType" :disabled="isReadOnly" placeholder="请选择探亲类别" clearable>
-                        <el-option 
-                          v-for="dict in getIntDictOptions(DICT_TYPE.PERSONAL_VISIT_TYPE)"
-                          :key="dict.value" 
-                          :label="dict.label" 
-                          :value="dict.value"
-                        />
-                      </el-select>
+                      <span class="detail-label">请假详情</span>
+                      <el-input v-model="personal.personalReason" type="textarea" :rows="3" placeholder="请输入请假详情" :disabled="isReadOnly"/>
                     </div>
                     <div class="detail-item">
-                      <span class="detail-label">户口所在地或地址</span>
-                      <el-input v-model="personalVisitAddress" :disabled="isReadOnly" placeholder="请输入户口所在地或地址"/>
+                      <span class="detail-label">联系电话</span>
+                      <el-input v-model="personal.personalPhone" placeholder="请输入联系电话" :disabled="isReadOnly" :maxlength="11"/>
                     </div>
-                    <div class="detail-item">
-                      <span class="detail-label">婚姻状况</span>
-                      <el-select v-model="personalMaritalStatus" :disabled="isReadOnly" placeholder="请选择婚姻状况" clearable>
-                        <el-option 
-                          v-for="dict in getIntDictOptions(DICT_TYPE.MARITAL_STATUS)"
-                          :key="dict.value" 
-                          :label="dict.label" 
-                          :value="dict.value"
-                        />
-                      </el-select>
+                    <div v-if="personal.personalType === 6">
+                      <div class="detail-item">
+                        <span class="detail-label">探亲路线</span>
+                        <el-input v-model="personal.personalRoute" placeholder="请输入探亲路线" :disabled="isReadOnly"/>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">与探望人关系</span>
+                        <el-input v-model="personal.personalRelation" placeholder="请输入与探望人关系" :disabled="isReadOnly"/>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">被探望人姓名</span>
+                        <el-input v-model="personal.personalVisitName" placeholder="请输入被探望人姓名" :disabled="isReadOnly"/>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">探亲类别</span>
+                        <el-select v-model="personal.personalVisitType" placeholder="请选择探亲类别" clearable :disabled="isReadOnly">
+                          <el-option
+                            v-for="dict in getIntDictOptions(DICT_TYPE.PERSONAL_VISIT_TYPE)"
+                            :key="dict.value"
+                            :label="dict.label"
+                            :value="dict.value"
+                          />
+                        </el-select>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">户口所在地或地址</span>
+                        <el-input v-model="personal.personalVisitAddress" placeholder="请输入户口所在地或地址" :disabled="isReadOnly"/>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">婚姻状况</span>
+                        <el-select v-model="personal.personalMaritalStatus" placeholder="请选择婚姻状况" clearable :disabled="isReadOnly">
+                          <el-option
+                            v-for="dict in getIntDictOptions(DICT_TYPE.MARITAL_STATUS)"
+                            :key="dict.value"
+                            :label="dict.label"
+                            :value="dict.value"
+                          />
+                        </el-select>
+                      </div>
                     </div>
-                  </div>
-                  <div v-if="personalType === 11">
-                    <div class="detail-item">
-                      <span class="detail-label">生育次数</span>
-                      <el-select v-model="personalParity" placeholder="请选择生育次数" clearable>
-                        <el-option 
-                          v-for="dict in getIntDictOptions(DICT_TYPE.PARITY)"
-                          :key="dict.value" 
-                          :label="dict.label" 
-                          :value="dict.value"
-                          :disabled="isReadOnly"
-                        />
-                      </el-select>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">是否多胞胎</span>
-                      <el-select v-model="personalMultiple" placeholder="请选择是否多胞胎" clearable>
-                        <el-option 
-                          v-for="dict in getIntDictOptions(DICT_TYPE.IS_PRESENTATION)"
-                          :key="dict.value" 
-                          :label="dict.label" 
-                          :value="dict.value"
-                          :disabled="isReadOnly"
-                        />
-                      </el-select>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">是否难产</span>
-                      <el-select v-model="personalDystocia" :disabled="isReadOnly" placeholder="请选择是否难产" clearable>
-                        <el-option 
-                          v-for="dict in getIntDictOptions(DICT_TYPE.IS_PRESENTATION)"
-                          :key="dict.value" 
-                          :label="dict.label" 
-                          :value="dict.value"
-                        />
-                      </el-select>
+                    <div v-if="personal.personalType === 11">
+                      <div class="detail-item">
+                        <span class="detail-label">生育次数</span>
+                        <el-select v-model="personal.personalParity" placeholder="请选择生育次数" clearable :disabled="isReadOnly">
+                          <el-option
+                            v-for="dict in getIntDictOptions(DICT_TYPE.PARITY)"
+                            :key="dict.value"
+                            :label="dict.label"
+                            :value="dict.value"
+                          />
+                        </el-select>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">是否多胞胎</span>
+                        <el-select v-model="personal.personalMultiple" placeholder="请选择是否多胞胎" clearable :disabled="isReadOnly">
+                          <el-option
+                            v-for="dict in getIntDictOptions(DICT_TYPE.IS_PRESENTATION)"
+                            :key="dict.value"
+                            :label="dict.label"
+                            :value="dict.value"
+                          />
+                        </el-select>
+                      </div>
+                      <div class="detail-item">
+                        <span class="detail-label">是否难产</span>
+                        <el-select v-model="personal.personalDystocia" placeholder="请选择是否难产" clearable :disabled="isReadOnly">
+                          <el-option
+                            v-for="dict in getIntDictOptions(DICT_TYPE.IS_PRESENTATION)"
+                            :key="dict.value"
+                            :label="dict.label"
+                            :value="dict.value"
+                          />
+                        </el-select>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -411,10 +407,10 @@
 
           <!-- 前往地点 -->
           <el-descriptions-item label="前往地点(必填)" label-class-name="approval-label">
-            <div class="detail-item">
+            <div v-for="(loc, index) in destinations" :key="index" class="detail-item">
               <!-- <span class="detail-label">国内</span> -->
-              <el-cascader :options="pcaTextArr" v-model="destination" style="width: 100%" :disabled="isReadOnly"/>
-              <el-input v-model="destinationDetail" placeholder="可选填写详细地址（如门牌号、楼层等）" clearable style="margin-left: 10px;" :disabled="isReadOnly"/>
+              <el-cascader :options="pcaTextArr" v-model="loc.destination" :disabled="isReadOnly" clearable style="width: 100%;"/>
+              <el-input v-model="loc.destinationDetail" placeholder="可选填写详细地址（如门牌号、楼层等）" clearable style="margin-left: 10px;" :disabled="isReadOnly"/>
             </div>
             <!-- <div class="detail-item">
               <span class="detail-label">国外</span>
@@ -423,7 +419,7 @@
           </el-descriptions-item>
 
           <!-- 请假期间主持工作负责人安排 -->
-          <el-descriptions-item label="请假期间主持工作负责人安排(必填)" label-class-name="approval-label">
+          <el-descriptions-item v-if="Number(personnel.level) >= 24 && Number(personnel.level) !== 100" label="请假期间主持工作负责人安排(必填)" label-class-name="approval-label">
             <el-input
               v-model="workArrangement"
               type="textarea"
@@ -446,7 +442,7 @@
         </el-descriptions>
       </div>
       <!-- 审批意见 -->
-      <div class="approval-section">
+      <div v-if="Number(personnel.level) !== 100" class="approval-section">
         <div class="divider">
           <span class="divider-text">审批意见</span>
         </div>
@@ -455,10 +451,10 @@
           :column="1"
           class="approval-descriptions"
         >
-          <el-descriptions-item label="校领导意见" label-class-name="approval-label">
+          <el-descriptions-item label="领导意见" label-class-name="approval-label">
             <div>{{ leaderApproval }}</div>
           </el-descriptions-item>
-          <el-descriptions-item label="请假期间主持工作负责人会签" label-class-name="approval-label">
+          <el-descriptions-item v-if="Number(personnel.level) >= 24" label="请假期间主持工作负责人会签" label-class-name="approval-label">
             <div>{{ hostApproval }}</div>
           </el-descriptions-item>
         </el-descriptions>
@@ -499,44 +495,49 @@ const personnel = ref({
   name: '',
   department: '',
   title: '',
-  position: ''
+  position: '',
+  level: ''
 });
 // 日期范围
 const dateRange = ref([]);
 // 调研事由信息
-const researchID = ref();
-const researchTopic = ref('');
-const researchPurpose = ref('');
-const researchUnit = ref('');
-const researchStartDate = ref('');
-const researchEndDate = ref('');
+const researchList = ref([
+  {
+    id: '',
+    researchTopic: '',
+    researchPurpose: '',
+    researchUnit: '',
+    researchStartDate: '',
+    researchEndDate: ''
+  }
+]);
+
 // 培训事由信息
-const trainingID = ref();
-const trainingTopic = ref('');
-const trainingUnit = ref('');
-const trainingStartDate = ref('');
-const trainingEndDate = ref('');
+const trainingList = ref([
+  {
+    id: '',
+    trainingTopic: '',
+    trainingUnit: '',
+    trainingStartDate: '',
+    trainingEndDate: ''
+  }
+]);
+
 // 公务事由信息
-const businessID = ref();
-const businessTopic = ref('');
-const businessUnit = ref('');
-const businessStartDate = ref('');
-const businessEndDate = ref('');
+const businessList = ref([
+  {
+    id: '',
+    businessTopic: '',
+    businessUnit: '',
+    businessStartDate: '',
+    businessEndDate: ''
+  }
+]);
+
 // 学术会议事由信息
-const academicID = ref();
-const academicMeetings = ref([{
-  academicTopic: '',
-  academicNature: '',
-  academicUnit: '',
-  academicStartDate: '',
-  academicEndDate: '',
-  isPresentation: '',
-  reportType: '',
-  reportTitle: '',
-  academicPaperCount: 0
-}]);
-const addAcademicMeeting = () => {
-  academicMeetings.value.push({
+const academicMeetings = ref([
+  {
+    id: '',
     academicTopic: '',
     academicNature: '',
     academicUnit: '',
@@ -546,54 +547,57 @@ const addAcademicMeeting = () => {
     reportType: '',
     reportTitle: '',
     academicPaperCount: 0
-  });
-};
-const removeAcademicMeeting = (index) => {
-  if (academicMeetings.value.length > 1) {
-    academicMeetings.value.splice(index, 1);
-  } else {
-    // 如果是最后一个，清空数据而不是删除
-    Object.keys(academicMeetings.value[0]).forEach(key => {
-      academicMeetings.value[0][key] = '';
-    });
   }
-};
+]);
+
 // 因私事由信息
-const personalID = ref();
-const personalType = ref<number>();
-const personalStartDate = ref('');
-const personalEndDate = ref('');
-const personalTotalDays = ref<number>(0);
-const personalReason = ref('');
-const personalPhone = ref('');
-const personalRoute = ref('');
-const personalRelation = ref('');
-const personalVisitName = ref('');
-const personalVisitType = ref<number>();
-const personalVisitAddress = ref('');
-const personalMaritalStatus = ref<number>();
-const personalParity = ref<number>();
-const personalMultiple = ref<number>();
-const personalDystocia = ref<number>();
+const personalList = ref([
+  {
+    id: '',
+    personalType: '',
+    personalStartDate: '',
+    personalEndDate: '',
+    personalTotalDays: 0,
+    personalReason: '',
+    personalPhone: '',
+    personalRoute: '',
+    personalRelation: '',
+    personalVisitName: '',
+    personalVisitType: '',
+    personalVisitAddress: '',
+    personalMaritalStatus: '',
+    personalParity: '',
+    personalMultiple: '',
+    personalDystocia: ''
+  }
+]);
 // 其他事由
 const otherID = ref();
 const otherReason = ref('');
 // 监听日期范围变化
 watch(dateRange, (newVal) => {
   if (newVal && newVal.length === 2) {
-    researchStartDate.value = newVal[0];
-    researchEndDate.value = newVal[1];
-    trainingStartDate.value = newVal[0];
-    trainingEndDate.value = newVal[1];
-    businessStartDate.value = newVal[0];
-    businessEndDate.value = newVal[1];
+    researchList.value.forEach(meeting => {
+      meeting.researchStartDate = newVal[0];
+      meeting.researchEndDate = newVal[1];
+    });
+    trainingList.value.forEach(meeting => {
+      meeting.trainingStartDate = newVal[0];
+      meeting.trainingEndDate = newVal[1];
+    });
+    businessList.value.forEach(meeting => {
+      meeting.businessStartDate = newVal[0];
+      meeting.businessEndDate = newVal[1];
+    });
     academicMeetings.value.forEach(meeting => {
       meeting.academicStartDate = newVal[0];
       meeting.academicEndDate = newVal[1];
     });
-    personalStartDate.value = newVal[0];
-    personalEndDate.value = newVal[1];
-    personalTotalDays.value = Math.ceil((new Date(newVal[1]).getTime() - new Date(newVal[0]).getTime()) / (1000 * 60 * 60 * 24))+1;
+    personalList.value.forEach(meeting => {
+      meeting.personalStartDate = newVal[0];
+      meeting.personalEndDate = newVal[1];
+      meeting.personalTotalDays = Math.ceil((new Date(newVal[1]).getTime() - new Date(newVal[0]).getTime()) / (1000 * 60 * 60 * 24))+1;
+    });
   }
 }, { deep: true });
 
@@ -671,10 +675,14 @@ const beforeRemove = (file: UploadFile) => {
   );
 };
 // 表单数据
-const destination = ref('');
-const destinationDetail = ref('');
 const workArrangement = ref('');
 const remarks = ref('');
+const destinations = ref([
+  {
+    destination: '',
+    destinationDetail: ''
+  }
+]);
 // 获取请假人信息
 const routeId = ref(props.id || queryId)
 const fetchUserProfile = async () => {
@@ -689,6 +697,7 @@ const fetchUserProfile = async () => {
           department: res.dept?.name || '',
           title: res.posts?.[0]?.name || '',
           position: res.nickname || '',
+          level: res.level || '',
         };
       }
     } else  {
@@ -715,58 +724,64 @@ const fetchUserProfile = async () => {
     // 根据不同类型设置对应的表单字段
     switch (item.type) {
       case 1: // 调研
-        researchID.value = item.id;
-        researchTopic.value = item.subject;
-        researchPurpose.value = item.purpose;
-        researchUnit.value = item.unit;
-        researchStartDate.value = dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss');
-        researchEndDate.value = dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss');
+        researchList.value.push({
+          id: item.id,
+          researchTopic: item.subject,
+          researchPurpose: item.purpose,
+          researchUnit: item.unit,
+          researchStartDate: dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss'),
+          researchEndDate: dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss'),
+        });
         break;
       case 2: // 培训
-        trainingID.value = item.id;
-        trainingTopic.value = item.subject;
-        trainingUnit.value = item.unit;
-        trainingStartDate.value = dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss');
-        trainingEndDate.value = dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss');
+        trainingList.value.push({
+          id: item.id,
+          trainingTopic: item.subject,
+          trainingUnit: item.unit,
+          trainingStartDate: dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss'),
+          trainingEndDate: dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss'),
+        });
         break;
       case 3: // 公务
-        businessID.value = item.id;
-        businessTopic.value = item.subject;
-        businessUnit.value = item.unit;
-        businessStartDate.value = dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss');
-        businessEndDate.value = dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss');
+        businessList.value.push({
+          id: item.id,
+          businessTopic: item.subject,
+          businessUnit: item.unit,
+          businessStartDate: dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss'),
+          businessEndDate: dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss'),
+        });
         break;
       case 4: // 因私
-        personalID.value = item.id;
-        personalType.value = Number(item.privateType);
-        personalStartDate.value = dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss');
-        personalEndDate.value = dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss');
-        personalTotalDays.value = item.totalDays;
-        personalPhone.value = item.phone;
-        personalParity.value = item.birthCount?.toString();
-        personalDystocia.value = item.difficultBirth;
-        personalMultiple.value = item.multipleBirth;
-        personalVisitAddress.value = item.registeredAddress;
-        personalRelation.value = item.relationship;
-        personalRoute.value = item.visitRoute;
-        personalVisitName.value = item.visitedPersonName;
-        personalVisitType.value = item.visitType;
-        personalReason.value = item.reason;
+        personalList.value.push({
+          id: item.id,
+          personalType: Number(item.privateType),
+          personalStartDate: dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss'),
+          personalEndDate: dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss'),
+          personalTotalDays: item.totalDays,
+          personalPhone: item.phone,
+          personalParity: item.birthCount?.toString(),
+          personalDystocia: item.difficultBirth,
+          personalMultiple: item.multipleBirth,
+          personalVisitAddress: item.registeredAddress,
+          personalRelation: item.relationship,
+          personalRoute: item.visitRoute,
+          personalVisitName: item.visitedPersonName,
+          personalVisitType: item.visitType,
+          personalReason: item.reason
+        });
         break;
       case 5: // 学术会议
-        academicID.value = item.id;
-        // 清空现有会议
-        academicMeetings.value = [];
         // 添加新的会议数据
         academicMeetings.value.push({
+          id: item.id,
           academicTopic: item.subject,
           academicNature: item.meetingNature,
           academicUnit: item.unit,
           academicStartDate: dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss'),
           academicEndDate: dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss'),
-          isPresentation: item.isPresentation,
+          isPresentation: item.reportTitle||item.reportType?1:0,
           reportTitle: item.reportTitle,
-          reportType: item.reportType,
+          reportType: Number(item.reportType),
           academicPaperCount: item.academicPaperCount
         });
         break;
@@ -781,14 +796,36 @@ const fetchUserProfile = async () => {
         dateRange.value = [dayjs(res.startDate).format('YYYY-MM-DD HH:mm:ss'), dayjs(res.endDate).format('YYYY-MM-DD HH:mm:ss')];
         workArrangement.value = res.hostArrangement;
         remarks.value = res.remark;
-        const destParts = res.destination.split(',');
-        // 如果地点数据包含超过省市区的部分，则最后一部分为详细地址
-        if (destParts.length > 3) {
-          destination.value = destParts.slice(0, 3);
-          destinationDetail.value = destParts.slice(3).join(',');
-        } else {
-          destination.value = destParts;
-          destinationDetail.value = '';
+        // 解析目的地数据
+        if (res.destination) {
+          // 首先尝试使用 ||| 分隔符解析（新格式）
+          if (res.destination.includes('|||')) {
+            const multiDestinations = res.destination.split('|||');
+            destinations.value = multiDestinations.map(dest => {
+              // 对每个地点，使用逗号分隔省市区和详细地址
+              const parts = dest.split(',');
+              return {
+                destination: parts.slice(0, 3), 
+                destinationDetail: parts.slice(3).join(',')
+              };
+            });
+          console.log(destinations.value)
+          } else {
+            // 兼容旧格式（只使用逗号分隔）
+            const destParts = res.destination.split(',');
+            // 如果地点数据包含超过省市区的部分，则最后一部分为详细地址
+            if (destParts.length > 3) {
+              destinations.value = [{
+                destination: destParts.slice(0, 3), 
+                destinationDetail: destParts.slice(3).join(',')
+              }];
+            } else {
+              destinations.value = [{
+                destination: destParts, 
+                destinationDetail: ''
+              }];
+            }
+          }
         }
         personnel.value = {
           id: res.personId,
@@ -797,6 +834,7 @@ const fetchUserProfile = async () => {
           department: res.deptName || '',
           title: res.postName || '',
           position: res.nickName || '',
+          level: res.level || '',
         };
         processInstanceId.value = res.processInstanceId;
       }
