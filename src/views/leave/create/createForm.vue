@@ -485,7 +485,7 @@
           </el-descriptions-item>
 
           <!-- 请假期间主持工作负责人安排 -->
-          <el-descriptions-item v-if="personnel.level === 2" label="请假期间主持工作负责人安排(必填)" label-class-name="approval-label">
+          <el-descriptions-item v-if="Number(personnel.level) >= 24 && Number(personnel.level) !== 100" label="请假期间主持工作负责人安排(必填)" label-class-name="approval-label">
             <el-input
               v-model="workArrangement"
               type="textarea"
@@ -506,7 +506,7 @@
         </el-descriptions>
       </div>
       <!-- 审批意见 -->
-      <div v-if="personnel.level !== 3" class="approval-section">
+      <div v-if="Number(personnel.level) != 100" class="approval-section">
         <div class="divider">
           <span class="divider-text">审批意见</span>
         </div>
@@ -515,10 +515,10 @@
           :column="1"
           class="approval-descriptions"
         >
-          <el-descriptions-item label="校领导意见" label-class-name="approval-label">
+          <el-descriptions-item label="领导意见" label-class-name="approval-label">
             <div></div>
           </el-descriptions-item>
-          <el-descriptions-item v-if="personnel.level === 2" label="请假期间主持工作负责人会签" label-class-name="approval-label">
+          <el-descriptions-item v-if="Number(personnel.level) >= 24" label="请假期间主持工作负责人会签" label-class-name="approval-label">
             <div></div>
           </el-descriptions-item>
         </el-descriptions>
@@ -530,8 +530,8 @@
           <span style="font-size: 14px;margin-bottom: 5px;">下一步</span>
         </div>
         <div class="action-item">
-          <span v-if="personnel.level === 2" style="font-size: 14px;margin-bottom: 5px;">请假期间主持工作负责人会签</span>
-          <span v-if="personnel.level === 1" style="font-size: 14px;margin-bottom: 5px;">单位负责人签字</span>
+          <span v-if="Number(personnel.level) >= 24 && Number(personnel.level) != 100" style="font-size: 14px;margin-bottom: 5px;">请假期间主持工作负责人会签</span>
+          <span v-if="Number(personnel.level) < 24" style="font-size: 14px;margin-bottom: 5px;">单位负责人签字</span>
         </div>
         <div class="action-item">
           <div v-for="userTask in startUserSelectTasks.filter(task => task.id === 'host_sign')" :key="userTask.id">
@@ -600,7 +600,7 @@
                   </div>
                 </div>
               </el-popover>
-              <el-button v-if="personnel.level === 2" type="primary" link @click="openApprovalUserSelect" :disabled="isReadOnly">
+              <el-button v-if="Number(personnel.level) >= 24 && Number(personnel.level) != 100" type="primary" link @click="openApprovalUserSelect" :disabled="isReadOnly">
                 <Icon icon="ep:plus" />选择人员
               </el-button>
             </div>

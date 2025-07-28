@@ -419,7 +419,7 @@
           </el-descriptions-item>
 
           <!-- 请假期间主持工作负责人安排 -->
-          <el-descriptions-item v-if="personnel.level === 2" label="请假期间主持工作负责人安排(必填)" label-class-name="approval-label">
+          <el-descriptions-item v-if="Number(personnel.level) >= 24 && Number(personnel.level) !== 100" label="请假期间主持工作负责人安排(必填)" label-class-name="approval-label">
             <el-input
               v-model="workArrangement"
               type="textarea"
@@ -442,7 +442,7 @@
         </el-descriptions>
       </div>
       <!-- 审批意见 -->
-      <div v-if="personnel.level !== 3" class="approval-section">
+      <div v-if="Number(personnel.level) !== 100" class="approval-section">
         <div class="divider">
           <span class="divider-text">审批意见</span>
         </div>
@@ -451,10 +451,10 @@
           :column="1"
           class="approval-descriptions"
         >
-          <el-descriptions-item label="校领导意见" label-class-name="approval-label">
+          <el-descriptions-item label="领导意见" label-class-name="approval-label">
             <div>{{ leaderApproval }}</div>
           </el-descriptions-item>
-          <el-descriptions-item v-if="personnel.level === 2" label="请假期间主持工作负责人会签" label-class-name="approval-label">
+          <el-descriptions-item v-if="Number(personnel.level) >= 24" label="请假期间主持工作负责人会签" label-class-name="approval-label">
             <div>{{ hostApproval }}</div>
           </el-descriptions-item>
         </el-descriptions>
