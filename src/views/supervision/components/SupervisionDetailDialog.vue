@@ -12,7 +12,7 @@
       <!-- 标题下状态栏 -->
       <div class="status-bar">
         <div class="status-tags">
-          <span class="status-tag priority-tag">{{ orderDetail.priority }}</span>
+          <span :class="['status-tag', 'priority-tag', `priority-${orderDetail.priorityType}`]">{{ orderDetail.priority }}</span>
           <span class="status-tag status-tag-item">{{ getStatusText(orderDetail.status) }}</span>
           <span class="status-tag category-tag">{{ orderDetail.category }}</span>
         </div>
@@ -50,7 +50,7 @@
                     <div class="group-title">协办部门</div>
                     <div class="info-item-new">
                       <Icon icon="ep:office-building" class="item-icon" />
-                      <span class="item-text">{{ orderDetail.collaborateDepts.join('、') }}</span>
+                      <span class="item-text">{{ orderDetail.collaborateDepts.length > 0 ? orderDetail.collaborateDepts.join('、') : '' }}</span>
                     </div>
                   </div>
                 </div>
@@ -61,8 +61,10 @@
                     <div class="info-item-new">
                       <Icon icon="ep:user" class="item-icon" />
                       <span class="item-text">{{ orderDetail.issuer }}</span>
-                      <span class="contact-info">联系电话</span>
-                      <span class="phone-number">{{ orderDetail.issuerPhone }}</span>
+                      <template v-if="orderDetail.issuerPhone">
+                        <span class="contact-info-inline">联系电话</span>
+                        <span class="phone-number">{{ orderDetail.issuerPhone }}</span>
+                      </template>
                     </div>
                   </div>
 
@@ -71,8 +73,10 @@
                     <div class="info-item-new">
                       <Icon icon="ep:user" class="item-icon" />
                       <span class="item-text">{{ orderDetail.supervisorName }}</span>
-                      <span class="contact-info">联系电话</span>
-                      <span class="phone-number">{{ orderDetail.phone }}</span>
+                      <template v-if="orderDetail.phone">
+                        <span class="contact-info-inline">联系电话</span>
+                        <span class="phone-number">{{ orderDetail.phone }}</span>
+                      </template>
                     </div>
                   </div>
 
@@ -81,8 +85,10 @@
                     <div class="info-item-new">
                       <Icon icon="ep:user" class="item-icon" />
                       <span class="item-text">{{ orderDetail.leader }}</span>
-                      <span class="contact-info">联系电话</span>
-                      <span class="phone-number">{{ orderDetail.leaderPhone }}</span>
+                      <template v-if="orderDetail.leaderPhone">
+                        <span class="contact-info-inline">联系电话</span>
+                        <span class="phone-number">{{ orderDetail.leaderPhone }}</span>
+                      </template>
                     </div>
                   </div>
                 </div>
@@ -96,28 +102,27 @@
           <div class="time-section">
             <div class="time-header">
               <h3 class="section-title">时间信息</h3>
-              <el-button size="small" type="primary">编辑时间</el-button>
             </div>
             <div class="time-list">
               <div class="time-item">
                 <Icon icon="ep:calendar" class="time-icon" />
                 <div class="time-content">
                   <div class="time-label">创建时间</div>
-                  <div class="time-value">{{ formatTime(orderDetail.createTime) }}</div>
+                  <div class="time-value">{{ orderDetail.createTime }}</div>
                 </div>
               </div>
               <div class="time-item">
                 <Icon icon="ep:clock" class="time-icon" />
                 <div class="time-content">
                   <div class="time-label">截止时间</div>
-                  <div class="time-value deadline">{{ formatTime(orderDetail.deadline) }}</div>
+                  <div class="time-value deadline">{{ orderDetail.deadline }}</div>
                 </div>
               </div>
               <div class="time-item">
                 <Icon icon="ep:refresh" class="time-icon" />
                 <div class="time-content">
                   <div class="time-label">最后更新</div>
-                  <div class="time-value">{{ formatTime(orderDetail.updateTime) }}</div>
+                  <div class="time-value">{{ orderDetail.updateTime }}</div>
                 </div>
               </div>
             </div>
@@ -127,30 +132,53 @@
 
       <!-- 进度更新记录 -->
       <div class="section-block">
-        <h3 class="section-title">进度更新记录</h3>
-        <div class="progress-records">
+        <div class="section-header">
+          <h3 class="section-title">进度更新记录</h3>
+          <el-button
+            v-if="!isSupervisionEnded"
+            type="primary"
+            @click="showAddProgressDialog"
+          >
+            <Icon icon="ep:plus" />
+            添加更新
+          </el-button>
+        </div>
+
+
+
+        <div class="progress-records" v-if="progressRecords.length > 0">
           <div v-for="(record, index) in progressRecords" :key="index" class="progress-item">
             <div class="progress-dot"></div>
             <div class="progress-content">
               <div class="progress-header">
-                <span class="progress-title">{{ record.title }}</span>
-                <span class="progress-name">{{ record.handler }}</span>
-                <span class="progress-time">预计完成时间：{{ record.expectedTime }}</span>
-              </div>
-              <div class="progress-description">{{ record.description }}</div>
-              <div v-if="record.attachments" class="progress-attachments">
-                <div v-for="file in record.attachments" :key="file.name" class="attachment-item">
-                  <Icon icon="ep:document" class="attachment-icon" />
-                  <span class="attachment-name">{{ file.name }}</span>
+                <div class="progress-left">
+                  <span class="progress-title">{{ record.title }}</span>
+                  <span class="progress-name" v-if="record.handler">{{ record.handler }}</span>
                 </div>
-                <div class="attachment-time">{{ record.time }}</div>
+                <div class="progress-right">
+                  <span class="progress-time">预计完成时间：{{ record.expectedTime || '未设置' }}</span>
+                </div>
               </div>
+              <div class="progress-description" v-if="record.description && record.description !== '暂无详细信息'">{{ record.description }}</div>
+              <div v-if="record.attachments && record.attachments.length > 0" class="progress-attachments">
+                <div v-for="file in record.attachments" :key="file.id || file.name" class="attachment-item">
+                  <Icon icon="ep:document" class="attachment-icon" />
+                  <span class="attachment-name" @click="downloadProgressFile(file)" style="cursor: pointer;">{{ file.name }}</span>
+                </div>
+                <div class="attachment-time" v-if="record.time">{{ record.time }}</div>
+              </div>
+              <div v-else-if="record.time" class="attachment-time">{{ record.time }}</div>
             </div>
           </div>
         </div>
 
+        <!-- 空状态提示 -->
+        <div v-else class="empty-records">
+          <el-empty description="暂无进度更新记录" :image-size="80" />
+        </div>
+
         <!-- 更多历史记录按钮 -->
-        <div class="more-records-container">
+        <div class="more-records-container" v-if="hasMoreRecords">
           <el-button type="text" @click="showAllRecords" class="more-records-btn">
             更多历史记录
           </el-button>
@@ -183,16 +211,18 @@
           <div class="section-block">
             <div class="section-header">
               <h3 class="section-title">所有文件</h3>
-              <el-button size="small" type="primary">上传文件</el-button>
             </div>
             <div class="files-container">
+              <div v-if="attachments.length === 0" class="empty-state">
+                <p>暂无附件</p>
+              </div>
               <div v-for="file in attachments" :key="file.id" class="file-row">
                 <div class="file-icon-wrapper">
                   <Icon :icon="getFileIcon(file.type)" class="file-type-icon" :class="getFileIconClass(file.type)" />
                 </div>
                 <div class="file-info">
                   <div class="file-name">{{ file.name }}</div>
-                  <div class="file-meta">{{ file.size }} · {{ file.uploader }} · {{ formatTime(file.uploadTime) }}</div>
+                  <div class="file-meta">{{ file.size }} · {{ file.uploader }} · {{ file.uploadTime }}</div>
                 </div>
                 <div class="file-actions">
                   <Icon icon="ep:view" class="action-btn" @click="previewFile(file)" />
@@ -204,27 +234,103 @@
         </el-col>
       </el-row>
 
-      <!-- 流转记录 -->
+      <!-- 流转记录 - 使用真实工作流数据 -->
       <div class="section-block">
         <h3 class="section-title">流转记录</h3>
-        <div class="flow-timeline">
-          <div v-for="(record, index) in circulationRecords" :key="index" class="flow-item">
-            <div class="flow-dot" :class="record.completed ? 'completed' : 'pending'"></div>
-            <div class="flow-line" v-if="index < circulationRecords.length - 1"></div>
-            <div class="flow-content">
-              <div class="flow-header">
-                <span class="flow-action-badge">{{ record.action }}</span>
-                <span class="flow-dept-badge">{{ record.fromDept }}</span>
-                <span v-if="record.fromDept !== record.toDept" class="flow-arrow">→</span>
-                <span v-if="record.fromDept !== record.toDept" class="flow-target-badge">{{ record.toDept }}</span>
+        <div v-loading="loading" class="workflow-timeline">
+          <el-timeline class="workflow-timeline-content">
+            <!-- 遍历每个审批节点 -->
+            <el-timeline-item
+              v-for="(activity, index) in activityNodes"
+              :key="index"
+              size="large"
+              :icon="getApprovalNodeIcon(activity.status, activity.nodeType)"
+              :color="getApprovalNodeColor(activity.status)"
+            >
+              <template #dot>
+                <div class="workflow-node-container">
+                  <img class="workflow-node-img" :src="getApprovalNodeImg(activity.nodeType)" alt="" />
+                  <div
+                    class="workflow-node-status"
+                    :style="{ backgroundColor: getApprovalNodeColor(activity.status) }"
+                  >
+                    <el-icon :size="11" color="#fff">
+                      <component :is="getApprovalNodeIcon(activity.status, activity.nodeType)" />
+                    </el-icon>
+                  </div>
+                </div>
+              </template>
+              <div class="workflow-activity-content">
+                <!-- 第一行：节点名称、时间 -->
+                <div class="workflow-activity-header">
+                  <div class="workflow-activity-name">{{ activity.name }}</div>
+                  <!-- 信息：时间 -->
+                  <div
+                    v-if="activity.status !== TaskStatusEnum.NOT_START"
+                    class="workflow-activity-time"
+                  >
+                    {{ getApprovalNodeTime(activity) }}
+                  </div>
+                </div>
+                <div class="workflow-activity-tasks">
+                  <!-- 遍历每个审批节点下的task任务 -->
+                  <div v-for="(task, idx) in activity.tasks" :key="idx" class="workflow-task-item">
+                    <div
+                      class="workflow-task-user"
+                      v-if="task.assigneeUser || task.ownerUser"
+                    >
+                      <!-- 信息：头像昵称 -->
+                      <div class="workflow-user-info">
+                        <template v-if="task.assigneeUser?.avatar || task.assigneeUser?.nickname">
+                          <el-avatar
+                            class="workflow-user-avatar"
+                            :size="28"
+                            v-if="task.assigneeUser?.avatar"
+                            :src="task.assigneeUser?.avatar"
+                          />
+                          <el-avatar class="workflow-user-avatar" :size="28" v-else>
+                            {{ task.assigneeUser?.nickname.substring(0, 1) }}
+                          </el-avatar>
+                          <span class="workflow-user-name">{{ task.assigneeUser?.nickname }}</span>
+                        </template>
+                        <template v-else-if="task.ownerUser?.avatar || task.ownerUser?.nickname">
+                          <el-avatar
+                            class="workflow-user-avatar"
+                            :size="28"
+                            v-if="task.ownerUser?.avatar"
+                            :src="task.ownerUser?.avatar"
+                          />
+                          <el-avatar class="workflow-user-avatar" :size="28" v-else>
+                            {{ task.ownerUser?.nickname.substring(0, 1) }}
+                          </el-avatar>
+                          <span class="workflow-user-name">{{ task.ownerUser?.nickname }}</span>
+                        </template>
+                      </div>
+                    </div>
+                    <!-- 审批意见 -->
+                    <div
+                      v-if="task.reason && [NodeType.USER_TASK_NODE, NodeType.END_EVENT_NODE].includes(activity.nodeType)"
+                      class="workflow-task-reason"
+                    >
+                      审批意见：{{ task.reason }}
+                    </div>
+                  </div>
+                  <!-- 候选用户 -->
+                  <div
+                    v-for="(user, idx1) in activity.candidateUsers"
+                    :key="idx1"
+                    class="workflow-candidate-user"
+                  >
+                    <el-avatar class="workflow-user-avatar" :size="28" v-if="user.avatar" :src="user.avatar" />
+                    <el-avatar class="workflow-user-avatar" :size="28" v-else>
+                      {{ user.nickname.substring(0, 1) }}
+                    </el-avatar>
+                    <span class="workflow-user-name">{{ user.nickname }}</span>
+                  </div>
+                </div>
               </div>
-              <div class="flow-details">
-                <span class="flow-handler">操作人：{{ record.handler }}</span>
-                <span v-if="record.message" class="flow-message">{{ record.message }}</span>
-              </div>
-              <div class="flow-time">{{ record.time }}</div>
-            </div>
-          </div>
+            </el-timeline-item>
+          </el-timeline>
         </div>
       </div>
     </div>
@@ -237,28 +343,99 @@
     width="50%"
     class="history-dialog"
   >
-    <div class="history-content">
-      <div v-for="(record, index) in allProgressRecords" :key="index" class="history-item">
-        <div class="history-dot"></div>
-        <div class="history-info">
-          <div class="history-header">
-            <span class="history-title">{{ record.title }}</span>
-            <span class="history-name">{{ record.handler }}</span>
-            <span class="history-time">{{ record.time }}</span>
-          </div>
-          <div class="history-description">{{ record.description }}</div>
-          <div v-if="record.attachments" class="history-attachments">
-            <div v-for="file in record.attachments" :key="file.name" class="history-attachment">
-              <Icon icon="ep:document" class="attachment-icon" />
-              <span class="attachment-name">{{ file.name }}</span>
+    <div class="history-content" v-loading="historyLoading">
+      <div v-if="allProgressRecords.length > 0">
+        <div v-for="(record, index) in allProgressRecords" :key="index" class="history-item">
+          <div class="history-dot"></div>
+          <div class="history-info">
+            <div class="history-header">
+              <div class="history-left">
+                <span class="history-title">{{ record.title }}</span>
+                <span class="history-name" v-if="record.handler">{{ record.handler }}</span>
+              </div>
+              <div class="history-right">
+                <span class="history-expected-time">预计完成时间：{{ record.expectedTime || '未设置' }}</span>
+              </div>
             </div>
-          </div>
-          <div v-if="record.expectedTime" class="expected-time">
-            预计完成时间：{{ record.expectedTime }}
+            <div class="history-description" v-if="record.description && record.description !== '暂无详细信息'">{{ record.description }}</div>
+            <div v-if="record.attachments && record.attachments.length > 0" class="history-attachments">
+              <div v-for="file in record.attachments" :key="file.id || file.name" class="history-attachment">
+                <Icon icon="ep:document" class="attachment-icon" />
+                <span class="attachment-name" @click="downloadProgressFile(file)" style="cursor: pointer;">{{ file.name }}</span>
+              </div>
+              <div class="history-time" v-if="record.time">{{ record.time }}</div>
+            </div>
+            <div v-else-if="record.time" class="history-time">{{ record.time }}</div>
           </div>
         </div>
       </div>
+      <div v-else-if="!historyLoading" class="empty-history">
+        <el-empty description="暂无历史记录" :image-size="80" />
+      </div>
     </div>
+  </el-dialog>
+
+  <!-- 添加进度更新弹窗 -->
+  <el-dialog
+    v-model="addProgressDialogVisible"
+    title="添加进度更新"
+    width="50%"
+    class="add-progress-dialog"
+  >
+    <el-form :model="progressForm" :rules="progressRules" ref="progressFormRef" label-width="120px">
+      <el-form-item label="当前进度：" prop="deptDetail">
+        <el-input
+          v-model="progressForm.deptDetail"
+          type="textarea"
+          :rows="4"
+          placeholder="请输入当前进度情况"
+          maxlength="500"
+          show-word-limit
+        />
+      </el-form-item>
+
+      <el-form-item label="预计完成时间：" prop="planTime">
+        <el-date-picker
+          v-model="progressForm.planTime"
+          type="datetime"
+          placeholder="选择预计完成时间"
+          format="YYYY-MM-DD HH:mm"
+          value-format="YYYY-MM-DD HH:mm:ss"
+          style="width: 100%"
+        />
+      </el-form-item>
+
+      <el-form-item label="上传附件：">
+        <el-upload
+          ref="uploadRef"
+          v-model:file-list="progressForm.fileList"
+          :http-request="customUpload"
+          :limit="10"
+          :multiple="true"
+          :auto-upload="true"
+          :show-file-list="true"
+          :on-error="handleCustomUploadError"
+          :on-remove="handleFileRemove"
+          :before-upload="beforeUpload"
+          accept=".doc,.docx,.pdf,.xls,.xlsx,.jpg,.jpeg,.png,.txt"
+          action="#"
+        >
+          <el-button type="primary">选取文件</el-button>
+          <template #tip>
+            <div class="el-upload__tip">
+              支持上传 doc、docx、pdf、xls、xlsx、jpg、jpeg、png、txt 格式文件，单个文件不超过10MB，最多上传10个文件
+            </div>
+          </template>
+        </el-upload>
+      </el-form-item>
+    </el-form>
+
+    <template #footer>
+      <div class="dialog-footer">
+        <el-button @click="cancelAddProgress">取消</el-button>
+        <el-button type="primary" @click="submitAddProgress">完成</el-button>
+      </div>
+    </template>
   </el-dialog>
 </template>
 
@@ -266,10 +443,28 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Icon } from '@/components/Icon'
+import { formatDate } from '@/utils/formatTime'
+import * as ProcessInstanceApi from '@/api/bpm/processInstance'
+import { TaskStatusEnum } from '@/api/bpm/task'
+import { NodeType, CandidateStrategy } from '@/components/SimpleProcessDesignerV2/src/consts'
+import { isEmpty } from '@/utils/is'
+import { Check, Close, Loading, Clock, Minus, Delete } from '@element-plus/icons-vue'
+import { OrderApi } from '@/api/supervision'
+import * as FileApi from '@/api/infra/file'
+import starterSvg from '@/assets/svgs/bpm/starter.svg'
+import auditorSvg from '@/assets/svgs/bpm/auditor.svg'
+import copySvg from '@/assets/svgs/bpm/copy.svg'
+import conditionSvg from '@/assets/svgs/bpm/condition.svg'
+import parallelSvg from '@/assets/svgs/bpm/parallel.svg'
+import finishSvg from '@/assets/svgs/bpm/finish.svg'
+import transactorSvg from '@/assets/svgs/bpm/transactor.svg'
+import childProcessSvg from '@/assets/svgs/bpm/child-process.svg'
 
 interface Props {
   modelValue: boolean
   taskData: any
+  processInstanceId?: string  // 新增：流程实例ID
+  supervisionStatus?: string  // 新增：督办状态（从首页传递）
 }
 
 const props = defineProps<Props>()
@@ -281,227 +476,454 @@ const dialogVisible = computed({
   set: (value) => emit('update:modelValue', value)
 })
 
+// 判断督办是否已结束（不能再添加更新）
+const isSupervisionEnded = computed(() => {
+  if (props.supervisionStatus) {
+    // 如果有传递督办状态，根据督办状态判断
+    return props.supervisionStatus === '办结文件' || props.supervisionStatus === '否决文件'
+  }
+
+  // 如果没有督办状态，根据数字状态码判断（3=已完成，4=已取消）
+  return orderDetail.status === 3 || orderDetail.status === 4
+})
+
 // 历史记录弹窗状态
 const historyDialogVisible = ref(false)
+const historyLoading = ref(false)
+
+// 添加进度更新弹窗状态
+const addProgressDialogVisible = ref(false)
+const progressFormRef = ref()
+
+// 进度更新表单数据
+const progressForm = reactive({
+  deptDetail: '',
+  planTime: '',
+  fileList: [] as Array<{
+    id?: number
+    name: string
+    url: string
+    size?: string
+    raw?: File
+    uid?: string | number
+  }>
+})
+
+// 进度更新表单验证规则
+const progressRules = {
+  deptDetail: [
+    { required: true, message: '请输入当前进度情况', trigger: 'blur' }
+  ]
+}
+
+// 进度更新记录相关状态
+const hasMoreRecords = ref(false)
+
+// 工作流相关数据
+const activityNodes = ref<ProcessInstanceApi.ApprovalNodeInfo[]>([])
+const loading = ref(false)
+
+// 督办单详情数据（从API获取）
+const orderDetailData = ref<any>({})
+// 附件数据（从API获取）
+const attachmentData = ref<any[]>([])
+
+// 工作流状态映射
+const statusIconMap = {
+  // 审批未开始
+  '-1': { color: '#909398', icon: Clock },
+  '0': { color: '#00b32a', icon: Clock },
+  // 审批中
+  '1': { color: '#448ef7', icon: Loading },
+  // 审批通过
+  '2': { color: '#00b32a', icon: Check },
+  // 审批不通过
+  '3': { color: '#f46b6c', icon: Close },
+  // 已取消
+  '4': { color: '#cccccc', icon: Delete },
+  // 退回
+  '5': { color: '#f46b6c', icon: Minus },
+  // 委派中
+  '6': { color: '#448ef7', icon: Loading },
+  // 审批通过中
+  '7': { color: '#00b32a', icon: Check }
+}
+
+const nodeTypeSvgMap = {
+  // 结束节点
+  [NodeType.END_EVENT_NODE]: { color: '#909398', svg: finishSvg },
+  // 发起人节点
+  [NodeType.START_USER_NODE]: { color: '#909398', svg: starterSvg },
+  // 审批人节点
+  [NodeType.USER_TASK_NODE]: { color: '#ff943e', svg: auditorSvg },
+  // 办理人节点
+  [NodeType.TRANSACTOR_NODE]: { color: '#ff943e', svg: transactorSvg },
+  // 抄送人节点
+  [NodeType.COPY_TASK_NODE]: { color: '#3296fb', svg: copySvg },
+  // 条件分支节点
+  [NodeType.CONDITION_NODE]: { color: '#14bb83', svg: conditionSvg },
+  // 并行分支节点
+  [NodeType.PARALLEL_BRANCH_NODE]: { color: '#14bb83', svg: parallelSvg },
+  // 子流程节点
+  [NodeType.CHILD_PROCESS_NODE]: { color: '#14bb83', svg: childProcessSvg }
+}
+
+// 工作流相关方法
+const getApprovalNodeImg = (nodeType: NodeType) => {
+  return nodeTypeSvgMap[nodeType]?.svg
+}
+
+const getApprovalNodeIcon = (taskStatus: number, nodeType: NodeType) => {
+  if (taskStatus == TaskStatusEnum.NOT_START) {
+    return statusIconMap[taskStatus]?.icon
+  }
+
+  if (
+    nodeType === NodeType.START_USER_NODE ||
+    nodeType === NodeType.USER_TASK_NODE ||
+    nodeType === NodeType.TRANSACTOR_NODE ||
+    nodeType === NodeType.CHILD_PROCESS_NODE ||
+    nodeType === NodeType.END_EVENT_NODE
+  ) {
+    return statusIconMap[taskStatus]?.icon
+  }
+}
+
+const getApprovalNodeColor = (taskStatus: number) => {
+  return statusIconMap[taskStatus]?.color
+}
+
+const getApprovalNodeTime = (node: ProcessInstanceApi.ApprovalNodeInfo) => {
+  if (node.nodeType === NodeType.START_USER_NODE && node.startTime) {
+    return `${formatDate(node.startTime)}`
+  }
+  if (node.endTime) {
+    return `${formatDate(node.endTime)}`
+  }
+  if (node.startTime) {
+    return `${formatDate(node.startTime)}`
+  }
+}
+
+// 获取督办单详情数据
+const getSupervisionOrderDetail = async (processInstanceId: string) => {
+  if (!processInstanceId) return
+
+  try {
+    const data = await OrderApi.getSupervisionOrderTaskDetail(processInstanceId)
+
+    if (data) {
+      // 判断data是否直接包含orderCode字段
+      const apiData = data.orderCode ? data : data.data
+
+      if (apiData) {
+        orderDetailData.value = apiData
+
+        // 处理协办部门
+        const coDeptNames = []
+        if (apiData.coDeptNameMap) {
+          for (const key in apiData.coDeptNameMap) {
+            coDeptNames.push(apiData.coDeptNameMap[key])
+          }
+        }
+
+        // 格式化时间函数（不显示秒数）
+        const formatTime = (timestamp: number) => {
+          if (!timestamp) return ''
+          const date = new Date(timestamp)
+          return date.toLocaleString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+          }).replace(/\//g, '/').replace(',', '')
+        }
+
+        // 更新督办单详情
+        orderDetail.orderNumber = apiData.orderCode || ''
+        orderDetail.title = apiData.orderTitle || ''
+
+        // 调试信息：打印type字段
+        console.log('督办详情API返回的type字段:', apiData.type)
+        orderDetail.category = getSupervisionTypeText(apiData.type) // 根据type字段设置督办类型
+        console.log('设置的督办类型:', orderDetail.category)
+        orderDetail.priority = getPriorityText(apiData.priority)
+        orderDetail.priorityType = getPriorityType(apiData.priority)
+        orderDetail.issueUnit = apiData.creatorDeptName || ''
+        orderDetail.issuer = apiData.creatorNickName || ''
+        orderDetail.issuerPhone = apiData.creatorPhone || ''
+        orderDetail.leadDept = apiData.leadDeptName || ''
+        orderDetail.supervisorName = apiData.leaderNickname || ''
+        orderDetail.phone = apiData.leaderPhone || ''
+        orderDetail.collaborateDepts = coDeptNames
+        orderDetail.leader = apiData.leaderNickname || ''
+        orderDetail.leaderPhone = apiData.leaderPhone || ''
+        orderDetail.content = apiData.content || ''
+        orderDetail.tasks = apiData.undertakeMatter || ''
+        orderDetail.createTime = formatTime(apiData.createTime)
+        orderDetail.deadline = formatTime(apiData.deadline)
+        orderDetail.updateTime = formatTime(apiData.lastTime)
+      }
+    }
+  } catch (error) {
+    console.error('获取督办单详情失败:', error)
+    ElMessage.error('获取督办单详情失败')
+  }
+}
+
+// 获取附件列表
+const getAttachmentList = async (processInstanceId: string) => {
+  if (!processInstanceId) return
+
+  try {
+    const data = await OrderApi.getAttachments(processInstanceId)
+
+    let attachmentList = []
+
+    // 处理各种可能的响应格式
+    if (data && data.data && Array.isArray(data.data)) {
+      attachmentList = data.data
+    } else if (data && Array.isArray(data)) {
+      attachmentList = data
+    } else if (data && data.code === 0 && data.data) {
+      attachmentList = Array.isArray(data.data) ? data.data : []
+    } else if (data && typeof data === 'object' && !Array.isArray(data)) {
+      // 尝试找到数组字段
+      const possibleArrayFields = ['list', 'items', 'files', 'attachments']
+      for (const field of possibleArrayFields) {
+        if (data[field] && Array.isArray(data[field])) {
+          attachmentList = data[field]
+          break
+        }
+      }
+    }
+
+    if (attachmentList.length > 0) {
+      attachmentData.value = attachmentList
+      updateAttachmentsFromAPI(attachmentList)
+    } else {
+      attachments.value = []
+    }
+  } catch (error) {
+    console.error('获取附件列表失败:', error)
+    ElMessage.error('获取附件列表失败')
+  }
+}
+
+// 获取工作流审批详情
+const getWorkflowDetail = async (processInstanceId: string) => {
+  if (!processInstanceId) return
+
+  try {
+    const param = {
+      processInstanceId: processInstanceId,
+      activityId: undefined,
+      taskId: undefined
+    }
+    const data = await ProcessInstanceApi.getApprovalDetail(param)
+    if (data && data.activityNodes) {
+      activityNodes.value = data.activityNodes
+    }
+  } catch (error) {
+    console.error('获取工作流详情失败:', error)
+    ElMessage.error('获取工作流详情失败')
+    throw error // 重新抛出错误，让 Promise.allSettled 能捕获
+  }
+}
+
+// 获取进度更新记录
+const getProgressRecords = async (processInstanceId: string, showAll: boolean = false) => {
+  if (!processInstanceId) return
+
+  try {
+    const data = await OrderApi.getSupervisionTaskDetail(processInstanceId, showAll)
+
+    // 处理不同的响应格式
+    let apiData
+    if (data && data.data) {
+      apiData = data.data
+    } else if (data && data.code === 0) {
+      // 如果响应格式是 { code: 0, data: {...}, msg: "" }
+      apiData = data.data
+    } else if (data) {
+      // 如果直接返回数据
+      apiData = data
+    }
+
+    if (apiData) {
+      // 根据showAll参数决定使用哪个数据源
+      let recordsToProcess = []
+
+      if (showAll) {
+        // 显示全部记录时，优先使用allRecords，如果没有则使用latestRecords
+        recordsToProcess = apiData.allRecords || apiData.latestRecords || []
+      } else {
+        // 默认显示时，使用latestRecords
+        recordsToProcess = apiData.latestRecords || []
+      }
+
+      if (Array.isArray(recordsToProcess) && recordsToProcess.length > 0) {
+        const formattedRecords = recordsToProcess.map(record => {
+          return {
+            title: record.creatorDeptName || '未知部门',
+            handler: record.creatorNickName || '',
+            description: record.deptDetail || '暂无详细信息',
+            expectedTime: record.planTime ? formatTimestamp(record.planTime) : '',
+            time: record.createTime ? formatTimestamp(record.createTime) : (record.planTime ? formatTimestamp(record.planTime) : ''),
+            attachments: record.fileList && Array.isArray(record.fileList) ? record.fileList : []
+          }
+        })
+
+        if (showAll) {
+          // 如果是显示全部记录，更新allProgressRecords
+          allProgressRecords.value = formattedRecords
+        } else {
+          // 如果是默认显示，更新progressRecords
+          progressRecords.value = formattedRecords
+          // 设置是否有更多记录
+          hasMoreRecords.value = apiData.hasMore || false
+        }
+      } else {
+        if (showAll) {
+          allProgressRecords.value = []
+        } else {
+          progressRecords.value = []
+          hasMoreRecords.value = false
+        }
+      }
+    }
+  } catch (error) {
+    console.error('获取进度更新记录失败:', error)
+    ElMessage.error('获取进度更新记录失败')
+  }
+}
+
+// 更新督办单详情数据
+
+
+// 更新附件列表数据
+const updateAttachmentsFromAPI = (apiData: any[]) => {
+  if (!Array.isArray(apiData)) {
+    attachments.value = []
+    return
+  }
+
+  attachments.value = apiData.map(item => ({
+    id: item.id,
+    name: item.name,
+    type: getFileTypeFromUrl(item.url),
+    size: formatFileSize(item.size),
+    uploader: item.creatorName || '未知',
+    uploadTime: formatTimestamp(item.createTime),
+    url: item.url
+  }))
+}
 
 // 督办单详情数据
 const orderDetail = reactive({
   id: 1,
-  orderNumber: 'FDSS41F74542',
-  title: '关于加强校园管理工作的督查',
+  orderNumber: '',
+  title: '',
   category: '工作督办',
-  priority: '高优先级',
+  priority: '一般优先级',
+  priorityType: 'info',
   status: 2, // 0-草稿 1-已发布 2-进行中 3-已完成 4-已取消
-  issueUnit: '校务督查室',
-  issuer: '庞主任',
-  issuerPhone: '1234567890',
-  leadDept: '保卫处',
-  supervisorName: '张处长',
-  phone: '1234567890',
-  collaborateDepts: ['学生处', '后勤处'],
-  leader: '李副校长',
-  leaderPhone: '1234567890',
-  content: '根据上级部门要求，为进一步加强校园管理工作，确保校园安全稳定，现对相关工作进行督查。请各相关部门高度重视，认真落实各项措施，确保工作取得实效。',
-  tasks: '1. 完善校园安全管理制度\n2. 加强校园巡查力度\n3. 建立应急响应机制\n4. 定期开展安全教育活动',
-  createTime: '2025-07-15',
-  deadline: '2025-08-15',
-  updateTime: '2025-07-21 15:30'
+  issueUnit: '',
+  issuer: '',
+  issuerPhone: '',
+  leadDept: '',
+  supervisorName: '',
+  phone: '',
+  collaborateDepts: [],
+  leader: '',
+  leaderPhone: '',
+  content: '',
+  tasks: '',
+  createTime: '',
+  deadline: '',
+  updateTime: ''
 })
 
 // 进度更新记录
-const progressRecords = ref([
-  {
-    title: '保卫处',
-    handler: '张处长',
-    description: '已完成教学楼、办公楼消防设施检查，发现问题15处，正在制定整改方案。',
-    expectedTime: '2025-07-23 15:00',
-    time: '2025-07-21 15:00',
-    attachments: [
-      { name: '消防检查报告.pdf' },
-      { name: '问题清单.xlsx' }
-    ]
-  },
-  {
-    title: '后勤处',
-    handler: '',
-    description: '已完成主要建筑结构安全检查，发现轻微问题3处，已安排维修。',
-    expectedTime: '2025-07-20 15:00',
-    time: '2025-07-19 15:00',
-    attachments: [
-      { name: '建筑检查报告.pdf' }
-    ]
-  }
-])
+const progressRecords = ref([])
 
 // 所有进度更新记录（包含更多历史记录）
-const allProgressRecords = ref([
-  {
-    title: '保卫处',
-    handler: '张处长',
-    description: '已完成教学楼、办公楼消防设施检查，发现问题15处，正在制定整改方案。预计本周内完成整改。',
-    expectedTime: '2025-07-23 15:00',
-    time: '2025-07-21 15:00',
-    attachments: [
-      { name: '消防检查报告.pdf' },
-      { name: '问题清单.xlsx' }
-    ]
-  },
-  {
-    title: '后勤处',
-    handler: '',
-    description: '已完成主要建筑结构安全检查，发现轻微问题3处，已安排维修。',
-    expectedTime: '2025-07-20 15:00',
-    time: '2025-07-19 15:00',
-    attachments: [
-      { name: '建筑检查报告.pdf' }
-    ]
-  },
-  {
-    title: '李副校长添加批示',
-    handler: '',
-    description: '请加快整改进度，确保按时完成。',
-    time: '2025-07-16 15:00'
-  },
-  {
-    title: '后勤处',
-    handler: '',
-    description: '已完成主要建筑结构安全检查，发现轻微问题3处，已安排维修。',
-    time: '2025-07-19 15:00',
-    attachments: [
-      { name: '建筑检查报告.pdf' }
-    ]
-  },
-  {
-    title: '李副校长添加批示',
-    handler: '',
-    description: '请加快整改进度，确保按时完成。',
-    expectedTime: '2025-07-20 15:00',
-    time: '2025-07-16 15:00'
-  }
-])
+const allProgressRecords = ref([])
 
 // 附件列表
-const attachments = ref([
-  {
-    id: 1,
-    name: '校园管理工作方案.pdf',
-    type: 'pdf',
-    size: '2.5MB',
-    uploader: '张三',
-    uploadTime: '2025-07-15 09:30'
-  },
-  {
-    id: 2,
-    name: '校园管理工作方案.docx',
-    type: 'docx',
-    size: '1.2MB',
-    uploader: '李四',
-    uploadTime: '2025-07-15 10:00'
-  },
-  {
-    id: 3,
-    name: '校园管理工作方案二期.docx',
-    type: 'docx',
-    size: '2.8MB',
-    uploader: '王五',
-    uploadTime: '2025-07-16 09:00'
-  },
-  {
-    id: 4,
-    name: '消防检查报告.pdf',
-    type: 'pdf',
-    size: '3.2MB',
-    uploader: '赵六',
-    uploadTime: '2025-07-16 14:30'
+const attachments = ref([])
+
+
+// 加载所有数据的统一方法
+const loadAllData = async (processInstanceId: string) => {
+  if (!processInstanceId) return
+
+  loading.value = true
+  try {
+    // 并行获取所有数据，即使某个请求失败也不影响其他请求
+    const [orderResult, attachmentResult, workflowResult, progressResult] = await Promise.allSettled([
+      getSupervisionOrderDetail(processInstanceId),
+      getAttachmentList(processInstanceId),
+      getWorkflowDetail(processInstanceId),
+      getProgressRecords(processInstanceId, false) // 默认只获取最新的几条记录
+    ])
+
+    // 检查各个请求的结果
+    if (orderResult.status === 'rejected') {
+      console.error('获取督办单详情失败:', orderResult.reason)
+    }
+    if (attachmentResult.status === 'rejected') {
+      console.error('获取附件列表失败:', attachmentResult.reason)
+    }
+    if (workflowResult.status === 'rejected') {
+      console.error('获取工作流详情失败:', workflowResult.reason)
+    }
+    if (progressResult.status === 'rejected') {
+      console.error('获取进度更新记录失败:', progressResult.reason)
+    }
+  } catch (error) {
+    console.error('加载数据时发生错误:', error)
+  } finally {
+    loading.value = false
   }
-])
+}
 
-// 流转记录 - 根据任务信息动态生成
-const circulationRecords = computed(() => {
-  const records = []
-  const baseTime = new Date(orderDetail.createTime + ' 10:00')
-
-  // 1. 督办单起草
-  records.push({
-    action: '督办单起草',
-    fromDept: orderDetail.issueUnit,
-    toDept: orderDetail.issueUnit,
-    handler: orderDetail.issuer,
-    message: '请认真落实相关要求',
-    time: formatDateTime(baseTime),
-    completed: true
-  })
-
-  // 2. 督办单审核
-  const reviewTime = new Date(baseTime.getTime() + 0 * 60 * 60 * 1000) // 同时进行
-  records.push({
-    action: '督办单审核',
-    fromDept: orderDetail.issueUnit,
-    toDept: orderDetail.issueUnit,
-    handler: orderDetail.issuer,
-    message: '审核通过',
-    time: formatDateTime(reviewTime),
-    completed: true
-  })
-
-  // 3. 移交督办
-  const transferTime = new Date(baseTime.getTime() + 0 * 60 * 60 * 1000) // 同时进行
-  records.push({
-    action: '移交督办',
-    fromDept: orderDetail.issueUnit,
-    toDept: orderDetail.leadDept,
-    handler: orderDetail.issuer,
-    message: '',
-    time: formatDateTime(transferTime),
-    completed: true
-  })
-
-  // 4. 协办流转 - 指定协办部门
-  const collaborateTime1 = new Date(baseTime.getTime() + 23 * 60 * 60 * 1000) // 23小时后
-  records.push({
-    action: '协办流转',
-    fromDept: orderDetail.leadDept,
-    toDept: orderDetail.collaborateDepts.join('、'),
-    handler: orderDetail.supervisorName,
-    message: `指定协办部门：${orderDetail.collaborateDepts.join('、')}`,
-    time: formatDateTime(collaborateTime1),
-    completed: true
-  })
-
-  // 5. 协办流转 - 工作提交复核（根据状态判断）
-  const collaborateTime2 = new Date(baseTime.getTime() + 23.5 * 60 * 60 * 1000) // 23.5小时后
-  const isInProgress = orderDetail.status === 2 // 进行中
-  records.push({
-    action: '协办流转',
-    fromDept: orderDetail.collaborateDepts[1] || '后勤处',
-    toDept: orderDetail.leadDept,
-    handler: '张三三',
-    message: isInProgress ? '工作内容提交复核' : '工作已完成提交复核',
-    time: formatDateTime(collaborateTime2),
-    completed: !isInProgress
-  })
-
-  return records
-})
-
-// 监听任务数据变化，更新详情
-watch(() => props.taskData, (newTaskData) => {
-  if (newTaskData) {
-    // 根据传入的任务数据更新详情
-    orderDetail.title = newTaskData.title || orderDetail.title
-    orderDetail.content = newTaskData.description || newTaskData.mainContent || orderDetail.content
-    orderDetail.tasks = newTaskData.undertakingContent || orderDetail.tasks
-    orderDetail.leadDept = newTaskData.leadDepartment || '保卫处' // 默认牵头部门
-    orderDetail.collaborateDepts = newTaskData.assistDepartments || newTaskData.collaborators || orderDetail.collaborateDepts
-    orderDetail.supervisorName = newTaskData.supervisor || orderDetail.supervisorName
-    orderDetail.leader = newTaskData.supervisor || orderDetail.leader
-    orderDetail.deadline = newTaskData.deadline || orderDetail.deadline
-    orderDetail.createTime = newTaskData.createdDate || newTaskData.createTime || orderDetail.createTime
-    orderDetail.urgencyLevel = newTaskData.priority === '高优先级' ? 3 : newTaskData.priority === '中优先级' ? 2 : 1
-    orderDetail.status = newTaskData.status === '进行中' ? 2 : newTaskData.status === '已完成' ? 3 : 1
-    orderDetail.issuer = newTaskData.issuer || orderDetail.issuer
+// 监听弹窗显示状态，当弹窗打开时获取所有数据
+watch(() => props.modelValue, (newValue) => {
+  if (newValue && props.processInstanceId) {
+    loadAllData(props.processInstanceId)
   }
 }, { immediate: true })
+
+// 监听 processInstanceId 变化
+watch(() => props.processInstanceId, (newProcessInstanceId) => {
+  if (newProcessInstanceId && props.modelValue) {
+    loadAllData(newProcessInstanceId)
+  }
+}, { immediate: true })
+
+// 优先级判断方法（与部门督办页面保持一致）
+const getPriorityType = (priority) => {
+  if (priority === 1) return 'danger'  // 高优先级
+  if (priority === 2) return 'warning' // 中优先级
+  return 'info' // 一般优先级
+}
+
+const getPriorityText = (priority) => {
+  if (priority === 1) return '高优先级'
+  if (priority === 2) return '中优先级'
+  return '一般优先级'
+}
+
+// 根据type字段获取督办类型文本
+const getSupervisionTypeText = (type: number) => {
+  switch (type) {
+    case 1: return '工作督办'
+    case 2: return '专项督办'
+    default: return '工作督办'
+  }
+}
 
 // 方法
 const handleClose = () => {
@@ -509,8 +931,194 @@ const handleClose = () => {
 }
 
 // 显示所有历史记录
-const showAllRecords = () => {
+const showAllRecords = async () => {
+  if (!props.processInstanceId) return
+
   historyDialogVisible.value = true
+  historyLoading.value = true
+
+  try {
+    // 获取全部进度更新记录
+    await getProgressRecords(props.processInstanceId, true)
+  } catch (error) {
+    console.error('获取全部进度记录失败:', error)
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+// 显示添加进度更新弹窗
+const showAddProgressDialog = () => {
+  addProgressDialogVisible.value = true
+  // 重置表单
+  progressForm.deptDetail = ''
+  progressForm.planTime = ''
+  progressForm.fileList = []
+}
+
+// 取消添加进度更新
+const cancelAddProgress = () => {
+  addProgressDialogVisible.value = false
+  // 重置表单
+  progressForm.deptDetail = ''
+  progressForm.planTime = ''
+  progressForm.fileList = []
+}
+
+// 文件上传相关方法
+const uploadRef = ref()
+
+// 自定义上传方法
+const customUpload = async (options) => {
+  const { file, onSuccess, onError } = options
+  try {
+    // 创建 FormData
+    const formData = new FormData()
+    formData.append('file', file)
+
+    // 调用文件上传API
+    const result = await FileApi.updateFile(formData)
+
+    // 检查响应结果
+    if (result.code === 0) {
+      // 上传成功，设置文件URL
+      file.url = result.data
+
+      // 更新文件列表中对应文件的URL
+      const index = progressForm.fileList.findIndex(item => item.uid === file.uid)
+      if (index !== -1) {
+        progressForm.fileList[index].url = file.url
+      }
+
+      // 调用成功回调
+      onSuccess(result)
+      ElMessage.success(`文件 ${file.name} 上传成功`)
+    } else {
+      // 上传失败
+      const error = new Error(result.msg || '文件上传失败')
+
+      // 从文件列表中移除失败的文件
+      const index = progressForm.fileList.findIndex(item => item.uid === file.uid)
+      if (index !== -1) {
+        progressForm.fileList.splice(index, 1)
+      }
+
+      onError(error)
+      ElMessage.error(result.msg || '文件上传失败')
+    }
+  } catch (error) {
+    console.error('文件上传失败:', error)
+
+    // 从文件列表中移除失败的文件
+    const index = progressForm.fileList.findIndex(item => item.uid === file.uid)
+    if (index !== -1) {
+      progressForm.fileList.splice(index, 1)
+    }
+
+    onError(error)
+    ElMessage.error('文件上传失败，请重试')
+  }
+}
+
+// 处理自定义上传失败
+const handleCustomUploadError = (error: any, file: any) => {
+  console.error('自定义上传失败:', error, file)
+  ElMessage.error(`文件 ${file.name} 上传失败: ${error.message || '未知错误'}`)
+}
+
+// 文件移除处理
+const handleFileRemove = async (file: any) => {
+  try {
+    // 从文件列表中移除
+    const index = progressForm.fileList.findIndex(item => item.uid === file.uid)
+    if (index !== -1) {
+      progressForm.fileList.splice(index, 1)
+      ElMessage.success('文件已移除')
+    }
+  } catch (error) {
+    console.error('删除附件失败:', error)
+    ElMessage.error('删除附件失败')
+  }
+}
+
+// 上传前验证
+const beforeUpload = (file: File) => {
+  // 检查文件数量限制
+  if (progressForm.fileList.length >= 10) {
+    ElMessage.error('上传文件数量不能超过10个!')
+    return false
+  }
+
+  // 检查文件类型
+  const allowedTypes = ['doc', 'docx', 'pdf', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'txt']
+  let fileExtension = ''
+  if (file.name.lastIndexOf('.') > -1) {
+    fileExtension = file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase()
+  }
+
+  const isValidType = allowedTypes.includes(fileExtension) ||
+    allowedTypes.some(type => file.type.toLowerCase().includes(type))
+
+  if (!isValidType) {
+    ElMessage.error(`文件格式不正确, 请上传 ${allowedTypes.join('/')} 格式文件!`)
+    return false
+  }
+
+  // 检查文件大小 (10MB)
+  const isValidSize = file.size < 10 * 1024 * 1024
+  if (!isValidSize) {
+    ElMessage.error('上传文件大小不能超过10MB!')
+    return false
+  }
+
+  ElMessage.success('正在上传文件，请稍候...')
+  return true
+}
+
+// 提交添加进度更新
+const submitAddProgress = async () => {
+  if (!progressFormRef.value) return
+
+  try {
+    // 验证表单
+    await progressFormRef.value.validate()
+
+    // 处理文件列表，只包含已成功上传的文件
+    const fileList = progressForm.fileList
+      .filter(file => file.url && file.url !== '') // 只包含有URL的文件
+      .map(file => ({
+        name: file.name,
+        url: file.url,
+        size: file.size || ''
+        // 新上传的文件不需要传id，后端会自动生成
+      }))
+
+    // 调用API添加进度更新记录
+    const params = {
+      processInstanceId: props.processInstanceId || '',
+      deptDetail: progressForm.deptDetail,
+      planTime: progressForm.planTime || undefined,
+      fileList: fileList.length > 0 ? fileList : undefined
+    }
+
+    await OrderApi.insertSupervisionOrderTaskNew(params)
+
+    ElMessage.success('进度更新添加成功')
+    addProgressDialogVisible.value = false
+
+    // 重新加载进度记录
+    if (props.processInstanceId) {
+      await getProgressRecords(props.processInstanceId)
+    }
+
+    // 重置表单
+    progressForm.deptDetail = ''
+    progressForm.planTime = ''
+    progressForm.fileList = []
+  } catch (error) {
+    console.error('添加进度更新失败:', error)
+    ElMessage.error('添加进度更新失败')
+  }
 }
 
 const handleEdit = () => {
@@ -526,30 +1134,110 @@ const handleFileUpload = () => {
 }
 
 const previewFile = (file: any) => {
-  ElMessage.info(`预览文件：${file.name}`)
+  if (file.url) {
+    // 直接在新窗口中打开文件，让浏览器决定如何处理
+    // 如果浏览器支持预览（如PDF、图片），会直接显示
+    // 如果不支持（如Word、Excel），浏览器会提示下载
+    window.open(file.url, '_blank')
+
+    ElMessage.info(`正在预览：${file.name}`)
+  } else {
+    ElMessage.warning('文件链接不存在，无法预览')
+  }
 }
 
 const downloadFile = (file: any) => {
-  ElMessage.success(`下载文件：${file.name}`)
+  if (file.url) {
+    // 创建下载链接
+    const link = document.createElement('a')
+    link.href = file.url
+    link.download = file.name
+    link.target = '_blank'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    ElMessage.success(`正在下载：${file.name}`)
+  } else {
+    ElMessage.success(`下载文件：${file.name}`)
+  }
 }
 
-const getPriorityType = (priority: string) => {
-  const types = {
-    '高优先级': 'danger',
-    '中优先级': 'warning',
-    '一般优先': ''
+// 下载进度记录中的附件
+const downloadProgressFile = (file: any) => {
+  if (file.url) {
+    // 创建下载链接
+    const link = document.createElement('a')
+    link.href = file.url
+    link.download = file.name
+    link.target = '_blank'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    ElMessage.success(`正在下载：${file.name}`)
+  } else {
+    ElMessage.info(`文件：${file.name}`)
   }
-  return types[priority as keyof typeof types] || ''
 }
+
+
 
 const getStatusType = (status: number) => {
+  // 如果有传递督办状态，根据计算出的状态文本来确定样式
+  if (props.supervisionStatus && props.taskData) {
+    const statusText = calculateDisplayStatusFromSupervision(props.supervisionStatus, props.taskData.deadline)
+    const statusTypeMap = {
+      '进行中': 'primary',
+      '已超时': 'danger',
+      '已结束': 'success'
+    }
+    return statusTypeMap[statusText] || 'info'
+  }
+
+  // 否则使用原来的数字状态码
   const types = { 0: 'info', 1: 'primary', 2: 'warning', 3: 'success', 4: 'danger' }
   return types[status as keyof typeof types] || 'info'
 }
 
 const getStatusText = (status: number) => {
+  // 如果有传递督办状态，优先使用督办状态来计算显示状态
+  if (props.supervisionStatus && props.taskData) {
+    return calculateDisplayStatusFromSupervision(props.supervisionStatus, props.taskData.deadline)
+  }
+
+  // 否则使用原来的数字状态码
   const texts = { 0: '草稿', 1: '已发布', 2: '进行中', 3: '已完成', 4: '已取消' }
   return texts[status as keyof typeof texts] || '未知'
+}
+
+// 根据督办状态计算显示状态（与首页逻辑保持一致）
+const calculateDisplayStatusFromSupervision = (supervisionStatus: string, deadline?: string) => {
+  // 根据 supervisionStatus 判断基本状态
+  if (supervisionStatus === '办结文件' || supervisionStatus === '否决文件') {
+    return '已结束'
+  }
+
+  // 如果是"流程中"，需要进一步判断是否超时
+  if (supervisionStatus === '流程中') {
+    if (!deadline) {
+      return '进行中'
+    }
+
+    // 获取今天的日期
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // 获取截止日期
+    const deadlineDate = new Date(deadline)
+    deadlineDate.setHours(0, 0, 0, 0)
+
+    // 计算天数差
+    const daysDiff = Math.floor((deadlineDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000))
+
+    return daysDiff < 0 ? '已超时' : '进行中'
+  }
+
+  // 其他状态默认显示进行中
+  return '进行中'
 }
 
 const getUrgencyType = (level: number) => {
@@ -601,6 +1289,30 @@ const formatDateTime = (date: Date) => {
   const minutes = String(date.getMinutes()).padStart(2, '0')
   return `${year}-${month}-${day} ${hours}:${minutes}`
 }
+
+// 格式化时间戳
+const formatTimestamp = (timestamp: number) => {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  return formatDateTime(date)
+}
+
+
+
+// 从URL获取文件类型
+const getFileTypeFromUrl = (url: string) => {
+  if (!url) return 'unknown'
+  const extension = url.split('.').pop()?.toLowerCase()
+  return extension || 'unknown'
+}
+
+// 格式化文件大小
+const formatFileSize = (size: number | null) => {
+  if (!size) return '未知大小'
+  if (size < 1024) return size + 'B'
+  if (size < 1024 * 1024) return (size / 1024).toFixed(1) + 'KB'
+  return (size / (1024 * 1024)).toFixed(1) + 'MB'
+}
 </script>
 
 <style scoped>
@@ -637,7 +1349,7 @@ const formatDateTime = (date: Date) => {
 
 /* 自定义标题样式 */
 .custom-dialog-title {
-  font-size: 20px;
+  font-size: 25px;
   font-weight: 550;
   color: #303133;
   margin: 0;
@@ -646,6 +1358,7 @@ const formatDateTime = (date: Date) => {
 
 .supervision-detail {
   padding: 20px;
+  padding-top: 5px; /* 进一步减少顶部间距 */
 }
 
 /* 状态栏样式 */
@@ -653,14 +1366,15 @@ const formatDateTime = (date: Date) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
+  padding: 8px 0; /* 增加内边距 */
   border-bottom: 1px solid #e4e7ed;
   margin-bottom: 16px;
+  margin-top: 2px; /* 进一步减少与标题的间距 */
 }
 
 .status-tags {
   display: flex;
-  gap: 16px;
+  gap: 12px;
 }
 
 .status-tag {
@@ -671,13 +1385,36 @@ const formatDateTime = (date: Date) => {
   border: 1px solid;
 }
 
+
+
+.status-tag-item {
+  background-color: #f0f9ff;
+  color: #409eff;
+  border-color: #b3d8ff;
+}
+
 .priority-tag {
+  background-color: #f0f9ff;
+  color: #409eff;
+  border-color: #b3d8ff;
+}
+
+/* 高优先级 - 红色 */
+.priority-danger {
   background-color: #fef0f0;
   color: #f56c6c;
   border-color: #fbc4c4;
 }
 
-.status-tag-item {
+/* 中优先级 - 橙色 */
+.priority-warning {
+  background-color: #fdf6ec;
+  color: #e6a23c;
+  border-color: #f5dab1;
+}
+
+/* 一般优先级 - 蓝色 */
+.priority-info {
   background-color: #f0f9ff;
   color: #409eff;
   border-color: #b3d8ff;
@@ -690,8 +1427,9 @@ const formatDateTime = (date: Date) => {
 }
 
 .doc-number {
-  color: #909399;
-  font-size: 14px;
+  color: #303133; /* 改为黑色 */
+  font-size: 16px;
+  font-weight: 500;
 }
 
 /* 主要内容区域 */
@@ -756,23 +1494,53 @@ const formatDateTime = (date: Date) => {
 }
 
 .task-info-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 40px;
-  align-items: stretch;
+  grid-template-rows: auto auto auto; /* 三行布局 */
 }
 
 .task-info-col {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  display: contents; /* 让子元素直接参与grid布局 */
+}
+
+/* 左列：下发单位、牵头部门、协办部门 */
+.task-info-col:first-child .info-group:nth-child(1) {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.task-info-col:first-child .info-group:nth-child(2) {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.task-info-col:first-child .info-group:nth-child(3) {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+/* 右列：下发人、负责人、分管领导 */
+.task-info-col:last-child .info-group:nth-child(1) {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.task-info-col:last-child .info-group:nth-child(2) {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.task-info-col:last-child .info-group:nth-child(3) {
+  grid-column: 2;
+  grid-row: 3;
 }
 
 .info-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-height: 60px;
+  min-height: 80px; /* 增加最小高度以适应换行 */
   justify-content: flex-start;
 }
 
@@ -785,21 +1553,29 @@ const formatDateTime = (date: Date) => {
 
 .info-item-new {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   padding: 8px 0;
   min-height: 40px;
+  position: relative;
 }
 
 .item-icon {
   color: #409eff;
   font-size: 16px;
+  margin-top: 2px;
+  flex-shrink: 0;
 }
 
 .item-text {
   color: #303133;
   font-size: 16px;
   font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  word-wrap: break-word;
+  line-height: 1.4;
+  max-width: calc(100% - 180px); /* 限制最大宽度，为联系电话预留空间 */
 }
 
 .contact-info {
@@ -808,10 +1584,21 @@ const formatDateTime = (date: Date) => {
   margin-left: 16px;
 }
 
+.contact-info-inline {
+  color: #909399;
+  font-size: 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: auto;
+  margin-right: 4px;
+}
+
 .phone-number {
   color: #303133;
   font-size: 16px;
-  margin-left: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 110px;
 }
 
 /* 时间信息样式 */
@@ -923,9 +1710,20 @@ const formatDateTime = (date: Date) => {
 
 .progress-header {
   display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.progress-left {
+  display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 8px;
+}
+
+.progress-right {
+  color: #ff6b6b;
+  font-size: 14px;
 }
 
 .progress-title {
@@ -940,9 +1738,8 @@ const formatDateTime = (date: Date) => {
 }
 
 .progress-time {
-  color: #f56c6c;
+  color: #ff6b6b;
   font-size: 14px;
-  margin-left: auto;
 }
 
 .progress-description {
@@ -977,7 +1774,13 @@ const formatDateTime = (date: Date) => {
   color: #909399;
   font-size: 14px;
   margin-top: 8px;
-  text-align: right;
+  text-align: left;
+}
+
+/* 空状态样式 */
+.empty-records {
+  padding: 40px 0;
+  text-align: center;
 }
 
 /* 更多历史记录按钮样式 */
@@ -1009,6 +1812,11 @@ const formatDateTime = (date: Date) => {
   gap: 16px;
 }
 
+.empty-history {
+  padding: 40px 0;
+  text-align: center;
+}
+
 .history-item {
   position: relative;
   display: flex;
@@ -1034,9 +1842,20 @@ const formatDateTime = (date: Date) => {
 
 .history-header {
   display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.history-left {
+  display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 8px;
+}
+
+.history-right {
+  color: #ff6b6b;
+  font-size: 14px;
 }
 
 .history-title {
@@ -1053,7 +1872,13 @@ const formatDateTime = (date: Date) => {
 .history-time {
   color: #909399;
   font-size: 14px;
-  margin-left: auto;
+  margin-top: 8px;
+  text-align: left;
+}
+
+.history-expected-time {
+  color: #ff6b6b;
+  font-size: 14px;
 }
 
 .history-description {
@@ -1162,7 +1987,163 @@ const formatDateTime = (date: Date) => {
   color: #409eff;
 }
 
-/* 流转记录样式 */
+/* 工作流时间线样式 */
+.workflow-timeline {
+  position: relative;
+}
+
+.workflow-timeline .el-timeline {
+  padding-left: 0;
+}
+
+.workflow-timeline-content {
+  padding-top: 20px;
+}
+
+.workflow-timeline .el-timeline-item__wrapper {
+  position: relative;
+  padding-left: 28px;
+  padding-bottom: 20px;
+}
+
+.workflow-timeline .el-timeline-item__tail {
+  position: absolute;
+  left: 4px;
+  height: calc(100% - 10px);
+  border-left: 2px solid #e4e7ed;
+}
+
+.workflow-timeline .el-timeline-item__node {
+  position: absolute;
+  background-color: #fff;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.workflow-timeline .el-timeline-item__content {
+  color: #303133;
+}
+
+/* 工作流节点样式 */
+.workflow-node-container {
+  position: absolute;
+  left: -10px;
+  top: -6px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid #dedede;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #3f73f7;
+  padding: 5px;
+}
+
+.workflow-node-img {
+  width: 100%;
+  height: 100%;
+}
+
+.workflow-node-status {
+  position: absolute;
+  top: 17px;
+  left: 17px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  padding: 1px;
+  border: 2px solid white;
+}
+
+/* 工作流活动内容样式 */
+.workflow-activity-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.workflow-activity-header {
+  display: flex;
+  width: 100%;
+}
+
+.workflow-activity-name {
+  font-weight: bold;
+}
+
+.workflow-activity-time {
+  color: #a5a5a5;
+  font-size: 13px;
+  margin-top: 4px;
+  margin-left: auto;
+}
+
+.workflow-activity-tasks {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  gap: 8px;
+}
+
+/* 工作流任务样式 */
+.workflow-task-item {
+  display: flex;
+  flex-direction: column;
+  padding-right: 8px;
+  gap: 8px;
+}
+
+.workflow-task-user {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.workflow-user-info {
+  background-color: #f5f5f5;
+  height: 35px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  padding-right: 8px;
+  position: relative;
+}
+
+.workflow-user-avatar {
+  margin: 5px;
+}
+
+.workflow-user-name {
+  margin-left: 4px;
+}
+
+.workflow-task-reason {
+  color: #a5a5a5;
+  font-size: 13px;
+  margin-top: 4px;
+  width: 100%;
+  background-color: #f8f8fa;
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.workflow-candidate-user {
+  background-color: #f5f5f5;
+  height: 35px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  padding-right: 8px;
+  position: relative;
+}
+
+/* 保留原有的流转记录样式作为备用 */
 .flow-timeline {
   position: relative;
 }
@@ -1280,5 +2261,86 @@ const formatDateTime = (date: Date) => {
 /* 底部内容区域 */
 .bottom-content {
   margin-top: 20px;
+}
+
+/* 进度更新记录标题区域 */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+/* 文件上传样式 */
+.el-upload__tip {
+  font-size: 12px;
+  color: #606266;
+  margin-top: 7px;
+}
+
+.section-header .section-title {
+  margin: 0;
+  flex: 1;
+}
+
+/* 添加进度更新弹窗样式 */
+.add-progress-dialog :deep(.el-dialog__body) {
+  padding: 20px;
+}
+
+.add-progress-dialog :deep(.el-form-item__label) {
+  font-weight: 500;
+  color: #303133;
+}
+
+.add-progress-dialog :deep(.el-textarea__inner) {
+  resize: vertical;
+}
+
+.dialog-footer {
+  text-align: right;
+}
+
+/* 文件上传样式 */
+.upload-demo {
+  width: 100%;
+}
+
+.upload-demo :deep(.el-upload-dragger) {
+  width: 100%;
+  height: 120px;
+  border: 2px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+
+.upload-demo :deep(.el-upload-dragger:hover) {
+  border-color: #409eff;
+}
+
+.upload-icon {
+  font-size: 28px;
+  color: #8c939d;
+  margin-bottom: 16px;
+}
+
+.upload-demo :deep(.el-upload__text) {
+  color: #606266;
+  font-size: 14px;
+  text-align: center;
+}
+
+.upload-demo :deep(.el-upload__text em) {
+  color: #409eff;
+  font-style: normal;
+}
+
+.upload-demo :deep(.el-upload__tip) {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 7px;
 }
 </style>

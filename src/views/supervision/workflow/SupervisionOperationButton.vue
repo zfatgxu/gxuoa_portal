@@ -189,7 +189,7 @@
     </el-popover> -->
 
     <!-- 【转办】按钮 -->
-    <!-- <el-popover
+    <el-popover
       :visible="popOverVisible.transfer"
       placement="top-start"
       :width="420"
@@ -238,59 +238,59 @@
           </el-form-item>
         </el-form>
       </div>
-    </el-popover> -->
+    </el-popover>
 
-    <!-- 【委派】按钮 -->
-    <!-- <el-popover
-      :visible="popOverVisible.delegate"
-      placement="top-start"
-      :width="420"
-      trigger="click"
-      v-if="runningTask && isHandleTaskStatus() && isShowButton(OperationButtonType.DELEGATE)"
-    >
-      <template #reference>
-        <div @click="openPopover('delegate')" class="hover-bg-gray-100 rounded-xl p-6px">
-          <Icon :size="14" icon="ep:position" />&nbsp;
-          {{ getButtonDisplayName(OperationButtonType.DELEGATE) }}
-        </div>
-      </template>
-      <div class="flex flex-col flex-1 pt-20px px-20px" v-loading="formLoading">
-        <el-form
-          label-position="top"
-          class="mb-auto"
-          ref="delegateFormRef"
-          :model="delegateForm"
-          :rules="delegateFormRule"
-          label-width="100px"
-        >
-          <el-form-item label="接收人" prop="delegateUserId">
-            <el-select v-model="delegateForm.delegateUserId" clearable style="width: 100%">
-              <el-option
-                v-for="item in userOptions"
-                :key="item.id"
-                :label="item.nickname"
-                :value="item.id"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="审批意见" prop="reason">
-            <el-input
-              v-model="delegateForm.reason"
-              clearable
-              placeholder="请输入审批意见"
-              type="textarea"
-              :rows="3"
-            />
-          </el-form-item>
-          <el-form-item>
-            <el-button :disabled="formLoading" type="primary" @click="handleDelegate()">
-              {{ getButtonDisplayName(OperationButtonType.DELEGATE) }}
-            </el-button>
-            <el-button @click="closePopover('delegate', delegateFormRef)"> 取消 </el-button>
-          </el-form-item>
-        </el-form>
-      </div>
-    </el-popover> -->
+<!--    &lt;!&ndash; 【委派】按钮 &ndash;&gt;-->
+<!--     <el-popover-->
+<!--      :visible="popOverVisible.delegate"-->
+<!--      placement="top-start"-->
+<!--      :width="420"-->
+<!--      trigger="click"-->
+<!--      v-if="runningTask && isHandleTaskStatus() && isShowButton(OperationButtonType.DELEGATE)"-->
+<!--    >-->
+<!--      <template #reference>-->
+<!--        <div @click="openPopover('delegate')" class="hover-bg-gray-100 rounded-xl p-6px">-->
+<!--          <Icon :size="14" icon="ep:position" />&nbsp;-->
+<!--          {{ getButtonDisplayName(OperationButtonType.DELEGATE) }}-->
+<!--        </div>-->
+<!--      </template>-->
+<!--      <div class="flex flex-col flex-1 pt-20px px-20px" v-loading="formLoading">-->
+<!--        <el-form-->
+<!--          label-position="top"-->
+<!--          class="mb-auto"-->
+<!--          ref="delegateFormRef"-->
+<!--          :model="delegateForm"-->
+<!--          :rules="delegateFormRule"-->
+<!--          label-width="100px"-->
+<!--        >-->
+<!--          <el-form-item label="接收人" prop="delegateUserId">-->
+<!--            <el-select v-model="delegateForm.delegateUserId" clearable style="width: 100%">-->
+<!--              <el-option-->
+<!--                v-for="item in userOptions"-->
+<!--                :key="item.id"-->
+<!--                :label="item.nickname"-->
+<!--                :value="item.id"-->
+<!--              />-->
+<!--            </el-select>-->
+<!--          </el-form-item>-->
+<!--          <el-form-item label="审批意见" prop="reason">-->
+<!--            <el-input-->
+<!--              v-model="delegateForm.reason"-->
+<!--              clearable-->
+<!--              placeholder="请输入审批意见"-->
+<!--              type="textarea"-->
+<!--              :rows="3"-->
+<!--            />-->
+<!--          </el-form-item>-->
+<!--          <el-form-item>-->
+<!--            <el-button :disabled="formLoading" type="primary" @click="handleDelegate()">-->
+<!--              {{ getButtonDisplayName(OperationButtonType.DELEGATE) }}-->
+<!--            </el-button>-->
+<!--            <el-button @click="closePopover('delegate', delegateFormRef)"> 取消 </el-button>-->
+<!--          </el-form-item>-->
+<!--        </el-form>-->
+<!--      </div>-->
+<!--    </el-popover>-->
 
     <!-- 【加签】按钮 当前任务审批人为A，向前加签选了一个C，则需要C先审批，然后再是A审批，向后加签B，A审批完，需要B再审批完，才算完成这个任务节点 -->
     <!-- <el-popover

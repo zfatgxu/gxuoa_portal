@@ -50,10 +50,7 @@
     <div class="task-section">
       <div class="task-header-controls">
         <el-tabs v-model="activeTab" class="inline-tabs">
-          <el-tab-pane label="分管事项" name="managed-items" />
           <el-tab-pane label="全部事项" name="all-items" />
-          <el-tab-pane label="需要关注" name="attention-items" />
-          <el-tab-pane label="协办任务" name="collaborative-tasks" />
           <el-tab-pane label="已完成" name="completed-tasks" />
         </el-tabs>
         <div class="control-group">
@@ -78,8 +75,7 @@
             <el-option label="已完成" value="已完成" />
             <el-option label="超时" value="超时" />
           </el-select>
-          <el-button :icon="Bell">一键提醒</el-button>
-          <el-button type="text" class="more-btn">更多 <el-icon><ArrowRight /></el-icon></el-button>
+
         </div>
       </div>
 
@@ -95,7 +91,7 @@
             <h4 class="task-title">{{ task.title }}</h4>
             <div class="task-actions">
               <el-tag :type="getPriorityType(task.priority)" size="small">{{ task.priority }}</el-tag>
-              <el-tag :type="getStatusType(task.status)" size="small">{{ task.status }}</el-tag>
+              <el-tag :type="getStatusType(task)" size="small">{{ getStatusText(task) }}</el-tag>
             </div>
           </div>
 
@@ -134,12 +130,11 @@
 
               <div class="detail-row">
                 <span>创建时间：{{ task.createTime }}</span>
-                <span class="remaining-days">剩余{{ task.remainingDays }}天</span>
+                <span v-if="activeTab !== 'completed-tasks'" class="remaining-days">剩余{{ task.remainingDays }}天</span>
               </div>
             </div>
             <div class="task-buttons">
               <el-button size="small" @click="viewTaskDetail(task)">查看详情</el-button>
-              <el-button size="small" type="info" @click="trackProgress(task)">督促提醒</el-button>
               <el-button size="small" type="primary" @click="addInstruction(task)">新增批示</el-button>
             </div>
           </div>
@@ -154,6 +149,7 @@
     <SupervisionDetailDialog
       v-model="detailDialogVisible"
       :task-data="selectedTask"
+      :process-instance-id="selectedTask?.processInstanceId"
       @close="handleDetailClose"
     />
 
@@ -164,28 +160,13 @@
       width="60%"
     >
       <el-form :model="instructionForm" label-width="100px">
-        <el-form-item label="批示类型">
-          <el-select v-model="instructionForm.type" placeholder="请选择批示类型">
-            <el-option label="重要批示" value="important" />
-            <el-option label="一般批示" value="normal" />
-            <el-option label="督办批示" value="supervision" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="批示内容">
           <el-input
             v-model="instructionForm.content"
             type="textarea"
-            :rows="6"
+            :rows="8"
             placeholder="请输入批示内容"
           />
-        </el-form-item>
-        <el-form-item label="抄送部门">
-          <el-select v-model="instructionForm.ccDepts" multiple placeholder="请选择抄送部门">
-            <el-option label="学生处" value="学生处" />
-            <el-option label="后勤处" value="后勤处" />
-            <el-option label="保卫处" value="保卫处" />
-            <el-option label="教务处" value="教务处" />
-          </el-select>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -229,8 +210,8 @@
 <script setup>
 import { ref, reactive, computed } from 'vue'
 import {
-  Search, Bell, DataAnalysis, Document, Clock, CircleCheck, Warning,
-  ArrowRight, OfficeBuilding, User
+  Search, DataAnalysis, Document, Clock, CircleCheck, Warning,
+  OfficeBuilding, User
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import SupervisionDetailDialog from '../components/SupervisionDetailDialog.vue'
@@ -246,9 +227,7 @@ const historyDialogVisible = ref(false)
 const selectedTask = ref(null)
 
 const instructionForm = reactive({
-  type: '',
-  content: '',
-  ccDepts: []
+  content: ''
 })
 
 // 模拟当前用户的部门，用于“协办任务”过滤
@@ -441,13 +420,39 @@ const getPriorityType = (priority) => {
   return types[priority] || 'info'
 }
 
-const getStatusType = (status) => {
+// 获取任务状态类型（用于标签颜色）
+const getStatusType = (task) => {
+  const status = getStatusText(task)
   const types = {
     '进行中': 'warning',
     '已完成': 'success',
-    '超时': 'danger'
+    '已超时': 'danger'
   }
   return types[status] || 'info'
+}
+
+// 获取任务状态文本
+const getStatusText = (task) => {
+  // 已完成标签页中的任务都显示"已完成"
+  if (activeTab.value === 'completed-tasks') {
+    return '已完成'
+  }
+
+  // 其他标签页中的任务根据截止时间判断状态
+  const deadline = task.deadline
+  if (!deadline) {
+    return '进行中' // 没有截止时间默认为进行中
+  }
+
+  const deadlineDate = new Date(deadline)
+  const now = new Date()
+
+  // 如果当前时间超过截止时间，显示"已超时"，否则显示"进行中"
+  if (now > deadlineDate) {
+    return '已超时'
+  } else {
+    return '进行中'
+  }
 }
 
 const viewTaskDetail = (task) => {
@@ -458,11 +463,6 @@ const viewTaskDetail = (task) => {
 const handleDetailClose = () => {
   detailDialogVisible.value = false
   selectedTask.value = null
-}
-
-const trackProgress = (task) => {
-  ElMessage.info(`正在督促提醒任务：${task.title}`)
-  // 这里可以实现督促提醒功能
 }
 
 const addInstruction = (task) => {
@@ -480,9 +480,7 @@ const submitInstruction = () => {
   instructionDialogVisible.value = false
 
   // 重置表单
-  instructionForm.type = ''
   instructionForm.content = ''
-  instructionForm.ccDepts = []
 }
 
 const showMoreHistory = () => {
@@ -528,14 +526,14 @@ const filteredTaskListByInstruction = () => {
 .section-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 15px;
-  color: #409eff;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 18px;
+  margin-bottom: 16px;
+  color: #303133;
 }
 
 .title-icon {
+  margin-right: 8px;
+  font-size: 20px;
   color: #409eff;
 }
 
@@ -632,6 +630,20 @@ const filteredTaskListByInstruction = () => {
 
 .inline-tabs {
   flex-shrink: 0;
+}
+
+/* 标签页文字样式 */
+.inline-tabs :deep(.el-tabs__item) {
+  font-size: 20px;        /* 调整文字大小 */
+  font-weight: 500;       /* 调整文字粗细：normal(400), 500, 600, bold(700) */
+  color: black;         /* 未激活状态文字颜色 */
+}
+
+/* 激活状态的标签页文字样式 */
+.inline-tabs :deep(.el-tabs__item.is-active) {
+  font-size: 20px;        /* 激活状态文字大小 */
+  font-weight: 500;       /* 激活状态文字粗细 */
+  color: #409EFF;         /* 激活状态文字颜色 */
 }
 
 .control-group {

@@ -920,7 +920,7 @@ const getSupervisionWorkflowUpdateData = async (startLeaderSelectAssignees?: Rec
 
   // 如果有附件，添加到更新数据中
   if (allAttachments.length > 0) {
-    updateData.fileLIst = allAttachments
+    updateData.fileList = allAttachments
   }
 
 
