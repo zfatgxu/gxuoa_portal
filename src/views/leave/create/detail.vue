@@ -837,6 +837,7 @@ const fetchUserProfile = async () => {
           title: res.postName || '',
           position: res.nickName || '',
           level: res.level || '',
+          professionalTitle: res.professionalTitle || '',
         };
         processInstanceId.value = res.processInstanceId;
       }
