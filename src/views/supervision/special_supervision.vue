@@ -12,10 +12,8 @@
         <div class="action-bar">
           <div class="action-buttons">
             <el-button type="primary" :icon="Plus" @click="handleCreate">新建</el-button>
-            <el-button :icon="Edit">修改</el-button>
             <el-button :icon="Delete" type="danger">删除</el-button>
-            <el-button :icon="Download">导出</el-button>
-            <el-button :icon="Bell" type="warning">提醒</el-button>
+            <el-button :icon="Download" @click="handleExport" :loading="exportLoading">导出</el-button>
           </div>
           
           <div class="search-area">
@@ -49,31 +47,13 @@
           </div>
         </div>
   
-        <!-- 标签页和排序 -->
-        <div class="tab-sort-area">
+        <!-- 标签页 -->
+        <div class="tab-area">
           <el-tabs v-model="activeTab" class="tabs custom-tabs">
             <el-tab-pane label="流程中" name="processing" />
-            <el-tab-pane label="结办文件" name="completed" />
+            <el-tab-pane label="办结文件" name="completed" />
             <el-tab-pane label="否决文件" name="rejected" />
           </el-tabs>
-          
-          <div class="sort-area">
-            <div class="sort-item">
-              <span>排序字段:</span>
-              <el-select v-model="sortField" style="width: 120px;">
-                <el-option label="创建时间" value="createTime" />
-                <el-option label="完成期限" value="deadline" />
-                <el-option label="督办编号" value="number" />
-              </el-select>
-            </div>
-            <div class="sort-item">
-              <span>排序方式:</span>
-              <el-select v-model="sortOrder" style="width: 100px;">
-                <el-option label="倒序" value="desc" />
-                <el-option label="正序" value="asc" />
-              </el-select>
-            </div>
-          </div>
         </div>
   
         <!-- 数据表格 -->
@@ -81,7 +61,11 @@
           <el-table-column type="selection" width="55" />
           <el-table-column prop="id" label="序号" width="80" />
           <el-table-column prop="orderCode" label="督办编号" min-width="120" />
-          <el-table-column prop="orderTitle" label="督办内容" min-width="150" />
+          <el-table-column label="督办内容" min-width="150">
+            <template #default="{ row }">
+              <div class="content-cell">{{ row.content || '' }}</div>
+            </template>
+          </el-table-column>
           <el-table-column label="承办单位" min-width="100">
             <template #default="{ row }">
               {{ getDeptName(row.leadDept) }}
@@ -103,8 +87,8 @@
             </template>
           </el-table-column>
           <el-table-column label="操作" width="80" fixed="right">
-            <template #default>
-              <el-button type="primary" link>详情</el-button>
+            <template #default="{ row }">
+              <el-button type="primary" link @click="handleDetail(row)">详情</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -130,17 +114,32 @@
         </div>
       </div>
     </div>
+
+    <!-- 督办详情弹窗 -->
+    <SupervisionDetailDialog
+      v-model="detailDialogVisible"
+      :task-data="selectedOrderData"
+      :process-instance-id="selectedOrderData?.processInstanceId"
+      :supervision-status="selectedOrderData?.supervisionStatus"
+    />
   </template>
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch } from 'vue'
-import { Plus, Edit, Delete, Download, Bell } from '@element-plus/icons-vue'
+import { Plus, Delete, Download } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { OrderApi } from '@/api/supervision'
-import type { OrderPageReqVO, OrderRespVO } from '@/api/supervision'
+import type { OrderPageReqVO, OrderRespVO, OrderExportReqVO } from '@/api/supervision'
 import { getSimpleDeptList, type DeptVO } from '@/api/system/dept'
 import { ElMessage } from 'element-plus'
+import SupervisionDetailDialog from './components/SupervisionDetailDialog.vue'
+import { useMessage } from '@/hooks/web/useMessage'
+import download from '@/utils/download'
 
 const router = useRouter()
+const message = useMessage()
+
+// 导出加载状态
+const exportLoading = ref(false)
 
 // 搜索表单
 const searchForm = reactive({
@@ -151,10 +150,6 @@ const searchForm = reactive({
 
 // 当前激活的标签页
 const activeTab = ref('processing')
-
-// 排序
-const sortField = ref('createTime')
-const sortOrder = ref('desc')
 
 // 分页
 const currentPage = ref(1)
@@ -271,7 +266,7 @@ const fetchOrderData = async () => {
 const getDataByStatus = (status: string) => {
   const statusMap = {
     'processing': '流程中',
-    'completed': '结办文件',
+    'completed': '办结文件',
     'rejected': '否决文件'
   }
   return allData.value.filter(item => {
@@ -302,13 +297,17 @@ const currentTabStats = computed(() => {
   return {
     tabName: {
       'processing': '流程中',
-      'completed': '结办文件',
+      'completed': '办结文件',
       'rejected': '否决文件'
     }[activeTab.value] || '全部'
   }
 })
 // 选中的行
 const selectedRows = ref([])
+
+// 详情弹窗状态
+const detailDialogVisible = ref(false)
+const selectedOrderData = ref(null)
 
 // 处理选择变化
 const handleSelectionChange = (selection) => {
@@ -345,6 +344,43 @@ const handleCreate = () => {
       type: 'special'
     }
   })
+}
+
+// 处理详情按钮点击
+const handleDetail = (row: OrderRespVO) => {
+  selectedOrderData.value = row
+  detailDialogVisible.value = true
+}
+
+// 处理导出按钮点击
+const handleExport = async () => {
+  try {
+    // 检查是否有选中的行
+    if (selectedRows.value.length === 0) {
+      ElMessage.warning('请先选择要导出的督办单')
+      return
+    }
+
+    // 导出的二次确认
+    await message.exportConfirm()
+
+    // 发起导出
+    exportLoading.value = true
+
+    // 构建导出参数，只传递必要的ID
+    const exportParams: OrderExportReqVO = {
+      ids: selectedRows.value.map(row => row.id) // 传递ID数组
+    }
+
+    const data = await OrderApi.exportOrder(exportParams)
+    download.excel(data, '专项督办单.xls')
+
+    ElMessage.success('导出成功')
+  } catch (error) {
+    console.error('导出失败:', error)
+  } finally {
+    exportLoading.value = false
+  }
 }
 
 // 监听标签页变化
@@ -411,29 +447,13 @@ onMounted(async () => {
     color: #666;
   }
   
-  .tab-sort-area {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+  .tab-area {
     margin-bottom: 20px;
     border-bottom: 1px solid #e4e7ed;
   }
-  
+
   .tabs {
-    flex: 1;
-  }
-  
-  .sort-area {
-    display: flex;
-    gap: 20px;
-    align-items: center;
-  }
-  
-  .sort-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #666;
+    width: 100%;
   }
   
   .pagination-wrapper {
@@ -443,6 +463,14 @@ onMounted(async () => {
     margin-top: 20px;
     flex-wrap: wrap;
     gap: 20px;
+  }
+
+  /* 督办内容单元格样式 */
+  .content-cell {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   
   .pagination-info {
@@ -512,16 +540,6 @@ onMounted(async () => {
     }
     
     .search-area {
-      justify-content: center;
-    }
-    
-    .tab-sort-area {
-      flex-direction: column;
-      align-items: stretch;
-      gap: 15px;
-    }
-    
-    .sort-area {
       justify-content: center;
     }
     

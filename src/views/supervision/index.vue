@@ -15,12 +15,12 @@
             <circle cx="50" cy="50" r="40" stroke="#e5e7eb" stroke-width="8" fill="none"/>
             <!-- Progress circle for 工作督办 -->
             <circle cx="50" cy="50" r="40" stroke="#f59e0b" stroke-width="8" fill="none"
-                    :stroke-dasharray="`${(taskStats.workSupervision / taskStats.total) * 251.2} 251.2`"
+                    :stroke-dasharray="workSupervisionDashArray"
                     stroke-linecap="round"/>
             <!-- Progress circle for 专项督办 -->
             <circle cx="50" cy="50" r="40" stroke="#3b82f6" stroke-width="8" fill="none"
-                    :stroke-dasharray="`${(taskStats.specialSupervision / taskStats.total) * 251.2} 251.2`"
-                    :stroke-dashoffset="`-${(taskStats.workSupervision / taskStats.total) * 251.2}`"
+                    :stroke-dasharray="specialSupervisionDashArray"
+                    :stroke-dashoffset="specialSupervisionDashOffset"
                     stroke-linecap="round"/>
             </svg>
             <div class="absolute inset-0 flex flex-col items-center justify-center">
@@ -56,16 +56,13 @@
             <circle cx="50" cy="50" r="35" stroke="#e5e7eb" stroke-width="12" fill="none"/>
             <!-- Status segments -->
             <circle cx="50" cy="50" r="35" stroke="#3b82f6" stroke-width="12" fill="none"
-                    :stroke-dasharray="`${(statusStats.fast / statusStats.total) * 219.8} 219.8`"/>
-            <circle cx="50" cy="50" r="35" stroke="#8b5cf6" stroke-width="12" fill="none"
-                    :stroke-dasharray="`${(statusStats.consulting / statusStats.total) * 219.8} 219.8`"
-                    :stroke-dashoffset="`-${(statusStats.fast / statusStats.total) * 219.8}`"/>
-            <circle cx="50" cy="50" r="35" stroke="#f59e0b" stroke-width="12" fill="none"
-                    :stroke-dasharray="`${(statusStats.slow / statusStats.total) * 219.8} 219.8`"
-                    :stroke-dashoffset="`-${((statusStats.fast + statusStats.consulting) / statusStats.total) * 219.8}`"/>
+                    :stroke-dasharray="statusInProgressDashArray"/>
+            <circle cx="50" cy="50" r="35" stroke="#ef4444" stroke-width="12" fill="none"
+                    :stroke-dasharray="statusOverdueDashArray"
+                    :stroke-dashoffset="statusOverdueDashOffset"/>
             <circle cx="50" cy="50" r="35" stroke="#10b981" stroke-width="12" fill="none"
-                    :stroke-dasharray="`${(statusStats.completed / statusStats.total) * 219.8} 219.8`"
-                    :stroke-dashoffset="`-${((statusStats.fast + statusStats.consulting + statusStats.slow) / statusStats.total) * 219.8}`"/>
+                    :stroke-dasharray="statusCompletedDashArray"
+                    :stroke-dashoffset="statusCompletedDashOffset"/>
             </svg>
             <div class="absolute inset-0 flex flex-col items-center justify-center">
             <span class="text-xl font-bold text-gray-800">{{ statusStats.total }}</span>
@@ -76,28 +73,21 @@
             <div class="flex items-center space-x-3">
             <div class="flex items-center">
                 <div class="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-                <span class="text-gray-600">进展较快</span>
+                <span class="text-gray-600">进行中</span>
             </div>
-            <span class="font-medium">{{ statusStats.fast }}</span>
-            </div>
-            <div class="flex items-center justify-between">
-            <div class="flex items-center">
-                <div class="w-2 h-2 bg-purple-500 rounded-full mr-2"></div>
-                <span class="text-gray-600">会商解决</span>
-            </div>
-            <span class="font-medium">{{ statusStats.consulting }}</span>
+            <span class="font-medium">{{ statusStats.inProgress }}</span>
             </div>
             <div class="flex items-center justify-between">
             <div class="flex items-center">
-                <div class="w-2 h-2 bg-yellow-500 rounded-full mr-2"></div>
-                <span class="text-gray-600">进展滞后</span>
+                <div class="w-2 h-2 bg-red-500 rounded-full mr-2"></div>
+                <span class="text-gray-600">已超时</span>
             </div>
-            <span class="font-medium">{{ statusStats.slow }}</span>
+            <span class="font-medium">{{ statusStats.overdue }}</span>
             </div>
             <div class="flex items-center justify-between">
             <div class="flex items-center">
                 <div class="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
-                <span class="text-gray-600">已完成</span>
+                <span class="text-gray-600">已结束</span>
             </div>
             <span class="font-medium">{{ statusStats.completed }}</span>
             </div>
@@ -185,12 +175,7 @@
                 :value="status"
             />
             </el-select>
-            <el-button>
-                <Bell class="w-5 h-5 mr-2" /> 一键提醒 
-            </el-button>
-            <el-button type="text" class="text-blue-600 hover:text-blue-700">
-                更多 
-            </el-button>
+
         </div>
         </div>
     </div>
@@ -213,11 +198,11 @@
                     style="font-weight: bold;">
                     {{ task.priority }}
                     </span>
-                    <span 
+                    <span
                     :class="[
                         'ml-2 px-2 py-1 rounded text-xs font-medium w-20',
                         task.status === '已超时' ? 'bg-red-100 text-red-800' :
-                        task.status === '已完成' ? 'bg-green-100 text-green-800' :
+                        task.status === '已结束' ? 'bg-green-100 text-green-800' :
                         task.status === '进行中' ? 'bg-blue-100 text-blue-800' :
                         'bg-gray-100 text-gray-800'
                     ]"
@@ -270,9 +255,6 @@
                     <el-button class="w-20" @click="openDetailDialog(task)">
                         查看详情
                     </el-button>
-                    <el-button class="w-20">
-                        流转
-                    </el-button>
                 </div>
             </div>
             </div>
@@ -281,25 +263,39 @@
         </div>
         </div>
     </div>
+
+    <!-- 分页组件 -->
+    <div class="flex justify-center mt-6">
+      <el-pagination
+        v-model:current-page="pagination.pageNo"
+        v-model:page-size="pagination.pageSize"
+        :page-sizes="[10, 20, 50, 100]"
+        :total="currentTabTotal"
+        layout="total, sizes, prev, pager, next, jumper"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+      />
+    </div>
     </div>
 
     <!-- 督办详情弹框 -->
     <SupervisionDetailDialog
       v-model="detailDialogVisible"
       :task-data="selectedTask"
+      :process-instance-id="selectedTask?.processInstanceId"
+      :supervision-status="selectedTask?.supervisionStatus"
     />
 </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted } from 'vue'
+<script setup lang="ts">
+import { ref, computed, onMounted, watch } from 'vue'
 import {
 Calendar,
 Clock,
 CheckCircle,
 TimerOff,
 Search,
-Bell,
 ChevronRight,
 Users,
 Building,
@@ -308,7 +304,9 @@ AlertTriangle
 } from 'lucide-vue-next'
 import SupervisionDetailDialog from './components/SupervisionDetailDialog.vue'
 import { SupervisionIndexApi } from '@/api/supervision/index'
+import type { SupervisionOrderDetailVO, SupervisionStatisticsVO } from '@/api/supervision/index'
 import { ElMessage } from 'element-plus'
+import { formatDate, betweenDay } from '@/utils/formatTime'
 
 // Reactive data
 const activeTab = ref('work')
@@ -319,14 +317,32 @@ const detailDialogVisible = ref(false)
 const selectedTask = ref(null)
 const loading = ref(false)
 
+// 缓存相关
+const statisticsCache = ref(null)
+const statisticsCacheTime = ref(0)
+const CACHE_DURATION = 5 * 60 * 1000 // 5分钟缓存
+
 // Static data
 const tabs = [
 { key: 'work', label: '工作督办' },
 { key: 'special', label: '专项督办' }
 ]
 
-const departments = ['学生处', '保卫处', '后勤处', '教务处', '人事处']
-const statuses = ['进行中', '已完成', '已超时', '已终结']
+const statuses = ['进行中', '已超时', '已结束']
+
+// 计算部门选项 - 从任务数据中提取部门名称
+const departments = computed(() => {
+  const deptSet = new Set()
+  tasks.value.forEach(task => {
+    if (task.leadDepartment) {
+      deptSet.add(task.leadDepartment)
+    }
+    task.assistDepartments.forEach(dept => {
+      if (dept) deptSet.add(dept)
+    })
+  })
+  return Array.from(deptSet)
+})
 
 // Statistics data
 const taskStats = ref({
@@ -337,9 +353,8 @@ const taskStats = ref({
 
 const statusStats = ref({
   total: 0,
-  fast: 0,
-  consulting: 0,
-  slow: 0,
+  inProgress: 0,
+  overdue: 0,
   completed: 0
 })
 
@@ -353,57 +368,221 @@ const monthlyStats = ref({
 // 任务列表数据
 const tasks = ref([])
 
+// 分页数据
+const pagination = ref({
+  pageNo: 1,
+  pageSize: 10, // 默认显示10条数据
+  total: 0
+})
+
+
+
+// 解析协办部门（从API返回的coDeptNameMap中获取）
+const parseCoDepts = (coDeptNameMap: Record<string, string> | null) => {
+  if (!coDeptNameMap) return []
+  return Object.values(coDeptNameMap)
+}
+
+// 根据督办状态和截止时间计算显示状态
+const calculateDisplayStatus = (supervisionStatus: string, deadline: number | null) => {
+  // 根据 supervisionStatus 判断基本状态
+  if (supervisionStatus === '办结文件' || supervisionStatus === '否决文件') {
+    return {
+      daysRemaining: null,
+      isOverdue: false,
+      overdueDays: null,
+      status: '已结束'
+    }
+  }
+
+  // 如果是"流程中"，需要进一步判断是否超时
+  if (supervisionStatus === '流程中') {
+    if (!deadline) {
+      return {
+        daysRemaining: null,
+        isOverdue: false,
+        overdueDays: null,
+        status: '进行中'
+      }
+    }
+
+    // 获取今天的日期（只保留年月日，忽略时分秒）
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // 获取截止日期（只保留年月日，忽略时分秒）
+    const deadlineDate = new Date(deadline)
+    deadlineDate.setHours(0, 0, 0, 0)
+
+    // 计算天数差：正数表示还有剩余天数，负数表示已超时
+    const daysDiff = Math.floor((deadlineDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000))
+
+    if (daysDiff < 0) {
+      // 已超时
+      return {
+        daysRemaining: null,
+        isOverdue: true,
+        overdueDays: Math.abs(daysDiff),
+        status: '已超时'
+      }
+    } else if (daysDiff === 0) {
+      // 今天截止
+      return {
+        daysRemaining: 0,
+        isOverdue: false,
+        overdueDays: null,
+        status: '进行中'
+      }
+    } else {
+      // 还有剩余时间
+      return {
+        daysRemaining: daysDiff,
+        isOverdue: false,
+        overdueDays: null,
+        status: '进行中'
+      }
+    }
+  }
+
+  // 其他状态默认显示进行中
+  return {
+    daysRemaining: null,
+    isOverdue: false,
+    overdueDays: null,
+    status: '进行中'
+  }
+}
+
+// 获取优先级文本
+const getPriorityText = (priority: number) => {
+  switch (priority) {
+    case 1: return '高优先级'
+    case 2: return '中优先级'
+    case 3: return '低优先级'
+    default: return '普通'
+  }
+}
+
+
+
+// 获取统计数据（带缓存）
+const getStatisticsData = async () => {
+  const now = Date.now()
+
+  // 检查缓存是否有效
+  if (statisticsCache.value && (now - statisticsCacheTime.value) < CACHE_DURATION) {
+    return statisticsCache.value
+  }
+
+  // 缓存失效，重新获取
+  const statistics = await SupervisionIndexApi.getStatistics()
+  statisticsCache.value = statistics
+  statisticsCacheTime.value = now
+
+  return statistics
+}
+
 // 获取数据
 const fetchData = async () => {
   loading.value = true
   try {
-    const response = await SupervisionIndexApi.getIndexData()
+    // 并行获取统计数据和督办数据
+    const typeParam = activeTab.value === 'work' ? 1 : 2
 
-    console.log('获取督办数据成功', response)
-    console.log('response.data:', response.data)
-    console.log('response类型:', typeof response)
-    console.log('response的所有键:', Object.keys(response))
+    const [statisticsResult, supervisionResult] = await Promise.allSettled([
+      getStatisticsData(),
+      SupervisionIndexApi.getIndexData({
+        pageNo: pagination.value.pageNo,
+        pageSize: pagination.value.pageSize,
+        type: typeParam
+      })
+    ])
 
-    // 灵活处理不同的响应结构
-    let data
-    if (response.data && response.data.data) {
-      // 如果是嵌套结构：{ data: { code: 0, msg: "success", data: {...} } }
-      data = response.data.data
-    } else if (response.data) {
-      // 如果是标准结构：{ data: {...} }
-      data = response.data
-    } else if (response.code === 0 && response.data) {
-      // 如果响应直接是API格式：{ code: 0, msg: "success", data: {...} }
-      data = response.data
+    // 处理统计数据
+    if (statisticsResult.status === 'fulfilled') {
+      const statistics = statisticsResult.value
+      console.log('获取统计数据成功', statistics)
+
+      // 设置任务类型统计
+      taskStats.value = {
+        total: statistics.workSupervision + statistics.specialSupervision,
+        workSupervision: statistics.workSupervision,
+        specialSupervision: statistics.specialSupervision
+      }
+
+      // 设置本月统计数据
+      monthlyStats.value = {
+        newTasks: statistics.monthTotal,
+        inProgress: statistics.monthInProgress,
+        completed: statistics.monthCompleted,
+        overdue: statistics.monthOverdue
+      }
+
+      // 设置状态统计
+      statusStats.value = {
+        total: statistics.monthTotal,
+        inProgress: statistics.monthInProgress,
+        overdue: statistics.monthOverdue,
+        completed: statistics.monthCompleted
+      }
     } else {
-      // 如果响应就是数据本身
-      data = response
+      console.error('获取统计数据失败', statisticsResult.reason)
+      ElMessage.error('获取统计数据失败')
     }
 
-    console.log('处理后的data:', data)
+    // 处理督办数据
+    if (supervisionResult.status === 'fulfilled') {
+      const supervisionResponse = supervisionResult.value
+      console.log('获取督办数据成功', supervisionResponse)
+      console.log('督办数据列表:', supervisionResponse.list)
 
-    // 设置统计数据
-    taskStats.value = data.taskStats
-    statusStats.value = data.statusStats
-    monthlyStats.value = data.monthlyStats
+      // 更新分页总数
+      pagination.value.total = supervisionResponse.total
+      const supervisionOrders = supervisionResponse.list
 
-    // 设置任务列表
-    tasks.value = data.tasks.map(task => ({
-      id: task.id,
-      title: task.applyTitle,
-      description: task.materialName,
-      leadDepartment: task.orgName,
-      assistDepartments: task.assistDepartments || [],
-      createdDate: task.createdDate,
-      deadline: task.deadline,
-      supervisor: task.signers,
-      priority: task.priority,
-      status: task.sealState,
-      overdueDays: task.overdueDays,
-      isOverdue: task.isOverdue,
-      daysRemaining: task.daysRemaining,
-      type: task.type === 1 ? 'work' : 'special'
-    }))
+      // 调试：统计不同类型的督办数量
+      const workCount = supervisionOrders.filter(order => order.type === 1).length
+      const specialCount = supervisionOrders.filter(order => order.type === 2).length
+      console.log(`工作督办数量: ${workCount}, 专项督办数量: ${specialCount}`)
+
+      // 处理督办数据（优化性能）
+      const processedTasks = supervisionOrders.map((order) => {
+        // 使用新的状态计算函数，传入 supervisionStatus 和 deadline
+        const displayStatus = calculateDisplayStatus(order.supervisionStatus || '流程中', order.deadline)
+
+        // 调试信息
+        console.log(`督办单 ${order.orderTitle}: supervisionStatus=${order.supervisionStatus}, 计算状态=${displayStatus.status}`)
+
+        // 预处理日期，避免重复创建Date对象
+        const createTime = order.createTime ? new Date(order.createTime) : null
+        const deadlineTime = order.deadline ? new Date(order.deadline) : null
+
+        return {
+          id: order.id,
+          title: order.orderTitle,
+          description: order.content,
+          leadDepartment: order.leadDeptName || '未知部门',
+          assistDepartments: parseCoDepts(order.coDeptNameMap),
+          createdDate: createTime ? formatDate(createTime, 'YYYY-MM-DD') : '',
+          deadline: deadlineTime ? formatDate(deadlineTime, 'YYYY-MM-DD') : '',
+          supervisor: order.leaderNickname || '未分配',
+          priority: getPriorityText(order.priority),
+          status: displayStatus.status,
+          overdueDays: displayStatus.overdueDays,
+          isOverdue: displayStatus.isOverdue,
+          daysRemaining: displayStatus.daysRemaining,
+          type: order.type === 1 ? 'work' : 'special',
+          processInstanceId: order.processInstanceId,
+          supervisionStatus: order.supervisionStatus // 保留原始状态字段
+        }
+      })
+
+      tasks.value = processedTasks
+    } else {
+      console.error('获取督办数据失败', supervisionResult.reason)
+      ElMessage.error('获取督办数据失败')
+    }
+
   } catch (error) {
     console.error('获取督办数据失败', error)
     ElMessage.error('获取督办数据失败')
@@ -412,15 +591,84 @@ const fetchData = async () => {
   }
 }
 
+
+
+// 分页事件处理
+const handleSizeChange = (newSize: number) => {
+  pagination.value.pageSize = newSize
+  pagination.value.pageNo = 1
+  fetchData()
+}
+
+const handleCurrentChange = (newPage: number) => {
+  pagination.value.pageNo = newPage
+  fetchData()
+}
+
+// 监听标签页切换，重新获取数据
+watch(activeTab, () => {
+  pagination.value.pageNo = 1 // 切换标签页时重置到第一页
+  fetchData()
+})
+
 // 页面加载时获取数据
 onMounted(() => {
   fetchData()
 })
 
-// Computed properties
+// Computed properties for chart data
+const workSupervisionDashArray = computed(() => {
+  if (taskStats.value.total === 0) return '0 251.2'
+  const percentage = (taskStats.value.workSupervision / taskStats.value.total) * 251.2
+  return `${percentage} 251.2`
+})
+
+const specialSupervisionDashArray = computed(() => {
+  if (taskStats.value.total === 0) return '0 251.2'
+  const percentage = (taskStats.value.specialSupervision / taskStats.value.total) * 251.2
+  return `${percentage} 251.2`
+})
+
+const specialSupervisionDashOffset = computed(() => {
+  if (taskStats.value.total === 0) return '0'
+  const offset = (taskStats.value.workSupervision / taskStats.value.total) * 251.2
+  return `-${offset}`
+})
+
+// Status chart computed properties
+const statusInProgressDashArray = computed(() => {
+  if (statusStats.value.total === 0) return '0 219.8'
+  const percentage = (statusStats.value.inProgress / statusStats.value.total) * 219.8
+  return `${percentage} 219.8`
+})
+
+const statusOverdueDashArray = computed(() => {
+  if (statusStats.value.total === 0) return '0 219.8'
+  const percentage = (statusStats.value.overdue / statusStats.value.total) * 219.8
+  return `${percentage} 219.8`
+})
+
+const statusOverdueDashOffset = computed(() => {
+  if (statusStats.value.total === 0) return '0'
+  const offset = (statusStats.value.inProgress / statusStats.value.total) * 219.8
+  return `-${offset}`
+})
+
+const statusCompletedDashArray = computed(() => {
+  if (statusStats.value.total === 0) return '0 219.8'
+  const percentage = (statusStats.value.completed / statusStats.value.total) * 219.8
+  return `${percentage} 219.8`
+})
+
+const statusCompletedDashOffset = computed(() => {
+  if (statusStats.value.total === 0) return '0'
+  const offset = ((statusStats.value.inProgress + statusStats.value.overdue) / statusStats.value.total) * 219.8
+  return `-${offset}`
+})
+
 const filteredTasks = computed(() => {
   return tasks.value.filter(task => {
-    const matchesTab = activeTab.value === task.type
+    // 不需要再按type过滤，因为后端已经按类型返回了数据
     const matchesSearch = !searchQuery.value ||
       task.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
       task.description.toLowerCase().includes(searchQuery.value.toLowerCase())
@@ -429,8 +677,13 @@ const filteredTasks = computed(() => {
       task.assistDepartments.includes(selectedDepartment.value)
     const matchesStatus = !selectedStatus.value || task.status === selectedStatus.value
 
-    return matchesTab && matchesSearch && matchesDepartment && matchesStatus
+    return matchesSearch && matchesDepartment && matchesStatus
   })
+})
+
+// 计算当前标签页的总数量（用于分页显示）
+const currentTabTotal = computed(() => {
+  return pagination.value.total // 直接使用后端返回的总数
 })
 
 // 打开详情弹框

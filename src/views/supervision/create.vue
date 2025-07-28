@@ -134,11 +134,11 @@
         <!-- 第六行：协办单位 -->
         <el-row :gutter="20">
           <el-col :span="24">
-            <el-form-item label="协办单位：" prop="collaborateDepts">
+            <el-form-item label="协办单位：" prop="collaborateDepts" >
               <el-select
                 v-model="orderForm.collaborateDepts"
                 multiple
-                placeholder="搜索并选择协办部门"
+                placeholder="协办单位由牵头单位选择"
                 style="width: 100%;"
                 :collapse-tags="true"
                 :max-collapse-tags="2"
@@ -148,6 +148,7 @@
                 :remote-method="searchDepts"
                 :loading="false"
                 @change="handleCollaborateDeptsChange"
+                disabled
               >
                 <el-option
                   v-for="dept in filteredCollaborateDepts"

@@ -10,20 +10,9 @@ export interface OrderPageReqVO extends PageParam {
   type?: number // 督办类型：1=工作督办，2=专项督办
 }
 
-// 督办单保存请求
-export interface OrderSaveReqVO {
-  id?: number
-  orderTitle: string // 督办标题
-  type: number // 督办分类
-  orderType?: number // 督办类型：1=工作督办，2=专项督办
-  priority: number // 紧急程度
-  deadline: string // 完成期限
-  leadDept: number // 牵头单位ID
-  supervisor: number // 督办人ID
-  content: string // 督办内容
-  undertakeMatter: string // 承办事项
-  coDept?: string // 协办单位ID（逗号分隔）
-  leadDeptDetail?: string // 牵头单位承办情况
+// 督办单导出参数（专门用于导出功能）
+export interface OrderExportReqVO {
+  ids: number[] // 要导出的督办单ID列表（数组格式）
 }
 
 // 督办单工作流更新请求（只传递修改的字段）
@@ -32,7 +21,7 @@ export interface OrderWorkflowUpdateReqVO {
   coDept?: string // 协办单位ID（逗号分隔）
   deptDetail?: string // 牵头单位承办情况
   startLeaderSelectAssignees?: Record<string, number[]> // 发起人自选审批人 Map，key为taskKey，value为用户ID数组
-  fileLIst?: AttachmentFileInfo[] // 附件列表
+  fileList?: AttachmentFileInfo[] // 附件列表
 }
 
 // 附件文件信息
@@ -104,9 +93,6 @@ export interface OrderRespVO {
   creatorName?: string // 创建人姓名
   isOverdue?: boolean // 是否超期
   remainingDays?: number // 剩余天数
-
-  // 附件信息
-  attachments?: AttachmentRespVO[] // 附件列表
 }
 
 // 督办分类选项接口响应
@@ -130,11 +116,6 @@ export const OrderApi = {
   // 创建督办单
   createOrder: async (data: OrderVO) => {
     return await request.post({ url: `/bpm/supervision/create`, data })
-  },
-
-  // 更新督办单
-  updateOrder: async (data: OrderSaveReqVO) => {
-    return await request.put({ url: `/supervision/order/update`, data })
   },
 
   // 工作流中更新督办单（只传递修改的字段）
@@ -163,270 +144,153 @@ export const OrderApi = {
   },
 
   // 导出督办单 Excel
-  exportOrder: async (params: OrderPageReqVO) => {
+  exportOrder: async (params: OrderExportReqVO) => {
     return await request.download({ url: `/supervision/order/export-excel`, params })
   },
 
   // 根据督办人ID获取手机号
   getSupervisorPhone: async (supervisorId: number): Promise<string> => {
     return await request.get({ url: `/bpm/supervision/getSupervisorPhone/${supervisorId}` })
+  },
+
+  // 根据流程实例ID获取督办单任务详情
+  getSupervisionOrderTaskDetail: async (processInstanceId: string) => {
+    return await request.get({ url: `/bpm/supervision/getSupervisionOrderTaskDetail/${processInstanceId}` })
+  },
+
+  // 获取督办任务进度更新记录
+  getSupervisionTaskDetail: async (processInstanceId: string, showAll?: boolean) => {
+    const params = showAll ? { showAll: true } : {}
+    return await request.get({
+      url: `/bpm/supervision/getSupervisionTaskDetail/${processInstanceId}`,
+      params
+    })
+  },
+
+  // 根据流程实例ID获取附件列表
+  getAttachments: async (processInstanceId: string) => {
+    return await request.get({ url: `/bpm/supervision/getAttachments/${processInstanceId}` })
+  },
+
+  // 添加督办进度更新记录
+  insertSupervisionOrderTaskNew: async (data: {
+    processInstanceId: string
+    deptDetail: string
+    planTime?: string
+    fileList?: Array<{
+      name: string
+      url: string
+      size?: string
+      // 注意：新上传的文件不需要传id，后端会自动生成
+    }>
+  }) => {
+    return await request.post({ url: '/bpm/supervision/insertSupervisionOrderTaskNew', data })
   }
 }
 
 // 督办任务 API
 export const SupervisionTaskApi = {
-  // 获取督办待办任务列表
-  getTodoTaskPage: async (params: any) => {
-    return await request.get({ url: `/supervision/task/todo/page`, params })
-  },
-
-  // 获取督办已办任务列表
-  getDoneTaskPage: async (params: any) => {
-    return await request.get({ url: `/supervision/task/done/page`, params })
-  },
 
   // 获取督办单详情（用于任务处理）
   getOrderDetailForTask: async (orderId: number) => {
     return await request.get({ url: `/supervision/task/order-detail?orderId=` + orderId })
+  },
+
+  // 获取督办待办任务列表（新接口）
+  getSupervisionTodoPage: async (params: any) => {
+    return await request.get({ url: `/bpm/supervision/lead-dept-todo-page`, params })
+  },
+
+  // 获取督办已办任务列表（新接口）
+  getSupervisionDonePage: async (params: any) => {
+    return await request.get({ url: `/bpm/supervision/done-page`, params })
+  },
+
+  // 获取协办部门待办任务列表
+  getCoDeptTodoPage: async (params: any) => {
+    return await request.get({ url: `/bpm/supervision/co-dept-todo-page`, params })
   }
 }
-
-// ========== 督办任务相关 ==========
-
-// 督办任务分页查询参数
-export interface TaskPageReqVO extends PageParam {
-  taskTitle?: string // 任务标题（模糊查询）
-  orderId?: number // 督办单ID
-  assignee?: number // 任务负责人ID
-  status?: number // 任务状态
-  orderType?: number // 督办类型：1=工作督办，2=专项督办
-  orderCode?: string // 督办编号（精确查询）
-}
-
-// 督办任务保存请求
-export interface TaskSaveReqVO {
-  id?: number
-  orderId: number // 督办单ID
-  taskTitle: string // 任务标题
-  taskContent: string // 任务内容
-  assignee: number // 任务负责人ID
-  deadline: string // 任务截止时间
-  priority: number // 任务优先级
-}
-
-// 督办任务响应 VO
-export interface TaskRespVO {
-  id: number // 任务ID
-  orderId: number // 督办单ID
-  orderTitle: string // 督办单标题
-  orderCode?: string // 督办编号
-  orderType?: number // 督办类型：1=工作督办，2=专项督办
-  taskTitle: string // 任务标题
-  taskContent: string // 任务内容
-  assignee: number // 任务负责人ID
-  assigneeName: string // 任务负责人姓名
-  deadline: string // 任务截止时间
-  priority: number // 任务优先级
-  priorityName: string // 优先级名称
-  status: number // 任务状态
-  statusText: string // 状态文本
-  createTime: string // 创建时间
-  creatorName: string // 创建人姓名
-  isOverdue: boolean // 是否超期
-  remainingDays: number // 剩余天数
-}
-
-// 督办任务 API
-export const TaskApi = {
-  // 创建督办任务
-  createTask: async (data: TaskSaveReqVO) => {
-    return await request.post({ url: `/supervision/task/create`, data })
-  },
-
-  // 更新督办任务
-  updateTask: async (data: TaskSaveReqVO) => {
-    return await request.put({ url: `/supervision/task/update`, data })
-  },
-
-  // 删除督办任务
-  deleteTask: async (id: number) => {
-    return await request.delete({ url: `/supervision/task/delete?id=` + id })
-  },
-
-  // 获取督办任务详情
-  getTask: async (id: number): Promise<TaskRespVO> => {
-    return await request.get({ url: `/supervision/task/get?id=` + id })
-  },
-
-  // 查询督办任务分页
-  getTaskPage: async (params: TaskPageReqVO) => {
-    return await request.get({ url: `/supervision/task/page`, params })
-  },
-
-  // 导出督办任务 Excel
-  exportTask: async (params: TaskPageReqVO) => {
-    return await request.download({ url: `/supervision/task/export-excel`, params })
-  }
-}
-
-// ========== 督办附件相关 ==========
-
-// 附件分页查询参数
-export interface AttachmentPageReqVO extends PageParam {
-  orderId?: number // 督办单ID
-  fileName?: string // 文件名（模糊查询）
-  fileType?: string // 文件类型
-  category?: string // 附件分类
-}
-
-// 附件保存请求
-export interface AttachmentSaveReqVO {
-  id?: number
-  fileName: string // 文件名
-  category?: string // 附件分类
-}
-
-// 附件响应 VO
-export interface AttachmentRespVO {
-  id?: number // 附件ID
-  orderId: number // 督办单ID
-  name: string // 文件名
-  url: string // 文件URL
-  size: number // 文件大小（字节）
-  type: string // 文件类型
-  category: string // 附件分类
-  categoryName?: string // 分类名称
-  createTime?: string // 上传时间
-  uploader?: number // 上传人ID
-  uploaderName?: string // 上传人姓名
-  canDelete?: boolean // 是否可删除
-  canDownload?: boolean // 是否可下载
-}
-
-// 督办附件 API
-export const AttachmentApi = {
-  // 上传附件
-  uploadAttachment: async (orderId: number, file: File, category: string = 'order') => {
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('orderId', orderId.toString())
-    formData.append('category', category)
-    return await request.upload({ url: `/supervision/attachment/upload`, data: formData })
-  },
-
-  // 批量上传附件
-  batchUploadAttachment: async (orderId: number, files: File[], category: string = 'order') => {
-    const formData = new FormData()
-    files.forEach(file => {
-      formData.append('files', file)
-    })
-    formData.append('orderId', orderId.toString())
-    formData.append('category', category)
-    return await request.upload({ url: `/supervision/attachment/batch-upload`, data: formData })
-  },
-
-  // 查询附件详情
-  getAttachment: async (id: number): Promise<AttachmentRespVO> => {
-    return await request.get({ url: `/supervision/attachment/get?id=` + id })
-  },
-
-  // 获取附件列表
-  getAttachmentList: async (orderId: number, category?: string): Promise<AttachmentRespVO[]> => {
-    return await request.get({ url: `/supervision/attachment/list`, params: { orderId, category } })
-  },
-
-  // 创建附件记录
-  createAttachment: async (data: AttachmentSaveReqVO) => {
-    return await request.post({ url: `/supervision/attachment/create`, data })
-  },
-
-  // 删除附件
-  deleteAttachment: async (id: number) => {
-    return await request.delete({ url: `/supervision/attachment/delete?id=` + id })
-  },
-
-  // 查询附件分页
-  getAttachmentPage: async (params: AttachmentPageReqVO) => {
-    return await request.get({ url: `/supervision/attachment/page`, params })
-  },
-
-  // 更新附件信息
-  updateAttachment: async (data: AttachmentSaveReqVO) => {
-    return await request.put({ url: `/supervision/attachment/update`, data })
-  },
-
-  // 删除附件
-  deleteAttachment: async (id: number) => {
-    return await request.delete({ url: `/supervision/attachment/delete?id=` + id })
-  },
-
-  // 下载附件
-  downloadAttachment: async (id: number) => {
-    return await request.download({ url: `/supervision/attachment/download`, params: { id } })
-  },
-
-  // 导出附件 Excel
-  exportAttachment: async (params: AttachmentPageReqVO) => {
-    return await request.download({ url: `/supervision/attachment/export-excel`, params })
-  }
-}
-
-
 
 
 // ========== 督办首页相关 ==========
 
-// 首页统计数据响应接口
-export interface SupervisionIndexRespVO {
-  taskStats: {
-    total: number
-    workSupervision: number
-    specialSupervision: number
-  }
-  statusStats: {
-    total: number
-    fast: number
-    consulting: number
-    slow: number
-    completed: number
-  }
-  monthlyStats: {
-    newTasks: number
-    inProgress: number
-    completed: number
-    overdue: number
-  }
-  tasks: SupervisionTaskItemVO[]
+// 督办单参与者用户信息
+export interface ParticipantUserVO {
+  nickname: string // 用户昵称
+  deptId: number // 部门ID
+  userId: string // 用户ID
 }
 
-// 督办任务项
-export interface SupervisionTaskItemVO {
-  id: number
-  applyTitle: string // 任务标题
-  materialName: string // 任务描述
-  signers: string // 分管领导
-  phone: string
-  sealStatus: boolean
-  orgName: string // 牵头部门
-  deleted: number
-  sealState: string // 状态
-  applyId: string
-  assistDepartments: string[] // 协办部门
-  createdDate: string // 创建时间
-  deadline: string // 截止时间
-  priority: string // 优先级
-  overdueDays: number | null // 超时天数
-  isOverdue: boolean // 是否超时
-  daysRemaining: number | null // 剩余天数
-  type: number // 任务类型：1=工作督办，2=专项督办
+// 督办单详细信息（首页接口返回）
+export interface SupervisionOrderDetailVO {
+  createTime: number // 创建时间（时间戳）
+  updateTime: number // 更新时间（时间戳）
+  creator: string // 创建人ID
+  updater: string // 更新人ID
+  deleted: boolean // 是否删除
+  id: number // 督办单ID
+  orderCode: string // 督办编号
+  orderTitle: string // 督办标题
+  type: number // 督办类型：1=工作督办，2=专项督办
+  reason: number | null // 督办依据
+  priority: number // 紧急程度
+  deadline: number | null // 完成期限（时间戳）
+  leadDept: number // 牵头单位ID
+  significance: number | null // 重要程度
+  coDept: string | null // 协办单位ID（逗号分隔）
+  supervisor: number // 督办人ID
+  content: string // 督办内容
+  undertakeMatter: string // 承办事项
+  supervisionApprove: number // 督察办审批状态
+  deptDetail: string // 牵头单位承办情况
+  supervisionReapprove: number | null // 督察办复核状态
+  processInstanceId: string // 流程实例ID
+  summary: string // 概述信息
+  participants: string[] // 参与者用户ID数组
+  participantUsers: ParticipantUserVO[] // 参与者用户详细信息
+  supervisionStatus: string // 督办状态：流程中、结办文件、否决文件
+}
+
+// 督办统计数据响应接口
+export interface SupervisionStatisticsVO {
+  monthInProgress: number // 本月进行中
+  monthOverdue: number // 本月超时
+  monthTotal: number // 本月总数
+  monthCompleted: number // 本月完成
+  specialSupervision: number // 专项督办总数
+  workSupervision: number // 工作督办总数
 }
 
 // 督办首页API
 export const SupervisionIndexApi = {
-  // 获取督办首页数据
-  getIndexData(): Promise<SupervisionIndexRespVO> {
-    return request.get({ url: 'http://127.0.0.1:4523/m1/6215417-5908881-default/dcdb/getIndex' })
-  }
+  // 获取督办首页数据（支持分页和类型过滤）
+  getIndexData(params?: { pageNo?: number; pageSize?: number; type?: number }): Promise<{ list: SupervisionOrderDetailVO[]; total: number }> {
+    return request.get({
+      url: '/bpm/supervision/page-with-participants',
+      params: {
+        pageNo: params?.pageNo || 1,
+        pageSize: params?.pageSize || 10,
+        type: params?.type
+      }
+    }).then(response => {
+      // 简化响应格式处理，优先使用最常见的格式
+      const data = response?.data || response
+      const list = data?.list || (Array.isArray(data) ? data : [])
+      const total = data?.total || list.length
+
+      return {
+        list,
+        total
+      }
+    })
+  },
+
+  // 获取督办统计数据
+  getStatistics(): Promise<SupervisionStatisticsVO> {
+    return request.get({ url: '/bpm/supervision/getStatistics' })
+  },
+
 }
 
 // ========== 通用类型定义 ==========
