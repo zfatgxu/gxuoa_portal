@@ -186,8 +186,8 @@
       /> -->
       <el-table-column label="操作" align="center">
         <template #default="scope">
-          <!-- 状态为待审批(2)时显示编辑和删除按钮 -->
-          <template v-if="scope.row.status === 2">
+          <!-- 状态为待会签(1)时显示编辑和删除按钮 -->
+          <template v-if="scope.row.status === 1">
             <el-button
               link
               type="primary"
@@ -247,16 +247,11 @@
 
 <script setup lang="ts">
 import { dateFormatter2 } from '@/utils/formatTime'
-import download from '@/utils/download'
 import { RegisterVO, RegisterApi } from '@/api/leave/create/createForm'
 import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
 import { useRouter } from 'vue-router'
-import { useUserStore } from '@/store/modules/user'
 /** 请假登记 列表 */
 defineOptions({ name: 'Register' })
-
-const message = useMessage() // 消息弹窗
-const { t } = useI18n() // 国际化
 
 const loading = ref(true) // 列表的加载中
 const list = ref<RegisterVO[]>([]) // 列表的数据
@@ -278,7 +273,7 @@ const queryParams = reactive({
   createTime: [],
 })
 const queryFormRef = ref() // 搜索的表单
-const exportLoading = ref(false) // 导出的加载
+
 /** 查询列表 */
 const getList = async () => {
   loading.value = true
@@ -316,34 +311,6 @@ const handleDetail = (row: any) => {
       id: row.processInstanceId
     }
   })
-}
-
-/** 删除按钮操作 */
-const handleDelete = async (id: number) => {
-  try {
-    // 删除的二次确认
-    await message.delConfirm()
-    // 发起删除
-    await RegisterApi.deleteRegister(id)
-    message.success(t('common.delSuccess'))
-    // 刷新列表
-    await getList()
-  } catch {}
-}
-
-/** 导出按钮操作 */
-const handleExport = async () => {
-  try {
-    // 导出的二次确认
-    await message.exportConfirm()
-    // 发起导出
-    exportLoading.value = true
-    const data = await RegisterApi.exportRegister(queryParams)
-    download.excel(data, '请假登记.xls')
-  } catch {
-  } finally {
-    exportLoading.value = false
-  }
 }
 
 /** 判断是否完成 */

@@ -545,7 +545,7 @@ onMounted(() => {
   top: 50%;
   transform: translateY(-50%);
   color: #999;
-  font-size: 12px;
+  font-size: 14px;
   cursor: pointer;
 }
 
@@ -605,7 +605,7 @@ onMounted(() => {
 }
 
 .todo-title {
-  font-size: 14px;
+  font-size: 16px;
   color: #303133;
   white-space: nowrap;
   overflow: hidden;
@@ -620,10 +620,10 @@ onMounted(() => {
 }
 
 .todo-type {
-  width: 60px;
+  width: 70px;
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 14px;
   color: white;
   background-color: #409EFF;
   text-align: center;
@@ -657,13 +657,13 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   color: #909399;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .todo-date {
-  width: 70px;
+  width: 130px;
   color: #909399;
-  font-size: 12px;
+  font-size: 14px;
 }
 
 .todo-actions {

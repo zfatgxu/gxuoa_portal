@@ -442,7 +442,7 @@
         </el-descriptions>
       </div>
       <!-- 审批意见 -->
-      <div class="approval-section">
+      <div v-if="personnel.level !== 3" class="approval-section">
         <div class="divider">
           <span class="divider-text">审批意见</span>
         </div>
@@ -511,25 +511,7 @@ const researchList = ref([
     researchEndDate: ''
   }
 ]);
-const addResearch = () => {
-  researchList.value.push({
-    id: '',
-    researchTopic: '',
-    researchPurpose: '',
-    researchUnit: '',
-    researchStartDate: '',
-    researchEndDate: ''
-  });
-};
-const removeResearch = (index) => {
-  if (researchList.value.length > 1) {
-    researchList.value.splice(index, 1);
-  } else {
-    Object.keys(researchList.value[0]).forEach(key => {
-      researchList.value[0][key] = '';
-    });
-  }
-};
+
 // 培训事由信息
 const trainingList = ref([
   {
@@ -540,24 +522,7 @@ const trainingList = ref([
     trainingEndDate: ''
   }
 ]);
-const addTraining = () => {
-  trainingList.value.push({
-    id: '',
-    trainingTopic: '',
-    trainingUnit: '',
-    trainingStartDate: '',
-    trainingEndDate: ''
-  });
-};
-const removeTraining = (index) => {
-  if (trainingList.value.length > 1) {
-    trainingList.value.splice(index, 1);
-  } else {
-    Object.keys(trainingList.value[0]).forEach(key => {
-      trainingList.value[0][key] = '';
-    });
-  }
-};
+
 // 公务事由信息
 const businessList = ref([
   {
@@ -568,24 +533,7 @@ const businessList = ref([
     businessEndDate: ''
   }
 ]);
-const addBusiness = () => {
-  businessList.value.push({
-    id: '',
-    businessTopic: '',
-    businessUnit: '',
-    businessStartDate: '',
-    businessEndDate: ''
-  });
-};
-const removeBusiness = (index) => {
-  if (businessList.value.length > 1) {
-    businessList.value.splice(index, 1);
-  } else {
-    Object.keys(businessList.value[0]).forEach(key => {
-      businessList.value[0][key] = '';
-    });
-  }
-};
+
 // 学术会议事由信息
 const academicMeetings = ref([
   {
@@ -601,30 +549,7 @@ const academicMeetings = ref([
     academicPaperCount: 0
   }
 ]);
-const addAcademicMeeting = () => {
-  academicMeetings.value.push({
-    id: '',
-    academicTopic: '',
-    academicNature: '',
-    academicUnit: '',
-    academicStartDate: '',
-    academicEndDate: '',
-    isPresentation: '',
-    reportType: '',
-    reportTitle: '',
-    academicPaperCount: 0
-  });
-};
-const removeAcademicMeeting = (index) => {
-  if (academicMeetings.value.length > 1) {
-    academicMeetings.value.splice(index, 1);
-  } else {
-    // 如果是最后一个，清空数据而不是删除
-    Object.keys(academicMeetings.value[0]).forEach(key => {
-      academicMeetings.value[0][key] = '';
-    });
-  }
-};
+
 // 因私事由信息
 const personalList = ref([
   {
@@ -646,35 +571,6 @@ const personalList = ref([
     personalDystocia: ''
   }
 ]);
-const addPersonal = () => {
-  personalList.value.push({
-    id: '',
-    personalType: '',
-    personalStartDate: '',
-    personalEndDate: '',
-    personalTotalDays: 0,
-    personalReason: '',
-    personalPhone: '',
-    personalRoute: '',
-    personalRelation: '',
-    personalVisitName: '',
-    personalVisitType: '',
-    personalVisitAddress: '',
-    personalMaritalStatus: '',
-    personalParity: '',
-    personalMultiple: '',
-    personalDystocia: ''
-  });
-};
-const removePersonal = (index: number) => {
-  if (personalList.value.length > 1) {
-    personalList.value.splice(index, 1);
-  } else {
-    Object.keys(personalList.value[0]).forEach(key => {
-      personalList.value[0][key] = '';
-    });
-  }
-};
 // 其他事由
 const otherID = ref();
 const otherReason = ref('');
@@ -801,6 +697,7 @@ const fetchUserProfile = async () => {
           department: res.dept?.name || '',
           title: res.posts?.[0]?.name || '',
           position: res.nickname || '',
+          level: res.level || '',
         };
       }
     } else  {
@@ -827,50 +724,56 @@ const fetchUserProfile = async () => {
     // 根据不同类型设置对应的表单字段
     switch (item.type) {
       case 1: // 调研
-        researchID.value = item.id;
-        researchTopic.value = item.subject;
-        researchPurpose.value = item.purpose;
-        researchUnit.value = item.unit;
-        researchStartDate.value = dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss');
-        researchEndDate.value = dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss');
+        researchList.value.push({
+          id: item.id,
+          researchTopic: item.subject,
+          researchPurpose: item.purpose,
+          researchUnit: item.unit,
+          researchStartDate: dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss'),
+          researchEndDate: dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss'),
+        });
         break;
       case 2: // 培训
-        trainingID.value = item.id;
-        trainingTopic.value = item.subject;
-        trainingUnit.value = item.unit;
-        trainingStartDate.value = dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss');
-        trainingEndDate.value = dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss');
+        trainingList.value.push({
+          id: item.id,
+          trainingTopic: item.subject,
+          trainingUnit: item.unit,
+          trainingStartDate: dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss'),
+          trainingEndDate: dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss'),
+        });
         break;
       case 3: // 公务
-        businessID.value = item.id;
-        businessTopic.value = item.subject;
-        businessUnit.value = item.unit;
-        businessStartDate.value = dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss');
-        businessEndDate.value = dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss');
+        businessList.value.push({
+          id: item.id,
+          businessTopic: item.subject,
+          businessUnit: item.unit,
+          businessStartDate: dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss'),
+          businessEndDate: dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss'),
+        });
         break;
       case 4: // 因私
-        personalID.value = item.id;
-        personalType.value = Number(item.privateType);
-        personalStartDate.value = dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss');
-        personalEndDate.value = dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss');
-        personalTotalDays.value = item.totalDays;
-        personalPhone.value = item.phone;
-        personalParity.value = item.birthCount?.toString();
-        personalDystocia.value = item.difficultBirth;
-        personalMultiple.value = item.multipleBirth;
-        personalVisitAddress.value = item.registeredAddress;
-        personalRelation.value = item.relationship;
-        personalRoute.value = item.visitRoute;
-        personalVisitName.value = item.visitedPersonName;
-        personalVisitType.value = item.visitType;
-        personalReason.value = item.reason;
+        personalList.value.push({
+          id: item.id,
+          personalType: Number(item.privateType),
+          personalStartDate: dayjs(item.startDate).format('YYYY-MM-DD HH:mm:ss'),
+          personalEndDate: dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss'),
+          personalTotalDays: item.totalDays,
+          personalPhone: item.phone,
+          personalParity: item.birthCount?.toString(),
+          personalDystocia: item.difficultBirth,
+          personalMultiple: item.multipleBirth,
+          personalVisitAddress: item.registeredAddress,
+          personalRelation: item.relationship,
+          personalRoute: item.visitRoute,
+          personalVisitName: item.visitedPersonName,
+          personalVisitType: item.visitType,
+          personalReason: item.reason
+        });
         break;
       case 5: // 学术会议
-        academicID.value = item.id;
-        // 清空现有会议
-        academicMeetings.value = [];
         // 添加新的会议数据
         academicMeetings.value.push({
+          id: item.id,
           academicTopic: item.subject,
           academicNature: item.meetingNature,
           academicUnit: item.unit,
@@ -878,7 +781,7 @@ const fetchUserProfile = async () => {
           academicEndDate: dayjs(item.endDate).format('YYYY-MM-DD HH:mm:ss'),
           isPresentation: item.reportTitle||item.reportType?1:0,
           reportTitle: item.reportTitle,
-          reportType: item.reportType,
+          reportType: Number(item.reportType),
           academicPaperCount: item.academicPaperCount
         });
         break;
