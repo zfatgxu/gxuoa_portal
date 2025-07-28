@@ -224,7 +224,7 @@
           </template>
           <el-button v-if="hasDone(scope.row.status)" link type="primary" @click="handleFinance(scope.row)">提交财务报销</el-button>
           <el-button 
-            v-if="hasAcademicMeeting(scope.row.reasons)" 
+            v-if="hasAcademicMeeting(scope.row)" 
             link 
             type="primary" 
             @click="handleUploadToResearch(scope.row)"
@@ -319,11 +319,11 @@ const hasDone = (status: number): boolean => {
 };
 
 /** 判断是否包含学术会议 */
-const hasAcademicMeeting = (reasons: string): boolean => {
-  if (!reasons) return false;
+const hasAcademicMeeting = (row: any): boolean => {
+  if (!row.reasons) return false;
   // 将原因字符串按"、"分割，检查是否包含"学术会议"
-  const reasonList = reasons.split('、');
-  return reasonList.some(reason => reason.includes('学术会议'));
+  const reasonList = row.reasons.split('、');
+  return reasonList.some((reason: string) => reason.includes('学术会议')) && row.status === 3;
 };
 
 /** 上传科研院 */

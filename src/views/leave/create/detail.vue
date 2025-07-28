@@ -15,8 +15,8 @@
         <el-table :data="[personnel]" border style="width: 100%">
           <el-table-column prop="name" label="姓名" />
           <el-table-column prop="department" label="部门" />
-          <el-table-column prop="title" label="职称" />
-          <el-table-column prop="position" label="职务" />
+          <el-table-column prop="title" label="职称" :formatter="(cellValue) => getDictLabel(DICT_TYPE.PROFESSIONAL_TITLE, cellValue.professionalTitle)"/>
+          <el-table-column prop="position" label="职务" :formatter="(cellValue) => getDictLabel(DICT_TYPE.LEVEL, cellValue.level)"/>
         </el-table>
       </div>
 
@@ -466,7 +466,7 @@
 
 <script lang="ts" setup>
 import { ref, watch } from 'vue';
-import { DICT_TYPE, getIntDictOptions, getStrDictOptions } from '@/utils/dict'
+import { DICT_TYPE, getIntDictOptions, getStrDictOptions, getDictLabel } from '@/utils/dict'
 import { Minus, Plus } from '@element-plus/icons-vue'
 import { pcaTextArr } from "element-china-area-data";
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -496,7 +496,8 @@ const personnel = ref({
   department: '',
   title: '',
   position: '',
-  level: ''
+  level: '',
+  professionalTitle: '',
 });
 // 日期范围
 const dateRange = ref([]);
@@ -693,11 +694,12 @@ const fetchUserProfile = async () => {
         personnel.value = {
           id: res.id,
           deptId: res.dept?.id || '',
-          name: res.username || '',
+          name: res.nickname || '',
           department: res.dept?.name || '',
           title: res.posts?.[0]?.name || '',
           position: res.nickname || '',
           level: res.level || '',
+          professionalTitle: res.professionalTitle || '',
         };
       }
     } else  {
