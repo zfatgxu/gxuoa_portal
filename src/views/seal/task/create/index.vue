@@ -215,6 +215,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue'
 import { getSimpleUserList } from '@/api/system/user'
+import { KKFileView } from '@/components/KKFileView'
 import { ElMessage } from 'element-plus'
 import { UploadFilled, Document, Check, Close, Paperclip, Plus, Edit } from '@element-plus/icons-vue'
 import * as DefinitionApi from '@/api/bpm/definition'
@@ -445,7 +446,7 @@ const getFileType = (filename) => {
 
 // 查看文件
 const viewFile = (file) => {
-  window.open(file.url, '_blank')
+  KKFileView.preview(file.url)
 }
 
 // 提交表单

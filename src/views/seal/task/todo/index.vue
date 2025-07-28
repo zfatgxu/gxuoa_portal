@@ -12,7 +12,7 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column align="center" label="用印材料名" prop="applyData.materialName" width="700" />
+      <el-table-column align="center" label="用印材料名" prop="applyData.materialName" width="500" />
       <el-table-column align="center" label="经办人" width="100">
         <template #default="scope">
           {{ scope.row.applyData.signers ? scope.row.applyData.signers.replace(/,/g, '，').split('，')[0] : '' }}
