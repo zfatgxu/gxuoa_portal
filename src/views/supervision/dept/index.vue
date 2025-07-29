@@ -109,7 +109,7 @@
                 </div>
                 <div class="detail-item">
                   <span class="detail-label">截止时间：</span>
-                  <span class="deadline-date">{{ getDeadlineText(task) }}</span>
+                  <span :class="getDeadlineClass(task)">{{ getDeadlineText(task) }}</span>
                 </div>
               </div>
               <div class="detail-row">
@@ -122,6 +122,16 @@
                 </div>
               </div>
             </div>
+
+            <!-- 批示显示区域 -->
+            <div v-if="task.leaderRemarks && task.leaderRemarks.length > 0" class="task-remarks">
+              <div class="remarks-header">分管领导批示</div>
+              <div v-for="remark in task.leaderRemarks" :key="remark.leaderNickName" class="remark-item">
+                <div class="remark-leader">{{ remark.leaderNickName }}：</div>
+                <div class="remark-content">{{ remark.remark }}</div>
+              </div>
+            </div>
+
             <div class="task-buttons">
               <el-button size="small" @click="viewTaskDetail(task)">查看详情</el-button>
               <el-button v-if="activeTab === 'lead' || activeTab === 'co'" size="small" type="primary" @click="handleAudit(task)">办理</el-button>
@@ -148,6 +158,7 @@
       v-model="detailDialogVisible"
       :task-data="selectedTask"
       :process-instance-id="selectedTask?.processInstance?.id"
+      :supervision-status="selectedTask?.supervisionStatus"
       @close="handleDetailClose"
     />
 
@@ -163,7 +174,7 @@ import {
 } from '@element-plus/icons-vue'
 import SupervisionDetailDialog from '../components/SupervisionDetailDialog.vue'
 import * as DeptApi from '@/api/system/dept'
-import { SupervisionTaskApi } from '@/api/supervision/index'
+import { SupervisionTaskApi, LeaderRemarkApi } from '@/api/supervision/index'
 import { dateFormatter } from '@/utils/formatTime'
 import { ElMessage } from 'element-plus'
 
@@ -245,7 +256,24 @@ const loadTaskList = async () => {
       result = await SupervisionTaskApi.getSupervisionDonePage(doneParams)
     }
 
-    taskList.value = result.list || []
+    const tasks = result.list || []
+
+    // 为每个任务获取批示信息
+    for (const task of tasks) {
+      if (task.processInstanceId) {
+        try {
+          const remarks = await LeaderRemarkApi.getLeaderRemark(task.processInstanceId)
+          task.leaderRemarks = remarks || []
+        } catch (error) {
+          console.error('获取批示信息失败', error)
+          task.leaderRemarks = []
+        }
+      } else {
+        task.leaderRemarks = []
+      }
+    }
+
+    taskList.value = tasks
     pagination.total = result.total || 0
   } catch (error) {
     console.error('加载任务列表失败', error)
@@ -325,6 +353,19 @@ const getDeadlineText = (task) => {
   return formatDateOnly(deadline)
 }
 
+// 根据任务状态获取截止时间的样式类
+const getDeadlineClass = (task) => {
+  const status = getStatusText(task)
+  if (status === '已超时') {
+    return 'deadline-date-overdue' // 红色
+  } else if (status === '已结束') {
+    return 'deadline-date-finished' // 黑色
+  } else if (status === '进行中') {
+    return 'deadline-date-processing' // 橙色
+  }
+  return 'deadline-date' // 默认颜色
+}
+
 const getRemainingTimeText = (task) => {
   const deadline = task.supervisionPageVOData?.deadline
   const createTime = task.createTime
@@ -397,7 +438,7 @@ const getStatusType = (task) => {
   const status = getStatusText(task)
   const types = {
     '进行中': 'warning',
-    '已完成': 'success',
+    '已结束': 'success',
     '已超时': 'danger'
   }
   return types[status] || 'info'
@@ -405,9 +446,9 @@ const getStatusType = (task) => {
 
 // 获取任务状态文本
 const getStatusText = (task) => {
-  // 已完成标签页中的任务都显示"已完成"
+  // 已完成标签页中的任务都显示"已结束"
   if (activeTab.value === 'done') {
-    return '已完成'
+    return '已结束'
   }
 
   // 牵头任务和协办任务标签页中的任务根据截止时间判断状态
@@ -435,6 +476,12 @@ const formatCreateTime = (timestamp) => {
 const formatEndTime = (timestamp) => {
   if (!timestamp) return ''
   return dateFormatter(null, null, timestamp)
+}
+
+// 获取督办状态用于详情弹窗显示（与外面状态标签保持一致）
+const getSupervisionStatusForDialog = (task) => {
+  // 直接返回与外面状态标签一致的状态文本
+  return getStatusText(task)
 }
 
 // 任务详情相关
@@ -466,7 +513,9 @@ const viewTaskDetail = async (task) => {
       },
       // 添加原型需要的字段
       issueUnit: supervisionData.creatorDeptName || '', // 下发单位
-      coDeptNameMap: supervisionData.coDeptNameMap || {} // 协办部门映射
+      coDeptNameMap: supervisionData.coDeptNameMap || {}, // 协办部门映射
+      // 添加督办状态，用于详情弹窗中的状态显示
+      supervisionStatus: getSupervisionStatusForDialog(task)
     }
     detailDialogVisible.value = true
   } catch (error) {
@@ -774,6 +823,25 @@ onMounted(() => {
   font-weight: 500;
 }
 
+/* 截止时间颜色样式 */
+.deadline-date-overdue {
+  color: #F56C6C; /* 红色 - 已超时 */
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.deadline-date-finished {
+  color: #303133; /* 黑色 - 已结束 */
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.deadline-date-processing {
+  color: #E6A23C; /* 橙色 - 进行中 */
+  font-size: 14px;
+  font-weight: 500;
+}
+
 
 
 .supervisor {
@@ -845,5 +913,43 @@ onMounted(() => {
   .task-buttons {
     margin-top: 16px;
   }
+}
+
+/* 批示显示样式 */
+.task-remarks {
+  margin-top: 12px;
+  padding: 12px;
+  background-color: #f0f9ff;
+  border-radius: 6px;
+  border-left: 3px solid #409eff;
+}
+
+.remarks-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 8px;
+}
+
+.remark-item {
+  margin-bottom: 8px;
+}
+
+.remark-item:last-child {
+  margin-bottom: 0;
+}
+
+.remark-leader {
+  font-size: 13px;
+  font-weight: 600;
+  color: #409eff;
+  margin-bottom: 4px;
+}
+
+.remark-content {
+  font-size: 13px;
+  color: #606266;
+  line-height: 1.5;
+  padding-left: 12px;
 }
 </style>

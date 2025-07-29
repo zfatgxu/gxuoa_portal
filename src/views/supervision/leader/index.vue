@@ -49,9 +49,9 @@
     <!-- Task Management Section -->
     <div class="task-section">
       <div class="task-header-controls">
-        <el-tabs v-model="activeTab" class="inline-tabs">
+        <el-tabs v-model="activeTab" class="inline-tabs" @tab-change="handleTabChange">
           <el-tab-pane label="全部事项" name="all-items" />
-          <el-tab-pane label="已完成" name="completed-tasks" />
+          <el-tab-pane label="需要关注" name="attention-items" />
         </el-tabs>
         <div class="control-group">
           <el-input
@@ -88,60 +88,77 @@
           shadow="hover"
         >
           <div class="task-header">
-            <h4 class="task-title">{{ task.title }}</h4>
+            <h4 class="task-title" @click="viewTaskDetail(task)">{{ getTaskTitle(task) }}</h4>
             <div class="task-actions">
-              <el-tag :type="getPriorityType(task.priority)" size="small">{{ task.priority }}</el-tag>
+              <el-tag :type="getPriorityType(task)" size="small">{{ getPriorityText(task) }}</el-tag>
               <el-tag :type="getStatusType(task)" size="small">{{ getStatusText(task) }}</el-tag>
             </div>
           </div>
 
-          <!-- 普通内容描述，不再高亮 -->
-          <div class="task-description" v-if="task.description">
-            <p class="description-text">{{ task.description }}</p>
-          </div>
-
-          <!-- 领导批示高亮部分 -->
-          <div class="leadership-instruction" v-if="task.instruction">
-            <el-alert
-              :title="task.instruction"
-              type="warning"
-              :closable="false"
-              show-icon
-            />
+          <div class="task-description" v-if="getTaskContent(task)">
+            <p class="description-text">{{ getTaskContent(task) }}</p>
           </div>
 
           <div class="task-content">
             <div class="task-details">
               <div class="detail-row">
-                <el-icon><OfficeBuilding /></el-icon>
-                <span>下发单位：</span>
-                <span>{{ task.issuer }}</span>
-
-                <el-icon><User /></el-icon>
-                <span>协办部门：</span>
-                <span>{{ task.collaborators.join('、') }}</span>
-
-                <el-icon><User /></el-icon>
-                <span>分管领导：</span>
-                <span class="supervisor">{{ task.supervisor }}</span>
-
-                <span class="deadline">截止时间：<span class="deadline-date">{{ task.deadline }}</span></span>
+                <div class="detail-item">
+                  <el-icon><OfficeBuilding /></el-icon>
+                  <span class="detail-label">下发单位：</span>
+                  <span class="detail-value">{{ getCreatorDeptName(task) }}</span>
+                </div>
+                <div class="detail-item">
+                  <el-icon><User /></el-icon>
+                  <span class="detail-label">协办部门：</span>
+                  <span class="detail-value">{{ getCoDeptNames(task) }}</span>
+                </div>
+                <div class="detail-item">
+                  <el-icon><User /></el-icon>
+                  <span class="detail-label">分管领导：</span>
+                  <span class="detail-value">{{ task.supervisionPageVOData?.leaderNickname || '' }}</span>
+                </div>
+                <div class="detail-item">
+                  <span class="detail-label">截止时间：</span>
+                  <span :class="getDeadlineClass(task)">{{ getDeadlineText(task) }}</span>
+                </div>
               </div>
-
               <div class="detail-row">
-                <span>创建时间：{{ task.createTime }}</span>
-                <span v-if="activeTab !== 'completed-tasks'" class="remaining-days">剩余{{ task.remainingDays }}天</span>
+                <div class="detail-item">
+                  <span class="detail-label">创建时间：</span>
+                  <span class="detail-value">{{ formatCreateTime(task.createTime) }}</span>
+                </div>
+                <div v-if="activeTab !== 'attention-items' && getStatusText(task) !== '已结束'" class="detail-item">
+                  <span :class="getRemainingTimeClass(task)">{{ getRemainingTimeText(task) }}</span>
+                </div>
               </div>
             </div>
+
+            <!-- 批示显示区域 -->
+            <div v-if="task.leaderRemarks && task.leaderRemarks.length > 0" class="task-remarks">
+              <div class="remarks-header">我的批示</div>
+              <div v-for="remark in task.leaderRemarks" :key="remark.leaderNickName" class="remark-item">
+                <div class="remark-content">{{ remark.remark }}</div>
+              </div>
+            </div>
+
             <div class="task-buttons">
               <el-button size="small" @click="viewTaskDetail(task)">查看详情</el-button>
-              <el-button size="small" type="primary" @click="addInstruction(task)">新增批示</el-button>
+              <el-button v-if="getStatusText(task) !== '已结束'" size="small" type="primary" @click="addInstruction(task)">新增批示</el-button>
             </div>
           </div>
         </el-card>
-        <div v-if="filteredTaskList.length === 0" class="no-tasks-message">
-          暂无相关任务。
+        <div v-if="filteredTaskList.length === 0 && !loading" class="no-tasks-message">
+          {{ taskList.length === 0 ? '暂无相关任务。' : '没有符合条件的任务。' }}
         </div>
+        <el-pagination
+          v-if="pagination.total > 0"
+          background
+          layout="prev, pager, next"
+          :total="pagination.total"
+          :page-size="pagination.pageSize"
+          :current-page="pagination.pageNo"
+          @current-change="handlePageChange"
+        />
       </div>
     </div>
 
@@ -150,6 +167,7 @@
       v-model="detailDialogVisible"
       :task-data="selectedTask"
       :process-instance-id="selectedTask?.processInstanceId"
+      :supervision-status="selectedTask?.supervisionStatus"
       @close="handleDetailClose"
     />
 
@@ -208,16 +226,28 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import {
   Search, DataAnalysis, Document, Clock, CircleCheck, Warning,
   OfficeBuilding, User
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import SupervisionDetailDialog from '../components/SupervisionDetailDialog.vue'
+import { SupervisionTaskApi, LeaderRemarkApi } from '@/api/supervision/index'
+import { dateFormatter } from '@/utils/formatTime'
+
+// 格式化日期，只显示年月日
+const formatDateOnly = (timestamp) => {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 // Reactive data
-const activeTab = ref('managed-items') // 默认激活“分管事项”
+const activeTab = ref('all-items') // 默认激活“分管事项”
 const taskSearch = ref('')
 const taskDept = ref('all')
 const taskStatus = ref('all')
@@ -225,199 +255,213 @@ const detailDialogVisible = ref(false)
 const instructionDialogVisible = ref(false)
 const historyDialogVisible = ref(false)
 const selectedTask = ref(null)
+const loading = ref(false)
 
 const instructionForm = reactive({
   content: ''
 })
 
-// 模拟当前用户的部门，用于“协办任务”过滤
-const currentUserDepartment = '学生处';
-
-// Mock data
-const taskList = ref([
-  {
-    id: 1,
-    title: '关于加强校园管理工作的督察',
-    description: '针对近期校园安全事件，要求各部门加强安全意识，完善应急预案，确保师生人身财产安全。',
-    instruction: '张副校长批示：落实校园安全管理，确保在前期内完成校园安全全面的排查整改工作。',
-    issuer: '校务督办',
-    collaborators: ['学生处', '后勤处'],
-    supervisor: '张副校长',
-    deadline: '2025-08-24',
-    createTime: '2025-06-30',
-    remainingDays: 15,
-    priority: '高优先级',
-    status: '进行中',
-    mainContent: '针对近期校园安全事件，要求各部门加强安全意识，完善应急预案，确保师生人身财产安全。重点检查宿舍区域、教学楼、实验室等重点场所的安全设施配备情况，建立健全安全管理制度。',
-    undertakingContent: '1. 学生处负责学生安全教育和宿舍管理，制定学生安全教育计划，定期开展安全教育活动；2. 后勤处负责校园基础设施安全检查，定期检查教学楼、宿舍楼等建筑物的安全设施；3. 保卫处负责校园安全巡逻和应急处置，建立24小时值班制度；4. 各学院配合做好学生安全教育工作。'
-  },
-  {
-    id: 2,
-    title: '学生宿舍管理规范化整治',
-    description: '加强学生宿舍日常管理，完善管理制度，改善住宿环境，提升学生满意度和安全保障水平。',
-    instruction: '李校长批示：此项工作关系学生切身利益，各部门要高度重视，确保按时完成整改任务。',
-    issuer: '校务督办',
-    collaborators: ['学生处', '后勤处'],
-    supervisor: '张副校长',
-    deadline: '2025-08-24',
-    createTime: '2025-06-30',
-    remainingDays: 15,
-    priority: '中优先级',
-    status: '已完成', // 已完成任务
-    mainContent: '加强学生宿舍日常管理，完善管理制度，改善住宿环境，提升学生满意度和安全保障水平。',
-    undertakingContent: '规范宿舍管理流程，加强宿舍安全检查，改善宿舍硬件设施，建立宿舍文化建设体系。'
-  },
-  {
-    id: 3,
-    title: '食堂卫生检查与整改',
-    description: '定期对食堂卫生进行检查，确保食品安全，提升师生用餐体验。',
-    issuer: '后勤处',
-    collaborators: ['学生处'], // 协办任务
-    supervisor: '王主任',
-    deadline: '2025-07-30',
-    createTime: '2025-07-01',
-    remainingDays: 10,
-    priority: '高优先级', // 需要关注
-    status: '进行中',
-    mainContent: '对食堂的食品采购、储存、加工、销售全流程进行严格把控，确保食品安全。',
-    undertakingContent: '1. 后勤处负责制定详细检查计划；2. 学生处负责收集学生反馈；3. 卫生部门进行定期抽检。'
-  },
-  {
-    id: 4,
-    title: '校园绿化美化项目',
-    description: '对校园绿化进行规划和实施，提升校园环境美观度。',
-    issuer: '基建处',
-    collaborators: ['后勤处'],
-    supervisor: '赵副校长',
-    deadline: '2025-09-15',
-    createTime: '2025-07-05',
-    remainingDays: 60,
-    priority: '一般优先',
-    status: '进行中',
-    mainContent: '对校园内现有绿植进行修剪、养护，并规划新增绿化区域。',
-    undertakingContent: '1. 基建处负责整体规划和施工；2. 后勤处负责日常养护。'
-  },
-  {
-    id: 5,
-    title: '教职工培训计划制定',
-    description: '制定年度教职工专业技能和职业素养培训计划。',
-    issuer: '人事处',
-    collaborators: [],
-    supervisor: '李校长',
-    deadline: '2025-07-20',
-    createTime: '2025-06-25',
-    remainingDays: 5,
-    priority: '高优先级', // 需要关注
-    status: '进行中',
-    mainContent: '根据学校发展需求和教职工个人发展意愿，制定全面的培训方案。',
-    undertakingContent: '1. 人事处负责需求调研和方案起草；2. 各部门配合组织培训。'
-  },
-  {
-    id: 6,
-    title: '实验室安全隐患排查',
-    description: '对全校实验室进行安全隐患排查，确保实验教学安全。',
-    issuer: '教务处',
-    collaborators: ['保卫处'],
-    supervisor: '张副校长',
-    deadline: '2025-08-10',
-    createTime: '2025-07-01',
-    remainingDays: 20,
-    priority: '高优先级',
-    status: '已完成', // 已完成任务
-    mainContent: '对所有实验室的设备、化学品、消防设施等进行全面检查。',
-    undertakingContent: '1. 教务处牵头组织；2. 保卫处提供安全指导；3. 各学院实验室自查。'
-  }
-])
-
-const historyList = ref([
-  {
-    time: '2025-06-30 10:00',
-    type: 'primary',
-    title: '任务创建',
-    content: '任务已创建并分配给相关部门',
-    operator: '系统管理员',
-    department: '校务督办'
-  },
-  {
-    time: '2025-07-01 14:30',
-    type: 'success',
-    title: '任务接收',
-    content: '学生处已接收任务并开始处理',
-    operator: '张三',
-    department: '学生处'
-  },
-  {
-    time: '2025-07-05 09:15',
-    type: 'warning',
-    title: '进度更新',
-    content: '已完成初步调研，正在制定具体实施方案',
-    operator: '李四',
-    department: '学生处'
-  },
-  {
-    time: '2025-07-10 16:45',
-    type: 'info',
-    title: '协办确认',
-    content: '后勤处确认协办，将配合相关工作',
-    operator: '王五',
-    department: '后勤处'
-  }
-])
-
-// Computed property for filtered task list based on active tab and filters
-const filteredTaskList = computed(() => {
-  let filtered = taskList.value;
-
-  // 1. Filter by active tab
-  if (activeTab.value === 'managed-items') {
-    // 假设“分管事项”是分管领导为“张副校长”的任务
-    filtered = filtered.filter(task => task.supervisor === '张副校长');
-  } else if (activeTab.value === 'all-items') {
-    // “全部事项”显示所有任务
-  } else if (activeTab.value === 'attention-items') {
-    // “需要关注”显示高优先级任务
-    filtered = filtered.filter(task => task.priority === '高优先级');
-  } else if (activeTab.value === 'collaborative-tasks') {
-    // “协办任务”显示当前用户部门（模拟为“学生处”）参与协办的任务
-    filtered = filtered.filter(task => task.collaborators.includes(currentUserDepartment));
-  } else if (activeTab.value === 'completed-tasks') {
-    // “已完成”显示状态为“已完成”的任务
-    filtered = filtered.filter(task => task.status === '已完成');
-  }
-
-  // 2. Apply search filter
-  if (taskSearch.value) {
-    const searchLower = taskSearch.value.toLowerCase();
-    filtered = filtered.filter(task =>
-      task.title.toLowerCase().includes(searchLower) ||
-      task.description.toLowerCase().includes(searchLower) ||
-      (task.instruction && task.instruction.toLowerCase().includes(searchLower))
-    );
-  }
-
-  // 3. Apply department filter
-  if (taskDept.value !== 'all') {
-    filtered = filtered.filter(task =>
-      task.issuer === taskDept.value || task.collaborators.includes(taskDept.value)
-    );
-  }
-
-  // 4. Apply status filter
-  if (taskStatus.value !== 'all') {
-    filtered = filtered.filter(task => task.status === taskStatus.value);
-  }
-
-  return filtered;
+// 分页相关
+const pagination = reactive({
+  pageNo: 1,
+  pageSize: 10,
+  total: 0,
 })
 
-// Methods
-const getPriorityType = (priority) => {
-  const types = {
-    '高优先级': 'danger',
-    '中优先级': 'warning',
-    '一般优先': 'info'
+// 模拟当前用户的部门，用于“协办任务”过滤
+
+
+// 任务列表数据
+const taskList = ref([])
+
+
+const historyList = ref([])
+
+// 前端过滤的计算属性
+const filteredTaskList = computed(() => {
+  return taskList.value.filter(task => {
+    // 关键词搜索 - 搜索标题和内容
+    const matchesSearch = !taskSearch.value ||
+      task.supervisionPageVOData?.orderTitle?.toLowerCase().includes(taskSearch.value.toLowerCase()) ||
+      task.supervisionPageVOData?.content?.toLowerCase().includes(taskSearch.value.toLowerCase())
+
+    // 部门过滤
+    const matchesDept = taskDept.value === 'all' ||
+      task.supervisionPageVOData?.creatorDeptName === taskDept.value ||
+      Object.values(task.supervisionPageVOData?.coDeptNameMap || {}).includes(taskDept.value)
+
+    // 状态过滤
+    const matchesStatus = taskStatus.value === 'all' ||
+      getStatusText(task) === taskStatus.value
+
+    return matchesSearch && matchesDept && matchesStatus
+})
+})
+
+// 加载任务列表
+const loadTaskList = async () => {
+  loading.value = true
+  try {
+    const params = {
+      pageNo: pagination.pageNo || 1,
+      pageSize: pagination.pageSize || 10,
+      category: '督察督办'
+    }
+
+    console.log('API请求参数:', params) // 添加调试日志
+
+    let result
+    if (activeTab.value === 'all-items') {
+      result = await SupervisionTaskApi.getAllTasksPage(params)
+    } else if (activeTab.value === 'attention-items') {
+      result = await SupervisionTaskApi.getAttentionTasksPage(params)
+    }
+
+    console.log('API响应结果:', result) // 添加调试日志
+    console.log('返回的任务数量:', result?.list?.length) // 检查实际返回的任务数量
+    console.log('返回的总数:', result?.total) // 检查返回的总数
+
+    const tasks = result.list || []
+
+    // 为每个任务获取批示信息
+    for (const task of tasks) {
+      if (task.processInstanceId) {
+        try {
+          const remarks = await LeaderRemarkApi.getLeaderRemark(task.processInstanceId)
+          task.leaderRemarks = remarks || []
+        } catch (error) {
+          console.error('获取批示信息失败', error)
+          task.leaderRemarks = []
+        }
+      } else {
+        task.leaderRemarks = []
+      }
+    }
+
+    taskList.value = tasks
+    pagination.total = result.total || 0
+  } catch (error) {
+    console.error('加载任务列表失败', error)
+    ElMessage.error('加载任务列表失败')
+  } finally {
+    loading.value = false
   }
-  return types[priority] || 'info'
+}
+
+// 处理页码变更
+const handlePageChange = (page) => {
+  pagination.pageNo = page
+  loadTaskList()
+}
+
+// 处理标签页切换
+const handleTabChange = () => {
+  pagination.pageNo = 1 // 重置为第一页
+  loadTaskList()
+}
+
+// 处理筛选条件变更 - 前端过滤，不重新请求API
+const handleFilterChange = () => {
+  // 前端过滤，不需要重新请求API
+}
+
+// 数据处理辅助方法
+const getTaskTitle = (task) => {
+  return task.supervisionPageVOData?.orderTitle || task.name || '未知任务'
+}
+
+const getTaskContent = (task) => {
+  return task.supervisionPageVOData?.content || ''
+}
+
+const getCreatorDeptName = (task) => {
+  return task.supervisionPageVOData?.creatorDeptName || ''
+}
+
+const getCoDeptNames = (task) => {
+  const coDeptNameMap = task.supervisionPageVOData?.coDeptNameMap || {}
+  const names = Object.values(coDeptNameMap)
+  return names.length > 0 ? names.join('、') : '无'
+}
+
+const getDeadlineText = (task) => {
+  const deadline = task.supervisionPageVOData?.deadline
+  if (!deadline) return '无'
+  return formatDateOnly(deadline)
+}
+
+// 根据任务状态获取截止时间的样式类
+const getDeadlineClass = (task) => {
+  const status = getStatusText(task)
+  if (status === '已超时') {
+    return 'deadline-date-overdue' // 红色
+  } else if (status === '已结束') {
+    return 'deadline-date-finished' // 黑色
+  } else if (status === '进行中' || status === '需要关注') {
+    return 'deadline-date-processing' // 橙色
+  }
+  return 'deadline-date' // 默认颜色
+}
+
+const getRemainingTimeText = (task) => {
+  const deadline = task.supervisionPageVOData?.deadline
+  const createTime = task.createTime
+
+  if (!deadline || !createTime) return ''
+
+  const deadlineDate = new Date(deadline)
+  const createDate = new Date(createTime)
+  const now = new Date()
+
+  // 计算剩余时间（以天为单位）
+  const remainingMs = deadlineDate.getTime() - now.getTime()
+  const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24))
+
+  if (remainingDays > 0) {
+    return `剩余${remainingDays}天`
+  } else if (remainingDays === 0) {
+    return '今日到期'
+  } else {
+    return `超期${Math.abs(remainingDays)}天`
+  }
+}
+
+const getRemainingTimeClass = (task) => {
+  const deadline = task.supervisionPageVOData?.deadline
+  if (!deadline) return 'remaining-days'
+
+  const deadlineDate = new Date(deadline)
+  const now = new Date()
+  const remainingMs = deadlineDate.getTime() - now.getTime()
+  const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24))
+
+  if (remainingDays < 0) {
+    return 'remaining-days overdue' // 超期显示红色
+  } else if (remainingDays === 0) {
+    return 'remaining-days urgent' // 今日到期显示橙色
+  } else {
+    return 'remaining-days' // 正常显示绿色
+  }
+}
+
+const getPriorityText = (task) => {
+  const priority = task.supervisionPageVOData?.priority
+  if (priority === 1) return '高优先级'
+  if (priority === 2) return '中优先级'
+  return '一般优先级'
+}
+
+const formatCreateTime = (timestamp) => {
+  if (!timestamp) return ''
+  return formatDateOnly(timestamp)
+}
+
+// Methods
+const getPriorityType = (task) => {
+  const priority = task.supervisionPageVOData?.priority
+  if (priority === 1) return 'danger'  // 高优先级
+  if (priority === 2) return 'warning' // 中优先级
+  return 'info' // 一般优先级
 }
 
 // 获取任务状态类型（用于标签颜色）
@@ -425,39 +469,90 @@ const getStatusType = (task) => {
   const status = getStatusText(task)
   const types = {
     '进行中': 'warning',
-    '已完成': 'success',
-    '已超时': 'danger'
+    '已结束': 'success',
+    '已超时': 'danger',
+    '需要关注': 'danger'
   }
   return types[status] || 'info'
 }
 
 // 获取任务状态文本
 const getStatusText = (task) => {
-  // 已完成标签页中的任务都显示"已完成"
-  if (activeTab.value === 'completed-tasks') {
-    return '已完成'
+  // 需要关注标签页中的任务都显示"需要关注"
+  if (activeTab.value === 'attention-items') {
+    return '需要关注'
   }
 
-  // 其他标签页中的任务根据截止时间判断状态
-  const deadline = task.deadline
-  if (!deadline) {
-    return '进行中' // 没有截止时间默认为进行中
+  // 全部事项标签页中根据taskType判断状态
+  const taskType = task.taskType
+
+  if (taskType === 'done') {
+    return '已结束'
   }
 
-  const deadlineDate = new Date(deadline)
-  const now = new Date()
+  if (taskType === 'todo') {
+    // 检查是否超时
+    const deadline = task.supervisionPageVOData?.deadline
+    if (deadline) {
+      const deadlineDate = new Date(deadline)
+      const now = new Date()
 
-  // 如果当前时间超过截止时间，显示"已超时"，否则显示"进行中"
-  if (now > deadlineDate) {
-    return '已超时'
-  } else {
+      if (now > deadlineDate) {
+        return '已超时'
+      }
+    }
     return '进行中'
   }
+
+  // 默认情况（兼容旧数据）
+  return '进行中'
 }
 
-const viewTaskDetail = (task) => {
-  selectedTask.value = task
-  detailDialogVisible.value = true
+// 获取督办状态用于详情弹窗显示（与外面状态标签保持一致）
+const getSupervisionStatusForDialog = (task) => {
+  // 直接返回与外面状态标签一致的状态文本
+  return getStatusText(task)
+}
+
+const viewTaskDetail = async (task) => {
+  try {
+    // 转换数据格式以匹配SupervisionDetailDialog组件期望的格式
+    const supervisionData = task.supervisionPageVOData || {}
+    const coDeptNames = Object.values(supervisionData.coDeptNameMap || {})
+
+    selectedTask.value = {
+      id: supervisionData.id,
+      title: supervisionData.orderTitle || '未知任务',
+      description: supervisionData.content || '',
+      mainContent: supervisionData.content || '',
+      undertakingContent: supervisionData.undertakeMatter || '',
+      leadDepartment: supervisionData.leadDeptName || '',
+      assistDepartments: coDeptNames,
+      collaborators: coDeptNames,
+      supervisor: supervisionData.leaderNickname || '',
+      priority: getPriorityText(task),
+      status: getStatusText(task), // 添加状态信息
+      deadline: supervisionData.deadline ? dateFormatter(null, null, supervisionData.deadline) : '无',
+      createTime: dateFormatter(null, null, task.createTime),
+      createdDate: dateFormatter(null, null, task.createTime),
+      orderNumber: supervisionData.orderCode || '',
+      processInstanceId: task.processInstance?.id || task.processInstanceId,
+      // 添加流程实例信息以匹配组件期望的数据结构
+      processInstance: {
+        id: task.processInstance?.id || task.processInstanceId
+      },
+      // 添加原型需要的字段
+      issueUnit: supervisionData.creatorDeptName || '', // 下发单位
+      coDeptNameMap: supervisionData.coDeptNameMap || {}, // 协办部门映射
+      taskType: task.taskType, // 添加任务类型信息
+      // 添加督办状态，用于详情弹窗中的状态显示
+      supervisionStatus: getSupervisionStatusForDialog(task)
+    }
+    detailDialogVisible.value = true
+  } catch (error) {
+    console.error('获取任务详情失败', error)
+    ElMessage.error('获取任务详情失败')
+  }
 }
 
 const handleDetailClose = () => {
@@ -470,17 +565,31 @@ const addInstruction = (task) => {
   instructionDialogVisible.value = true
 }
 
-const submitInstruction = () => {
+const submitInstruction = async () => {
   if (!instructionForm.content.trim()) {
     ElMessage.warning('请输入批示内容')
     return
   }
 
-  ElMessage.success('批示已提交')
-  instructionDialogVisible.value = false
+  try {
+    // 调用新增批示API
+    await LeaderRemarkApi.insertLeaderRemark({
+      processInstanceId: selectedTask.value.processInstanceId,
+      remark: instructionForm.content.trim()
+    })
 
-  // 重置表单
-  instructionForm.content = ''
+    ElMessage.success('批示已提交')
+    instructionDialogVisible.value = false
+
+    // 重置表单
+    instructionForm.content = ''
+
+    // 重新加载任务列表以显示最新批示
+    await loadTaskList()
+  } catch (error) {
+    console.error('提交批示失败', error)
+    ElMessage.error('提交批示失败')
+  }
 }
 
 const showMoreHistory = () => {
@@ -496,20 +605,26 @@ const handleScroll = (event) => {
 const filteredTaskListByTab = (tabName) => {
   let filtered = taskList.value;
   if (tabName === 'managed-items') {
-    filtered = filtered.filter(task => task.supervisor === '张副校长');
+    filtered = filtered.filter(task => task.supervisionPageVOData?.leaderNickname === '张副校长');
   } else if (tabName === 'attention-items') {
-    filtered = filtered.filter(task => task.priority === '高优先级');
+    filtered = filtered.filter(task => task.supervisionPageVOData?.priority === 1);
   }
   return filtered;
 };
 
 const filteredTaskListByStatus = (status) => {
-  return taskList.value.filter(task => task.status === status);
+  return taskList.value.filter(task => getStatusText(task) === status);
 };
 
 const filteredTaskListByInstruction = () => {
   return taskList.value.filter(task => task.instruction);
 };
+
+// 初始化
+onMounted(() => {
+  // 加载任务列表
+  loadTaskList()
+})
 </script>
 
 <style scoped>
@@ -667,32 +782,33 @@ const filteredTaskListByInstruction = () => {
 .task-list {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 16px;
 }
 
 .task-item {
+  margin-bottom: 16px;
   border-radius: 8px;
-  border: 1px solid #e4e7ed;
-  transition: all 0.3s ease;
+  transition: box-shadow 0.3s ease;
 }
 
 .task-item:hover {
-  border-color: #409eff;
-  box-shadow: 0 2px 12px rgba(64, 158, 255, 0.1);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
 .task-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 10px;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
 .task-title {
-  font-size: 16px;
-  font-weight: bold;
-  color: #303133;
   margin: 0;
+  font-size: 20px; /* 与部门界面保持一致 */
+  font-weight: bold; /* 与部门界面保持一致 */
+  cursor: pointer;
+  color: #303133;
+  transition: color 0.3s;
 }
 
 .task-actions {
@@ -700,9 +816,8 @@ const filteredTaskListByInstruction = () => {
   gap: 8px;
 }
 
-/* 普通内容描述样式 */
 .task-description {
-  margin-bottom: 15px;
+  margin-bottom: 12px;
 }
 
 .description-text {
@@ -712,15 +827,15 @@ const filteredTaskListByInstruction = () => {
   line-height: 1.5;
 }
 
-/* 领导批示高亮样式 */
 .leadership-instruction {
-  margin-bottom: 15px;
+  margin-bottom: 12px;
 }
 
 .task-content {
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
+  margin-top: 12px;
 }
 
 .task-details {
@@ -730,15 +845,55 @@ const filteredTaskListByInstruction = () => {
 .detail-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 8px;
-  font-size: 14px;
+  flex-wrap: wrap;
+  gap: 32px;
+  margin-bottom: 12px;
   color: #606266;
+  font-size: 14px;
 }
 
-.detail-row .el-icon {
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.detail-item .el-icon {
+  font-size: 14px;
   color: #909399;
-  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.detail-label {
+  color: #606266;
+  font-size: 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.detail-value {
+  color: #303133;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.task-title {
+  cursor: pointer;
+}
+
+.task-title:hover {
+  color: #409eff;
+}
+
+.remaining-days.overdue {
+  color: #f56c6c;
+  font-weight: 600;
+}
+
+.remaining-days.urgent {
+  color: #e6a23c;
+  font-weight: 600;
 }
 
 .supervisor {
@@ -752,19 +907,76 @@ const filteredTaskListByInstruction = () => {
 }
 
 .deadline-date {
-  color: #f56c6c; /* 红色样式 */
+  color: #E6A23C;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* 截止时间颜色样式 */
+.deadline-date-overdue {
+  color: #F56C6C; /* 红色 - 已超时 */
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.deadline-date-finished {
+  color: #303133; /* 黑色 - 已结束 */
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.deadline-date-processing {
+  color: #E6A23C; /* 橙色 - 进行中 */
+  font-size: 14px;
   font-weight: 500;
 }
 
 .remaining-days {
-  color: #e6a23c;
+  color: #67c23a;
+  font-size: 14px;
   font-weight: 500;
 }
 
 .task-buttons {
   display: flex;
-  gap: 10px;
-  flex-shrink: 0;
+  gap: 8px;
+}
+
+.no-tasks-message {
+  padding: 40px 0;
+  text-align: center;
+  color: #909399;
+  font-size: 14px;
+}
+
+/* Element Plus 卡片样式调整 */
+:deep(.el-card__body) {
+  padding: 24px; /* 与部门界面保持一致 */
+}
+
+@media (max-width: 768px) {
+  .task-header-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .control-group {
+    margin-top: 12px;
+    width: 100%;
+  }
+
+  .task-search, .task-filter {
+    width: 100%;
+  }
+
+  .task-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .task-buttons {
+    margin-top: 16px;
+  }
 }
 
 
@@ -851,12 +1063,44 @@ const filteredTaskListByInstruction = () => {
   font-weight: 500;
 }
 
+/* 批示显示样式 */
+.task-remarks {
+  margin-top: 12px;
+  padding: 12px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid #409eff;
+}
+
+.remarks-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 8px;
+}
+
+.remark-item {
+  margin-bottom: 8px;
+}
+
+.remark-item:last-child {
+  margin-bottom: 0;
+}
+
+.remark-content {
+  font-size: 13px;
+  color: #606266;
+  line-height: 1.5;
+  padding: 6px 0;
+}
+
 :deep(.el-button--small) {
   padding: 5px 12px;
   font-size: 12px;
 }
 
-:deep(.el-dialog__body) {
+/* 只对非督办详情弹窗应用此样式 */
+:deep(.el-dialog:not(.supervision-detail-dialog) .el-dialog__body) {
   padding: 15px 20px;
 }
 

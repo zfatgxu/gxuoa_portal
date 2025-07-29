@@ -103,28 +103,28 @@
         </div>
       <div class="grid grid-cols-4 gap-4">
         <div class="flex items-center p-4 justify-center rounded-lg" style="border: 1px solid #e5e7eb;">
-            <Calendar class="w-7 h-7 text-blue-500" />
+            <el-icon class="w-7 h-7 text-blue-500"><Calendar /></el-icon>
             <div class="flex flex-col items-center ml-4">
                 <span class="text-md text-gray-600">本月新增</span>
                 <span class="text-2xl font-bold text-blue-600">{{ monthlyStats.newTasks }}</span>
             </div>
         </div>
         <div class="flex items-center p-4 justify-center rounded-lg" style="border: 1px solid #e5e7eb;">
-            <Clock class="w-7 h-7 text-orange-500" />
+            <el-icon class="w-7 h-7 text-orange-500"><Clock /></el-icon>
             <div class="flex flex-col items-center ml-4">
                 <span class="text-sm text-gray-600">进行中</span>
                 <span class="text-2xl font-bold text-orange-600">{{ monthlyStats.inProgress }}</span>
             </div>
         </div>
         <div class="flex items-center p-4 justify-center rounded-lg" style="border: 1px solid #e5e7eb;">
-            <CheckCircle class="w-7 h-7 text-green-500" />
+            <el-icon class="w-7 h-7 text-green-500"><CheckCircle /></el-icon>
             <div class="flex flex-col items-center ml-4">
                 <span class="text-sm text-gray-600">已完成</span>
                 <span class="text-2xl font-bold text-green-600">{{ monthlyStats.completed }}</span>
             </div>
         </div>
         <div class="flex items-center p-4 justify-center rounded-lg" style="border: 1px solid #e5e7eb;">
-            <TimerOff class="w-7 h-7 text-red-500" />
+            <el-icon class="w-7 h-7 text-red-500"><TimerOff /></el-icon>
             <div class="flex flex-col items-center ml-4">
                 <span class="text-sm text-gray-600">已超时</span>
                 <span class="text-2xl font-bold text-red-600">{{ monthlyStats.overdue }}</span>
@@ -216,14 +216,14 @@
             
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div class="flex items-center">
-                <Users class="w-4 h-4 text-gray-400 mr-2" />
+                <el-icon class="w-4 h-4 text-gray-400 mr-2"><Users /></el-icon>
                 <span class="text-gray-500">牵头部门：</span>
                 <span class="text-gray-700">{{ task.leadDepartment }}</span>
                 </div>
                 <div class="flex items-center">
-                <Clock class="w-4 h-4 text-gray-400 mr-2" />
+                <el-icon class="w-4 h-4 text-gray-400 mr-2"><Clock /></el-icon>
                 <span class="text-gray-500">截止时间：</span>
-                <span :class="task.isOverdue ? 'text-red-600' : 'text-gray-700'">
+                <span :class="getDeadlineColorClass(task)">
                     {{ task.deadline }}
                 </span>
                 </div>
@@ -245,7 +245,7 @@
                         <span v-if="task.daysRemaining" class="ml-2 text-orange-600">
                             剩余{{ task.daysRemaining }}天
                         </span>
-                        <AlertTriangle v-if="task.isOverdue" class="w-6 h-6 text-red-500 ml-2" />
+                        <el-icon v-if="task.isOverdue" class="w-6 h-6 text-red-500 ml-2"><AlertTriangle /></el-icon>
                         <span v-if="task.overdueDays" class="ml-2 text-orange-600">
                             超时{{ task.overdueDays }}天
                         </span>
@@ -283,44 +283,89 @@
       v-model="detailDialogVisible"
       :task-data="selectedTask"
       :process-instance-id="selectedTask?.processInstanceId"
-      :supervision-status="selectedTask?.supervisionStatus"
+      :supervision-status="selectedTask?.status"
     />
 </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
+// 使用 Element Plus 图标替代 lucide-vue-next
 import {
-Calendar,
-Clock,
-CheckCircle,
-TimerOff,
-Search,
-ChevronRight,
-Users,
-Building,
-User,
-AlertTriangle
-} from 'lucide-vue-next'
+  Calendar,
+  Clock,
+  CircleCheck as CheckCircle,
+  Timer as TimerOff,
+  Search,
+  User as Users,
+  Warning as AlertTriangle
+} from '@element-plus/icons-vue'
 import SupervisionDetailDialog from './components/SupervisionDetailDialog.vue'
 import { SupervisionIndexApi } from '@/api/supervision/index'
-import type { SupervisionOrderDetailVO, SupervisionStatisticsVO } from '@/api/supervision/index'
+import type { SupervisionOrderDetailVO } from '@/api/supervision/index'
 import { ElMessage } from 'element-plus'
-import { formatDate, betweenDay } from '@/utils/formatTime'
+import { formatDate } from '@/utils/formatTime'
+
+// 定义任务数据类型
+interface TaskData {
+  id: number
+  title: string
+  description: string
+  leadDepartment: string
+  assistDepartments: string[]
+  createdDate: string
+  deadline: string
+  supervisor: string
+  priority: string
+  status: string
+  overdueDays: number | null
+  isOverdue: boolean
+  daysRemaining: number | null
+  type: string
+  processInstanceId?: string
+  supervisionStatus?: string
+}
+
+// 定义任务统计数据类型
+interface TaskStatsData {
+  total: number
+  workSupervision: number
+  specialSupervision: number
+}
+
+// 定义状态统计数据类型
+interface StatusStatsData {
+  total: number
+  inProgress: number
+  overdue: number
+  completed: number
+}
+
+// 定义月度统计数据类型
+interface MonthlyStatsData {
+  newTasks: number
+  inProgress: number
+  completed: number
+  overdue: number
+}
+
+// 定义分页数据类型
+interface PaginationData {
+  pageNo: number
+  pageSize: number
+  total: number
+}
 
 // Reactive data
-const activeTab = ref('work')
-const searchQuery = ref('')
-const selectedDepartment = ref('')
-const selectedStatus = ref('')
-const detailDialogVisible = ref(false)
-const selectedTask = ref(null)
-const loading = ref(false)
+const activeTab = ref<string>('work')
+const searchQuery = ref<string>('')
+const selectedDepartment = ref<string>('')
+const selectedStatus = ref<string>('')
+const detailDialogVisible = ref<boolean>(false)
+const selectedTask = ref<TaskData | null>(null)
+const loading = ref<boolean>(false)
 
-// 缓存相关
-const statisticsCache = ref(null)
-const statisticsCacheTime = ref(0)
-const CACHE_DURATION = 5 * 60 * 1000 // 5分钟缓存
+
 
 // Static data
 const tabs = [
@@ -328,11 +373,11 @@ const tabs = [
 { key: 'special', label: '专项督办' }
 ]
 
-const statuses = ['进行中', '已超时', '已结束']
+const statuses: string[] = ['进行中', '已超时', '已结束']
 
 // 计算部门选项 - 从任务数据中提取部门名称
 const departments = computed(() => {
-  const deptSet = new Set()
+  const deptSet = new Set<string>()
   tasks.value.forEach(task => {
     if (task.leadDepartment) {
       deptSet.add(task.leadDepartment)
@@ -345,20 +390,20 @@ const departments = computed(() => {
 })
 
 // Statistics data
-const taskStats = ref({
+const taskStats = ref<TaskStatsData>({
   total: 0,
   workSupervision: 0,
   specialSupervision: 0
 })
 
-const statusStats = ref({
+const statusStats = ref<StatusStatsData>({
   total: 0,
   inProgress: 0,
   overdue: 0,
   completed: 0
 })
 
-const monthlyStats = ref({
+const monthlyStats = ref<MonthlyStatsData>({
   newTasks: 0,
   inProgress: 0,
   completed: 0,
@@ -366,10 +411,10 @@ const monthlyStats = ref({
 })
 
 // 任务列表数据
-const tasks = ref([])
+const tasks = ref<TaskData[]>([])
 
 // 分页数据
-const pagination = ref({
+const pagination = ref<PaginationData>({
   pageNo: 1,
   pageSize: 10, // 默认显示10条数据
   total: 0
@@ -378,13 +423,31 @@ const pagination = ref({
 
 
 // 解析协办部门（从API返回的coDeptNameMap中获取）
-const parseCoDepts = (coDeptNameMap: Record<string, string> | null) => {
+const parseCoDepts = (coDeptNameMap: Record<string, string> | null | undefined): string[] => {
   if (!coDeptNameMap) return []
   return Object.values(coDeptNameMap)
 }
 
+// 根据任务状态获取截止时间颜色样式类
+const getDeadlineColorClass = (task: TaskData) => {
+  const status = task.status
+  if (status === '已超时') {
+    return 'text-red-600' // 红色
+  } else if (status === '已结束') {
+    return 'text-gray-900' // 黑色
+  } else if (status === '进行中') {
+    return 'text-orange-500' // 橙色
+  }
+  return 'text-gray-700' // 默认颜色
+}
+
 // 根据督办状态和截止时间计算显示状态
-const calculateDisplayStatus = (supervisionStatus: string, deadline: number | null) => {
+const calculateDisplayStatus = (supervisionStatus: string, deadline: number | null): {
+  daysRemaining: number | null
+  isOverdue: boolean
+  overdueDays: number | null
+  status: string
+} => {
   // 根据 supervisionStatus 判断基本状态
   if (supervisionStatus === '办结文件' || supervisionStatus === '否决文件') {
     return {
@@ -454,7 +517,8 @@ const calculateDisplayStatus = (supervisionStatus: string, deadline: number | nu
 }
 
 // 获取优先级文本
-const getPriorityText = (priority: number) => {
+const getPriorityText = (priority: number | null | undefined): string => {
+  if (priority === null || priority === undefined) return '普通'
   switch (priority) {
     case 1: return '高优先级'
     case 2: return '中优先级'
@@ -465,21 +529,9 @@ const getPriorityText = (priority: number) => {
 
 
 
-// 获取统计数据（带缓存）
+// 获取统计数据
 const getStatisticsData = async () => {
-  const now = Date.now()
-
-  // 检查缓存是否有效
-  if (statisticsCache.value && (now - statisticsCacheTime.value) < CACHE_DURATION) {
-    return statisticsCache.value
-  }
-
-  // 缓存失效，重新获取
-  const statistics = await SupervisionIndexApi.getStatistics()
-  statisticsCache.value = statistics
-  statisticsCacheTime.value = now
-
-  return statistics
+  return await SupervisionIndexApi.getStatistics()
 }
 
 // 获取数据
@@ -548,33 +600,41 @@ const fetchData = async () => {
       // 处理督办数据（优化性能）
       const processedTasks = supervisionOrders.map((order) => {
         // 使用新的状态计算函数，传入 supervisionStatus 和 deadline
-        const displayStatus = calculateDisplayStatus(order.supervisionStatus || '流程中', order.deadline)
+        const displayStatus = calculateDisplayStatus(order.supervisionStatus || '流程中', order.deadline || null)
 
         // 调试信息
-        console.log(`督办单 ${order.orderTitle}: supervisionStatus=${order.supervisionStatus}, 计算状态=${displayStatus.status}`)
+        console.log(`督办单 ${order.orderTitle}: supervisionStatus=${order.supervisionStatus}, 计算状态=${displayStatus?.status || '未知'}`)
 
-        // 预处理日期，避免重复创建Date对象
-        const createTime = order.createTime ? new Date(order.createTime) : null
-        const deadlineTime = order.deadline ? new Date(order.deadline) : null
+        // 格式化日期的辅助函数
+        const formatOrderDate = (dateValue: number | string | null | undefined): string => {
+          if (!dateValue) return ''
+          try {
+            const date = new Date(dateValue)
+            if (isNaN(date.getTime())) return ''
+            return formatDate(date, 'YYYY-MM-DD')
+          } catch {
+            return ''
+          }
+        }
 
         return {
           id: order.id,
-          title: order.orderTitle,
-          description: order.content,
+          title: order.orderTitle || '',
+          description: order.content || '',
           leadDepartment: order.leadDeptName || '未知部门',
           assistDepartments: parseCoDepts(order.coDeptNameMap),
-          createdDate: createTime ? formatDate(createTime, 'YYYY-MM-DD') : '',
-          deadline: deadlineTime ? formatDate(deadlineTime, 'YYYY-MM-DD') : '',
+          createdDate: formatOrderDate(order.createTime),
+          deadline: formatOrderDate(order.deadline),
           supervisor: order.leaderNickname || '未分配',
           priority: getPriorityText(order.priority),
-          status: displayStatus.status,
-          overdueDays: displayStatus.overdueDays,
-          isOverdue: displayStatus.isOverdue,
-          daysRemaining: displayStatus.daysRemaining,
+          status: displayStatus?.status || '进行中',
+          overdueDays: displayStatus?.overdueDays || null,
+          isOverdue: displayStatus?.isOverdue || false,
+          daysRemaining: displayStatus?.daysRemaining || null,
           type: order.type === 1 ? 'work' : 'special',
-          processInstanceId: order.processInstanceId,
-          supervisionStatus: order.supervisionStatus // 保留原始状态字段
-        }
+          processInstanceId: order.processInstanceId || '',
+          supervisionStatus: order.supervisionStatus || ''
+        } as TaskData
       })
 
       tasks.value = processedTasks
@@ -687,7 +747,7 @@ const currentTabTotal = computed(() => {
 })
 
 // 打开详情弹框
-const openDetailDialog = (task) => {
+const openDetailDialog = (task: TaskData) => {
   selectedTask.value = task
   detailDialogVisible.value = true
 }

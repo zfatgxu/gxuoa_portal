@@ -896,10 +896,6 @@ const createOrder = async () => {
   }
 }
 
-
-
-
-
 const resetForm = async () => {
   await generateOrderNumber()
   orderForm.title = ''
@@ -922,8 +918,6 @@ const resetForm = async () => {
   orderForm.handlingDetails = ''
   orderForm.supervisionReview = undefined
 }
-
-
 
 const handleCancel = async () => {
   try {
