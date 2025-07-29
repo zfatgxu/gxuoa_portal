@@ -173,7 +173,10 @@
       <el-table-column label="工作主持人" align="center" prop="hostId" /> -->
       <el-table-column label="流转状态" align="center" prop="status">
         <template #default="scope">
-          <dict-tag :type="DICT_TYPE.LEAVE_STATUS" :value="scope.row.status"/>
+          <el-tag :type="getStatusTagType(scope.row.status)">
+            {{ getStatusLabel(scope.row.status) }}
+          </el-tag>
+        <!-- <dict-tag :type="DICT_TYPE.LEAVE_STATUS" :value="scope.row.status"/> -->
         </template>
       </el-table-column>
       <!-- <el-table-column label="审核人" align="center" prop="personAdmitId" /> -->
@@ -273,6 +276,25 @@ const queryParams = reactive({
   createTime: [],
 })
 const queryFormRef = ref() // 搜索的表单
+
+/** 获取状态标签类型 */
+const getStatusTagType = (status) => {
+  switch (parseInt(status)) {
+    case 1: return 'warning' // 待会签
+    case 4: return 'info'    // 已取消
+    case 2: return 'primary' // 待审批
+    case 3: return 'success' // 已完成
+    case 0: return 'danger'  // 未通过
+    default: return ''
+  }
+}
+
+/** 获取状态标签文本 */
+const getStatusLabel = (status) => {
+  const dictList = getIntDictOptions(DICT_TYPE.LEAVE_STATUS)
+  const dict = dictList.find(item => parseInt(item.value) === parseInt(status))
+  return dict ? dict.label : '未知状态'
+}
 
 /** 查询列表 */
 const getList = async () => {

@@ -68,15 +68,15 @@
                   </div>
                     <div class="detail-item">
                       <span class="detail-label">调研主题</span>
-                      <el-input v-model="research.researchTopic" placeholder="请输入调研主题"/>
+                      <el-input v-model="research.researchTopic" type="textarea" autosize placeholder="请输入调研主题"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">调研目的</span>
-                      <el-input v-model="research.researchPurpose" placeholder="请输入调研目的"/>
+                      <el-input v-model="research.researchPurpose" type="textarea" autosize placeholder="请输入调研目的"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">调研单位</span>
-                      <el-input v-model="research.researchUnit" placeholder="请输入调研单位"/>
+                      <el-input v-model="research.researchUnit" type="textarea" autosize placeholder="请输入调研单位"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">开始时间</span>
@@ -86,7 +86,7 @@
                         placeholder="开始时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
-                        :disabled-date="disabledDate"
+                        :disabled-date="disabledStartDate(index,1)"
                       />
                     </div>
                     <div class="detail-item">
@@ -97,14 +97,14 @@
                         placeholder="结束时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
-                        :disabled-date="disabledDate"
+                        :disabled-date="disabledEndDate(index,1)"
                       />
                     </div>
                     <div class="add-meeting">
                     <el-button type="primary" circle @click="addResearch">
                       <el-icon><Plus /></el-icon>
                     </el-button>
-                  </div>
+                    </div>
                   </div>
                 </div>
                 <!-- 培训事由 -->
@@ -117,11 +117,11 @@
                   </div>
                     <div class="detail-item">
                       <span class="detail-label">培训主题</span>
-                      <el-input v-model="meeting.trainingTopic" placeholder="请输入培训主题"/>
+                      <el-input v-model="meeting.trainingTopic" type="textarea" autosize placeholder="请输入培训主题"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">举办单位</span>
-                      <el-input v-model="meeting.trainingUnit" placeholder="请输入举办单位"/>
+                      <el-input v-model="meeting.trainingUnit" type="textarea" autosize placeholder="请输入举办单位"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">开始时间</span>
@@ -131,7 +131,7 @@
                         placeholder="开始时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
-                        :disabled-date="disabledDate"
+                        :disabled-date="disabledStartDate(index,2)"
                       />
                     </div>
                     <div class="detail-item">
@@ -142,7 +142,7 @@
                         placeholder="结束时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
-                        :disabled-date="disabledDate"
+                        :disabled-date="disabledEndDate(index,2)"
                       />
                     </div>
                     <div class="add-meeting">
@@ -162,11 +162,11 @@
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">会议名称</span>
-                      <el-input v-model="meeting.businessTopic" placeholder="请输入会议名称"/>
+                      <el-input v-model="meeting.businessTopic" type="textarea" autosize placeholder="请输入会议名称"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">举办单位</span>
-                      <el-input v-model="meeting.businessUnit" placeholder="请输入举办单位"/>
+                      <el-input v-model="meeting.businessUnit" type="textarea" autosize placeholder="请输入举办单位"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">开始时间</span>
@@ -176,7 +176,7 @@
                         placeholder="开始时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
-                        :disabled-date="disabledDate"
+                        :disabled-date="disabledStartDate(index,3)"
                       />
                     </div>
                     <div class="detail-item">
@@ -187,7 +187,7 @@
                         placeholder="结束时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
-                        :disabled-date="disabledDate"
+                        :disabled-date="disabledEndDate(index,3)"
                       />
                     </div>
                     <div class="add-meeting">
@@ -207,7 +207,7 @@
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">会议名称</span>
-                      <el-input v-model="meeting.academicTopic" placeholder="请输入会议名称"/>
+                      <el-input v-model="meeting.academicTopic" type="textarea" autosize placeholder="请输入会议名称"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">会议性质</span>
@@ -223,7 +223,7 @@
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">主办方</span>
-                      <el-input v-model="meeting.academicUnit" placeholder="请输入主办方"/>
+                      <el-input v-model="meeting.academicUnit" type="textarea" autosize placeholder="请输入主办方"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">开始时间</span>
@@ -233,7 +233,7 @@
                         placeholder="开始时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
-                        :disabled-date="disabledDate"
+                        :disabled-date="disabledStartDate(index,5)"
                       />
                     </div>
                     <div class="detail-item">
@@ -244,7 +244,7 @@
                         placeholder="结束时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
-                        :disabled-date="disabledDate"
+                        :disabled-date="disabledEndDate(index,5)"
                       />
                     </div>
                     <div class="detail-item">
@@ -273,11 +273,12 @@
                     </div>
                     <div v-if="meeting.isPresentation === 1" class="detail-item">
                       <span class="detail-label">报告题目</span>
-                      <el-input v-model="meeting.reportTitle" placeholder="请输入报告题目"/>
+                      <el-input v-model="meeting.reportTitle" type="textarea" autosize placeholder="请输入报告题目"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">交流论文数</span>
-                      <el-input v-model="meeting.academicPaperCount" placeholder="请输入交流论文数"/>
+                      <el-input v-model="meeting.academicPaperCount" type="number"
+                      min="0" placeholder="请输入交流论文数"/>
                     </div>
                   </div>
                   <div class="add-meeting">
@@ -313,7 +314,7 @@
                         placeholder="开始时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
-                        :disabled-date="disabledDate"
+                        :disabled-date="disabledStartDate(index,4)"
                       />
                     </div>
                     <div class="detail-item">
@@ -324,16 +325,16 @@
                         placeholder="结束时间"
                         value-format="YYYY-MM-DD HH:mm:ss"
                         style="width: 100%;"
-                        :disabled-date="disabledDate"
+                        :disabled-date="disabledEndDate(index,4)"
                       />
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">总计天数</span>
-                      <el-input v-model="personal.personalTotalDays" placeholder="请输入总计天数"/>
+                      <el-input v-model="personal.personalTotalDays" readonly placeholder="请输入总计天数"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">请假详情</span>
-                      <el-input v-model="personal.personalReason" type="textarea" :rows="3" placeholder="请输入请假详情"/>
+                      <el-input v-model="personal.personalReason" type="textarea" autosize placeholder="请输入请假详情"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">联系电话</span>
@@ -342,15 +343,15 @@
                     <div v-if="personal.personalType === 6">
                       <div class="detail-item">
                         <span class="detail-label">探亲路线</span>
-                        <el-input v-model="personal.personalRoute" placeholder="请输入探亲路线"/>
+                        <el-input v-model="personal.personalRoute" type="textarea" autosize placeholder="请输入探亲路线"/>
                       </div>
                       <div class="detail-item">
                         <span class="detail-label">与探望人关系</span>
-                        <el-input v-model="personal.personalRelation" placeholder="请输入与探望人关系"/>
+                        <el-input v-model="personal.personalRelation" type="textarea" autosize placeholder="请输入与探望人关系"/>
                       </div>
                       <div class="detail-item">
                         <span class="detail-label">被探望人姓名</span>
-                        <el-input v-model="personal.personalVisitName" placeholder="请输入被探望人姓名"/>
+                        <el-input v-model="personal.personalVisitName" type="textarea" autosize placeholder="请输入被探望人姓名"/>
                       </div>
                       <div class="detail-item">
                         <span class="detail-label">探亲类别</span>
@@ -365,7 +366,7 @@
                       </div>
                       <div class="detail-item">
                         <span class="detail-label">户口所在地或地址</span>
-                        <el-input v-model="personal.personalVisitAddress" placeholder="请输入户口所在地或地址"/>
+                        <el-input v-model="personal.personalVisitAddress" type="textarea" autosize placeholder="请输入户口所在地或地址"/>
                       </div>
                       <div class="detail-item">
                         <span class="detail-label">婚姻状况</span>
@@ -455,10 +456,10 @@
 
           <!-- 前往地点 -->
           <el-descriptions-item label="前往地点(必填)" label-class-name="approval-label">
-            <div v-for="(loc, index) in destinations" :key="index" class="detail-item">
+            <div v-for="(loc, index) in destinations" :key="index" style="display: flex;align-items: center;">
               <!-- <span class="detail-label">国内</span> -->
               <el-cascader :options="pcaTextArr" v-model="loc.destination" clearable style="width: 100%;"/>
-              <el-input v-model="loc.destinationDetail" placeholder="可选填写详细地址（如门牌号、楼层等）" clearable style="margin-left: 10px;"/>
+              <el-input v-model="loc.destinationDetail" placeholder="可选填写详细地址（如门牌号、楼层等）" clearable style="margin-left: 10px;" type="textarea" autosize/>
               <el-button 
                 v-if="index === destinations.length - 1" 
                 type="primary" 
@@ -745,7 +746,7 @@ const academicMeetings = ref([
     isPresentation: '',
     reportType: '',
     reportTitle: '',
-    academicPaperCount: 0
+    academicPaperCount: ''
   }
 ]);
 const addAcademicMeeting = () => {
@@ -759,7 +760,7 @@ const addAcademicMeeting = () => {
     isPresentation: '',
     reportType: '',
     reportTitle: '',
-    academicPaperCount: 0
+    academicPaperCount: ''
   });
 };
 const removeAcademicMeeting = (index) => {
@@ -952,28 +953,28 @@ const removeDestination = (index) => {
   }
 };
 // 手机号验证
-const validatePhone = (personalPhone) => {
-  if (!personalPhone.value) return;
+const validatePhone = (phoneValue) => {
+  if (!phoneValue) return;
   
   const phoneRegex = /^1[3-9]\d{9}$/;
-  if (!phoneRegex.test(personalPhone.value)) {
+  if (!phoneRegex.test(phoneValue)) {
     ElMessage.warning('请输入正确的11位手机号码');
-    personalPhone.value = '';
+    return '';
   }
+  return phoneValue;
 };
 // 提交流程
 const handleSubmit = async () => {
-  try {
-    // 0. 确认提示
-    await ElMessageBox.confirm(
+  // 0. 确认提示
+  await ElMessageBox.confirm(
       '确认提交请假申请吗？',
       '提示',
       {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
-        type: 'warning',
       }
     )
+  try {
     // 1. 表单验证
     if (!dateRange.value || dateRange.value.length !== 2) {
       ElMessage.warning('请选择请假日期范围')
@@ -983,6 +984,104 @@ const handleSubmit = async () => {
     if (selectedReasons.value.length === 0) {
       ElMessage.warning('请至少选择一个请假事由')
       return
+    }
+
+        // 调研事由验证
+        if (selectedReasons.value.includes(1)) {
+      for (let i = 0; i < researchList.value.length; i++) {
+        const research = researchList.value[i];
+        if (!research.researchTopic) {
+          ElMessage.warning(`第${i+1}条调研记录的调研主题不能为空`);
+          return;
+        }
+        if (!research.researchPurpose) {
+          ElMessage.warning(`第${i+1}条调研记录的调研目的不能为空`);
+          return;
+        }
+        if (!research.researchUnit) {
+          ElMessage.warning(`第${i+1}条调研记录的调研单位不能为空`);
+          return;
+        }
+      }
+    }
+
+    // 培训事由验证
+    if (selectedReasons.value.includes(2)) {
+      for (let i = 0; i < trainingList.value.length; i++) {
+        const training = trainingList.value[i];
+        if (!training.trainingTopic) {
+          ElMessage.warning(`第${i+1}条培训记录的培训主题不能为空`);
+          return;
+        }
+        if (!training.trainingUnit) {
+          ElMessage.warning(`第${i+1}条培训记录的培训单位不能为空`);
+          return;
+        }
+      }
+    }
+
+    // 公务事由验证
+    if (selectedReasons.value.includes(3)) {
+      for (let i = 0; i < businessList.value.length; i++) {
+        const business = businessList.value[i];
+        if (!business.businessTopic) {
+          ElMessage.warning(`第${i+1}条公务记录的会议名称不能为空`);
+          return;
+        }
+        if (!business.businessUnit) {
+          ElMessage.warning(`第${i+1}条公务记录的会议单位不能为空`);
+          return;
+        }
+      }
+    }
+
+    // 学术会议事由验证
+    if (selectedReasons.value.includes(5)) {
+      for (let i = 0; i < academicMeetings.value.length; i++) {
+        const meeting = academicMeetings.value[i];
+        if (!meeting.academicTopic) {
+          ElMessage.warning(`第${i+1}条学术会议记录的会议名称不能为空`);
+          return;
+        }
+        if (!meeting.academicNature) {
+          ElMessage.warning(`第${i+1}条学术会议记录的会议性质不能为空`);
+          return;
+        }
+        if (!meeting.academicUnit) {
+          ElMessage.warning(`第${i+1}条学术会议记录的会议单位不能为空`);
+          return;
+        }
+      }
+    }
+
+    // 因私事由验证
+    if (selectedReasons.value.includes(4)) {
+      for (let i = 0; i < personalList.value.length; i++) {
+        const personal = personalList.value[i];
+        if (!personal.personalType) {
+          ElMessage.warning(`第${i+1}条因私记录的请假类型不能为空`);
+          return;
+        }
+        if (!personal.personalReason) {
+          ElMessage.warning(`第${i+1}条因私记录的请假详情不能为空`);
+          return;
+        }
+        if (!personal.personalPhone) {
+          ElMessage.warning(`第${i+1}条因私记录的联系电话不能为空`);
+          return;
+        }
+      }
+    }
+
+    // 其他事由验证
+    if (selectedReasons.value.includes(6) && !otherReason.value) {
+      ElMessage.warning('其他事由内容不能为空');
+      return;
+    }
+
+    if (hasAttachment.value && fileList.value.length === 0) {
+      ElMessage.warning('请上传至少一个附件');
+      return;
     }
 
     // 检查是否至少有一个有效的目的地
@@ -1401,9 +1500,103 @@ const disabledDate = (time) => {
   // 对于开始日期和结束日期，都不能超出主日期范围
   return currentDate < startDate || currentDate > endDate;
 };
+// 为调研事由的开始日期创建禁用函数
+const disabledStartDate = (index, type) => {
+  return (time) => {
+    // 首先应用全局日期范围限制
+    if (disabledDate(time)) {
+      return true;
+    }
+    
+    // 根据事由类型获取对应的结束日期
+    let endDate;
+    switch (type) {
+      case 1:
+        endDate = researchList.value[index].researchEndDate;
+        break;
+      case 2:
+        endDate = trainingList.value[index].trainingEndDate;
+        break;
+      case 3:
+        endDate = businessList.value[index].businessEndDate;
+        break;
+      case 4:
+        endDate = personalList.value[index].personalEndDate;
+        break;
+      case 5:
+        endDate = academicMeetings.value[index].academicEndDate;
+        break;
+      default:
+        return false;
+    }
+
+    // 如果已有结束日期，则不能选择晚于结束日期的时间
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(0, 0, 0, 0);
+      
+      const currentDate = new Date(time);
+      currentDate.setHours(0, 0, 0, 0);
+      
+      return currentDate > end;
+    }
+    
+    return false;
+  };
+};
+
+// 为调研事由的结束日期创建禁用函数
+const disabledEndDate = (index, type) => {
+  return (time) => {
+    // 首先应用全局日期范围限制
+    if (disabledDate(time)) {
+      return true;
+    }
+    
+    let startDate;
+    switch (type) {
+      case 1:
+        startDate = researchList.value[index].researchStartDate;
+        break;
+      case 2:
+        startDate = trainingList.value[index].trainingStartDate;
+        break;
+      case 3:
+        startDate = businessList.value[index].businessStartDate;
+        break;
+      case 4:
+        startDate = personalList.value[index].personalStartDate;
+        break;
+      case 5:
+        startDate = academicMeetings.value[index].academicStartDate;
+        break;
+      default:
+        return false;
+    }
+
+    // 如果已有开始日期，则不能选择早于开始日期的时间
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      
+      const currentDate = new Date(time);
+      currentDate.setHours(0, 0, 0, 0);
+      
+      return currentDate < start;
+    }
+    
+    return false;
+  };
+};
+
 /** 打开签办人选择 */
 const openApprovalUserSelect = () => {
-  userSelectFormRef.value?.open(startUserSelectTasks.value['host_sign'],personnel.value.deptId,startUserSelectAssignees.value['host_sign']); // 修改为使用 UserSelectForm 组件
+  userSelectFormRef.value?.open(
+    startUserSelectTasks.value['host_sign'],
+    personnel.value.deptId,
+    startUserSelectAssignees.value['host_sign'],
+    personnel.value.id 
+  );
 }
 
 
@@ -1569,11 +1762,11 @@ await fetchUserProfile()
   width: 180px;
 }
 
-.reason-options .el-checkbox:hover {
+/* .reason-options .el-checkbox:hover {
   background-color: #f0f7ff;
   display: flex;
   align-items: center;
-}
+} */
 
 .detail-item {
   display: flex;
@@ -1627,5 +1820,9 @@ await fetchUserProfile()
 
 :deep(.el-descriptions__content) {
   width: 70%;
+}
+
+:deep(.el-textarea__inner) {
+  background-color: #ffffff;
 }
 </style>

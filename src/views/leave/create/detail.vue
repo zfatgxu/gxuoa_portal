@@ -95,6 +95,7 @@
                         :disabled="isReadOnly"
                       />
                     </div>
+                    <div v-if="index < researchList.length - 1" class="item-divider"></div>
                   </div>
                 </div>
                 <!-- 培训事由 -->
@@ -130,6 +131,7 @@
                         :disabled="isReadOnly"
                       />
                     </div>
+                    <div v-if="index < trainingList.length - 1" class="item-divider"></div>
                   </div>
                 </div>
                 <!-- 公务事由 -->
@@ -165,6 +167,7 @@
                         :disabled="isReadOnly"
                       />
                     </div>
+                    <div v-if="index < businessList.length - 1" class="item-divider"></div>
                   </div>
                 </div>
                 <!-- 学术会议事由 -->
@@ -245,6 +248,7 @@
                       <el-input v-model="meeting.academicPaperCount" placeholder="请输入交流论文数" :disabled="isReadOnly"/>
                     </div>
                   </div>
+                  <div v-if="index < academicMeetings.length - 1" class="item-divider"></div>
                 </div>
                 <!-- 因私事由 -->
                 <div v-if="reason.value === 4 && selectedReasons.includes(4)" style="padding: 15px 10px;">
@@ -369,6 +373,7 @@
                         </el-select>
                       </div>
                     </div>
+                    <div v-if="index < personalList.length - 1" class="item-divider"></div>
                   </div>
                 </div>
                 <!-- 其他 -->
@@ -1010,6 +1015,11 @@ onMounted(async () => {
   height: 32px;
   padding: 0;
   font-size: 16px;
+}
+
+.item-divider {
+  border-top: 2px dashed #645b5b;
+  margin: 15px 0;
 }
 
 :deep(.reason-options .el-checkbox:not(.is-checked):hover .el-checkbox__inner) {
