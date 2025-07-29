@@ -146,7 +146,7 @@ console.log(activityNodes)
 
 const filteredActivityNodes = computed(() => {
   return activityNodes.filter(
-    (activity) => activity.id !== "StartUserNode" && activity.id !== "EndEvent"
+    (activity) => activity.id !== "StartUserNode" && activity.id !== "EndEvent" && activity.name !== "结束"
   );
 })
 

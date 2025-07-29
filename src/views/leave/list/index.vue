@@ -173,7 +173,10 @@
       <el-table-column label="工作主持人" align="center" prop="hostId" /> -->
       <el-table-column label="流转状态" align="center" prop="status">
         <template #default="scope">
-          <dict-tag :type="DICT_TYPE.LEAVE_STATUS" :value="scope.row.status"/>
+          <el-tag :type="getStatusTagType(scope.row.status)">
+            {{ getStatusLabel(scope.row.status) }}
+          </el-tag>
+        <!-- <dict-tag :type="DICT_TYPE.LEAVE_STATUS" :value="scope.row.status"/> -->
         </template>
       </el-table-column>
       <!-- <el-table-column label="审核人" align="center" prop="personAdmitId" /> -->
@@ -224,11 +227,12 @@
           </template>
           <el-button v-if="hasDone(scope.row.status)" link type="primary" @click="handleFinance(scope.row)">提交财务报销</el-button>
           <el-button 
-            v-if="hasAcademicMeeting(scope.row.reasons)" 
+            v-if="hasAcademicMeeting(scope.row)" 
             link 
             type="primary" 
             @click="handleUploadToResearch(scope.row)"
           >上传科研院</el-button>
+          <el-button v-if="hasPersonal(scope.row)" link type="primary" @click="handleFinance(scope.row)">销假</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -273,6 +277,25 @@ const queryParams = reactive({
   createTime: [],
 })
 const queryFormRef = ref() // 搜索的表单
+
+/** 获取状态标签类型 */
+const getStatusTagType = (status) => {
+  switch (parseInt(status)) {
+    case 1: return 'warning' // 待会签
+    case 4: return 'info'    // 已取消
+    case 2: return 'primary' // 待审批
+    case 3: return 'success' // 已完成
+    case 0: return 'danger'  // 未通过
+    default: return ''
+  }
+}
+
+/** 获取状态标签文本 */
+const getStatusLabel = (status) => {
+  const dictList = getIntDictOptions(DICT_TYPE.LEAVE_STATUS)
+  const dict = dictList.find(item => parseInt(item.value) === parseInt(status))
+  return dict ? dict.label : '未知状态'
+}
 
 /** 查询列表 */
 const getList = async () => {
@@ -319,11 +342,20 @@ const hasDone = (status: number): boolean => {
 };
 
 /** 判断是否包含学术会议 */
-const hasAcademicMeeting = (reasons: string): boolean => {
-  if (!reasons) return false;
+const hasAcademicMeeting = (row: any): boolean => {
+  if (!row.reasons) return false;
   // 将原因字符串按"、"分割，检查是否包含"学术会议"
-  const reasonList = reasons.split('、');
-  return reasonList.some(reason => reason.includes('学术会议'));
+  const reasonList = row.reasons.split('、');
+  return reasonList.some((reason: string) => reason.includes('学术会议')) && row.status === 3;
+};
+
+/** 判断是否包含因私 */
+const hasPersonal = (row: any): boolean => {
+  if (!row.reasons) return false;
+  // 将原因字符串按"、"分割，检查是否包含"因私"
+  const reasonList = row.reasons.split('、');
+  const daysDiff = Math.ceil((row.endDate - row.startDate) / (1000 * 60 * 60 * 24));
+  return reasonList.some((reason: string) => reason.includes('因私')) && row.status === 3 && daysDiff >= 7;
 };
 
 /** 上传科研院 */

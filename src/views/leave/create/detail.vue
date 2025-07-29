@@ -15,8 +15,8 @@
         <el-table :data="[personnel]" border style="width: 100%">
           <el-table-column prop="name" label="姓名" />
           <el-table-column prop="department" label="部门" />
-          <el-table-column prop="title" label="职称" />
-          <el-table-column prop="position" label="职务" />
+          <el-table-column prop="title" label="职称" :formatter="(cellValue) => getDictLabel(DICT_TYPE.PROFESSIONAL_TITLE, cellValue.professionalTitle)"/>
+          <el-table-column prop="position" label="职务" :formatter="(cellValue) => getDictLabel(DICT_TYPE.LEVEL, cellValue.level)"/>
         </el-table>
       </div>
 
@@ -95,6 +95,7 @@
                         :disabled="isReadOnly"
                       />
                     </div>
+                    <div v-if="index < researchList.length - 1" class="item-divider"></div>
                   </div>
                 </div>
                 <!-- 培训事由 -->
@@ -130,6 +131,7 @@
                         :disabled="isReadOnly"
                       />
                     </div>
+                    <div v-if="index < trainingList.length - 1" class="item-divider"></div>
                   </div>
                 </div>
                 <!-- 公务事由 -->
@@ -165,6 +167,7 @@
                         :disabled="isReadOnly"
                       />
                     </div>
+                    <div v-if="index < businessList.length - 1" class="item-divider"></div>
                   </div>
                 </div>
                 <!-- 学术会议事由 -->
@@ -245,6 +248,7 @@
                       <el-input v-model="meeting.academicPaperCount" placeholder="请输入交流论文数" :disabled="isReadOnly"/>
                     </div>
                   </div>
+                  <div v-if="index < academicMeetings.length - 1" class="item-divider"></div>
                 </div>
                 <!-- 因私事由 -->
                 <div v-if="reason.value === 4 && selectedReasons.includes(4)" style="padding: 15px 10px;">
@@ -369,6 +373,7 @@
                         </el-select>
                       </div>
                     </div>
+                    <div v-if="index < personalList.length - 1" class="item-divider"></div>
                   </div>
                 </div>
                 <!-- 其他 -->
@@ -466,7 +471,7 @@
 
 <script lang="ts" setup>
 import { ref, watch } from 'vue';
-import { DICT_TYPE, getIntDictOptions, getStrDictOptions } from '@/utils/dict'
+import { DICT_TYPE, getIntDictOptions, getStrDictOptions, getDictLabel } from '@/utils/dict'
 import { Minus, Plus } from '@element-plus/icons-vue'
 import { pcaTextArr } from "element-china-area-data";
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -496,7 +501,8 @@ const personnel = ref({
   department: '',
   title: '',
   position: '',
-  level: ''
+  level: '',
+  professionalTitle: '',
 });
 // 日期范围
 const dateRange = ref([]);
@@ -574,33 +580,6 @@ const personalList = ref([
 // 其他事由
 const otherID = ref();
 const otherReason = ref('');
-// 监听日期范围变化
-watch(dateRange, (newVal) => {
-  if (newVal && newVal.length === 2) {
-    researchList.value.forEach(meeting => {
-      meeting.researchStartDate = newVal[0];
-      meeting.researchEndDate = newVal[1];
-    });
-    trainingList.value.forEach(meeting => {
-      meeting.trainingStartDate = newVal[0];
-      meeting.trainingEndDate = newVal[1];
-    });
-    businessList.value.forEach(meeting => {
-      meeting.businessStartDate = newVal[0];
-      meeting.businessEndDate = newVal[1];
-    });
-    academicMeetings.value.forEach(meeting => {
-      meeting.academicStartDate = newVal[0];
-      meeting.academicEndDate = newVal[1];
-    });
-    personalList.value.forEach(meeting => {
-      meeting.personalStartDate = newVal[0];
-      meeting.personalEndDate = newVal[1];
-      meeting.personalTotalDays = Math.ceil((new Date(newVal[1]).getTime() - new Date(newVal[0]).getTime()) / (1000 * 60 * 60 * 24))+1;
-    });
-  }
-}, { deep: true });
-
 const selectedReasons = ref<number[]>([]);
 // 附件
 const hasAttachment = ref(false);
@@ -693,11 +672,12 @@ const fetchUserProfile = async () => {
         personnel.value = {
           id: res.id,
           deptId: res.dept?.id || '',
-          name: res.username || '',
+          name: res.nickname || '',
           department: res.dept?.name || '',
           title: res.posts?.[0]?.name || '',
           position: res.nickname || '',
           level: res.level || '',
+          professionalTitle: res.professionalTitle || '',
         };
       }
     } else  {
@@ -715,6 +695,11 @@ const fetchUserProfile = async () => {
         }));
       }
       if (res2 && Array.isArray(res2)) {
+        researchList.value = [];
+        trainingList.value = [];
+        businessList.value = [];
+        academicMeetings.value = [];
+        personalList.value = [];
   res2.forEach(item => {
     // 根据类型设置选中的事由
     if (!selectedReasons.value.includes(item.type)) {
@@ -835,6 +820,7 @@ const fetchUserProfile = async () => {
           title: res.postName || '',
           position: res.nickName || '',
           level: res.level || '',
+          professionalTitle: res.professionalTitle || '',
         };
         processInstanceId.value = res.processInstanceId;
       }
@@ -1007,6 +993,11 @@ onMounted(async () => {
   height: 32px;
   padding: 0;
   font-size: 16px;
+}
+
+.item-divider {
+  border-top: 2px dashed #645b5b;
+  margin: 15px 0;
 }
 
 :deep(.reason-options .el-checkbox:not(.is-checked):hover .el-checkbox__inner) {

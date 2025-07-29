@@ -76,7 +76,7 @@ const transferUserList = computed(() => {
 })
 
 /** 打开弹窗 */
-const open = async (id: any, deptId?: number| number[], selectedList?: any[]) => {
+const open = async (id: any, deptId?: number| number[], selectedList?: any[], currentUserId?: number) => {
   activityId.value = id
   resetForm()
   // 将单个部门ID转换为数组
@@ -93,7 +93,9 @@ const open = async (id: any, deptId?: number| number[], selectedList?: any[]) =>
     const filteredDepts = deptData.filter(dept => deptIdArray.includes(dept.id))
     deptList.value = filteredDepts // 保存过滤后的扁平结构部门数据
     deptTree.value = handleTree(filteredDepts) // 转换成树形结构
-
+    if (currentUserId) {
+      userList.value = userList.value.filter(user => user.id !== currentUserId)
+    }
     // 过滤用户列表，只保留这些部门的用户
     filteredUserList.value = userList.value.filter(user => deptIdArray.includes(user.deptId))
     
