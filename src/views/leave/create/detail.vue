@@ -580,33 +580,6 @@ const personalList = ref([
 // 其他事由
 const otherID = ref();
 const otherReason = ref('');
-// 监听日期范围变化
-watch(dateRange, (newVal) => {
-  if (newVal && newVal.length === 2) {
-    researchList.value.forEach(meeting => {
-      meeting.researchStartDate = newVal[0];
-      meeting.researchEndDate = newVal[1];
-    });
-    trainingList.value.forEach(meeting => {
-      meeting.trainingStartDate = newVal[0];
-      meeting.trainingEndDate = newVal[1];
-    });
-    businessList.value.forEach(meeting => {
-      meeting.businessStartDate = newVal[0];
-      meeting.businessEndDate = newVal[1];
-    });
-    academicMeetings.value.forEach(meeting => {
-      meeting.academicStartDate = newVal[0];
-      meeting.academicEndDate = newVal[1];
-    });
-    personalList.value.forEach(meeting => {
-      meeting.personalStartDate = newVal[0];
-      meeting.personalEndDate = newVal[1];
-      meeting.personalTotalDays = Math.ceil((new Date(newVal[1]).getTime() - new Date(newVal[0]).getTime()) / (1000 * 60 * 60 * 24))+1;
-    });
-  }
-}, { deep: true });
-
 const selectedReasons = ref<number[]>([]);
 // 附件
 const hasAttachment = ref(false);
@@ -722,6 +695,11 @@ const fetchUserProfile = async () => {
         }));
       }
       if (res2 && Array.isArray(res2)) {
+        researchList.value = [];
+        trainingList.value = [];
+        businessList.value = [];
+        academicMeetings.value = [];
+        personalList.value = [];
   res2.forEach(item => {
     // 根据类型设置选中的事由
     if (!selectedReasons.value.includes(item.type)) {
