@@ -1091,14 +1091,14 @@ const handleSubmit = async () => {
       return
     }
 
-    if (personnel.value.level === 2) {
+    if (Number(personnel.value.level) >= 24 && Number(personnel.value.level) !== 100) {
       if (!workArrangement.value) {
         ElMessage.warning('请填写请假期间工作安排')
         return
       }
     }
 
-    if (personnel.value.level === 2) {
+    if (Number(personnel.value.level) >= 24 && Number(personnel.value.level) !== 100) {
       if (startUserSelectAssignees.value === '') {
         ElMessage.warning('请选择签办人')
         return

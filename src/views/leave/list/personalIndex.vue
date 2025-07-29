@@ -104,7 +104,6 @@ const getList = async () => {
   }
 }
 
-/** 提交财务报销 */
 const handleFinance=(row:any)=>{
   ElMessage.error('功能开发中')
 }
