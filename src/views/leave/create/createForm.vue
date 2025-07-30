@@ -516,12 +516,13 @@
           :column="1"
           class="approval-descriptions"
         >
-          <el-descriptions-item label="领导意见" label-class-name="approval-label">
-            <div></div>
-          </el-descriptions-item>
           <el-descriptions-item v-if="Number(personnel.level) >= 24" label="请假期间主持工作负责人会签" label-class-name="approval-label">
             <div></div>
           </el-descriptions-item>
+          <el-descriptions-item label="领导意见" label-class-name="approval-label">
+            <div></div>
+          </el-descriptions-item>
+
         </el-descriptions>
       </div>
 
@@ -1099,7 +1100,7 @@ const handleSubmit = async () => {
     }
 
     if (Number(personnel.value.level) >= 24 && Number(personnel.value.level) !== 100) {
-      if (startUserSelectAssignees.value === '') {
+      if (startUserSelectAssignees.value['host_sign'].length === 0) {
         ElMessage.warning('请选择签办人')
         return
       }
