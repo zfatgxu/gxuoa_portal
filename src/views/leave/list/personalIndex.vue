@@ -47,7 +47,14 @@
         prop="endDate"
         :formatter="dateFormatter2"
       />
-
+      <el-table-column label="流转状态" align="center" prop="status">
+        <template #default="scope">
+          <el-tag :type="getStatusTagType(scope.row)">
+            {{ getStatusLabel(scope.row) }}
+          </el-tag>
+        <!-- <dict-tag :type="DICT_TYPE.LEAVE_STATUS" :value="scope.row.status"/> -->
+        </template>
+      </el-table-column>
       <el-table-column label="操作" align="center">
         <template #default="scope">
           <el-button link type="primary" @click="handleCancel(scope.row)" v-if="hasCancel(scope.row)">销假</el-button>
@@ -70,6 +77,7 @@
 import { dateFormatter2 } from '@/utils/formatTime'
 import { RegisterVO, RegisterApi } from '@/api/leave/create/createForm'
 import { useRouter } from 'vue-router'
+import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
 /** 请假登记 列表 */
 defineOptions({ name: 'Register' })
 
@@ -125,6 +133,25 @@ const handleCancel=(row:any)=>{
     }
   })
 }
+
+const getStatusTagType = (row:any) => {
+  switch (parseInt(row.cancelForm.status)) {
+    case 1: return 'warning' // 待会签
+    case 3: return 'primary' // 待销假
+    case 2: return 'success' // 已销假
+    case 0: return 'info'  // 待审批
+    default: return ''
+  }
+}
+
+/** 获取状态标签文本 */
+const getStatusLabel = (row:any) => {
+  const dictList = getIntDictOptions(DICT_TYPE.CANCELSTATUE)
+  console.log(dictList)
+  const dict = dictList.find(item => parseInt(item.value) === parseInt(row.cancelForm.status))
+  return dict ? dict.label : '未知状态'
+}
+
 
 /** 查看销假详情 */
 const seekDetail=(row:any)=>{

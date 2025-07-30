@@ -141,12 +141,12 @@
               {{ formatPast2(scope.row.durationInMillis) }}
             </template>
           </el-table-column>
-          <el-table-column
+          <!-- <el-table-column
             align="center"
             label="请假原因"
             prop="reasons"
             :show-overflow-tooltip="true"
-          />
+          /> -->
           <el-table-column align="center" label="操作" fixed="right">
             <template #default="scope">
               <el-button link type="primary" @click="handleAudit(scope.row)">历史</el-button>
@@ -180,7 +180,7 @@
     const queryParams = reactive({
       pageNo: 1,
       pageSize: 10,
-      category: '销假流程',
+      category: '请假登记',
       processDefinitionKey: 'oa_cancelForm',
     })
     const queryFormRef = ref() // 搜索的表单
