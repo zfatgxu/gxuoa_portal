@@ -135,4 +135,8 @@ export const CancelFormApi = {
   createCancelForm: async (id: number) => {
     return await request.get({ url: `/leave/app-cancel-form/create`, params: { registerId: id } })
   },
+  // 查询销假表单id
+  getCancelFormId: async (processInstanceId: string) => {
+    return await request.get({ url: `/leave/app-cancel-form/get-leaveRegisterId`, params: { processInstanceId: processInstanceId } })
+  },
 }

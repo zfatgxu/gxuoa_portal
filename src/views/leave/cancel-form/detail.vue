@@ -478,7 +478,7 @@
   import type { UploadFile, UploadUserFile } from 'element-plus';
   import { getUserProfile } from '@/api/system/user/profile'
   import { UserVO } from '@/api/system/user'
-  import { RegisterApi, RegisterFileApi, ReasonFormApi } from '@/api/leave/create/createForm' 
+  import { RegisterApi, RegisterFileApi, ReasonFormApi, CancelFormApi } from '@/api/leave/create/createForm' 
   import { useRoute } from 'vue-router'
   import dayjs from 'dayjs'
   import * as FileApi from '@/api/infra/file'
@@ -663,7 +663,7 @@
     }
   ]);
   // 获取请假人信息
-  const routeId = ref(props.id || queryId)
+  const routeId = await CancelFormApi.getCancelFormId(queryId.toString())
   const fetchUserProfile = async () => {
     try {
       if(!routeId.value){
