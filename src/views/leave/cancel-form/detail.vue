@@ -663,10 +663,10 @@
     }
   ]);
   // 获取请假人信息
-  const routeId = await CancelFormApi.getCancelFormId(queryId.toString())
   const fetchUserProfile = async () => {
+    const routeId = await CancelFormApi.getCancelFormId(queryId.toString())
     try {
-      if(!routeId.value){
+      if(!routeId){
         const res = await getUserProfile();
         if (res) {
           personnel.value = {
@@ -682,9 +682,9 @@
         }
       } else  {
         isReadOnly.value = true;
-        const res = await RegisterApi.getRegister(Number(routeId.value))
-        const res1 = await RegisterFileApi.getRegisterFile(Number(routeId.value))
-        const res2 = await ReasonFormApi.getReasonForm(Number(routeId.value))
+        const res = await RegisterApi.getRegister(Number(routeId))
+        const res1 = await RegisterFileApi.getRegisterFile(Number(routeId))
+        const res2 = await ReasonFormApi.getReasonForm(Number(routeId))
         if (res1.length > 0){
           hasAttachment.value = true;
           fileList.value = res1.map(file => ({
@@ -1029,4 +1029,3 @@
     width: 70%;
   }
   </style>
-  
