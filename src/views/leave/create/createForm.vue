@@ -1230,7 +1230,7 @@ const handleSubmit = async () => {
           birthCount: personal.personalParity,
           difficultBirth: personal.personalDystocia,
           multipleBirth: personal.personalMultiple,
-          reason: personal.personalReason,
+          detail: personal.personalReason,
           phone: personal.personalPhone,
           visitRoute: personal.personalRoute,
           relationship: personal.personalRelation,
@@ -1401,7 +1401,8 @@ const fetchUserProfile = async () => {
                 personalRoute: item.visitRoute,
                 personalVisitName: item.visitedPersonName,
                 personalVisitType: item.visitType,
-                personalReason: item.reason,
+                personalReason: item.detail,
+                personalMaritalStatus: item.maritalStatus,
               });
               break;
             case 5: // 学术会议

@@ -129,3 +129,10 @@ export const ReasonFormApi = {
     return await request.download({ url: `/leave/reason-form/export-excel`, params })
   },
 }
+// 销假 API
+export const CancelFormApi = {
+  // 新增销假流程
+  createCancelForm: async (id: number) => {
+    return await request.get({ url: `/leave/app-cancel-form/create`, params: { registerId: id } })
+  },
+}
