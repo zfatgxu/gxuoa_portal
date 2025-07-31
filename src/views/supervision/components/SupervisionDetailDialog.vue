@@ -451,6 +451,7 @@ import { isEmpty } from '@/utils/is'
 import { Check, Close, Loading, Clock, Minus, Delete } from '@element-plus/icons-vue'
 import { OrderApi } from '@/api/supervision'
 import * as FileApi from '@/api/infra/file'
+import { KKFileView } from '@/components/KKFileView'
 import starterSvg from '@/assets/svgs/bpm/starter.svg'
 import auditorSvg from '@/assets/svgs/bpm/auditor.svg'
 import copySvg from '@/assets/svgs/bpm/copy.svg'
@@ -478,8 +479,10 @@ const dialogVisible = computed({
 
 // 判断督办是否已结束（不能再添加更新）
 const isSupervisionEnded = computed(() => {
-  // 根据督办状态判断
-  return props.supervisionStatus === '办结文件' || props.supervisionStatus === '否决文件'
+  // 根据督办状态判断，支持前端显示状态和后端原始状态
+  return props.supervisionStatus === '办结文件' ||
+         props.supervisionStatus === '否决文件' ||
+         props.supervisionStatus === '已结束'
 })
 
 // 历史记录弹窗状态
@@ -810,7 +813,7 @@ const orderDetail = reactive({
   orderNumber: '',
   title: '',
   category: '工作督办',
-  priority: '一般优先级',
+  priority: '一般优先',
   priorityType: 'info',
   // status 字段已移除，直接使用传递的督办状态
   issueUnit: '',
@@ -887,17 +890,19 @@ watch(() => props.processInstanceId, (newProcessInstanceId) => {
   }
 }, { immediate: true })
 
-// 优先级判断方法（与部门督办页面保持一致）
+// 优先级判断方法（与其他页面保持一致）
 const getPriorityType = (priority) => {
-  if (priority === 1) return 'danger'  // 高优先级
+  if (priority === 1) return 'info'    // 一般优先级
   if (priority === 2) return 'warning' // 中优先级
+  if (priority === 3) return 'danger'  // 高优先级
   return 'info' // 一般优先级
 }
 
 const getPriorityText = (priority) => {
-  if (priority === 1) return '高优先级'
+  if (priority === 1) return '一般优先'
   if (priority === 2) return '中优先级'
-  return '一般优先级'
+  if (priority === 3) return '高优先级'
+  return '一般优先'
 }
 
 // 根据type字段获取督办类型文本
@@ -1107,12 +1112,8 @@ const submitAddProgress = async () => {
 
 const previewFile = (file: any) => {
   if (file.url) {
-    // 直接在新窗口中打开文件，让浏览器决定如何处理
-    // 如果浏览器支持预览（如PDF、图片），会直接显示
-    // 如果不支持（如Word、Excel），浏览器会提示下载
-    window.open(file.url, '_blank')
-
-    ElMessage.info(`正在预览：${file.name}`)
+    // 使用KKFileView进行文件预览
+    KKFileView.preview(file.url, file.name)
   } else {
     ElMessage.warning('文件链接不存在，无法预览')
   }
@@ -1345,18 +1346,18 @@ const formatFileSize = (size: number | null) => {
   border-color: #fbc4c4;
 }
 
-/* 中优先级 - 橙色 */
+/* 中优先级 - 黄色 */
 .priority-warning {
   background-color: #fdf6ec;
   color: #e6a23c;
   border-color: #f5dab1;
 }
 
-/* 一般优先级 - 蓝色 */
+/* 一般优先级 - 绿色 */
 .priority-info {
   background-color: #f0f9ff;
-  color: #409eff;
-  border-color: #b3d8ff;
+  color: #67c23a;
+  border-color: #c2e7b0;
 }
 
 .category-tag {

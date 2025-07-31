@@ -3,7 +3,7 @@
       class="h-50px bottom-10 text-14px flex items-center color-#32373c dark:color-#fff font-bold btn-container"
     >
       <!-- 【通过】按钮 -->
-      <!-- <el-popover
+      <el-popover
         :visible="popOverVisible.approve"
         placement="top-end"
         :width="420"
@@ -14,9 +14,9 @@
           <el-button plain type="success" @click="openPopover('approve')">
             <Icon icon="ep:select" />&nbsp; {{ getButtonDisplayName(OperationButtonType.APPROVE) }}
           </el-button>
-        </template> -->
+        </template>
         <!-- 审批表单 -->
-        <!-- <div class="flex flex-col flex-1 pt-20px px-20px" v-loading="formLoading">
+        <div class="flex flex-col flex-1 pt-20px px-20px" v-loading="formLoading">
           <el-form
             label-position="top"
             class="mb-auto"
@@ -83,10 +83,10 @@
             </el-form-item>
           </el-form>
         </div>
-      </el-popover> -->
+      </el-popover>
   
       <!-- 【拒绝】按钮 -->
-      <!-- <el-popover
+      <el-popover
         :visible="popOverVisible.reject"
         placement="top-end"
         :width="420"
@@ -97,9 +97,9 @@
           <el-button class="mr-20px" plain type="danger" @click="openPopover('reject')">
             <Icon icon="ep:close" />&nbsp; {{ getButtonDisplayName(OperationButtonType.REJECT) }}
           </el-button>
-        </template> -->
+        </template>
         <!-- 审批表单 -->
-        <!-- <div class="flex flex-col flex-1 pt-20px px-20px" v-loading="formLoading">
+        <div class="flex flex-col flex-1 pt-20px px-20px" v-loading="formLoading">
           <el-form
             label-position="top"
             class="mb-auto"
@@ -128,7 +128,7 @@
             </el-form-item>
           </el-form>
         </div>
-      </el-popover> -->
+      </el-popover>
   
       <!-- 【抄送】按钮 -->
       <!-- <el-popover

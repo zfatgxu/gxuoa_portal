@@ -12,7 +12,7 @@
         <div class="action-bar">
           <div class="action-buttons">
             <el-button type="primary" :icon="Plus" @click="handleCreate">新建</el-button>
-            <el-button :icon="Delete" type="danger">删除</el-button>
+<!--            <el-button :icon="Delete" type="danger">删除</el-button>-->
             <el-button :icon="Download" @click="handleExport" :loading="exportLoading">导出</el-button>
           </div>
           
@@ -355,21 +355,36 @@ const handleDetail = (row: OrderRespVO) => {
 // 处理导出按钮点击
 const handleExport = async () => {
   try {
-    // 检查是否有选中的行
-    if (selectedRows.value.length === 0) {
-      ElMessage.warning('请先选择要导出的督办单')
-      return
-    }
-
     // 导出的二次确认
     await message.exportConfirm()
 
     // 发起导出
     exportLoading.value = true
 
-    // 构建导出参数，只传递必要的ID
+    // 构建导出参数，传递完整的筛选条件
     const exportParams: OrderExportReqVO = {
-      ids: selectedRows.value.map(row => row.id) // 传递ID数组
+      type: 2, // 专项督办类型
+      supervisionStatus: {
+        'processing': '流程中',
+        'completed': '办结文件',
+        'rejected': '否决文件'
+      }[activeTab.value] // 当前标签页对应的状态
+    }
+
+    // 添加搜索条件
+    if (searchForm.content) {
+      exportParams.content = searchForm.content
+    }
+    if (searchForm.number) {
+      exportParams.orderCode = searchForm.number
+    }
+    if (searchForm.unit && searchForm.unit !== 'all') {
+      exportParams.leadDept = searchForm.unit
+    }
+
+    // 如果有选中的行，优先导出选中的数据
+    if (selectedRows.value.length > 0) {
+      exportParams.ids = selectedRows.value.map(row => row.id)
     }
 
     const data = await OrderApi.exportOrder(exportParams)

@@ -230,8 +230,8 @@ const getApprovalDetail = async () => {
     console.log('processInstance.businessKey', processInstance.value.businessKey)
     console.log('processInstance.id', processInstance.value.id)
     console.log('processInstance.status', processInstance.value.status)
-    
-    
+
+
     processDefinition.value = data.processDefinition
 
     // 设置表单信息

@@ -82,13 +82,41 @@
           <div class="task-header">
             <h4 class="task-title" @click="viewTaskDetail(task)">{{ getTaskTitle(task) }}</h4>
             <div class="task-actions">
-              <el-tag :type="getPriorityType(task)" size="small">{{ getPriorityText(task) }}</el-tag>
-              <el-tag :type="getStatusType(task)" size="small">{{ getStatusText(task) }}</el-tag>
+              <span
+                :class="[
+                  'px-2 py-1 rounded text-xs font-medium w-20 text-center',
+                  getPriorityText(task) === '高优先级' ? 'bg-red-100 text-red-800' :
+                  getPriorityText(task) === '中优先级' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-green-100 text-green-800'
+                ]"
+                style="font-weight: bold;">
+                {{ getPriorityText(task) }}
+              </span>
+              <span
+                :class="[
+                  'ml-2 px-2 py-1 rounded text-xs font-medium w-20 text-center',
+                  getStatusText(task) === '已超时' ? 'bg-red-100 text-red-800' :
+                  getStatusText(task) === '已结束' ? 'bg-gray-500 text-white' :
+                  getStatusText(task) === '进行中' ? 'bg-blue-100 text-blue-800' :
+                  'bg-gray-100 text-gray-800'
+                ]"
+                style="font-weight: bold;">
+                {{ getStatusText(task) }}
+              </span>
             </div>
           </div>
           <div class="task-description" v-if="getTaskContent(task)">
             <p class="description-text">{{ getTaskContent(task) }}</p>
           </div>
+
+          <!-- 批示显示区域 - 移到主要内容下方 -->
+          <div v-if="task.leaderRemarks && task.leaderRemarks.length > 0" class="task-remarks">
+            <el-icon><Document /></el-icon>
+            <span v-for="(remark, index) in task.leaderRemarks" :key="remark.leaderNickName" class="remark-text">
+              <span v-if="index > 0">；</span>{{ remark.leaderNickName }}批示：{{ remark.remark }}
+            </span>
+          </div>
+
           <div class="task-content">
             <div class="task-details">
               <div class="detail-row">
@@ -120,15 +148,6 @@
                 <div v-if="activeTab !== 'done'" class="detail-item">
                   <span :class="getRemainingTimeClass(task)">{{ getRemainingTimeText(task) }}</span>
                 </div>
-              </div>
-            </div>
-
-            <!-- 批示显示区域 -->
-            <div v-if="task.leaderRemarks && task.leaderRemarks.length > 0" class="task-remarks">
-              <div class="remarks-header">分管领导批示</div>
-              <div v-for="remark in task.leaderRemarks" :key="remark.leaderNickName" class="remark-item">
-                <div class="remark-leader">{{ remark.leaderNickName }}：</div>
-                <div class="remark-content">{{ remark.remark }}</div>
               </div>
             </div>
 
@@ -411,16 +430,18 @@ const getRemainingTimeClass = (task) => {
 
 const getPriorityType = (task) => {
   const priority = task.supervisionPageVOData?.priority
-  if (priority === 1) return 'danger'  // 高优先级
+  if (priority === 1) return 'info'    // 一般优先级
   if (priority === 2) return 'warning' // 中优先级
+  if (priority === 3) return 'danger'  // 高优先级
   return 'info' // 一般优先级
 }
 
 const getPriorityText = (task) => {
   const priority = task.supervisionPageVOData?.priority
-  if (priority === 1) return '高优先级'
+  if (priority === 1) return '一般优先'
   if (priority === 2) return '中优先级'
-  return '一般优先级'
+  if (priority === 3) return '高优先级'
+  return '一般优先'
 }
 
 const getTypeTag = (task) => {
@@ -915,41 +936,30 @@ onMounted(() => {
   }
 }
 
-/* 批示显示样式 */
+/* 批示显示样式 - 横向布局，橙色主题 */
 .task-remarks {
-  margin-top: 12px;
-  padding: 12px;
-  background-color: #f0f9ff;
-  border-radius: 6px;
-  border-left: 3px solid #409eff;
+  margin: 8px 0;
+  padding: 6px 10px;
+  background-color: #fff7e6;
+  border-radius: 4px;
+  border-left: 3px solid #faad14;
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 70%;
 }
 
-.remarks-header {
+.task-remarks .el-icon {
+  margin-right: 6px;
+  font-size: 14px;
+  color: #d46b08;
+  flex-shrink: 0;
+}
+
+.remark-text {
   font-size: 13px;
-  font-weight: 600;
-  color: #303133;
-  margin-bottom: 8px;
-}
-
-.remark-item {
-  margin-bottom: 8px;
-}
-
-.remark-item:last-child {
-  margin-bottom: 0;
-}
-
-.remark-leader {
-  font-size: 13px;
-  font-weight: 600;
-  color: #409eff;
-  margin-bottom: 4px;
-}
-
-.remark-content {
-  font-size: 13px;
-  color: #606266;
-  line-height: 1.5;
-  padding-left: 12px;
+  font-weight: bold;
+  color: #8c4400;
+  line-height: 1.4;
 }
 </style>
