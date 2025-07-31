@@ -15,6 +15,9 @@
         class="order-form"
         v-loading="dataLoading"
         element-loading-text="正在加载数据..."
+        :show-message="true"
+        :inline-message="false"
+        status-icon
       >
         <!-- 第一行：督办编号放右边 -->
         <el-row :gutter="20">
@@ -496,7 +499,17 @@ const rules = {
   ],
   title: [
     { required: true, message: '请输入文件标题', trigger: 'blur' },
-    { min: 1, max: 200, message: '标题长度在 1 到 200 个字符', trigger: 'blur' }
+    { min: 1, max: 200, message: '文件标题长度在 1 到 200 个字符', trigger: 'blur' },
+    {
+      validator: (rule: any, value: string, callback: Function) => {
+        if (!value || !value.trim()) {
+          callback(new Error('文件标题不能为空'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
   ],
   category: [
     { required: true, message: '请选择督办分类', trigger: 'change' }
@@ -511,7 +524,7 @@ const rules = {
     { required: true, message: '请选择重要程度', trigger: 'change' }
   ],
   deadline: [
-    { required: true, message: '请选择完成时间', trigger: 'change' }
+    { required: true, message: '请选择要求完成时间', trigger: 'change' }
   ],
   leadDept: [
     { required: true, message: '请选择牵头单位', trigger: 'change' }
@@ -521,11 +534,30 @@ const rules = {
   ],
   content: [
     { required: true, message: '请输入主要内容', trigger: 'blur' },
-    { min: 1, max: 2000, message: '内容长度在 1 到 2000 个字符', trigger: 'blur' }
+    { min: 1, max: 2000, message: '主要内容长度在 1 到 2000 个字符', trigger: 'blur' },
+    {
+      validator: (rule: any, value: string, callback: Function) => {
+        if (!value || !value.trim()) {
+          callback(new Error('主要内容不能为空'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
   ],
   tasks: [
     { required: false, message: '请输入承办事项', trigger: 'blur' },
-    { min: 1, max: 1000, message: '承办事项长度在 1 到 1000 个字符', trigger: 'blur' }
+    {
+      validator: (rule: any, value: string, callback: Function) => {
+        if (value && value.length > 1000) {
+          callback(new Error('承办事项长度不能超过 1000 个字符'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'blur'
+    }
   ]
 }
 
@@ -785,11 +817,60 @@ const generateAutoSummary = () => {
   return summaryItems.join('\n')
 }
 
+// 验证必填字段的方法
+const validateRequiredFields = () => {
+  const missingFields: string[] = []
+
+  if (!orderForm.orderNumber) {
+    missingFields.push('督办编号')
+  }
+  if (!orderForm.title?.trim()) {
+    missingFields.push('文件标题')
+  }
+  if (!orderForm.category) {
+    missingFields.push('督办分类')
+  }
+  if (!orderForm.urgencyLevel) {
+    missingFields.push('紧急程度')
+  }
+  if (!orderForm.importance) {
+    missingFields.push('重要程度')
+  }
+  if (!orderForm.deadline) {
+    missingFields.push('要求完成时间')
+  }
+  if (!orderForm.leadDept) {
+    missingFields.push('牵头单位')
+  }
+  if (!orderForm.supervisorName) {
+    missingFields.push('督办人')
+  }
+  if (!orderForm.content?.trim()) {
+    missingFields.push('主要内容')
+  }
+
+  return missingFields
+}
+
 const createOrder = async () => {
   try {
+    // 首先进行自定义验证
+    const missingFields = validateRequiredFields()
+    if (missingFields.length > 0) {
+      ElMessage.error(`请填写以下必填项：${missingFields.join('、')}`)
+      return
+    }
+
     // 表单验证
-    const valid = await orderFormRef.value?.validate().catch(() => false)
-    if (!valid) return
+    const valid = await orderFormRef.value?.validate().catch((error) => {
+      console.error('表单验证失败:', error)
+      ElMessage.error('表单验证失败，请检查填写内容')
+      return false
+    })
+    if (!valid) {
+      ElMessage.error('请检查表单填写是否正确')
+      return
+    }
 
     submitLoading.value = true
 
@@ -888,15 +969,35 @@ const createOrder = async () => {
       // 返回对应的列表页
       router.push(getReturnPath())
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('创建督办单失败:', error)
-    ElMessage.error('创建督办单失败，请重试')
+
+    // 根据错误类型提供更详细的提示
+    let errorMessage = '创建督办单失败，请重试'
+
+    if (error?.response?.data?.msg) {
+      errorMessage = error.response.data.msg
+    } else if (error?.message) {
+      errorMessage = error.message
+    } else if (typeof error === 'string') {
+      errorMessage = error
+    }
+
+    // 检查是否是验证相关的错误
+    if (errorMessage.includes('验证') || errorMessage.includes('必填') || errorMessage.includes('不能为空')) {
+      ElMessage.error(`表单验证失败：${errorMessage}`)
+    } else {
+      ElMessage.error(`创建督办单失败：${errorMessage}`)
+    }
   } finally {
     submitLoading.value = false
   }
 }
 
 const resetForm = async () => {
+  // 重置表单验证状态
+  orderFormRef.value?.resetFields()
+
   await generateOrderNumber()
   orderForm.title = ''
   orderForm.category = undefined
@@ -917,6 +1018,9 @@ const resetForm = async () => {
   orderForm.inspectionApproval = undefined
   orderForm.handlingDetails = ''
   orderForm.supervisionReview = undefined
+
+  // 清除验证错误信息
+  orderFormRef.value?.clearValidate()
 }
 
 const handleCancel = async () => {
@@ -1049,5 +1153,29 @@ onMounted(async () => {
   margin: 0;
 }
 
+/* 必填项提示样式 */
+.required-tips {
+  color: #909399;
+  font-size: 12px;
+  margin-top: 10px;
+}
+
+.required-tips .el-icon {
+  color: #f56c6c;
+}
+
+/* 增强表单验证错误提示的可见性 */
+:deep(.el-form-item__error) {
+  font-size: 12px;
+  color: #f56c6c;
+  padding-top: 4px;
+}
+
+/* 必填字段标签样式 */
+:deep(.el-form-item.is-required .el-form-item__label::before) {
+  content: '*';
+  color: #f56c6c;
+  margin-right: 4px;
+}
 
 </style>

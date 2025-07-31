@@ -55,25 +55,43 @@
         </el-tabs>
         <div class="control-group">
           <el-input
-            v-model="taskSearch"
+            v-model="searchQuery"
             placeholder="输入搜索关键词"
             class="task-search"
             :prefix-icon="Search"
+            @input="handleFilterChange"
           />
-          <el-select v-model="taskDept" placeholder="全部部门" class="task-filter">
-            <el-option label="全部部门" value="all" />
-            <el-option label="学生处" value="学生处" />
-            <el-option label="后勤处" value="后勤处" />
-            <el-option label="保卫处" value="保卫处" />
-            <el-option label="教务处" value="教务处" />
-            <el-option label="人事处" value="人事处" />
-            <el-option label="基建处" value="基建处" />
+          <el-select
+            v-model="selectedDepartment"
+            placeholder="全部部门"
+            class="task-filter dept-filter"
+            @change="handleFilterChange"
+            popper-class="dept-dropdown"
+            clearable
+          >
+            <el-option label="全部部门" value="" />
+            <el-option
+              v-for="dept in departments"
+              :key="dept"
+              :label="dept"
+              :value="dept"
+            />
           </el-select>
-          <el-select v-model="taskStatus" placeholder="全部状态" class="task-filter">
-            <el-option label="全部状态" value="all" />
-            <el-option label="进行中" value="进行中" />
-            <el-option label="已完成" value="已完成" />
-            <el-option label="超时" value="超时" />
+          <el-select
+            v-model="selectedStatus"
+            placeholder="全部状态"
+            class="task-filter status-filter"
+            @change="handleFilterChange"
+            popper-class="status-dropdown"
+            clearable
+          >
+            <el-option label="全部状态" value="" />
+            <el-option
+              v-for="status in statuses"
+              :key="status"
+              :label="status"
+              :value="status"
+            />
           </el-select>
 
         </div>
@@ -90,13 +108,42 @@
           <div class="task-header">
             <h4 class="task-title" @click="viewTaskDetail(task)">{{ getTaskTitle(task) }}</h4>
             <div class="task-actions">
-              <el-tag :type="getPriorityType(task)" size="small">{{ getPriorityText(task) }}</el-tag>
-              <el-tag :type="getStatusType(task)" size="small">{{ getStatusText(task) }}</el-tag>
+              <span
+                :class="[
+                  'px-2 py-1 rounded text-xs font-medium w-20 text-center',
+                  getPriorityText(task) === '高优先级' ? 'bg-red-100 text-red-800' :
+                  getPriorityText(task) === '中优先级' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-green-100 text-green-800'
+                ]"
+                style="font-weight: bold;">
+                {{ getPriorityText(task) }}
+              </span>
+              <span
+                :class="[
+                  'ml-2 px-2 py-1 rounded text-xs font-medium w-20 text-center',
+                  getStatusText(task) === '已超时' ? 'bg-red-100 text-red-800' :
+                  getStatusText(task) === '已结束' ? 'bg-gray-500 text-white' :
+                  getStatusText(task) === '进行中' ? 'bg-blue-100 text-blue-800' :
+                  getStatusText(task) === '需要关注' ? 'bg-red-100 text-red-800' :
+                  'bg-gray-100 text-gray-800'
+                ]"
+                style="font-weight: bold;">
+                {{ getStatusText(task) }}
+              </span>
             </div>
           </div>
 
           <div class="task-description" v-if="getTaskContent(task)">
             <p class="description-text">{{ getTaskContent(task) }}</p>
+          </div>
+
+          <!-- 批示显示区域 - 移到主要内容下方 -->
+          <div v-if="task.leaderRemarks && task.leaderRemarks.length > 0" class="task-remarks">
+            <el-icon><Document /></el-icon>
+            <span class="remark-label">我的批示：</span>
+            <span v-for="(remark, index) in task.leaderRemarks" :key="remark.leaderNickName" class="remark-text">
+              <span v-if="index > 0">；</span>{{ remark.remark }}
+            </span>
           </div>
 
           <div class="task-content">
@@ -130,14 +177,6 @@
                 <div v-if="activeTab !== 'attention-items' && getStatusText(task) !== '已结束'" class="detail-item">
                   <span :class="getRemainingTimeClass(task)">{{ getRemainingTimeText(task) }}</span>
                 </div>
-              </div>
-            </div>
-
-            <!-- 批示显示区域 -->
-            <div v-if="task.leaderRemarks && task.leaderRemarks.length > 0" class="task-remarks">
-              <div class="remarks-header">我的批示</div>
-              <div v-for="remark in task.leaderRemarks" :key="remark.leaderNickName" class="remark-item">
-                <div class="remark-content">{{ remark.remark }}</div>
               </div>
             </div>
 
@@ -248,9 +287,9 @@ const formatDateOnly = (timestamp) => {
 
 // Reactive data
 const activeTab = ref('all-items') // 默认激活“分管事项”
-const taskSearch = ref('')
-const taskDept = ref('all')
-const taskStatus = ref('all')
+const searchQuery = ref('')
+const selectedDepartment = ref('')
+const selectedStatus = ref('')
 const detailDialogVisible = ref(false)
 const instructionDialogVisible = ref(false)
 const historyDialogVisible = ref(false)
@@ -274,28 +313,52 @@ const pagination = reactive({
 // 任务列表数据
 const taskList = ref([])
 
-
 const historyList = ref([])
 
-// 前端过滤的计算属性
+// 静态状态选项
+const statuses = ['进行中', '已超时', '已结束', '需要关注']
+
+// 计算部门选项 - 从任务数据中提取部门名称
+const departments = computed(() => {
+  const deptSet = new Set()
+  taskList.value.forEach(task => {
+    // 添加牵头单位
+    if (task.supervisionPageVOData?.leadDeptName) {
+      deptSet.add(task.supervisionPageVOData.leadDeptName)
+    }
+    // 添加创建单位
+    if (task.supervisionPageVOData?.creatorDeptName) {
+      deptSet.add(task.supervisionPageVOData.creatorDeptName)
+    }
+    // 添加协办单位
+    if (task.supervisionPageVOData?.coDeptNameMap) {
+      Object.values(task.supervisionPageVOData.coDeptNameMap).forEach(dept => {
+        if (dept) deptSet.add(dept)
+      })
+    }
+  })
+  return Array.from(deptSet)
+})
+
+// 前端过滤的计算属性 - 参考督查督办首页的实现
 const filteredTaskList = computed(() => {
   return taskList.value.filter(task => {
-    // 关键词搜索 - 搜索标题和内容
-    const matchesSearch = !taskSearch.value ||
-      task.supervisionPageVOData?.orderTitle?.toLowerCase().includes(taskSearch.value.toLowerCase()) ||
-      task.supervisionPageVOData?.content?.toLowerCase().includes(taskSearch.value.toLowerCase())
+    // 关键词搜索 - 搜索标题和内容（参考督查督办首页）
+    const matchesSearch = !searchQuery.value ||
+      task.supervisionPageVOData?.orderTitle?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      task.supervisionPageVOData?.content?.toLowerCase().includes(searchQuery.value.toLowerCase())
 
-    // 部门过滤
-    const matchesDept = taskDept.value === 'all' ||
-      task.supervisionPageVOData?.creatorDeptName === taskDept.value ||
-      Object.values(task.supervisionPageVOData?.coDeptNameMap || {}).includes(taskDept.value)
+    // 部门过滤 - 检查牵头单位、创建单位和协办单位（参考督查督办首页）
+    const matchesDepartment = !selectedDepartment.value ||
+      task.supervisionPageVOData?.leadDeptName === selectedDepartment.value ||
+      task.supervisionPageVOData?.creatorDeptName === selectedDepartment.value ||
+      Object.values(task.supervisionPageVOData?.coDeptNameMap || {}).includes(selectedDepartment.value)
 
-    // 状态过滤
-    const matchesStatus = taskStatus.value === 'all' ||
-      getStatusText(task) === taskStatus.value
+    // 状态过滤（参考督查督办首页）
+    const matchesStatus = !selectedStatus.value || getStatusText(task) === selectedStatus.value
 
-    return matchesSearch && matchesDept && matchesStatus
-})
+    return matchesSearch && matchesDepartment && matchesStatus
+  })
 })
 
 // 加载任务列表
@@ -446,9 +509,10 @@ const getRemainingTimeClass = (task) => {
 
 const getPriorityText = (task) => {
   const priority = task.supervisionPageVOData?.priority
-  if (priority === 1) return '高优先级'
+  if (priority === 1) return '一般优先'
   if (priority === 2) return '中优先级'
-  return '一般优先级'
+  if (priority === 3) return '高优先级'
+  return '一般优先'
 }
 
 const formatCreateTime = (timestamp) => {
@@ -459,8 +523,9 @@ const formatCreateTime = (timestamp) => {
 // Methods
 const getPriorityType = (task) => {
   const priority = task.supervisionPageVOData?.priority
-  if (priority === 1) return 'danger'  // 高优先级
+  if (priority === 1) return 'info'    // 一般优先级
   if (priority === 2) return 'warning' // 中优先级
+  if (priority === 3) return 'danger'  // 高优先级
   return 'info' // 一般优先级
 }
 
@@ -607,7 +672,7 @@ const filteredTaskListByTab = (tabName) => {
   if (tabName === 'managed-items') {
     filtered = filtered.filter(task => task.supervisionPageVOData?.leaderNickname === '张副校长');
   } else if (tabName === 'attention-items') {
-    filtered = filtered.filter(task => task.supervisionPageVOData?.priority === 1);
+    filtered = filtered.filter(task => task.supervisionPageVOData?.priority === 3);
   }
   return filtered;
 };
@@ -772,7 +837,7 @@ onMounted(() => {
 }
 
 .task-filter {
-  width: 110px;
+  width: 150px;
 }
 
 .more-btn {
@@ -1063,35 +1128,38 @@ onMounted(() => {
   font-weight: 500;
 }
 
-/* 批示显示样式 */
+/* 批示显示样式 - 横向布局，蓝色主题 */
 .task-remarks {
-  margin-top: 12px;
-  padding: 12px;
-  background-color: #f8f9fa;
-  border-radius: 6px;
+  margin: 8px 0;
+  padding: 6px 10px;
+  background-color: #f0f9ff;
+  border-radius: 4px;
   border-left: 3px solid #409eff;
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 70%;
 }
 
-.remarks-header {
+.task-remarks .el-icon {
+  margin-right: 6px;
+  font-size: 14px;
+  color: #409eff;
+  flex-shrink: 0;
+}
+
+.remark-label {
   font-size: 13px;
-  font-weight: 600;
-  color: #303133;
-  margin-bottom: 8px;
+  font-weight: bold;
+  color: #409eff;
+  margin-right: 4px;
 }
 
-.remark-item {
-  margin-bottom: 8px;
-}
-
-.remark-item:last-child {
-  margin-bottom: 0;
-}
-
-.remark-content {
+.remark-text {
   font-size: 13px;
-  color: #606266;
-  line-height: 1.5;
-  padding: 6px 0;
+  font-weight: bold;
+  color: #409eff;
+  line-height: 1.4;
 }
 
 :deep(.el-button--small) {
