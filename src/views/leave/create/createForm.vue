@@ -516,12 +516,13 @@
           :column="1"
           class="approval-descriptions"
         >
-          <el-descriptions-item label="领导意见" label-class-name="approval-label">
-            <div></div>
-          </el-descriptions-item>
           <el-descriptions-item v-if="Number(personnel.level) >= 24" label="请假期间主持工作负责人会签" label-class-name="approval-label">
             <div></div>
           </el-descriptions-item>
+          <el-descriptions-item label="领导意见" label-class-name="approval-label">
+            <div></div>
+          </el-descriptions-item>
+
         </el-descriptions>
       </div>
 
@@ -1099,7 +1100,7 @@ const handleSubmit = async () => {
     }
 
     if (Number(personnel.value.level) >= 24 && Number(personnel.value.level) !== 100) {
-      if (startUserSelectAssignees.value === '') {
+      if (startUserSelectAssignees.value['host_sign'].length === 0) {
         ElMessage.warning('请选择签办人')
         return
       }
@@ -1230,7 +1231,7 @@ const handleSubmit = async () => {
           birthCount: personal.personalParity,
           difficultBirth: personal.personalDystocia,
           multipleBirth: personal.personalMultiple,
-          reason: personal.personalReason,
+          detail: personal.personalReason,
           phone: personal.personalPhone,
           visitRoute: personal.personalRoute,
           relationship: personal.personalRelation,
@@ -1401,7 +1402,8 @@ const fetchUserProfile = async () => {
                 personalRoute: item.visitRoute,
                 personalVisitName: item.visitedPersonName,
                 personalVisitType: item.visitType,
-                personalReason: item.reason,
+                personalReason: item.detail,
+                personalMaritalStatus: item.maritalStatus,
               });
               break;
             case 5: // 学术会议

@@ -47,10 +47,18 @@
         prop="endDate"
         :formatter="dateFormatter2"
       />
-
+      <el-table-column label="流转状态" align="center" prop="status">
+        <template #default="scope">
+          <el-tag :type="getStatusTagType(scope.row)">
+            {{ getStatusLabel(scope.row) }}
+          </el-tag>
+        <!-- <dict-tag :type="DICT_TYPE.LEAVE_STATUS" :value="scope.row.status"/> -->
+        </template>
+      </el-table-column>
       <el-table-column label="操作" align="center">
         <template #default="scope">
-          <el-button link type="primary" @click="handleFinance(scope.row)">销假</el-button>
+          <el-button link type="primary" @click="handleCancel(scope.row)" v-if="hasCancel(scope.row)">销假</el-button>
+          <el-button link type="primary" @click="seekDetail(scope.row)"  v-if="hasCanceling(scope.row)">查看详情</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -68,9 +76,12 @@
 <script setup lang="ts">
 import { dateFormatter2 } from '@/utils/formatTime'
 import { RegisterVO, RegisterApi } from '@/api/leave/create/createForm'
+import { useRouter } from 'vue-router'
+import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
 /** 请假登记 列表 */
 defineOptions({ name: 'Register' })
 
+const router = useRouter()
 const loading = ref(true) // 列表的加载中
 const list = ref<RegisterVO[]>([]) // 列表的数据
 const total = ref(0) // 列表的总页数
@@ -89,9 +100,9 @@ const queryParams = reactive({
   status: undefined,
   personAdmitId: undefined,
   createTime: [],
+  isBackLeave: true,
 })
 const queryFormRef = ref() // 搜索的表单
-
 /** 查询列表 */
 const getList = async () => {
   loading.value = true
@@ -104,8 +115,52 @@ const getList = async () => {
   }
 }
 
-const handleFinance=(row:any)=>{
-  ElMessage.error('功能开发中')
+/** 判断是否待销假 */
+const hasCancel = (row:any): boolean => {
+  return row.cancelForm.status === 3;
+};
+
+/** 判断是否处于销假中 */
+const hasCanceling = (row:any): boolean => {
+  return row.cancelForm.processInstanceId !== null;
+};
+/** 发起销假流程 */
+const handleCancel=(row:any)=>{
+  router.push({
+    path: '/leave/cancel-form/create',
+    query: {
+      id: row.id
+    }
+  })
+}
+
+const getStatusTagType = (row:any) => {
+  switch (parseInt(row.cancelForm.status)) {
+    case 1: return 'warning' // 待会签
+    case 3: return 'primary' // 待销假
+    case 2: return 'success' // 已销假
+    case 0: return 'info'  // 待审批
+    default: return ''
+  }
+}
+
+/** 获取状态标签文本 */
+const getStatusLabel = (row:any) => {
+  const dictList = getIntDictOptions(DICT_TYPE.CANCELSTATUE)
+  console.log(dictList)
+  const dict = dictList.find(item => parseInt(item.value) === parseInt(row.cancelForm.status))
+  return dict ? dict.label : '未知状态'
+}
+
+
+/** 查看销假详情 */
+const seekDetail=(row:any)=>{
+  router.push({
+    path: '/bpm/process-instance/detail',
+    query: {
+      id: row.cancelForm.processInstanceId
+    }
+  })
 }
 
 /** 初始化 **/

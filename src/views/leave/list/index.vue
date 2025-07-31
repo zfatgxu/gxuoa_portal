@@ -232,7 +232,7 @@
             type="primary" 
             @click="handleUploadToResearch(scope.row)"
           >上传科研院</el-button>
-          <el-button v-if="hasPersonal(scope.row)" link type="primary" @click="handleFinance(scope.row)">销假</el-button>
+          <!-- <el-button v-if="hasPersonal(scope.row)" link type="primary" @click="handleFinance(scope.row)">销假</el-button> -->
         </template>
       </el-table-column>
     </el-table>

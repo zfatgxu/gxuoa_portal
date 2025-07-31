@@ -63,15 +63,15 @@
                   <div v-for="(research, index) in researchList" :key="index">
                     <div class="detail-item">
                       <span class="detail-label">调研主题</span>
-                      <el-input v-model="research.researchTopic" placeholder="请输入调研主题" :disabled="isReadOnly"/>
+                      <el-input v-model="research.researchTopic" type="textarea" autosize placeholder="请输入调研主题" :disabled="isReadOnly"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">调研目的</span>
-                      <el-input v-model="research.researchPurpose" placeholder="请输入调研目的" :disabled="isReadOnly"/>
+                      <el-input v-model="research.researchPurpose" type="textarea" autosize placeholder="请输入调研目的" :disabled="isReadOnly"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">调研单位</span>
-                      <el-input v-model="research.researchUnit" placeholder="请输入调研单位" :disabled="isReadOnly"/>
+                      <el-input v-model="research.researchUnit" type="textarea" autosize placeholder="请输入调研单位" :disabled="isReadOnly"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">开始时间</span>
@@ -103,11 +103,11 @@
                   <div v-for="(meeting, index) in trainingList" :key="index">
                     <div class="detail-item">
                       <span class="detail-label">培训主题</span>
-                      <el-input v-model="meeting.trainingTopic" placeholder="请输入培训主题" :disabled="isReadOnly"/>
+                      <el-input v-model="meeting.trainingTopic" type="textarea" autosize placeholder="请输入培训主题" :disabled="isReadOnly"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">举办单位</span>
-                      <el-input v-model="meeting.trainingUnit" placeholder="请输入举办单位" :disabled="isReadOnly"/>
+                      <el-input v-model="meeting.trainingUnit" type="textarea" autosize placeholder="请输入举办单位" :disabled="isReadOnly"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">开始时间</span>
@@ -139,11 +139,11 @@
                   <div v-for="(meeting, index) in businessList" :key="index">
                     <div class="detail-item">
                       <span class="detail-label">会议名称</span>
-                      <el-input v-model="meeting.businessTopic" placeholder="请输入会议名称" :disabled="isReadOnly"/>
+                      <el-input v-model="meeting.businessTopic" type="textarea" autosize placeholder="请输入会议名称" :disabled="isReadOnly"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">举办单位</span>
-                      <el-input v-model="meeting.businessUnit" placeholder="请输入举办单位" :disabled="isReadOnly"/>
+                      <el-input v-model="meeting.businessUnit" type="textarea" autosize placeholder="请输入举办单位" :disabled="isReadOnly"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">开始时间</span>
@@ -175,7 +175,7 @@
                   <div v-for="(meeting, index) in academicMeetings" :key="index">
                     <div class="detail-item">
                       <span class="detail-label">会议名称</span>
-                      <el-input v-model="meeting.academicTopic" placeholder="请输入会议名称" :disabled="isReadOnly"/>
+                      <el-input v-model="meeting.academicTopic" type="textarea" autosize placeholder="请输入会议名称" :disabled="isReadOnly"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">会议性质</span>
@@ -191,7 +191,7 @@
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">主办方</span>
-                      <el-input v-model="meeting.academicUnit" placeholder="请输入主办方" :disabled="isReadOnly"/>
+                      <el-input v-model="meeting.academicUnit" type="textarea" autosize placeholder="请输入主办方" :disabled="isReadOnly"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">开始时间</span>
@@ -241,7 +241,7 @@
                     </div>
                     <div v-if="meeting.isPresentation === 1" class="detail-item">
                       <span class="detail-label">报告题目</span>
-                      <el-input v-model="meeting.reportTitle" placeholder="请输入报告题目" :disabled="isReadOnly"/>
+                      <el-input v-model="meeting.reportTitle" type="textarea" autosize placeholder="请输入报告题目" :disabled="isReadOnly"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">交流论文数</span>
@@ -292,7 +292,7 @@
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">请假详情</span>
-                      <el-input v-model="personal.personalReason" type="textarea" :rows="3" placeholder="请输入请假详情" :disabled="isReadOnly"/>
+                      <el-input v-model="personal.personalReason" type="textarea" autosize placeholder="请输入请假详情" :disabled="isReadOnly"/>
                     </div>
                     <div class="detail-item">
                       <span class="detail-label">联系电话</span>
@@ -301,15 +301,15 @@
                     <div v-if="personal.personalType === 6">
                       <div class="detail-item">
                         <span class="detail-label">探亲路线</span>
-                        <el-input v-model="personal.personalRoute" placeholder="请输入探亲路线" :disabled="isReadOnly"/>
+                        <el-input v-model="personal.personalRoute" type="textarea" autosize placeholder="请输入探亲路线" :disabled="isReadOnly"/>
                       </div>
                       <div class="detail-item">
                         <span class="detail-label">与探望人关系</span>
-                        <el-input v-model="personal.personalRelation" placeholder="请输入与探望人关系" :disabled="isReadOnly"/>
+                        <el-input v-model="personal.personalRelation" type="textarea" autosize placeholder="请输入与探望人关系" :disabled="isReadOnly"/>
                       </div>
                       <div class="detail-item">
                         <span class="detail-label">被探望人姓名</span>
-                        <el-input v-model="personal.personalVisitName" placeholder="请输入被探望人姓名" :disabled="isReadOnly"/>
+                        <el-input v-model="personal.personalVisitName" type="textarea" autosize placeholder="请输入被探望人姓名" :disabled="isReadOnly"/>
                       </div>
                       <div class="detail-item">
                         <span class="detail-label">探亲类别</span>
@@ -324,7 +324,7 @@
                       </div>
                       <div class="detail-item">
                         <span class="detail-label">户口所在地或地址</span>
-                        <el-input v-model="personal.personalVisitAddress" placeholder="请输入户口所在地或地址" :disabled="isReadOnly"/>
+                        <el-input v-model="personal.personalVisitAddress" type="textarea" autosize placeholder="请输入户口所在地或地址" :disabled="isReadOnly"/>
                       </div>
                       <div class="detail-item">
                         <span class="detail-label">婚姻状况</span>
@@ -456,12 +456,13 @@
           :column="1"
           class="approval-descriptions"
         >
-          <el-descriptions-item label="领导意见" label-class-name="approval-label">
-            <div>{{ leaderApproval }}</div>
-          </el-descriptions-item>
           <el-descriptions-item v-if="Number(personnel.level) >= 24" label="请假期间主持工作负责人会签" label-class-name="approval-label">
             <div>{{ hostApproval }}</div>
           </el-descriptions-item>
+          <el-descriptions-item label="领导意见" label-class-name="approval-label">
+            <div>{{ leaderApproval }}</div>
+          </el-descriptions-item>
+
         </el-descriptions>
       </div>
 
@@ -752,7 +753,8 @@ const fetchUserProfile = async () => {
           personalRoute: item.visitRoute,
           personalVisitName: item.visitedPersonName,
           personalVisitType: item.visitType,
-          personalReason: item.reason
+          personalReason: item.detail,
+          personalMaritalStatus: item.maritalStatus,
         });
         break;
       case 5: // 学术会议
@@ -815,7 +817,7 @@ const fetchUserProfile = async () => {
         personnel.value = {
           id: res.personId,
           deptId: res.deptId || '',
-          name: res.userName || '',
+          name: res.nickName || '',
           department: res.deptName || '',
           title: res.postName || '',
           position: res.nickName || '',
@@ -845,7 +847,6 @@ const getApprovalOpinions = async () => {
       processInstanceId: processInstanceId.value
     };
     const data = await ProcessInstanceApi.getApprovalDetail(param);
-    console.log('审批详情数据:', data);
     
     if (data && data.activityNodes) {
       // 处理审批意见数据
