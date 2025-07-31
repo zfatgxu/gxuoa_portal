@@ -21,7 +21,7 @@
           <img src="@/assets/imgs/gxdx.png" alt="广西大学" class="gxdx-img" />
         </div>
         <div class="divider"></div>
-        <p class="platform-title">文件管理平台</p>
+        <p class="platform-title">文件管理系统</p>
       </div>
     </header>
 
@@ -122,11 +122,41 @@ const handleTabClick = (tab) => {
 }
 </script>
 
-<style>
+<style lang="scss" scoped>
+/* 登录页专用变量，只在登录页生效 */
+.login-page {
+  --login-primary-color: #0061B1;
+  --login-primary-light: #3384c5;
+  --login-primary-dark: #004e8f;
+  
+  /* 登录页按钮样式覆盖 */
+  :deep(.el-button--primary) {
+    --el-button-bg-color: var(--login-primary-color) !important;
+    --el-button-border-color: var(--login-primary-color) !important;
+    --el-button-hover-bg-color: var(--login-primary-light) !important;
+    --el-button-hover-border-color: var(--login-primary-light) !important;
+    --el-button-active-bg-color: var(--login-primary-dark) !important;
+    --el-button-active-border-color: var(--login-primary-dark) !important;
+  }
+  
+  /* 登录页链接样式覆盖 */
+  :deep(.el-link.el-link--primary) {
+    --el-link-text-color: var(--login-primary-color) !important;
+    --el-link-hover-text-color: var(--login-primary-light) !important;
+  }
+  
+  /* 登录页复选框样式覆盖 */
+  :deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
+    background-color: var(--login-primary-color) !important;
+    border-color: var(--login-primary-color) !important;
+  }
+}
+
 /* 全局覆盖Element Plus标签样式 */
 .el-tabs__item {
   font-size: 20px !important;
 }
+
 /* login page */
 .login-page {
   height: 100vh;
@@ -197,7 +227,25 @@ const handleTabClick = (tab) => {
   left: 0;
   width: 100%;
   height: 80px;
-  background-color: rgba(54, 163, 247, 1);
+  background-color: #0061B1;
+  z-index: -1;
+}
+
+/* 顶部遮罩图片 */
+.login-header::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 2%;
+  width: 28%;
+  height: 80px;
+  background-image: url('@/assets/imgs/bg/headerbg.png');
+  background-position: right center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  opacity: 0.5;
+  mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 90%);
+  -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 90%);
   z-index: -1;
 }
 
@@ -209,7 +257,7 @@ const handleTabClick = (tab) => {
   left: 0;
   width: 100%;
   height: 60px;
-  background-color: rgba(54, 163, 247, 1);
+  background-color: #0061B1;
   pointer-events: none;
   z-index: 1;
 }
@@ -607,7 +655,7 @@ const handleTabClick = (tab) => {
 }
 
 :deep(.login-tabs .el-tabs__active-bar) {
-  background-color: #0078d4;
+  background-color: var(--login-primary-color) !important;
   height: 3px;
 }
 
@@ -618,12 +666,12 @@ const handleTabClick = (tab) => {
 }
 
 :deep(.login-tabs .el-tabs__item.is-active) {
-  color: #0078d4;
+  color: var(--login-primary-color) !important;
   font-weight: 500;
 }
 
 :deep(.login-tabs .el-tabs__item:hover) {
-  color: #0078d4;
+  color: var(--login-primary-color) !important;
 }
 
 /* 响应式调整 */

@@ -411,7 +411,7 @@ onMounted(() => {
 <style lang="scss" scoped>
 :deep(.anticon) {
   &:hover {
-    color: var(--el-color-primary) !important;
+    color: var(--login-primary-color) !important;
   }
 }
 
@@ -476,7 +476,7 @@ onMounted(() => {
   transition: all 0.3s ease;
   
   &:hover {
-    background-color: #409eff;
+    background-color: var(--login-primary-color);
     color: white;
     transform: translateY(-2px);
   }
@@ -495,6 +495,6 @@ onMounted(() => {
 }
 
 .social-icon:nth-child(4):hover {
-  background-color: #409eff;
+  background-color: var(--login-primary-color);
 }
 </style>
