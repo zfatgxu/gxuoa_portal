@@ -278,5 +278,5 @@ export enum DICT_TYPE {
   MARITAL_STATUS = 'marital_status', // 婚姻状况
   PARITY = 'parity', // 生育次数
   LEAVE_STATUS = 'leave_status', // 请假流转状态
- 
+  CANCELSTATUE = 'cancelStatue', // 销假状态
 }

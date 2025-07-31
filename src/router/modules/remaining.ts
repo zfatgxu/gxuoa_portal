@@ -456,7 +456,33 @@ const remainingRouter: AppRouteRecordRaw[] = [
         component: () => import('@/views/leave/create/detail.vue'),
         name: 'LeaveDetail',
         meta: {
-          title: '查看请假详情',
+          title: '请假详情',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: 'ep:edit',
+          activeMenu: '/leave'
+        }
+      },
+      {
+        path: 'cancel-form/create',
+        component: () => import('@/views/leave/cancel-form/create.vue'),
+        name: 'CancelFormCreate',
+        meta: {
+          title: '销假表单',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: 'ep:edit',
+          activeMenu: '/leave'
+        }
+      },
+      {
+        path: 'cancel-form/detail',
+        component: () => import('@/views/leave/cancel-form/detail.vue'),
+        name: 'CancelFormDetail',
+        meta: {
+          title: '销假详情',
           noCache: true,
           hidden: true,
           canTo: true,

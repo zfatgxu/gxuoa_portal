@@ -209,6 +209,16 @@ export const SupervisionTaskApi = {
   // 获取协办部门待办任务列表
   getCoDeptTodoPage: async (params: any) => {
     return await request.get({ url: `/bpm/supervision/co-dept-todo-page`, params })
+  },
+
+  // 获取全部事项任务列表（领导界面）
+  getAllTasksPage: async (params: any) => {
+    return await request.get({ url: `/bpm/supervision/all-tasks-page`, params })
+  },
+
+  // 获取需要关注任务列表（领导界面）
+  getAttentionTasksPage: async (params: any) => {
+    return await request.get({ url: `/bpm/supervision/attention-tasks-page`, params })
   }
 }
 
@@ -237,9 +247,12 @@ export interface SupervisionOrderDetailVO {
   priority: number // 紧急程度
   deadline: number | null // 完成期限（时间戳）
   leadDept: number // 牵头单位ID
+  leadDeptName?: string // 牵头单位名称
   significance: number | null // 重要程度
   coDept: string | null // 协办单位ID（逗号分隔）
+  coDeptNameMap?: Record<string, string> | null // 协办单位名称映射
   supervisor: number // 督办人ID
+  leaderNickname?: string // 分管领导姓名
   content: string // 督办内容
   undertakeMatter: string // 承办事项
   supervisionApprove: number // 督察办审批状态
@@ -247,9 +260,9 @@ export interface SupervisionOrderDetailVO {
   supervisionReapprove: number | null // 督察办复核状态
   processInstanceId: string // 流程实例ID
   summary: string // 概述信息
+  supervisionStatus?: string // 督办状态
   participants: string[] // 参与者用户ID数组
   participantUsers: ParticipantUserVO[] // 参与者用户详细信息
-  supervisionStatus: string // 督办状态：流程中、结办文件、否决文件
 }
 
 // 督办统计数据响应接口
@@ -289,8 +302,38 @@ export const SupervisionIndexApi = {
   // 获取督办统计数据
   getStatistics(): Promise<SupervisionStatisticsVO> {
     return request.get({ url: '/bpm/supervision/getStatistics' })
+  }
+}
+
+// ========== 批示相关接口 ==========
+
+// 批示信息接口
+export interface LeaderRemarkVO {
+  leaderNickName: string // 领导姓名
+  remark: string // 批示内容
+  leadDeptName: string // 部门名称
+}
+
+// 新增批示请求接口
+export interface InsertLeaderRemarkReqVO {
+  processInstanceId: string // 流程实例ID
+  remark: string // 批示内容
+}
+
+// 批示相关API
+export const LeaderRemarkApi = {
+  // 新增批示
+  insertLeaderRemark: async (data: InsertLeaderRemarkReqVO) => {
+    return await request.post({ url: '/bpm/supervision/insertLeaderRemark', data })
   },
 
+  // 获取批示列表
+  getLeaderRemark: async (processInstanceId: string): Promise<LeaderRemarkVO[]> => {
+    return await request.get({
+      url: '/bpm/supervision/getLeaderRemark',
+      params: { processInstanceId }
+    })
+  }
 }
 
 // ========== 通用类型定义 ==========
@@ -298,5 +341,5 @@ export const SupervisionIndexApi = {
 // 分页参数基类
 export interface PageParam {
   pageNo?: number // 页码，默认1
-  pageSize?: number // 每页大小，默认20
+  pageSize?: number
 }

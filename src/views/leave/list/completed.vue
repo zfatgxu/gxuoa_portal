@@ -180,7 +180,8 @@ const processDefinitionList = ref<any[]>([]) // 流程定义列表
 const queryParams = reactive({
   pageNo: 1,
   pageSize: 10,
-
+  category: '请假登记',
+  processDefinitionKey: 'oa_leaveRegister',
 })
 const queryFormRef = ref() // 搜索的表单
 const categoryList = ref<CategoryVO[]>([]) // 流程分类列表

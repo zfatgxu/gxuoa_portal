@@ -516,12 +516,13 @@
           :column="1"
           class="approval-descriptions"
         >
-          <el-descriptions-item label="领导意见" label-class-name="approval-label">
-            <div></div>
-          </el-descriptions-item>
           <el-descriptions-item v-if="Number(personnel.level) >= 24" label="请假期间主持工作负责人会签" label-class-name="approval-label">
             <div></div>
           </el-descriptions-item>
+          <el-descriptions-item label="领导意见" label-class-name="approval-label">
+            <div></div>
+          </el-descriptions-item>
+
         </el-descriptions>
       </div>
 
@@ -1091,15 +1092,15 @@ const handleSubmit = async () => {
       return
     }
 
-    if (personnel.value.level === 2) {
+    if (Number(personnel.value.level) >= 24 && Number(personnel.value.level) !== 100) {
       if (!workArrangement.value) {
         ElMessage.warning('请填写请假期间工作安排')
         return
       }
     }
 
-    if (personnel.value.level === 2) {
-      if (startUserSelectAssignees.value === '') {
+    if (Number(personnel.value.level) >= 24 && Number(personnel.value.level) !== 100) {
+      if (startUserSelectAssignees.value['host_sign'].length === 0) {
         ElMessage.warning('请选择签办人')
         return
       }
@@ -1230,7 +1231,7 @@ const handleSubmit = async () => {
           birthCount: personal.personalParity,
           difficultBirth: personal.personalDystocia,
           multipleBirth: personal.personalMultiple,
-          reason: personal.personalReason,
+          detail: personal.personalReason,
           phone: personal.personalPhone,
           visitRoute: personal.personalRoute,
           relationship: personal.personalRelation,
@@ -1339,6 +1340,15 @@ const fetchUserProfile = async () => {
         }));
       }
       if (res2 && Array.isArray(res2)) {
+        // 获取所有存在的事由类型
+        const existingTypes = res2.map(item => item.type);
+
+        // 只清空有对应数据的列表
+        if (existingTypes.includes(1)) researchList.value = [];
+        if (existingTypes.includes(2)) trainingList.value = [];
+        if (existingTypes.includes(3)) businessList.value = [];
+        if (existingTypes.includes(4)) personalList.value = [];
+        if (existingTypes.includes(5)) academicMeetings.value = [];
         res2.forEach(item => {
           // 根据类型设置选中的事由
           if (!selectedReasons.value.includes(item.type)) {
@@ -1392,7 +1402,8 @@ const fetchUserProfile = async () => {
                 personalRoute: item.visitRoute,
                 personalVisitName: item.visitedPersonName,
                 personalVisitType: item.visitType,
-                personalReason: item.reason,
+                personalReason: item.detail,
+                personalMaritalStatus: item.maritalStatus,
               });
               break;
             case 5: // 学术会议
@@ -1512,19 +1523,29 @@ const disabledStartDate = (index, type) => {
     let endDate;
     switch (type) {
       case 1:
-        endDate = researchList.value[index].researchEndDate;
+        if (researchList.value && researchList.value[index]) {
+          endDate = researchList.value[index].researchEndDate;
+        }
         break;
       case 2:
-        endDate = trainingList.value[index].trainingEndDate;
+        if (trainingList.value && trainingList.value[index]) {
+          endDate = trainingList.value[index].trainingEndDate;
+        }
         break;
       case 3:
-        endDate = businessList.value[index].businessEndDate;
+        if (businessList.value && businessList.value[index]) {
+          endDate = businessList.value[index].businessEndDate;
+        }
         break;
       case 4:
-        endDate = personalList.value[index].personalEndDate;
+        if (personalList.value && personalList.value[index]) {
+          endDate = personalList.value[index].personalEndDate;
+        }
         break;
       case 5:
-        endDate = academicMeetings.value[index].academicEndDate;
+        if (academicMeetings.value && academicMeetings.value[index]) {
+          endDate = academicMeetings.value[index].academicEndDate;
+        }
         break;
       default:
         return false;
@@ -1556,19 +1577,29 @@ const disabledEndDate = (index, type) => {
     let startDate;
     switch (type) {
       case 1:
-        startDate = researchList.value[index].researchStartDate;
+        if (researchList.value && researchList.value[index]) {
+          startDate = researchList.value[index].researchStartDate;
+        }
         break;
       case 2:
-        startDate = trainingList.value[index].trainingStartDate;
+        if (trainingList.value && trainingList.value[index]) {
+          startDate = trainingList.value[index].trainingStartDate;
+        }
         break;
       case 3:
-        startDate = businessList.value[index].businessStartDate;
+        if (businessList.value && businessList.value[index]) {
+          startDate = businessList.value[index].businessStartDate;
+        }
         break;
       case 4:
-        startDate = personalList.value[index].personalStartDate;
+        if (personalList.value && personalList.value[index]) {
+          startDate = personalList.value[index].personalStartDate;
+        }
         break;
       case 5:
-        startDate = academicMeetings.value[index].academicStartDate;
+        if (academicMeetings.value && academicMeetings.value[index]) {
+          startDate = academicMeetings.value[index].academicStartDate;
+        }
         break;
       default:
         return false;

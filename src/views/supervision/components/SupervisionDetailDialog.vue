@@ -13,7 +13,7 @@
       <div class="status-bar">
         <div class="status-tags">
           <span :class="['status-tag', 'priority-tag', `priority-${orderDetail.priorityType}`]">{{ orderDetail.priority }}</span>
-          <span class="status-tag status-tag-item">{{ getStatusText(orderDetail.status) }}</span>
+          <span class="status-tag status-tag-item">{{ getStatusText() }}</span>
           <span class="status-tag category-tag">{{ orderDetail.category }}</span>
         </div>
         <div class="doc-number">
@@ -115,7 +115,7 @@
                 <Icon icon="ep:clock" class="time-icon" />
                 <div class="time-content">
                   <div class="time-label">截止时间</div>
-                  <div class="time-value deadline">{{ orderDetail.deadline }}</div>
+                  <div :class="getDeadlineTimeClass()">{{ orderDetail.deadline }}</div>
                 </div>
               </div>
               <div class="time-item">
@@ -478,13 +478,8 @@ const dialogVisible = computed({
 
 // 判断督办是否已结束（不能再添加更新）
 const isSupervisionEnded = computed(() => {
-  if (props.supervisionStatus) {
-    // 如果有传递督办状态，根据督办状态判断
-    return props.supervisionStatus === '办结文件' || props.supervisionStatus === '否决文件'
-  }
-
-  // 如果没有督办状态，根据数字状态码判断（3=已完成，4=已取消）
-  return orderDetail.status === 3 || orderDetail.status === 4
+  // 根据督办状态判断
+  return props.supervisionStatus === '办结文件' || props.supervisionStatus === '否决文件'
 })
 
 // 历史记录弹窗状态
@@ -614,13 +609,13 @@ const getSupervisionOrderDetail = async (processInstanceId: string) => {
 
     if (data) {
       // 判断data是否直接包含orderCode字段
-      const apiData = data.orderCode ? data : data.data
+      const apiData: any = data.orderCode ? data : data.data
 
       if (apiData) {
         orderDetailData.value = apiData
 
         // 处理协办部门
-        const coDeptNames = []
+        const coDeptNames: string[] = []
         if (apiData.coDeptNameMap) {
           for (const key in apiData.coDeptNameMap) {
             coDeptNames.push(apiData.coDeptNameMap[key])
@@ -643,11 +638,7 @@ const getSupervisionOrderDetail = async (processInstanceId: string) => {
         // 更新督办单详情
         orderDetail.orderNumber = apiData.orderCode || ''
         orderDetail.title = apiData.orderTitle || ''
-
-        // 调试信息：打印type字段
-        console.log('督办详情API返回的type字段:', apiData.type)
-        orderDetail.category = getSupervisionTypeText(apiData.type) // 根据type字段设置督办类型
-        console.log('设置的督办类型:', orderDetail.category)
+        orderDetail.category = getSupervisionTypeText(apiData.type)
         orderDetail.priority = getPriorityText(apiData.priority)
         orderDetail.priorityType = getPriorityType(apiData.priority)
         orderDetail.issueUnit = apiData.creatorDeptName || ''
@@ -667,7 +658,6 @@ const getSupervisionOrderDetail = async (processInstanceId: string) => {
       }
     }
   } catch (error) {
-    console.error('获取督办单详情失败:', error)
     ElMessage.error('获取督办单详情失败')
   }
 }
@@ -679,7 +669,7 @@ const getAttachmentList = async (processInstanceId: string) => {
   try {
     const data = await OrderApi.getAttachments(processInstanceId)
 
-    let attachmentList = []
+    let attachmentList: any[] = []
 
     // 处理各种可能的响应格式
     if (data && data.data && Array.isArray(data.data)) {
@@ -706,7 +696,6 @@ const getAttachmentList = async (processInstanceId: string) => {
       attachments.value = []
     }
   } catch (error) {
-    console.error('获取附件列表失败:', error)
     ElMessage.error('获取附件列表失败')
   }
 }
@@ -726,9 +715,8 @@ const getWorkflowDetail = async (processInstanceId: string) => {
       activityNodes.value = data.activityNodes
     }
   } catch (error) {
-    console.error('获取工作流详情失败:', error)
     ElMessage.error('获取工作流详情失败')
-    throw error // 重新抛出错误，让 Promise.allSettled 能捕获
+    throw error
   }
 }
 
@@ -740,7 +728,7 @@ const getProgressRecords = async (processInstanceId: string, showAll: boolean = 
     const data = await OrderApi.getSupervisionTaskDetail(processInstanceId, showAll)
 
     // 处理不同的响应格式
-    let apiData
+    let apiData: any
     if (data && data.data) {
       apiData = data.data
     } else if (data && data.code === 0) {
@@ -753,7 +741,7 @@ const getProgressRecords = async (processInstanceId: string, showAll: boolean = 
 
     if (apiData) {
       // 根据showAll参数决定使用哪个数据源
-      let recordsToProcess = []
+      let recordsToProcess: any[] = []
 
       if (showAll) {
         // 显示全部记录时，优先使用allRecords，如果没有则使用latestRecords
@@ -764,7 +752,7 @@ const getProgressRecords = async (processInstanceId: string, showAll: boolean = 
       }
 
       if (Array.isArray(recordsToProcess) && recordsToProcess.length > 0) {
-        const formattedRecords = recordsToProcess.map(record => {
+        const formattedRecords = recordsToProcess.map((record: any) => {
           return {
             title: record.creatorDeptName || '未知部门',
             handler: record.creatorNickName || '',
@@ -794,13 +782,9 @@ const getProgressRecords = async (processInstanceId: string, showAll: boolean = 
       }
     }
   } catch (error) {
-    console.error('获取进度更新记录失败:', error)
     ElMessage.error('获取进度更新记录失败')
   }
 }
-
-// 更新督办单详情数据
-
 
 // 更新附件列表数据
 const updateAttachmentsFromAPI = (apiData: any[]) => {
@@ -828,7 +812,7 @@ const orderDetail = reactive({
   category: '工作督办',
   priority: '一般优先级',
   priorityType: 'info',
-  status: 2, // 0-草稿 1-已发布 2-进行中 3-已完成 4-已取消
+  // status 字段已移除，直接使用传递的督办状态
   issueUnit: '',
   issuer: '',
   issuerPhone: '',
@@ -846,13 +830,13 @@ const orderDetail = reactive({
 })
 
 // 进度更新记录
-const progressRecords = ref([])
+const progressRecords = ref<any[]>([])
 
 // 所有进度更新记录（包含更多历史记录）
-const allProgressRecords = ref([])
+const allProgressRecords = ref<any[]>([])
 
 // 附件列表
-const attachments = ref([])
+const attachments = ref<any[]>([])
 
 
 // 加载所有数据的统一方法
@@ -921,7 +905,7 @@ const getSupervisionTypeText = (type: number) => {
   switch (type) {
     case 1: return '工作督办'
     case 2: return '专项督办'
-    default: return '工作督办'
+    default: return ' '
   }
 }
 
@@ -1121,18 +1105,6 @@ const submitAddProgress = async () => {
   }
 }
 
-const handleEdit = () => {
-  ElMessage.info('编辑功能开发中...')
-}
-
-const handleExport = () => {
-  ElMessage.success('导出功能开发中...')
-}
-
-const handleFileUpload = () => {
-  ElMessage.info('文件上传功能开发中...')
-}
-
 const previewFile = (file: any) => {
   if (file.url) {
     // 直接在新窗口中打开文件，让浏览器决定如何处理
@@ -1179,65 +1151,34 @@ const downloadProgressFile = (file: any) => {
   }
 }
 
-
-
-const getStatusType = (status: number) => {
-  // 如果有传递督办状态，根据计算出的状态文本来确定样式
-  if (props.supervisionStatus && props.taskData) {
-    const statusText = calculateDisplayStatusFromSupervision(props.supervisionStatus, props.taskData.deadline)
-    const statusTypeMap = {
-      '进行中': 'primary',
-      '已超时': 'danger',
-      '已结束': 'success'
-    }
-    return statusTypeMap[statusText] || 'info'
+const getStatusType = () => {
+  // 根据传递的督办状态直接映射状态样式
+  const statusTypeMap = {
+    '进行中': 'warning',
+    '已超时': 'danger',
+    '已结束': 'success'
   }
-
-  // 否则使用原来的数字状态码
-  const types = { 0: 'info', 1: 'primary', 2: 'warning', 3: 'success', 4: 'danger' }
-  return types[status as keyof typeof types] || 'info'
+  return statusTypeMap[props.supervisionStatus] || 'info'
 }
 
-const getStatusText = (status: number) => {
-  // 如果有传递督办状态，优先使用督办状态来计算显示状态
-  if (props.supervisionStatus && props.taskData) {
-    return calculateDisplayStatusFromSupervision(props.supervisionStatus, props.taskData.deadline)
-  }
-
-  // 否则使用原来的数字状态码
-  const texts = { 0: '草稿', 1: '已发布', 2: '进行中', 3: '已完成', 4: '已取消' }
-  return texts[status as keyof typeof texts] || '未知'
+const getStatusText = () => {
+  // 直接使用传递的督办状态
+  return props.supervisionStatus || ' '
 }
 
-// 根据督办状态计算显示状态（与首页逻辑保持一致）
-const calculateDisplayStatusFromSupervision = (supervisionStatus: string, deadline?: string) => {
-  // 根据 supervisionStatus 判断基本状态
-  if (supervisionStatus === '办结文件' || supervisionStatus === '否决文件') {
-    return '已结束'
+// 根据状态获取截止时间的样式类
+const getDeadlineTimeClass = () => {
+  // 直接使用从外部页面传递过来的督办状态
+  const status = props.supervisionStatus || ' '
+
+  if (status === '已超时') {
+    return 'time-value deadline-overdue' // 红色
+  } else if (status === '已结束') {
+    return 'time-value deadline-finished' // 黑色
+  } else if (status === '进行中') {
+    return 'time-value deadline-processing' // 橙色
   }
-
-  // 如果是"流程中"，需要进一步判断是否超时
-  if (supervisionStatus === '流程中') {
-    if (!deadline) {
-      return '进行中'
-    }
-
-    // 获取今天的日期
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    // 获取截止日期
-    const deadlineDate = new Date(deadline)
-    deadlineDate.setHours(0, 0, 0, 0)
-
-    // 计算天数差
-    const daysDiff = Math.floor((deadlineDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000))
-
-    return daysDiff < 0 ? '已超时' : '进行中'
-  }
-
-  // 其他状态默认显示进行中
-  return '进行中'
+  return 'time-value deadline' // 默认颜色
 }
 
 const getUrgencyType = (level: number) => {
@@ -1296,8 +1237,6 @@ const formatTimestamp = (timestamp: number) => {
   const date = new Date(timestamp)
   return formatDateTime(date)
 }
-
-
 
 // 从URL获取文件类型
 const getFileTypeFromUrl = (url: string) => {
@@ -1650,6 +1589,25 @@ const formatFileSize = (size: number | null) => {
 
 .time-value.deadline {
   color: #f56c6c;
+}
+
+/* 截止时间颜色样式 */
+.time-value.deadline-overdue {
+  color: #F56C6C; /* 红色 - 已超时 */
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.time-value.deadline-finished {
+  color: #303133; /* 黑色 - 已结束 */
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.time-value.deadline-processing {
+  color: #E6A23C; /* 橙色 - 进行中 */
+  font-size: 16px;
+  font-weight: 500;
 }
 
 /* 区块样式 */

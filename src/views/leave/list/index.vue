@@ -232,6 +232,7 @@
             type="primary" 
             @click="handleUploadToResearch(scope.row)"
           >上传科研院</el-button>
+          <!-- <el-button v-if="hasPersonal(scope.row)" link type="primary" @click="handleFinance(scope.row)">销假</el-button> -->
         </template>
       </el-table-column>
     </el-table>
@@ -346,6 +347,15 @@ const hasAcademicMeeting = (row: any): boolean => {
   // 将原因字符串按"、"分割，检查是否包含"学术会议"
   const reasonList = row.reasons.split('、');
   return reasonList.some((reason: string) => reason.includes('学术会议')) && row.status === 3;
+};
+
+/** 判断是否包含因私 */
+const hasPersonal = (row: any): boolean => {
+  if (!row.reasons) return false;
+  // 将原因字符串按"、"分割，检查是否包含"因私"
+  const reasonList = row.reasons.split('、');
+  const daysDiff = Math.ceil((row.endDate - row.startDate) / (1000 * 60 * 60 * 24));
+  return reasonList.some((reason: string) => reason.includes('因私')) && row.status === 3 && daysDiff >= 7;
 };
 
 /** 上传科研院 */
