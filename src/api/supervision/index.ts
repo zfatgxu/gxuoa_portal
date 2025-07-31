@@ -12,7 +12,16 @@ export interface OrderPageReqVO extends PageParam {
 
 // 督办单导出参数（专门用于导出功能）
 export interface OrderExportReqVO {
-  ids: number[] // 要导出的督办单ID列表（数组格式）
+  ids?: number[] // 要导出的督办单ID列表（可选，用于导出选中的特定行）
+  content?: string // 督办内容（模糊查询）
+  orderCode?: string // 督办编号（精确查询）
+  leadDept?: string // 承办单位（模糊查询）
+  type?: number // 督办类型：1=工作督办，2=专项督办
+  supervisionStatus?: string // 督办状态：流程中、办结文件、否决文件
+  createTimeStart?: string // 创建时间开始
+  createTimeEnd?: string // 创建时间结束
+  deadlineStart?: string // 完成期限开始
+  deadlineEnd?: string // 完成期限结束
 }
 
 // 督办单工作流更新请求（只传递修改的字段）
@@ -219,6 +228,11 @@ export const SupervisionTaskApi = {
   // 获取需要关注任务列表（领导界面）
   getAttentionTasksPage: async (params: any) => {
     return await request.get({ url: `/bpm/supervision/attention-tasks-page`, params })
+  },
+
+  // 获取督办待审核任务列表（督查督办首页）
+  getTodoPage: async (params: any) => {
+    return await request.get({ url: `/bpm/supervision/todo-page`, params })
   }
 }
 
@@ -330,8 +344,7 @@ export const LeaderRemarkApi = {
   // 获取批示列表
   getLeaderRemark: async (processInstanceId: string): Promise<LeaderRemarkVO[]> => {
     return await request.get({
-      url: '/bpm/supervision/getLeaderRemark',
-      params: { processInstanceId }
+      url: `/bpm/supervision/getLeaderRemark/${processInstanceId}`
     })
   }
 }
