@@ -527,6 +527,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import SignDialog from '@/views/bpm/processInstance/detail/SignDialog.vue'
 import ProcessInstanceTimeline from '@/views/bpm/processInstance/detail/ProcessInstanceTimeline.vue'
 import { isEmpty } from '@/utils/is'
+import { ElMessageBox } from 'element-plus'
 
 defineOptions({ name: 'SupervisionOperationButton' })
 
@@ -781,6 +782,12 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
     if (pass) {
       const nextAssigneesValid = validateNextAssignees()
       if (!nextAssigneesValid) return
+
+      // 督办单专用逻辑：验证牵头单位负责人的必填项
+      if (props.supervisionDetailRef) {
+        const leadDeptValidation = await validateLeadDeptRequirements()
+        if (!leadDeptValidation) return
+      }
 
       // 督办单专用逻辑：先更新督办单数据
       if (props.supervisionDetailRef && props.supervisionDetailRef.hasEditPermission) {
@@ -1120,6 +1127,58 @@ const getUpdatedProcessInstanceVariables = () => {
     variables[field] = props.normalFormApi.getValue(field)
   })
   return variables
+}
+
+/** 验证牵头单位负责人的必填项 */
+const validateLeadDeptRequirements = async (): Promise<boolean> => {
+  try {
+    // 检查当前用户是否为牵头单位负责人
+    const isLeadDeptLeader = await props.supervisionDetailRef?.checkIsLeadDeptLeader?.()
+    if (!isLeadDeptLeader) {
+      return true // 不是牵头单位负责人，无需验证
+    }
+
+    // 获取当前督办单数据
+    const orderDetail = props.supervisionDetailRef?.getOrderDetailData?.()
+    const editForm = props.supervisionDetailRef?.getEditFormData?.()
+
+    if (!orderDetail) {
+      console.warn('无法获取督办单详情数据')
+      return true
+    }
+
+    // 检查承办状况是否已填写（必填）
+    const leadDeptDetail = editForm?.leadDeptDetail || orderDetail.leadDeptDetail
+    if (!leadDeptDetail || leadDeptDetail.trim() === '') {
+      message.error('作为牵头单位负责人，您必须填写承办状况后才能通过审批')
+      return false
+    }
+
+    // 检查协办单位是否已选择（可选但需要提醒）
+    const coDept = editForm?.coDept || orderDetail.coDept
+    if (!coDept || coDept.trim() === '') {
+      try {
+        await ElMessageBox.confirm(
+          '您还未选择协办单位。协办单位可以协助处理督办事项，建议根据实际情况选择相关部门。\n\n是否确认不选择协办单位并继续审批？',
+          '协办单位提醒',
+          {
+            confirmButtonText: '确认继续',
+            cancelButtonText: '取消审批',
+            type: 'warning',
+            dangerouslyUseHTMLString: false
+          }
+        )
+        return true // 用户确认继续
+      } catch {
+        return false // 用户取消审批
+      }
+    }
+
+    return true // 所有验证通过
+  } catch (error) {
+    console.error('验证牵头单位负责人必填项时出错:', error)
+    return true // 出错时允许继续，避免阻塞正常流程
+  }
 }
 
 /** 处理签名完成 */

@@ -236,13 +236,13 @@
         <el-row :gutter="20">
           <el-col :span="24">
             <el-form-item>
-              <div class="summary-content">
+              <div class="summary-content-simple">
                 <div v-if="parsedSummary && parsedSummary.length > 0">
-                  <div v-for="(item, index) in parsedSummary" :key="index" class="summary-item">
+                  <div v-for="(item, index) in parsedSummary" :key="index" class="summary-item-simple">
                     <strong>{{ item.label }}：</strong>{{ item.value }}
                   </div>
                 </div>
-                <div v-else class="no-summary">
+                <div v-else class="no-summary-simple">
                   暂无概述信息
                 </div>
               </div>
@@ -922,10 +922,6 @@ const getSupervisionWorkflowUpdateData = async (startLeaderSelectAssignees?: Rec
   if (allAttachments.length > 0) {
     updateData.fileList = allAttachments
   }
-
-
-
-
   return updateData
 }
 
@@ -1049,11 +1045,6 @@ const loadAttachments = async () => {
     console.error('加载附件列表失败:', error)
   }
 }
-
-// 以下方法已废弃，现在通过工作流更新接口处理附件
-// const handleAttachmentUpload = async (response: any, file: any) => { ... }
-// const handleAttachmentRemove = (file: any) => { ... }
-
 const downloadAttachment = (attachment: AttachmentRespVO) => {
   // 下载附件
   window.open(attachment.url, '_blank')
@@ -1083,8 +1074,6 @@ const formatFileSize = (bytes: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
-
-
 // 初始化
 onMounted(async () => {
   // 先获取部门列表和用户列表，确保字段映射能正确工作
@@ -1109,12 +1098,44 @@ onMounted(async () => {
   }
 })
 
+// 检查当前用户是否为牵头单位负责人
+const checkIsLeadDeptLeader = async (): Promise<boolean> => {
+  const currentUser = userStore.getUser
+  const currentUserId = currentUser?.id
+  const leadDeptId = orderDetail.value.leadDept
+
+  if (!currentUserId || !leadDeptId) {
+    return false
+  }
+
+  // 通过接口获取牵头单位部门详情
+  const leadDeptDetail = await getDeptDetail(leadDeptId)
+  if (!leadDeptDetail) {
+    return false
+  }
+
+  return leadDeptDetail.leaderUserId === currentUserId
+}
+
+// 获取督办单详情数据（用于外部调用）
+const getOrderDetailData = () => {
+  return orderDetail.value
+}
+
+// 获取编辑表单数据
+const getEditFormData = () => {
+  return editForm.value
+}
+
 // 暴露方法供外部调用
 defineExpose({
   updateSupervisionOrder,
   clearPendingAttachments,
   hasEditPermission: computed(() => hasEditPermission.value),
-  pendingAttachmentsCount: computed(() => pendingAttachments.value.length)
+  pendingAttachmentsCount: computed(() => pendingAttachments.value.length),
+  checkIsLeadDeptLeader,
+  getOrderDetailData,
+  getEditFormData
 })
 </script>
 
@@ -1229,6 +1250,26 @@ defineExpose({
   padding: 20px 0;
 }
 
+/* 简化的概述内容样式 - 去掉框框 */
+.summary-content-simple {
+  margin-bottom: 20px;
+}
+
+.summary-item-simple {
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+
+.summary-item-simple strong {
+  color: #303133;
+  margin-right: 8px;
+}
+
+.no-summary-simple {
+  color: #909399;
+  font-style: italic;
+}
+
 /* 部门标签样式 */
 .dept-tag {
   margin-right: 8px;
@@ -1246,16 +1287,12 @@ defineExpose({
   display: flex;
   gap: 8px;
 }
-
-
-
 /* 只读输入框样式 */
 :deep(.el-input.is-disabled .el-input__wrapper) {
   background-color: #f5f7fa;
   border-color: #e4e7ed;
   color: #606266;
 }
-
 :deep(.el-textarea.is-disabled .el-textarea__inner) {
   background-color: #f5f7fa;
   border-color: #e4e7ed;

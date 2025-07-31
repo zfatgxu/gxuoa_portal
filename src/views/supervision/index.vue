@@ -188,12 +188,12 @@
             <div class="flex items-center justify-between mb-3">
                 <h4 class="text-xl font-bold text-gray-900 mr-4">{{ task.title }}</h4>
                 <div class="flex space-x-2 text-center">
-                    <span 
+                    <span
                     :class="[
                         'px-2 py-1 rounded text-xs font-medium w-20',
                         task.priority === '高优先级' ? 'bg-red-100 text-red-800' :
                         task.priority === '中优先级' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-green-100 text-green-800' 
+                        'bg-green-100 text-green-800'
                     ]"
                     style="font-weight: bold;">
                     {{ task.priority }}
@@ -202,7 +202,7 @@
                     :class="[
                         'ml-2 px-2 py-1 rounded text-xs font-medium w-20',
                         task.status === '已超时' ? 'bg-red-100 text-red-800' :
-                        task.status === '已结束' ? 'bg-green-100 text-green-800' :
+                        task.status === '已结束' ? 'bg-gray-500 text-white' :
                         task.status === '进行中' ? 'bg-blue-100 text-blue-800' :
                         'bg-gray-100 text-gray-800'
                     ]"
@@ -255,6 +255,9 @@
                     <el-button class="w-20" @click="openDetailDialog(task)">
                         查看详情
                     </el-button>
+                    <el-button v-if="activeTab === 'todo'" class="w-20 ml-2" type="primary" @click="handleAudit(task)">
+                        办理
+                    </el-button>
                 </div>
             </div>
             </div>
@@ -301,10 +304,13 @@ import {
   Warning as AlertTriangle
 } from '@element-plus/icons-vue'
 import SupervisionDetailDialog from './components/SupervisionDetailDialog.vue'
-import { SupervisionIndexApi } from '@/api/supervision/index'
+import { SupervisionIndexApi, SupervisionTaskApi } from '@/api/supervision/index'
 import type { SupervisionOrderDetailVO } from '@/api/supervision/index'
 import { ElMessage } from 'element-plus'
 import { formatDate } from '@/utils/formatTime'
+import { useRouter } from 'vue-router'
+
+const { push } = useRouter()
 
 // 定义任务数据类型
 interface TaskData {
@@ -324,6 +330,7 @@ interface TaskData {
   type: string
   processInstanceId?: string
   supervisionStatus?: string
+  taskId?: number // 任务ID，用于待办列表标签页的办理功能
 }
 
 // 定义任务统计数据类型
@@ -370,7 +377,8 @@ const loading = ref<boolean>(false)
 // Static data
 const tabs = [
 { key: 'work', label: '工作督办' },
-{ key: 'special', label: '专项督办' }
+{ key: 'special', label: '专项督办' },
+{ key: 'todo', label: '待办列表' }
 ]
 
 const statuses: string[] = ['进行中', '已超时', '已结束']
@@ -518,12 +526,12 @@ const calculateDisplayStatus = (supervisionStatus: string, deadline: number | nu
 
 // 获取优先级文本
 const getPriorityText = (priority: number | null | undefined): string => {
-  if (priority === null || priority === undefined) return '普通'
+  if (priority === null || priority === undefined) return '一般优先'
   switch (priority) {
-    case 1: return '高优先级'
+    case 1: return '一般优先'
     case 2: return '中优先级'
-    case 3: return '低优先级'
-    default: return '普通'
+    case 3: return '高优先级'
+    default: return '一般优先'
   }
 }
 
@@ -539,15 +547,27 @@ const fetchData = async () => {
   loading.value = true
   try {
     // 并行获取统计数据和督办数据
-    const typeParam = activeTab.value === 'work' ? 1 : 2
+    let supervisionPromise
 
-    const [statisticsResult, supervisionResult] = await Promise.allSettled([
-      getStatisticsData(),
-      SupervisionIndexApi.getIndexData({
+    if (activeTab.value === 'todo') {
+      // 待办列表标签页 - 使用督办待办任务接口
+      supervisionPromise = SupervisionTaskApi.getTodoPage({
+        pageNo: pagination.value.pageNo,
+        pageSize: pagination.value.pageSize
+      })
+    } else {
+      // 工作督办和专项督办
+      const typeParam = activeTab.value === 'work' ? 1 : 2
+      supervisionPromise = SupervisionIndexApi.getIndexData({
         pageNo: pagination.value.pageNo,
         pageSize: pagination.value.pageSize,
         type: typeParam
       })
+    }
+
+    const [statisticsResult, supervisionResult] = await Promise.allSettled([
+      getStatisticsData(),
+      supervisionPromise
     ])
 
     // 处理统计数据
@@ -590,52 +610,145 @@ const fetchData = async () => {
 
       // 更新分页总数
       pagination.value.total = supervisionResponse.total
-      const supervisionOrders = supervisionResponse.list
 
-      // 调试：统计不同类型的督办数量
-      const workCount = supervisionOrders.filter(order => order.type === 1).length
-      const specialCount = supervisionOrders.filter(order => order.type === 2).length
-      console.log(`工作督办数量: ${workCount}, 专项督办数量: ${specialCount}`)
+      let processedTasks: TaskData[] = []
 
-      // 处理督办数据（优化性能）
-      const processedTasks = supervisionOrders.map((order) => {
-        // 使用新的状态计算函数，传入 supervisionStatus 和 deadline
-        const displayStatus = calculateDisplayStatus(order.supervisionStatus || '流程中', order.deadline || null)
+      if (activeTab.value === 'todo') {
+        // 处理待办列表数据（任务格式），参考工作督办的字段映射
+        const taskList = supervisionResponse.list || []
 
-        // 调试信息
-        console.log(`督办单 ${order.orderTitle}: supervisionStatus=${order.supervisionStatus}, 计算状态=${displayStatus?.status || '未知'}`)
-
-        // 格式化日期的辅助函数
-        const formatOrderDate = (dateValue: number | string | null | undefined): string => {
-          if (!dateValue) return ''
-          try {
-            const date = new Date(dateValue)
-            if (isNaN(date.getTime())) return ''
-            return formatDate(date, 'YYYY-MM-DD')
-          } catch {
-            return ''
+        processedTasks = taskList.map((task: any) => {
+          // 格式化日期的辅助函数（与工作督办保持一致）
+          const formatOrderDate = (dateValue: number | string | null | undefined): string => {
+            if (!dateValue) return ''
+            try {
+              const date = new Date(dateValue)
+              if (isNaN(date.getTime())) return ''
+              return formatDate(date, 'YYYY-MM-DD')
+            } catch {
+              return ''
+            }
           }
-        }
 
-        return {
-          id: order.id,
-          title: order.orderTitle || '',
-          description: order.content || '',
-          leadDepartment: order.leadDeptName || '未知部门',
-          assistDepartments: parseCoDepts(order.coDeptNameMap),
-          createdDate: formatOrderDate(order.createTime),
-          deadline: formatOrderDate(order.deadline),
-          supervisor: order.leaderNickname || '未分配',
-          priority: getPriorityText(order.priority),
-          status: displayStatus?.status || '进行中',
-          overdueDays: displayStatus?.overdueDays || null,
-          isOverdue: displayStatus?.isOverdue || false,
-          daysRemaining: displayStatus?.daysRemaining || null,
-          type: order.type === 1 ? 'work' : 'special',
-          processInstanceId: order.processInstanceId || '',
-          supervisionStatus: order.supervisionStatus || ''
-        } as TaskData
-      })
+          // 从任务中获取督办单信息，参考工作督办的数据结构
+          const order = task.supervisionOrder || task.businessData || {}
+
+          // 待办列表专用的状态计算逻辑：只显示进行中和已超时
+          const calculateTodoStatus = (deadline: number | null): {
+            daysRemaining: number | null
+            isOverdue: boolean
+            overdueDays: number | null
+            status: string
+          } => {
+            if (!deadline) {
+              return {
+                daysRemaining: null,
+                isOverdue: false,
+                overdueDays: null,
+                status: '进行中'
+              }
+            }
+
+            // 获取今天的日期（只保留年月日，忽略时分秒）
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+
+            // 获取截止日期（只保留年月日，忽略时分秒）
+            const deadlineDate = new Date(deadline)
+            deadlineDate.setHours(0, 0, 0, 0)
+
+            // 计算天数差：正数表示还有剩余天数，负数表示已超时
+            const daysDiff = Math.floor((deadlineDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000))
+
+            if (daysDiff < 0) {
+              // 已超时
+              return {
+                daysRemaining: null,
+                isOverdue: true,
+                overdueDays: Math.abs(daysDiff),
+                status: '已超时'
+              }
+            } else {
+              // 进行中（包括今天截止的情况）
+              return {
+                daysRemaining: daysDiff,
+                isOverdue: false,
+                overdueDays: null,
+                status: '进行中'
+              }
+            }
+          }
+
+          const displayStatus = calculateTodoStatus(order.deadline || null)
+
+          return {
+            id: order.id || task.id,
+            title: order.orderTitle || task.name || '',
+            description: order.content || '',
+            leadDepartment: order.leadDeptName || '未知部门',
+            assistDepartments: parseCoDepts(order.coDeptNameMap),
+            createdDate: formatOrderDate(task.createTime || order.createTime),
+            deadline: formatOrderDate(order.deadline),
+            supervisor: order.leaderNickname || '未分配',
+            priority: getPriorityText(order.priority), // 使用与工作督办相同的优先级处理
+            status: displayStatus?.status || '进行中', // 待办列表只显示进行中和已超时
+            overdueDays: displayStatus?.overdueDays || null,
+            isOverdue: displayStatus?.isOverdue || false,
+            daysRemaining: displayStatus?.daysRemaining || null,
+            type: 'todo', // 标记为待办
+            processInstanceId: task.processInstance?.id || order.processInstanceId || '',
+            supervisionStatus: order.supervisionStatus || '',
+            taskId: task.id // 保存任务ID用于办理
+          } as TaskData
+        })
+      } else {
+        // 处理工作督办和专项督办数据（督办单格式）
+        const supervisionOrders = supervisionResponse.list
+
+        // 调试：统计不同类型的督办数量
+        const workCount = supervisionOrders.filter(order => order.type === 1).length
+        const specialCount = supervisionOrders.filter(order => order.type === 2).length
+        console.log(`工作督办数量: ${workCount}, 专项督办数量: ${specialCount}`)
+
+        processedTasks = supervisionOrders.map((order) => {
+          // 使用新的状态计算函数，传入 supervisionStatus 和 deadline
+          const displayStatus = calculateDisplayStatus(order.supervisionStatus || '流程中', order.deadline || null)
+
+          // 调试信息
+          console.log(`督办单 ${order.orderTitle}: supervisionStatus=${order.supervisionStatus}, 计算状态=${displayStatus?.status || '未知'}`)
+
+          // 格式化日期的辅助函数
+          const formatOrderDate = (dateValue: number | string | null | undefined): string => {
+            if (!dateValue) return ''
+            try {
+              const date = new Date(dateValue)
+              if (isNaN(date.getTime())) return ''
+              return formatDate(date, 'YYYY-MM-DD')
+            } catch {
+              return ''
+            }
+          }
+
+          return {
+            id: order.id,
+            title: order.orderTitle || '',
+            description: order.content || '',
+            leadDepartment: order.leadDeptName || '未知部门',
+            assistDepartments: parseCoDepts(order.coDeptNameMap),
+            createdDate: formatOrderDate(order.createTime),
+            deadline: formatOrderDate(order.deadline),
+            supervisor: order.leaderNickname || '未分配',
+            priority: getPriorityText(order.priority),
+            status: displayStatus?.status || '进行中',
+            overdueDays: displayStatus?.overdueDays || null,
+            isOverdue: displayStatus?.isOverdue || false,
+            daysRemaining: displayStatus?.daysRemaining || null,
+            type: order.type === 1 ? 'work' : 'special',
+            processInstanceId: order.processInstanceId || '',
+            supervisionStatus: order.supervisionStatus || ''
+          } as TaskData
+        })
+      }
 
       tasks.value = processedTasks
     } else {
@@ -750,6 +863,24 @@ const currentTabTotal = computed(() => {
 const openDetailDialog = (task: TaskData) => {
   selectedTask.value = task
   detailDialogVisible.value = true
+}
+
+// 处理审批按钮（参考部门界面实现）
+const handleAudit = (task: TaskData) => {
+  // 督办相关流程跳转到督办专用工作流详情页面
+  if (task.processInstanceId) {
+    push({
+      name: 'SupervisionWorkflowDetail',
+      params: {
+        id: task.processInstanceId
+      },
+      query: {
+        taskId: task.taskId || task.id
+      }
+    })
+  } else {
+    ElMessage.error('无法获取流程实例信息')
+  }
 }
 </script>
 
