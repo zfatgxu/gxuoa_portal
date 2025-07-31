@@ -243,9 +243,9 @@ const handleTabClick = (tab) => {
   background-position: right center;
   background-repeat: no-repeat;
   background-size: cover;
-  opacity: 0.5;
-  mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 90%);
-  -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 20%, rgba(0,0,0,0) 90%);
+  opacity: 0.4;
+  mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 90%);
+  -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 90%);
   z-index: -1;
 }
 
