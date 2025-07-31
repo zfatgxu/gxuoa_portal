@@ -1,6 +1,17 @@
 <template>
   <div class="login-page">
-    <!-- 背景 -->
+    <!-- 背景轮播图 -->
+    <div class="login-bg-carousel">
+      <div 
+        v-for="(img, index) in carouselImages" 
+        :key="index"
+        class="carousel-item"
+        :class="{ active: currentImageIndex === index }"
+        :style="{ backgroundImage: `url(${img})` }">
+      </div>
+    </div>
+    
+    <!-- 背景遮罩 -->
     <div class="login-bg"></div>
 
     <!-- 顶部 -->
@@ -63,13 +74,43 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { LoginForm, MobileForm, ForgetPasswordForm, QrCodeForm, RegisterForm } from './components'
 import { LoginStateEnum, useLoginState } from './components/useLogin'
+
+// 导入轮播图图片
+import bg1 from '@/assets/imgs/bg/cycle/bg1.jpg'
+import bg2 from '@/assets/imgs/bg/cycle/bg2.png'
+import bg3 from '@/assets/imgs/bg/cycle/bg3.jpg'
+import bg4 from '@/assets/imgs/bg/cycle/bg4.jpg'
+import bg5 from '@/assets/imgs/bg/cycle/bg5.jpg'
+import bg6 from '@/assets/imgs/bg/cycle/bg6.jpg'
 
 defineOptions({ name: 'Login' })
 const { setLoginState, getLoginState } = useLoginState()
 const activeTab = ref('account')
+
+// 轮播图相关变量
+const carouselImages = [bg1, bg2, bg3, bg4, bg5, bg6]
+const currentImageIndex = ref(0)
+let carouselInterval: number | null = null
+
+// 初始化轮播图
+const startCarousel = () => {
+  carouselInterval = window.setInterval(() => {
+    currentImageIndex.value = (currentImageIndex.value + 1) % carouselImages.length
+  }, 5000)
+}
+
+onMounted(() => {
+  startCarousel()
+})
+
+onBeforeUnmount(() => {
+  if (carouselInterval) {
+    clearInterval(carouselInterval)
+  }
+})
 
 // 处理标签页切换
 const handleTabClick = (tab) => {
@@ -95,15 +136,45 @@ const handleTabClick = (tab) => {
   background-color: #fff;
 }
 
+/* 背景轮播图 */
+.login-bg-carousel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 70%;
+  height: 100vh;
+  overflow: hidden;
+  z-index: 0;
+}
+
+/* 轮播图项 */
+.carousel-item {
+  position: absolute;
+  left: 2%;
+  top: 15%;
+  width: 90%;
+  height: 70%;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 1s ease;
+}
+
+.carousel-item.active {
+  opacity: 1;
+}
+
 /* background */
 .login-bg {
   position: absolute;
   left: 0;
-  width: 70%;
+  width: 100%;
   height: 100%;
-  background: url('@/assets/imgs/login-bg.jpg') no-repeat center;
+  background: url('@/assets/imgs/bg/mask.png') no-repeat center;
   background-size: cover;
-  opacity: 0.95;
+  opacity: 1;
+  z-index: 1;
 }
 
 /* 右侧区域 */
@@ -111,7 +182,7 @@ const handleTabClick = (tab) => {
   position: absolute;
   right: 0;
   top: 0;
-  width: 30%;
+  width: 35%;
   height: 100%;
   display: flex;
   align-items: center;
@@ -140,6 +211,7 @@ const handleTabClick = (tab) => {
   height: 60px;
   background-color: rgba(54, 163, 247, 1);
   pointer-events: none;
+  z-index: 1;
 }
 
 /* 头部样式 */
@@ -230,7 +302,7 @@ const handleTabClick = (tab) => {
 @media (max-width: 992px) {
   .login-bg {
     width: 100%;
-    opacity: 0.1;
+    opacity: 0.8;
   }
   
   .login-form-container {
@@ -559,17 +631,64 @@ const handleTabClick = (tab) => {
   .login-form-container {
     right: 100px;
   }
+  
+  .login-bg-carousel {
+    width: 70%;
+  }
+  
+  .carousel-item {
+    left: 5%;
+    top: 15%;
+    width: 80%;
+    height: 70%;
+  }
 }
 
 @media (max-width: 992px) {
   .login-bg {
     width: 100%;
-    opacity: 0.1;
+    opacity: 0.8;
+  }
+  
+  .login-right {
+    position: absolute;
+    right: 0;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
   }
   
   .login-form-container {
-    right: 50%;
-    transform: translate(50%, -50%);
+    position: relative;
+    right: auto;
+    top: 25%;
+    transform: translateY(-50%);
+  }
+  
+  .login-bg-carousel {
+    width: 100%;
+    z-index: -1;
+  }
+  
+  .carousel-item {
+    left: 10%;
+    top: 15%;
+    width: 80%;
+    height: 70%;
+  }
+}
+
+@media (max-width: 768px) {
+  .login-bg-carousel {
+    width: 100%;
+  }
+  
+  .carousel-item {
+    left: 0;
+    top: 10%;
+    width: 100%;
+    height: 80%;
   }
 }
 
