@@ -486,7 +486,7 @@
           </el-descriptions-item>
 
           <!-- 请假期间主持工作负责人安排 -->
-          <el-descriptions-item v-if="Number(personnel.level) >= 24 && Number(personnel.level) !== 100" label="请假期间主持工作负责人安排(必填)" label-class-name="approval-label">
+          <el-descriptions-item v-if="Number(personnel.level) >= 27 && Number(personnel.level) !== 100" label="请假期间主持工作负责人安排(必填)" label-class-name="approval-label">
             <el-input
               v-model="workArrangement"
               type="textarea"
@@ -516,7 +516,7 @@
           :column="1"
           class="approval-descriptions"
         >
-          <el-descriptions-item v-if="Number(personnel.level) >= 24" label="请假期间主持工作负责人会签" label-class-name="approval-label">
+          <el-descriptions-item v-if="Number(personnel.level) >= 27" label="请假期间主持工作负责人会签" label-class-name="approval-label">
             <div></div>
           </el-descriptions-item>
           <el-descriptions-item label="领导意见" label-class-name="approval-label">
@@ -532,8 +532,8 @@
           <span style="font-size: 14px;margin-bottom: 5px;">下一步</span>
         </div>
         <div class="action-item">
-          <span v-if="Number(personnel.level) >= 24 && Number(personnel.level) != 100" style="font-size: 14px;margin-bottom: 5px;">请假期间主持工作负责人会签</span>
-          <span v-if="Number(personnel.level) < 24" style="font-size: 14px;margin-bottom: 5px;">单位负责人签字</span>
+          <span v-if="Number(personnel.level) >= 27 && Number(personnel.level) != 100" style="font-size: 14px;margin-bottom: 5px;">请假期间主持工作负责人会签</span>
+          <span v-if="Number(personnel.level) < 27" style="font-size: 14px;margin-bottom: 5px;">单位负责人签字</span>
         </div>
         <div class="action-item">
           <div v-for="userTask in startUserSelectTasks" :key="userTask.id">
@@ -602,7 +602,7 @@
                   </div>
                 </div>
               </el-popover>
-              <el-button v-if="Number(personnel.level) >= 24 && Number(personnel.level) != 100 && userTask.id==='host_sign'" type="primary" link @click="openApprovalUserSelect(userTask.id)" :disabled="isReadOnly">
+              <el-button v-if="Number(personnel.level) >= 27 && Number(personnel.level) != 100 && userTask.id==='host_sign'" type="primary" link @click="openApprovalUserSelect(userTask.id)" :disabled="isReadOnly">
                 <Icon icon="ep:plus" />选择代工人
               </el-button>
               <el-button v-if="userTask.id==='leader_sign'" type="primary" link @click="openApprovalUserSelect(userTask.id)" :disabled="isReadOnly">
@@ -1095,14 +1095,14 @@ const handleSubmit = async () => {
       return
     }
 
-    if (Number(personnel.value.level) >= 24 && Number(personnel.value.level) !== 100) {
+    if (Number(personnel.value.level) >= 27 && Number(personnel.value.level) !== 100) {
       if (!workArrangement.value) {
         ElMessage.warning('请填写请假期间工作安排')
         return
       }
     }
 
-    if (Number(personnel.value.level) >= 24 && Number(personnel.value.level) !== 100) {
+    if (Number(personnel.value.level) >= 27 && Number(personnel.value.level) !== 100) {
       if (startUserSelectAssignees.value['host_sign'].length === 0) {
         ElMessage.warning('请选择代工人')
         return

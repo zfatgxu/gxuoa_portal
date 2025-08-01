@@ -424,7 +424,7 @@
             </el-descriptions-item>
   
             <!-- 请假期间主持工作负责人安排 -->
-            <el-descriptions-item v-if="Number(personnel.level) >= 24 && Number(personnel.level) !== 100" label="请假期间主持工作负责人安排(必填)" label-class-name="approval-label">
+            <el-descriptions-item v-if="Number(personnel.level) >= 27 && Number(personnel.level) !== 100" label="请假期间主持工作负责人安排(必填)" label-class-name="approval-label">
               <el-input
                 v-model="workArrangement"
                 type="textarea"
@@ -456,7 +456,7 @@
             :column="1"
             class="approval-descriptions"
           > 
-            <el-descriptions-item v-if="Number(personnel.level) >= 24" label="请假期间主持工作负责人会签" label-class-name="approval-label">
+            <el-descriptions-item v-if="Number(personnel.level) >= 27" label="请假期间主持工作负责人会签" label-class-name="approval-label">
               <div>{{ hostApproval }}</div>
             </el-descriptions-item>
             <el-descriptions-item label="领导意见" label-class-name="approval-label">

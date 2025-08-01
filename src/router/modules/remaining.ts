@@ -315,6 +315,18 @@ const remainingRouter: AppRouteRecordRaw[] = [
           activeMenu: '/petition'
         }
       },
+      {
+        path: 'statistics',
+        component: () => import('@/views/petition/statistics/index.vue'),
+        name: 'PetitionStatistics',
+        meta: {
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          title: '统计汇总',
+          activeMenu: '/petition'
+        }
+      }
 
     ]
   },

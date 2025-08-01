@@ -10,28 +10,28 @@
         </div>
       <div class="grid grid-cols-4 gap-4">
         <div class="flex items-center p-4 justify-center rounded-lg" style="border: 1px solid #e5e7eb;">
-            <el-icon class="w-7 h-7 text-blue-500"><Calendar color="blue"/></el-icon>
+            <el-icon size="24"><Calendar color="blue"/></el-icon>
             <div class="flex flex-col items-center ml-4">
                 <span class="text-md text-gray-600">本月新增</span>
                 <span class="text-2xl font-bold text-blue-600">{{ monthlyStats.newTasks }}</span>
             </div>
         </div>
         <div class="flex items-center p-4 justify-center rounded-lg" style="border: 1px solid #e5e7eb;">
-            <el-icon class="w-7 h-7 text-orange-500"><Clock color="orange"/></el-icon>
+            <el-icon size="24"><Clock color="orange"/></el-icon>
             <div class="flex flex-col items-center ml-4">
                 <span class="text-sm text-gray-600">进行中</span>
                 <span class="text-2xl font-bold text-orange-600">{{ monthlyStats.inProgress }}</span>
             </div>
         </div>
         <div class="flex items-center p-4 justify-center rounded-lg" style="border: 1px solid #e5e7eb;">
-            <el-icon class="w-7 h-7 text-green-500"><CheckCircle color="green"/></el-icon>
+            <el-icon size="24"><CheckCircle color="green"/></el-icon>
             <div class="flex flex-col items-center ml-4">
                 <span class="text-sm text-gray-600">已完成</span>
                 <span class="text-2xl font-bold text-green-600">{{ monthlyStats.completed }}</span>
             </div>
         </div>
         <div class="flex items-center p-4 justify-center rounded-lg" style="border: 1px solid #e5e7eb;">
-            <el-icon class="w-7 h-7 text-red-500"><TimerOff color="red"/></el-icon>
+            <el-icon size="24"><TimerOff color="red"/></el-icon>
             <div class="flex flex-col items-center ml-4">
                 <span class="text-sm text-gray-600">已超时</span>
                 <span class="text-2xl font-bold text-red-600">{{ monthlyStats.overdue }}</span>
@@ -386,6 +386,7 @@ const entryList = ref([
     name: '统计查询',
     icon: new URL('@/assets/imgs/petition/4.png', import.meta.url).href,
     bgColor: '#5352ed',
+    path: '/petition/statistics'
   },
 ])
 
@@ -772,55 +773,6 @@ onMounted(() => {
   fetchData()
 })
 
-// Computed properties for chart data
-const workSupervisionDashArray = computed(() => {
-  if (taskStats.value.total === 0) return '0 251.2'
-  const percentage = (taskStats.value.workSupervision / taskStats.value.total) * 251.2
-  return `${percentage} 251.2`
-})
-
-const specialSupervisionDashArray = computed(() => {
-  if (taskStats.value.total === 0) return '0 251.2'
-  const percentage = (taskStats.value.specialSupervision / taskStats.value.total) * 251.2
-  return `${percentage} 251.2`
-})
-
-const specialSupervisionDashOffset = computed(() => {
-  if (taskStats.value.total === 0) return '0'
-  const offset = (taskStats.value.workSupervision / taskStats.value.total) * 251.2
-  return `-${offset}`
-})
-
-// Status chart computed properties
-const statusInProgressDashArray = computed(() => {
-  if (statusStats.value.total === 0) return '0 219.8'
-  const percentage = (statusStats.value.inProgress / statusStats.value.total) * 219.8
-  return `${percentage} 219.8`
-})
-
-const statusOverdueDashArray = computed(() => {
-  if (statusStats.value.total === 0) return '0 219.8'
-  const percentage = (statusStats.value.overdue / statusStats.value.total) * 219.8
-  return `${percentage} 219.8`
-})
-
-const statusOverdueDashOffset = computed(() => {
-  if (statusStats.value.total === 0) return '0'
-  const offset = (statusStats.value.inProgress / statusStats.value.total) * 219.8
-  return `-${offset}`
-})
-
-const statusCompletedDashArray = computed(() => {
-  if (statusStats.value.total === 0) return '0 219.8'
-  const percentage = (statusStats.value.completed / statusStats.value.total) * 219.8
-  return `${percentage} 219.8`
-})
-
-const statusCompletedDashOffset = computed(() => {
-  if (statusStats.value.total === 0) return '0'
-  const offset = ((statusStats.value.inProgress + statusStats.value.overdue) / statusStats.value.total) * 219.8
-  return `-${offset}`
-})
 
 const filteredTasks = computed(() => {
   return tasks.value.filter(task => {
