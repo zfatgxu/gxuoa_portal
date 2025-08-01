@@ -47,7 +47,7 @@
     <div class="bg-white rounded-lg shadow-md p-6">
         <div class="flex items-center mb-4">
         <div class="w-3 h-3 bg-blue-500 rounded-sm mr-2"></div>
-        <h3 class="text-gray-700 font-medium">督办任务状态统计</h3>
+        <h3 class="text-gray-700 font-medium">本月督办任务状态统计</h3>
         </div>
         <div class="flex items-center justify-center">
         <div class="relative w-32 h-32">
@@ -148,6 +148,8 @@
             />
             </el-tabs>
         </div>
+        <!-- 搜索功能暂时注释，后期调用后端接口实现 -->
+        <!--
         <div class="flex space-x-4 w-50%">
             <el-input
                 v-model="searchQuery"
@@ -175,8 +177,8 @@
                 :value="status"
             />
             </el-select>
-
         </div>
+        -->
         </div>
     </div>
 
@@ -242,13 +244,10 @@
                     <span class="text-gray-500">创建时间：</span>
                     <span class="text-gray-700">{{ task.createdDate }}</span>
                     <div class="flex items-center">
-                        <span v-if="task.daysRemaining" class="ml-2 text-orange-600">
-                            剩余{{ task.daysRemaining }}天
+                        <span v-if="getPreciseTimeRemaining(task)" :class="getPreciseTimeRemainingClass(task)" class="ml-2">
+                            {{ getPreciseTimeRemaining(task) }}
                         </span>
-                        <el-icon v-if="task.isOverdue" class="w-6 h-6 text-red-500 ml-2"><AlertTriangle /></el-icon>
-                        <span v-if="task.overdueDays" class="ml-2 text-orange-600">
-                            超时{{ task.overdueDays }}天
-                        </span>
+                        <el-icon v-if="isPreciseOverdue(task)" class="w-6 h-6 text-red-500 ml-2"><AlertTriangle /></el-icon>
                     </div>
                 </div>
                 <div class="flex ml-6">
@@ -321,6 +320,7 @@ interface TaskData {
   assistDepartments: string[]
   createdDate: string
   deadline: string
+  deadlineTimestamp?: number // 添加原始时间戳字段
   supervisor: string
   priority: string
   status: string
@@ -365,9 +365,10 @@ interface PaginationData {
 
 // Reactive data
 const activeTab = ref<string>('work')
-const searchQuery = ref<string>('')
-const selectedDepartment = ref<string>('')
-const selectedStatus = ref<string>('')
+// 搜索相关变量暂时注释，后期调用后端接口实现
+// const searchQuery = ref<string>('')
+// const selectedDepartment = ref<string>('')
+// const selectedStatus = ref<string>('')
 const detailDialogVisible = ref<boolean>(false)
 const selectedTask = ref<TaskData | null>(null)
 const loading = ref<boolean>(false)
@@ -381,21 +382,22 @@ const tabs = [
 { key: 'todo', label: '待办列表' }
 ]
 
-const statuses: string[] = ['进行中', '已超时', '已结束']
+// 搜索选项暂时注释，后期调用后端接口实现
+// const statuses: string[] = ['进行中', '已超时', '已结束']
 
-// 计算部门选项 - 从任务数据中提取部门名称
-const departments = computed(() => {
-  const deptSet = new Set<string>()
-  tasks.value.forEach(task => {
-    if (task.leadDepartment) {
-      deptSet.add(task.leadDepartment)
-    }
-    task.assistDepartments.forEach(dept => {
-      if (dept) deptSet.add(dept)
-    })
-  })
-  return Array.from(deptSet)
-})
+// 计算部门选项 - 从任务数据中提取部门名称（暂时注释）
+// const departments = computed(() => {
+//   const deptSet = new Set<string>()
+//   tasks.value.forEach(task => {
+//     if (task.leadDepartment) {
+//       deptSet.add(task.leadDepartment)
+//     }
+//     task.assistDepartments.forEach(dept => {
+//       if (dept) deptSet.add(dept)
+//     })
+//   })
+//   return Array.from(deptSet)
+// })
 
 // Statistics data
 const taskStats = ref<TaskStatsData>({
@@ -449,6 +451,83 @@ const getDeadlineColorClass = (task: TaskData) => {
   return 'text-gray-700' // 默认颜色
 }
 
+// 计算精确的剩余时间文本
+const getPreciseTimeRemaining = (task) => {
+  // 直接使用原始时间戳（数据库中的精确时间）
+  const deadlineTimestamp = task.deadlineTimestamp
+  if (!deadlineTimestamp || typeof deadlineTimestamp !== 'number') {
+    console.warn('缺少原始时间戳数据:', task)
+    return null
+  }
+
+  const now = new Date()
+  const deadlineDate = new Date(deadlineTimestamp)
+  const timeDiff = deadlineDate.getTime() - now.getTime()
+
+  // 计算绝对时间差
+  const absDiff = Math.abs(timeDiff)
+  const totalMinutes = Math.floor(absDiff / (60 * 1000))
+  const totalHours = Math.floor(absDiff / (60 * 60 * 1000))
+  const totalDays = Math.floor(absDiff / (24 * 60 * 60 * 1000))
+
+  if (timeDiff < 0) {
+    // 已超时 - 优先显示更小的时间单位
+    if (totalDays >= 1) {
+      return `超时${totalDays}天`
+    } else if (totalHours >= 1) {
+      return `超时${totalHours}小时`
+    } else if (totalMinutes >= 1) {
+      return `超时${totalMinutes}分钟`
+    } else {
+      return `刚刚超时`
+    }
+  } else {
+    // 还有剩余时间 - 优先显示更小的时间单位
+    if (totalDays >= 1) {
+      return `剩余${totalDays}天`
+    } else if (totalHours >= 1) {
+      return `剩余${totalHours}小时`
+    } else if (totalMinutes >= 1) {
+      return `剩余${totalMinutes}分钟`
+    } else {
+      return `即将到期`
+    }
+  }
+}
+
+// 判断是否精确超时（精确到分钟）
+const isPreciseOverdue = (task) => {
+  const deadlineTimestamp = task.deadlineTimestamp
+  if (!deadlineTimestamp || typeof deadlineTimestamp !== 'number') {
+    return false
+  }
+
+  const now = new Date()
+  const deadlineDate = new Date(deadlineTimestamp)
+  return now > deadlineDate
+}
+
+// 获取剩余时间的样式类
+const getPreciseTimeRemainingClass = (task) => {
+  const deadlineTimestamp = task.deadlineTimestamp
+  if (!deadlineTimestamp || typeof deadlineTimestamp !== 'number') {
+    return 'remaining-days'
+  }
+
+  const now = new Date()
+  const deadlineDate = new Date(deadlineTimestamp)
+  const timeDiff = deadlineDate.getTime() - now.getTime()
+  const totalHours = Math.abs(Math.floor(timeDiff / (60 * 60 * 1000)))
+
+  if (timeDiff < 0) {
+    return 'remaining-days overdue' // 超期显示红色
+  } else if (totalHours <= 24) {
+    return 'remaining-days urgent' // 24小时内显示橙色
+  } else {
+    return 'remaining-days' // 正常显示绿色
+  }
+}
+
 // 根据督办状态和截止时间计算显示状态
 const calculateDisplayStatus = (supervisionStatus: string, deadline: number | null): {
   daysRemaining: number | null
@@ -477,37 +556,23 @@ const calculateDisplayStatus = (supervisionStatus: string, deadline: number | nu
       }
     }
 
-    // 获取今天的日期（只保留年月日，忽略时分秒）
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    // 获取截止日期（只保留年月日，忽略时分秒）
+    // 使用精确时间比较（精确到分钟）
+    const now = new Date()
     const deadlineDate = new Date(deadline)
-    deadlineDate.setHours(0, 0, 0, 0)
+    const isOverdue = now > deadlineDate
 
-    // 计算天数差：正数表示还有剩余天数，负数表示已超时
-    const daysDiff = Math.floor((deadlineDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000))
-
-    if (daysDiff < 0) {
+    if (isOverdue) {
       // 已超时
       return {
         daysRemaining: null,
         isOverdue: true,
-        overdueDays: Math.abs(daysDiff),
-        status: '已超时'
-      }
-    } else if (daysDiff === 0) {
-      // 今天截止
-      return {
-        daysRemaining: 0,
-        isOverdue: false,
         overdueDays: null,
-        status: '进行中'
+        status: '已超时'
       }
     } else {
       // 还有剩余时间
       return {
-        daysRemaining: daysDiff,
+        daysRemaining: null,
         isOverdue: false,
         overdueDays: null,
         status: '进行中'
@@ -534,6 +599,8 @@ const getPriorityText = (priority: number | null | undefined): string => {
     default: return '一般优先'
   }
 }
+
+
 
 
 
@@ -590,13 +657,23 @@ const fetchData = async () => {
         overdue: statistics.monthOverdue
       }
 
-      // 设置状态统计
+      // 设置本月督办任务状态统计
       statusStats.value = {
-        total: statistics.monthTotal,
-        inProgress: statistics.monthInProgress,
-        overdue: statistics.monthOverdue,
-        completed: statistics.monthCompleted
+        total: statistics.monthTotal, // 直接使用API返回的monthTotal字段
+        inProgress: statistics.monthInProgress, // 进行中
+        overdue: statistics.monthOverdue, // 已超时
+        completed: statistics.monthCompleted // 已结束
       }
+
+      console.log('本月督办任务状态统计数据:', {
+        API原始数据: {
+          monthTotal: statistics.monthTotal,
+          monthInProgress: statistics.monthInProgress,
+          monthOverdue: statistics.monthOverdue,
+          monthCompleted: statistics.monthCompleted
+        },
+        映射后数据: statusStats.value
+      })
     } else {
       console.error('获取统计数据失败', statisticsResult.reason)
       ElMessage.error('获取统计数据失败')
@@ -630,8 +707,14 @@ const fetchData = async () => {
             }
           }
 
-          // 从任务中获取督办单信息，参考工作督办的数据结构
-          const order = task.supervisionOrder || task.businessData || {}
+          // 待办列表数据结构：从task.supervisionPageVOData获取督办单信息
+          // 根据实际API返回结构，督办单信息在task.supervisionPageVOData中：
+          // - 标题：supervisionPageVOData.orderTitle
+          // - 牵头部门：supervisionPageVOData.leadDeptName
+          // - 截止时间：supervisionPageVOData.deadline
+          // - 协办部门：supervisionPageVOData.coDeptNameMap（只要名字）
+          // - 分管领导：supervisionPageVOData.leaderNickname
+          const supervisionData = task.supervisionPageVOData || {}
 
           // 待办列表专用的状态计算逻辑：只显示进行中和已超时
           const calculateTodoStatus = (deadline: number | null): {
@@ -649,29 +732,23 @@ const fetchData = async () => {
               }
             }
 
-            // 获取今天的日期（只保留年月日，忽略时分秒）
-            const today = new Date()
-            today.setHours(0, 0, 0, 0)
-
-            // 获取截止日期（只保留年月日，忽略时分秒）
+            // 使用精确时间比较（精确到分钟）
+            const now = new Date()
             const deadlineDate = new Date(deadline)
-            deadlineDate.setHours(0, 0, 0, 0)
+            const isOverdue = now > deadlineDate
 
-            // 计算天数差：正数表示还有剩余天数，负数表示已超时
-            const daysDiff = Math.floor((deadlineDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000))
-
-            if (daysDiff < 0) {
+            if (isOverdue) {
               // 已超时
               return {
                 daysRemaining: null,
                 isOverdue: true,
-                overdueDays: Math.abs(daysDiff),
+                overdueDays: null,
                 status: '已超时'
               }
             } else {
-              // 进行中（包括今天截止的情况）
+              // 进行中
               return {
-                daysRemaining: daysDiff,
+                daysRemaining: null,
                 isOverdue: false,
                 overdueDays: null,
                 status: '进行中'
@@ -679,25 +756,26 @@ const fetchData = async () => {
             }
           }
 
-          const displayStatus = calculateTodoStatus(order.deadline || null)
+          const displayStatus = calculateTodoStatus(supervisionData.deadline || null)
 
           return {
-            id: order.id || task.id,
-            title: order.orderTitle || task.name || '',
-            description: order.content || '',
-            leadDepartment: order.leadDeptName || '未知部门',
-            assistDepartments: parseCoDepts(order.coDeptNameMap),
-            createdDate: formatOrderDate(task.createTime || order.createTime),
-            deadline: formatOrderDate(order.deadline),
-            supervisor: order.leaderNickname || '未分配',
-            priority: getPriorityText(order.priority), // 使用与工作督办相同的优先级处理
+            id: supervisionData.id || task.id,
+            title: supervisionData.orderTitle || '',
+            description: supervisionData.content || '',
+            leadDepartment: supervisionData.leadDeptName || '未知部门',
+            assistDepartments: parseCoDepts(supervisionData.coDeptNameMap),
+            createdDate: formatOrderDate(task.createTime),
+            deadline: formatOrderDate(supervisionData.deadline),
+            deadlineTimestamp: supervisionData.deadline, // 保存原始时间戳
+            supervisor: supervisionData.leaderNickname || '未分配',
+            priority: getPriorityText(supervisionData.priority),
             status: displayStatus?.status || '进行中', // 待办列表只显示进行中和已超时
             overdueDays: displayStatus?.overdueDays || null,
             isOverdue: displayStatus?.isOverdue || false,
             daysRemaining: displayStatus?.daysRemaining || null,
             type: 'todo', // 标记为待办
-            processInstanceId: task.processInstance?.id || order.processInstanceId || '',
-            supervisionStatus: order.supervisionStatus || '',
+            processInstanceId: task.processInstanceId || supervisionData.processInstanceId || '',
+            supervisionStatus: supervisionData.supervisionStatus || '',
             taskId: task.id // 保存任务ID用于办理
           } as TaskData
         })
@@ -705,10 +783,7 @@ const fetchData = async () => {
         // 处理工作督办和专项督办数据（督办单格式）
         const supervisionOrders = supervisionResponse.list
 
-        // 调试：统计不同类型的督办数量
-        const workCount = supervisionOrders.filter(order => order.type === 1).length
-        const specialCount = supervisionOrders.filter(order => order.type === 2).length
-        console.log(`工作督办数量: ${workCount}, 专项督办数量: ${specialCount}`)
+        // 注意：督办数量统计现在使用API返回的数据，不再前端计算
 
         processedTasks = supervisionOrders.map((order) => {
           // 使用新的状态计算函数，传入 supervisionStatus 和 deadline
@@ -737,6 +812,7 @@ const fetchData = async () => {
             assistDepartments: parseCoDepts(order.coDeptNameMap),
             createdDate: formatOrderDate(order.createTime),
             deadline: formatOrderDate(order.deadline),
+            deadlineTimestamp: order.deadline, // 保存原始时间戳
             supervisor: order.leaderNickname || '未分配',
             priority: getPriorityText(order.priority),
             status: displayStatus?.status || '进行中',
@@ -839,19 +915,25 @@ const statusCompletedDashOffset = computed(() => {
   return `-${offset}`
 })
 
-const filteredTasks = computed(() => {
-  return tasks.value.filter(task => {
-    // 不需要再按type过滤，因为后端已经按类型返回了数据
-    const matchesSearch = !searchQuery.value ||
-      task.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      task.description.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const matchesDepartment = !selectedDepartment.value ||
-      task.leadDepartment === selectedDepartment.value ||
-      task.assistDepartments.includes(selectedDepartment.value)
-    const matchesStatus = !selectedStatus.value || task.status === selectedStatus.value
+// 前端搜索逻辑暂时注释，后期调用后端接口实现
+// const filteredTasks = computed(() => {
+//   return tasks.value.filter(task => {
+//     // 不需要再按type过滤，因为后端已经按类型返回了数据
+//     const matchesSearch = !searchQuery.value ||
+//       task.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+//       task.description.toLowerCase().includes(searchQuery.value.toLowerCase())
+//     const matchesDepartment = !selectedDepartment.value ||
+//       task.leadDepartment === selectedDepartment.value ||
+//       task.assistDepartments.includes(selectedDepartment.value)
+//     const matchesStatus = !selectedStatus.value || task.status === selectedStatus.value
 
-    return matchesSearch && matchesDepartment && matchesStatus
-  })
+//     return matchesSearch && matchesDepartment && matchesStatus
+//   })
+// })
+
+// 暂时直接使用 tasks.value，不进行前端过滤
+const filteredTasks = computed(() => {
+  return tasks.value
 })
 
 // 计算当前标签页的总数量（用于分页显示）
@@ -930,5 +1012,21 @@ border-radius: 3px;
 
 ::-webkit-scrollbar-thumb:hover {
 background: #a8a8a8;
+}
+
+/* 剩余时间颜色样式 */
+.remaining-days {
+  color: #67c23a; /* 绿色 - 正常 */
+  font-weight: 600;
+}
+
+.remaining-days.overdue {
+  color: #f56c6c; /* 红色 - 超期 */
+  font-weight: 600;
+}
+
+.remaining-days.urgent {
+  color: #e6a23c; /* 橙色 - 今日到期 */
+  font-weight: 600;
 }
 </style>

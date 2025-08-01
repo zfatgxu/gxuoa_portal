@@ -59,7 +59,15 @@
                         </el-col>
                         <!-- 情况二：业务表单 -->
                         <div v-if="processDefinition?.formType === BpmModelFormType.CUSTOM">
-                          <BusinessFormComponent :id="sealApplyId" :activity-nodes="activityNodes" :applyUser="applyUser" :applyTime="applyTime" :status="processInstance.status"/>
+                          <component 
+                            :is="BusinessFormComponent" 
+                            :id="sealApplyId" 
+                            :activity-nodes="activityNodes" 
+                            :applyUser="applyUser" 
+                            :applyTime="applyTime" 
+                            :status="processInstance.status"
+                            :process-instance="processInstance"
+                          />
                         </div>
                       </div>
                     </el-col>
@@ -282,6 +290,82 @@
           }
           
           console.log('最终使用的印章申请单ID:', sealId)
+
+          // 直接使用确定的角色分配方式
+          // 这里我们不依赖流程实例中的userRoles数据
+          // 而是直接根据活动节点的顺序来分配角色
+          console.log('开始分配用户角色，活动节点数量:', activityNodes.value?.length);
+          
+          // 首先将活动节点按照定义的顺序排序
+          const sortedNodes = [...(activityNodes.value || [])];
+          sortedNodes.sort((a, b) => {
+            // 按照经办人 -> 审批人 -> 单位负责人的顺序排序
+            const getNodeOrder = (node) => {
+              if (node.name.includes('经办人')) return 0;
+              if (node.name.includes('审批人')) return 1;
+              if (node.name.includes('单位负责人')) return 2;
+              return 3; // 其他节点放在最后
+            };
+            return getNodeOrder(a) - getNodeOrder(b);
+          });
+          
+          // 创建用户角色映射
+          const userRolesData = {};
+          const roleNames = ['经办人', '审批人', '单位负责人'];
+          let roleIndex = 0;
+          
+          // 遍历排序后的节点，为每个用户分配角色
+          sortedNodes.forEach(activity => {
+            if (activity.tasks && activity.tasks.length > 0) {
+              // 根据活动节点名称确定角色
+              let roleName = '';
+              if (activity.name.includes('经办人')) {
+                roleName = '经办人';
+              } else if (activity.name.includes('审批人')) {
+                roleName = '审批人';
+              } else if (activity.name.includes('单位负责人')) {
+                roleName = '单位负责人';
+              } else if (roleIndex < roleNames.length) {
+                roleName = roleNames[roleIndex++];
+              } else {
+                roleName = '审批人'; // 默认角色
+              }
+              
+              // 为活动中的每个用户分配角色
+              activity.tasks.forEach(task => {
+                if (task.assigneeUser && task.assigneeUser.id) {
+                  const userId = task.assigneeUser.id;
+                  userRolesData[userId] = roleName;
+                  console.log(`为用户 ${task.assigneeUser.nickname}(${userId}) 分配角色: ${roleName}`);
+                }
+              });
+            }
+          });
+          
+          console.log('创建的用户角色映射:', userRolesData);
+          
+          // 将用户角色数据添加到流程实例的所有可能位置
+          if (Object.keys(userRolesData).length > 0) {
+            // 添加到formVariables
+            if (!processInstance.value.formVariables) {
+              processInstance.value.formVariables = {};
+            }
+            processInstance.value.formVariables.userRoles = userRolesData;
+            
+            // 添加到variables
+            if (!processInstance.value.variables) {
+              processInstance.value.variables = {};
+            }
+            processInstance.value.variables.userRoles = userRolesData;
+            
+            // 添加到processVariables
+            if (!processInstance.value.processVariables) {
+              processInstance.value.processVariables = {};
+            }
+            processInstance.value.processVariables.userRoles = userRolesData;
+            
+            console.log('已将用户角色数据添加到流程实例的所有位置');
+          }
 
           // 使用异步组件方式导入
           const SealDetailComponent = defineAsyncComponent({

@@ -63,6 +63,7 @@ export interface OrderVO {
   supervisionReapprove?: number // 督察办复核状态
   summary?: string // 概述信息（字符串格式）
   startUserSelectAssignees?: Record<string, number[]> // 发起人自选审批人 Map，key为taskKey，value为用户ID数组
+  startLeaderSelectAssignees?: Record<string, number[]>
 }
 
 // 督办单响应 VO
@@ -289,6 +290,22 @@ export interface SupervisionStatisticsVO {
   workSupervision: number // 工作督办总数
 }
 
+// 部门月度任务统计数据响应接口
+export interface DeptMonthTaskStatisticsVO {
+  monthInProgress: number // 本月进行中
+  monthOverdue: number // 本月超时提醒
+  monthCompleted: number // 本月已完成
+  monthNew: number // 本月我的任务
+}
+
+// 分管领导月度任务统计数据响应接口
+export interface LeaderMonthTaskStatisticsVO {
+  monthInProgress: number // 本月进行中
+  monthOverdue: number // 本月需要关注
+  monthNew: number // 本月我的分管事项
+  monthRemark: number // 本月已批示
+}
+
 // 督办首页API
 export const SupervisionIndexApi = {
   // 获取督办首页数据（支持分页和类型过滤）
@@ -316,6 +333,21 @@ export const SupervisionIndexApi = {
   // 获取督办统计数据
   getStatistics(): Promise<SupervisionStatisticsVO> {
     return request.get({ url: '/bpm/supervision/getStatistics' })
+  },
+
+  // 获取部门月度任务统计数据
+  getDeptMonthTaskStatistics(): Promise<DeptMonthTaskStatisticsVO> {
+    return request.get({ url: '/bpm/supervision/getMyMonthTaskStatistics' })
+  },
+
+  // 获取分管领导月度任务统计数据
+  getLeaderMonthTaskStatistics(): Promise<LeaderMonthTaskStatisticsVO> {
+    return request.get({ url: '/bpm/supervision/getLeaderMonthTaskStatistics' })
+  },
+
+  // 督办拒绝接口
+  supervisionReject(processInstanceId: string): Promise<void> {
+    return request.get({ url: `/bpm/supervision/supervision-reject/${processInstanceId}` })
   }
 }
 
@@ -323,6 +355,7 @@ export const SupervisionIndexApi = {
 
 // 批示信息接口
 export interface LeaderRemarkVO {
+  leaderId: number // 领导ID
   leaderNickName: string // 领导姓名
   remark: string // 批示内容
   leadDeptName: string // 部门名称

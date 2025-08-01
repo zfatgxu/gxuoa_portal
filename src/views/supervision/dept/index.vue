@@ -54,6 +54,8 @@
           <el-tab-pane label="协办任务" name="co" />
           <el-tab-pane label="已完成" name="done" />
         </el-tabs>
+        <!-- 搜索功能暂时注释，后期调用后端接口实现 -->
+        <!--
         <div class="task-controls">
           <el-input
             v-model="taskSearch"
@@ -69,6 +71,7 @@
           </el-select>
           <el-button :icon="Bell">一键提醒</el-button>
         </div>
+        -->
       </div>
 
       <!-- Task List -->
@@ -112,8 +115,9 @@
           <!-- 批示显示区域 - 移到主要内容下方 -->
           <div v-if="task.leaderRemarks && task.leaderRemarks.length > 0" class="task-remarks">
             <el-icon><Document /></el-icon>
-            <span v-for="(remark, index) in task.leaderRemarks" :key="remark.leaderNickName" class="remark-text">
-              <span v-if="index > 0">；</span>{{ remark.leaderNickName }}批示：{{ remark.remark }}
+            <span v-for="(remark, index) in task.leaderRemarks" :key="`${remark.leaderId}-${index}`" class="remark-item">
+              <span v-if="index > 0">；</span>
+              <span class="remark-text">{{ getRemarkLabel(remark) }}：{{ remark.remark }}</span>
             </span>
           </div>
 
@@ -146,14 +150,14 @@
                   <span class="detail-value">{{ formatCreateTime(task.createTime) }}</span>
                 </div>
                 <div v-if="activeTab !== 'done'" class="detail-item">
-                  <span :class="getRemainingTimeClass(task)">{{ getRemainingTimeText(task) }}</span>
+                  <span :class="getPreciseTimeRemainingClass(task)">{{ getPreciseTimeRemaining(task) }}</span>
                 </div>
               </div>
             </div>
 
             <div class="task-buttons">
-              <el-button size="small" @click="viewTaskDetail(task)">查看详情</el-button>
-              <el-button v-if="activeTab === 'lead' || activeTab === 'co'" size="small" type="primary" @click="handleAudit(task)">办理</el-button>
+              <el-button class="w-20" @click="viewTaskDetail(task)">查看详情</el-button>
+              <el-button v-if="activeTab === 'lead' || activeTab === 'co'" class="w-20 ml-2" type="primary" @click="handleAudit(task)">办理</el-button>
             </div>
           </div>
         </el-card>
@@ -193,9 +197,10 @@ import {
 } from '@element-plus/icons-vue'
 import SupervisionDetailDialog from '../components/SupervisionDetailDialog.vue'
 import * as DeptApi from '@/api/system/dept'
-import { SupervisionTaskApi, LeaderRemarkApi } from '@/api/supervision/index'
+import { SupervisionTaskApi, LeaderRemarkApi, SupervisionIndexApi } from '@/api/supervision/index'
 import { dateFormatter } from '@/utils/formatTime'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/store/modules/user'
 
 // 格式化日期，只显示年月日
 const formatDateOnly = (timestamp) => {
@@ -207,12 +212,30 @@ const formatDateOnly = (timestamp) => {
   return `${year}-${month}-${day}`
 }
 
+// 获取用户store
+const userStore = useUserStore()
+
+// 根据批示的leaderId判断显示标签
+const getRemarkLabel = (remark) => {
+  const currentUser = userStore.getUser
+  const currentUserId = currentUser?.id
+
+  // 如果批示的leaderId与当前用户ID匹配，显示"我的批示"
+  if (remark.leaderId === currentUserId) {
+    return '我的批示'
+  }
+
+  // 否则显示领导姓名
+  return `${remark.leaderNickName}批示`
+}
+
 const { push } = useRouter() // 路由
 
 // 响应式数据
 const activeTab = ref('lead') // 默认激活"牵头任务"
-const taskSearch = ref('')
-const taskCategory = ref('')
+// 搜索相关变量暂时注释，后期调用后端接口实现
+// const taskSearch = ref('')
+// const taskCategory = ref('')
 const detailDialogVisible = ref(false)
 const selectedTask = ref(null)
 const loading = ref(false)
@@ -240,14 +263,39 @@ const pagination = reactive({
 // 加载统计数据
 const loadStatistics = async () => {
   try {
-    // 使用模拟数据
-    statistics.myTaskCount = 12
-    statistics.ongoingCount = 8
-    statistics.completedCount = 15
-    statistics.overdueCount = 2
+    console.log('开始调用部门统计数据API...')
+
+    // 先测试现有的API是否工作
+    try {
+      const testResult = await SupervisionIndexApi.getStatistics()
+      console.log('现有统计API测试成功:', testResult)
+    } catch (testError) {
+      console.error('现有统计API测试失败:', testError)
+    }
+
+    // 调用真实API获取部门月度任务统计数据
+    const result = await SupervisionIndexApi.getDeptMonthTaskStatistics()
+    console.log('部门统计数据API响应:', result)
+    console.log('API响应类型:', typeof result)
+    console.log('API响应键:', Object.keys(result || {}))
+
+    // 映射API返回的字段到界面显示
+    statistics.myTaskCount = result.monthNew // 我的任务
+    statistics.ongoingCount = result.monthInProgress // 进行中
+    statistics.completedCount = result.monthCompleted // 已完成
+    statistics.overdueCount = result.monthOverdue // 超时提醒
+
+    console.log('统计数据更新完成:', statistics)
   } catch (error) {
     console.error('加载统计数据失败', error)
-    ElMessage.error('加载统计数据失败')
+    console.error('错误详情:', error.response || error)
+    ElMessage.error('加载统计数据失败: ' + (error.message || error))
+
+    // 如果API调用失败，使用默认值
+    statistics.myTaskCount = 0
+    statistics.ongoingCount = 0
+    statistics.completedCount = 0
+    statistics.overdueCount = 0
   }
 }
 
@@ -308,26 +356,31 @@ const handlePageChange = (page) => {
   loadTaskList()
 }
 
-// 前端过滤的计算属性
+// 前端过滤逻辑暂时注释，后期调用后端接口实现
+// const filteredTaskList = computed(() => {
+//   return taskList.value.filter(task => {
+//     // 关键词搜索 - 搜索标题和内容
+//     const matchesSearch = !taskSearch.value ||
+//       task.supervisionPageVOData?.orderTitle?.toLowerCase().includes(taskSearch.value.toLowerCase()) ||
+//       task.supervisionPageVOData?.content?.toLowerCase().includes(taskSearch.value.toLowerCase())
+
+//     // 督办类型过滤
+//     const matchesCategory = !taskCategory.value ||
+//       task.supervisionPageVOData?.type?.toString() === taskCategory.value
+
+//     return matchesSearch && matchesCategory
+//   })
+// })
+
+// 暂时直接使用 taskList.value，不进行前端过滤
 const filteredTaskList = computed(() => {
-  return taskList.value.filter(task => {
-    // 关键词搜索 - 搜索标题和内容
-    const matchesSearch = !taskSearch.value ||
-      task.supervisionPageVOData?.orderTitle?.toLowerCase().includes(taskSearch.value.toLowerCase()) ||
-      task.supervisionPageVOData?.content?.toLowerCase().includes(taskSearch.value.toLowerCase())
-
-    // 督办类型过滤
-    const matchesCategory = !taskCategory.value ||
-      task.supervisionPageVOData?.type?.toString() === taskCategory.value
-
-    return matchesSearch && matchesCategory
-  })
+  return taskList.value
 })
 
-// 处理筛选条件变更 - 改为前端过滤，不重新请求API
-const handleFilterChange = () => {
-  // 前端过滤，不需要重新请求API
-}
+// 处理筛选条件变更逻辑暂时注释
+// const handleFilterChange = () => {
+//   // 前端过滤，不需要重新请求API
+// }
 
 // 处理标签页切换
 const handleTabChange = () => {
@@ -385,42 +438,61 @@ const getDeadlineClass = (task) => {
   return 'deadline-date' // 默认颜色
 }
 
-const getRemainingTimeText = (task) => {
+// 计算精确的剩余时间文本
+const getPreciseTimeRemaining = (task) => {
+  // 从任务的supervisionPageVOData中获取deadline
   const deadline = task.supervisionPageVOData?.deadline
-  const createTime = task.createTime
+  if (!deadline) return null
 
-  if (!deadline || !createTime) return ''
-
-  const deadlineDate = new Date(deadline)
-  const createDate = new Date(createTime)
   const now = new Date()
+  const deadlineDate = new Date(deadline)
+  const timeDiff = deadlineDate.getTime() - now.getTime()
 
-  // 计算剩余时间（以天为单位）
-  const remainingMs = deadlineDate.getTime() - now.getTime()
-  const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24))
+  // 计算绝对时间差
+  const absDiff = Math.abs(timeDiff)
+  const totalMinutes = Math.floor(absDiff / (60 * 1000))
+  const totalHours = Math.floor(absDiff / (60 * 60 * 1000))
+  const totalDays = Math.floor(absDiff / (24 * 60 * 60 * 1000))
 
-  if (remainingDays > 0) {
-    return `剩余${remainingDays}天`
-  } else if (remainingDays === 0) {
-    return '今日到期'
+  if (timeDiff < 0) {
+    // 已超时 - 优先显示更小的时间单位
+    if (totalDays >= 1) {
+      return `超时${totalDays}天`
+    } else if (totalHours >= 1) {
+      return `超时${totalHours}小时`
+    } else if (totalMinutes >= 1) {
+      return `超时${totalMinutes}分钟`
+    } else {
+      return `刚刚超时`
+    }
   } else {
-    return `超期${Math.abs(remainingDays)}天`
+    // 还有剩余时间 - 优先显示更小的时间单位
+    if (totalDays >= 1) {
+      return `剩余${totalDays}天`
+    } else if (totalHours >= 1) {
+      return `剩余${totalHours}小时`
+    } else if (totalMinutes >= 1) {
+      return `剩余${totalMinutes}分钟`
+    } else {
+      return `即将到期`
+    }
   }
 }
 
-const getRemainingTimeClass = (task) => {
+// 获取剩余时间的样式类
+const getPreciseTimeRemainingClass = (task) => {
   const deadline = task.supervisionPageVOData?.deadline
   if (!deadline) return 'remaining-days'
 
-  const deadlineDate = new Date(deadline)
   const now = new Date()
-  const remainingMs = deadlineDate.getTime() - now.getTime()
-  const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24))
+  const deadlineDate = new Date(deadline)
+  const timeDiff = deadlineDate.getTime() - now.getTime()
+  const totalHours = Math.abs(Math.floor(timeDiff / (60 * 60 * 1000)))
 
-  if (remainingDays < 0) {
+  if (timeDiff < 0) {
     return 'remaining-days overdue' // 超期显示红色
-  } else if (remainingDays === 0) {
-    return 'remaining-days urgent' // 今日到期显示橙色
+  } else if (totalHours <= 24) {
+    return 'remaining-days urgent' // 24小时内显示橙色
   } else {
     return 'remaining-days' // 正常显示绿色
   }
@@ -472,7 +544,7 @@ const getStatusText = (task) => {
     return '已结束'
   }
 
-  // 牵头任务和协办任务标签页中的任务根据截止时间判断状态
+  // 牵头任务和协办任务标签页中的任务根据截止时间判断状态（精确到分钟）
   const deadline = task.supervisionPageVOData?.deadline
   if (!deadline) {
     return '进行中' // 没有截止时间默认为进行中
@@ -481,7 +553,7 @@ const getStatusText = (task) => {
   const deadlineDate = new Date(deadline)
   const now = new Date()
 
-  // 如果当前时间超过截止时间，显示"已超时"，否则显示"进行中"
+  // 使用精确时间比较（精确到分钟）
   if (now > deadlineDate) {
     return '已超时'
   } else {
@@ -524,6 +596,7 @@ const viewTaskDetail = async (task) => {
       supervisor: supervisionData.leaderNickname || '',
       priority: getPriorityText(task),
       deadline: supervisionData.deadline ? dateFormatter(null, null, supervisionData.deadline) : '无',
+      deadlineTimestamp: supervisionData.deadline, // 添加原始时间戳
       createTime: dateFormatter(null, null, task.createTime),
       createdDate: dateFormatter(null, null, task.createTime),
       orderNumber: supervisionData.orderCode || '',
@@ -954,6 +1027,10 @@ onMounted(() => {
   font-size: 14px;
   color: #d46b08;
   flex-shrink: 0;
+}
+
+.remark-item {
+  display: inline;
 }
 
 .remark-text {
