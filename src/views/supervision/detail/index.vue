@@ -1117,6 +1117,28 @@ const checkIsLeadDeptLeader = async (): Promise<boolean> => {
   return leadDeptDetail.leaderUserId === currentUserId
 }
 
+// 检查当前用户是否为协办单位负责人
+const checkIsCoDeptLeader = async (): Promise<boolean> => {
+  const currentUser = userStore.getUser
+  const currentUserId = currentUser?.id
+
+  if (!currentUserId || !orderDetail.value.coDept) {
+    return false
+  }
+
+  // 检查是否是协办单位负责人
+  const coDeptIds = orderDetail.value.coDept.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))
+
+  for (const coDeptId of coDeptIds) {
+    const coDeptDetail = await getDeptDetail(coDeptId)
+    if (coDeptDetail && coDeptDetail.leaderUserId === currentUserId) {
+      return true
+    }
+  }
+
+  return false
+}
+
 // 获取督办单详情数据（用于外部调用）
 const getOrderDetailData = () => {
   return orderDetail.value
@@ -1134,8 +1156,11 @@ defineExpose({
   hasEditPermission: computed(() => hasEditPermission.value),
   pendingAttachmentsCount: computed(() => pendingAttachments.value.length),
   checkIsLeadDeptLeader,
+  checkIsCoDeptLeader,
   getOrderDetailData,
-  getEditFormData
+  getEditFormData,
+  canEditCollaborateDepts: computed(() => canEditCollaborateDepts.value),
+  canEditLeadDeptDetail: computed(() => canEditLeadDeptDetail.value)
 })
 </script>
 

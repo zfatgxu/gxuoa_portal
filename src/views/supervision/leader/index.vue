@@ -12,7 +12,7 @@
             <el-icon class="stat-icon"><Document /></el-icon>
             <div class="stat-info">
               <div class="stat-label">我的分管事项</div>
-              <div class="stat-number">{{ filteredTaskListByTab('managed-items').length }}</div>
+              <div class="stat-number">{{ statistics.managedItemsCount }}</div>
             </div>
           </div>
         </el-card>
@@ -21,7 +21,7 @@
             <el-icon class="stat-icon"><Clock /></el-icon>
             <div class="stat-info">
               <div class="stat-label">进行中</div>
-              <div class="stat-number">{{ filteredTaskListByStatus('进行中').length }}</div>
+              <div class="stat-number">{{ statistics.ongoingCount }}</div>
             </div>
           </div>
         </el-card>
@@ -30,7 +30,7 @@
             <el-icon class="stat-icon"><CircleCheck /></el-icon>
             <div class="stat-info">
               <div class="stat-label">已批示</div>
-              <div class="stat-number">{{ filteredTaskListByInstruction().length }}</div>
+              <div class="stat-number">{{ statistics.instructedCount }}</div>
             </div>
           </div>
         </el-card>
@@ -39,7 +39,7 @@
             <el-icon class="stat-icon"><Warning /></el-icon>
             <div class="stat-info">
               <div class="stat-label">需要关注</div>
-              <div class="stat-number">{{ filteredTaskListByTab('attention-items').length }}</div>
+              <div class="stat-number">{{ statistics.attentionCount }}</div>
             </div>
           </div>
         </el-card>
@@ -53,6 +53,8 @@
           <el-tab-pane label="全部事项" name="all-items" />
           <el-tab-pane label="需要关注" name="attention-items" />
         </el-tabs>
+        <!-- 搜索功能暂时注释，后期调用后端接口实现 -->
+        <!--
         <div class="control-group">
           <el-input
             v-model="searchQuery"
@@ -93,8 +95,8 @@
               :value="status"
             />
           </el-select>
-
         </div>
+        -->
       </div>
 
       <!-- Task List -->
@@ -140,9 +142,10 @@
           <!-- 批示显示区域 - 移到主要内容下方 -->
           <div v-if="task.leaderRemarks && task.leaderRemarks.length > 0" class="task-remarks">
             <el-icon><Document /></el-icon>
-            <span class="remark-label">我的批示：</span>
-            <span v-for="(remark, index) in task.leaderRemarks" :key="remark.leaderNickName" class="remark-text">
-              <span v-if="index > 0">；</span>{{ remark.remark }}
+            <span v-for="(remark, index) in task.leaderRemarks" :key="`${remark.leaderId}-${index}`" class="remark-item">
+              <span v-if="index > 0">；</span>
+              <span class="remark-label">{{ getRemarkLabel(remark) }}：</span>
+              <span class="remark-text">{{ remark.remark }}</span>
             </span>
           </div>
 
@@ -181,8 +184,8 @@
             </div>
 
             <div class="task-buttons">
-              <el-button size="small" @click="viewTaskDetail(task)">查看详情</el-button>
-              <el-button v-if="getStatusText(task) !== '已结束'" size="small" type="primary" @click="addInstruction(task)">新增批示</el-button>
+              <el-button class="w-20" @click="viewTaskDetail(task)">查看详情</el-button>
+              <el-button v-if="getStatusText(task) !== '已结束'" class="w-20 ml-2" type="primary" @click="addInstruction(task)">新增批示</el-button>
             </div>
           </div>
         </el-card>
@@ -272,8 +275,9 @@ import {
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import SupervisionDetailDialog from '../components/SupervisionDetailDialog.vue'
-import { SupervisionTaskApi, LeaderRemarkApi } from '@/api/supervision/index'
+import { SupervisionTaskApi, LeaderRemarkApi, SupervisionIndexApi } from '@/api/supervision/index'
 import { dateFormatter } from '@/utils/formatTime'
+import { useUserStore } from '@/store/modules/user'
 
 // 格式化日期，只显示年月日
 const formatDateOnly = (timestamp) => {
@@ -285,11 +289,29 @@ const formatDateOnly = (timestamp) => {
   return `${year}-${month}-${day}`
 }
 
+// 获取用户store
+const userStore = useUserStore()
+
+// 根据批示的leaderId判断显示标签
+const getRemarkLabel = (remark) => {
+  const currentUser = userStore.getUser
+  const currentUserId = currentUser?.id
+
+  // 如果批示的leaderId与当前用户ID匹配，显示"我的批示"
+  if (remark.leaderId === currentUserId) {
+    return '我的批示'
+  }
+
+  // 否则显示领导姓名
+  return `${remark.leaderNickName}批示`
+}
+
 // Reactive data
 const activeTab = ref('all-items') // 默认激活“分管事项”
-const searchQuery = ref('')
-const selectedDepartment = ref('')
-const selectedStatus = ref('')
+// 搜索相关变量暂时注释，后期调用后端接口实现
+// const searchQuery = ref('')
+// const selectedDepartment = ref('')
+// const selectedStatus = ref('')
 const detailDialogVisible = ref(false)
 const instructionDialogVisible = ref(false)
 const historyDialogVisible = ref(false)
@@ -315,50 +337,63 @@ const taskList = ref([])
 
 const historyList = ref([])
 
-// 静态状态选项
-const statuses = ['进行中', '已超时', '已结束', '需要关注']
-
-// 计算部门选项 - 从任务数据中提取部门名称
-const departments = computed(() => {
-  const deptSet = new Set()
-  taskList.value.forEach(task => {
-    // 添加牵头单位
-    if (task.supervisionPageVOData?.leadDeptName) {
-      deptSet.add(task.supervisionPageVOData.leadDeptName)
-    }
-    // 添加创建单位
-    if (task.supervisionPageVOData?.creatorDeptName) {
-      deptSet.add(task.supervisionPageVOData.creatorDeptName)
-    }
-    // 添加协办单位
-    if (task.supervisionPageVOData?.coDeptNameMap) {
-      Object.values(task.supervisionPageVOData.coDeptNameMap).forEach(dept => {
-        if (dept) deptSet.add(dept)
-      })
-    }
-  })
-  return Array.from(deptSet)
+// 统计数据
+const statistics = reactive({
+  managedItemsCount: 0, // 我的分管事项
+  ongoingCount: 0, // 进行中
+  instructedCount: 0, // 已批示
+  attentionCount: 0 // 需要关注
 })
 
-// 前端过滤的计算属性 - 参考督查督办首页的实现
+// 搜索选项暂时注释，后期调用后端接口实现
+// const statuses = ['进行中', '已超时', '已结束', '需要关注']
+
+// 计算部门选项暂时注释
+// const departments = computed(() => {
+//   const deptSet = new Set()
+//   taskList.value.forEach(task => {
+//     // 添加牵头单位
+//     if (task.supervisionPageVOData?.leadDeptName) {
+//       deptSet.add(task.supervisionPageVOData.leadDeptName)
+//     }
+//     // 添加创建单位
+//     if (task.supervisionPageVOData?.creatorDeptName) {
+//       deptSet.add(task.supervisionPageVOData.creatorDeptName)
+//     }
+//     // 添加协办单位
+//     if (task.supervisionPageVOData?.coDeptNameMap) {
+//       Object.values(task.supervisionPageVOData.coDeptNameMap).forEach(dept => {
+//         if (dept) deptSet.add(dept)
+//       })
+//     }
+//   })
+//   return Array.from(deptSet)
+// })
+
+// 前端过滤逻辑暂时注释，后期调用后端接口实现
+// const filteredTaskList = computed(() => {
+//   return taskList.value.filter(task => {
+//     // 关键词搜索 - 搜索标题和内容（参考督查督办首页）
+//     const matchesSearch = !searchQuery.value ||
+//       task.supervisionPageVOData?.orderTitle?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+//       task.supervisionPageVOData?.content?.toLowerCase().includes(searchQuery.value.toLowerCase())
+
+//     // 部门过滤 - 检查牵头单位、创建单位和协办单位（参考督查督办首页）
+//     const matchesDepartment = !selectedDepartment.value ||
+//       task.supervisionPageVOData?.leadDeptName === selectedDepartment.value ||
+//       task.supervisionPageVOData?.creatorDeptName === selectedDepartment.value ||
+//       Object.values(task.supervisionPageVOData?.coDeptNameMap || {}).includes(selectedDepartment.value)
+
+//     // 状态过滤（参考督查督办首页）
+//     const matchesStatus = !selectedStatus.value || getStatusText(task) === selectedStatus.value
+
+//     return matchesSearch && matchesDepartment && matchesStatus
+//   })
+// })
+
+// 暂时直接使用 taskList.value，不进行前端过滤
 const filteredTaskList = computed(() => {
-  return taskList.value.filter(task => {
-    // 关键词搜索 - 搜索标题和内容（参考督查督办首页）
-    const matchesSearch = !searchQuery.value ||
-      task.supervisionPageVOData?.orderTitle?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      task.supervisionPageVOData?.content?.toLowerCase().includes(searchQuery.value.toLowerCase())
-
-    // 部门过滤 - 检查牵头单位、创建单位和协办单位（参考督查督办首页）
-    const matchesDepartment = !selectedDepartment.value ||
-      task.supervisionPageVOData?.leadDeptName === selectedDepartment.value ||
-      task.supervisionPageVOData?.creatorDeptName === selectedDepartment.value ||
-      Object.values(task.supervisionPageVOData?.coDeptNameMap || {}).includes(selectedDepartment.value)
-
-    // 状态过滤（参考督查督办首页）
-    const matchesStatus = !selectedStatus.value || getStatusText(task) === selectedStatus.value
-
-    return matchesSearch && matchesDepartment && matchesStatus
-  })
+  return taskList.value
 })
 
 // 加载任务列表
@@ -411,6 +446,27 @@ const loadTaskList = async () => {
   }
 }
 
+// 加载统计数据
+const loadStatistics = async () => {
+  try {
+    console.log('开始调用分管领导统计数据API...')
+    // 调用真实API获取分管领导月度任务统计数据
+    const result = await SupervisionIndexApi.getLeaderMonthTaskStatistics()
+    console.log('分管领导统计数据API响应:', result)
+
+    // 映射API返回的字段到界面显示
+    statistics.managedItemsCount = result.monthNew // 我的分管事项
+    statistics.ongoingCount = result.monthInProgress // 进行中
+    statistics.instructedCount = result.monthRemark // 已批示
+    statistics.attentionCount = result.monthOverdue // 需要关注
+
+    console.log('统计数据更新完成:', statistics)
+  } catch (error) {
+    console.error('加载统计数据失败', error)
+    ElMessage.error('加载统计数据失败: ' + (error.message || error))
+  }
+}
+
 // 处理页码变更
 const handlePageChange = (page) => {
   pagination.pageNo = page
@@ -423,10 +479,10 @@ const handleTabChange = () => {
   loadTaskList()
 }
 
-// 处理筛选条件变更 - 前端过滤，不重新请求API
-const handleFilterChange = () => {
-  // 前端过滤，不需要重新请求API
-}
+// 处理筛选条件变更逻辑暂时注释
+// const handleFilterChange = () => {
+//   // 前端过滤，不需要重新请求API
+// }
 
 // 数据处理辅助方法
 const getTaskTitle = (task) => {
@@ -666,27 +722,12 @@ const handleScroll = (event) => {
   console.log('Content scrolled:', event.target.scrollTop)
 }
 
-// Helper computed properties for statistics cards
-const filteredTaskListByTab = (tabName) => {
-  let filtered = taskList.value;
-  if (tabName === 'managed-items') {
-    filtered = filtered.filter(task => task.supervisionPageVOData?.leaderNickname === '张副校长');
-  } else if (tabName === 'attention-items') {
-    filtered = filtered.filter(task => task.supervisionPageVOData?.priority === 3);
-  }
-  return filtered;
-};
-
-const filteredTaskListByStatus = (status) => {
-  return taskList.value.filter(task => getStatusText(task) === status);
-};
-
-const filteredTaskListByInstruction = () => {
-  return taskList.value.filter(task => task.instruction);
-};
+// 注意：统计数据现在通过API获取，不再需要基于任务列表计算的辅助方法
 
 // 初始化
 onMounted(() => {
+  // 加载统计数据
+  loadStatistics()
   // 加载任务列表
   loadTaskList()
 })
@@ -1146,6 +1187,10 @@ onMounted(() => {
   font-size: 14px;
   color: #409eff;
   flex-shrink: 0;
+}
+
+.remark-item {
+  display: inline;
 }
 
 .remark-label {
