@@ -155,8 +155,8 @@
                   <span class="progress-title">{{ record.title }}</span>
                   <span class="progress-name" v-if="record.handler">{{ record.handler }}</span>
                 </div>
-                <div class="progress-right">
-                  <span class="progress-time">预计完成时间：{{ record.expectedTime || '未设置' }}</span>
+                <div class="progress-right" v-if="record.expectedTime">
+                  <span class="progress-time">预计完成时间：{{ record.expectedTime }}</span>
                 </div>
               </div>
               <div class="progress-description" v-if="record.description && record.description !== '暂无详细信息'">{{ record.description }}</div>
@@ -353,8 +353,8 @@
                 <span class="history-title">{{ record.title }}</span>
                 <span class="history-name" v-if="record.handler">{{ record.handler }}</span>
               </div>
-              <div class="history-right">
-                <span class="history-expected-time">预计完成时间：{{ record.expectedTime || '未设置' }}</span>
+              <div class="history-right" v-if="record.expectedTime">
+                <span class="history-expected-time">预计完成时间：{{ record.expectedTime }}</span>
               </div>
             </div>
             <div class="history-description" v-if="record.description && record.description !== '暂无详细信息'">{{ record.description }}</div>
@@ -1095,9 +1095,12 @@ const submitAddProgress = async () => {
     ElMessage.success('进度更新添加成功')
     addProgressDialogVisible.value = false
 
-    // 重新加载进度记录
+    // 重新加载进度记录和附件列表
     if (props.processInstanceId) {
-      await getProgressRecords(props.processInstanceId)
+      await Promise.all([
+        getProgressRecords(props.processInstanceId),
+        getAttachmentList(props.processInstanceId)
+      ])
     }
 
     // 重置表单
@@ -1152,15 +1155,7 @@ const downloadProgressFile = (file: any) => {
   }
 }
 
-const getStatusType = () => {
-  // 根据传递的督办状态直接映射状态样式
-  const statusTypeMap = {
-    '进行中': 'warning',
-    '已超时': 'danger',
-    '已结束': 'success'
-  }
-  return statusTypeMap[props.supervisionStatus] || 'info'
-}
+
 
 const getStatusText = () => {
   // 直接使用传递的督办状态
@@ -1182,15 +1177,7 @@ const getDeadlineTimeClass = () => {
   return 'time-value deadline' // 默认颜色
 }
 
-const getUrgencyType = (level: number) => {
-  const types = { 1: '', 2: 'warning', 3: 'danger' }
-  return types[level as keyof typeof types] || ''
-}
 
-const getUrgencyText = (level: number) => {
-  const texts = { 1: '一般', 2: '紧急', 3: '特急' }
-  return texts[level as keyof typeof texts] || '一般'
-}
 
 const getFileIcon = (type: string) => {
   const icons = {

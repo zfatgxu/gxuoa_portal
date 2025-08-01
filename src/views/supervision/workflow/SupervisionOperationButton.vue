@@ -189,56 +189,56 @@
     </el-popover> -->
 
     <!-- 【转办】按钮 -->
-    <el-popover
-      :visible="popOverVisible.transfer"
-      placement="top-start"
-      :width="420"
-      trigger="click"
-      v-if="runningTask && isHandleTaskStatus() && isShowButton(OperationButtonType.TRANSFER)"
-    >
-      <template #reference>
-        <div @click="openPopover('transfer')" class="hover-bg-gray-100 rounded-xl p-6px">
-          <Icon :size="14" icon="fa:share-square-o" />&nbsp;
-          {{ getButtonDisplayName(OperationButtonType.TRANSFER) }}
-        </div>
-      </template>
-      <div class="flex flex-col flex-1 pt-20px px-20px" v-loading="formLoading">
-        <el-form
-          label-position="top"
-          class="mb-auto"
-          ref="transferFormRef"
-          :model="transferForm"
-          :rules="transferFormRule"
-          label-width="100px"
-        >
-          <el-form-item label="新审批人" prop="assigneeUserId">
-            <el-select v-model="transferForm.assigneeUserId" clearable style="width: 100%">
-              <el-option
-                v-for="item in userOptions"
-                :key="item.id"
-                :label="item.nickname"
-                :value="item.id"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="审批意见" prop="reason">
-            <el-input
-              v-model="transferForm.reason"
-              clearable
-              placeholder="请输入审批意见"
-              type="textarea"
-              :rows="3"
-            />
-          </el-form-item>
-          <el-form-item>
-            <el-button :disabled="formLoading" type="primary" @click="handleTransfer()">
-              {{ getButtonDisplayName(OperationButtonType.TRANSFER) }}
-            </el-button>
-            <el-button @click="closePopover('transfer', transferFormRef)"> 取消 </el-button>
-          </el-form-item>
-        </el-form>
-      </div>
-    </el-popover>
+<!--    <el-popover-->
+<!--      :visible="popOverVisible.transfer"-->
+<!--      placement="top-start"-->
+<!--      :width="420"-->
+<!--      trigger="click"-->
+<!--      v-if="runningTask && isHandleTaskStatus() && isShowButton(OperationButtonType.TRANSFER)"-->
+<!--    >-->
+<!--      <template #reference>-->
+<!--        <div @click="openPopover('transfer')" class="hover-bg-gray-100 rounded-xl p-6px">-->
+<!--          <Icon :size="14" icon="fa:share-square-o" />&nbsp;-->
+<!--          {{ getButtonDisplayName(OperationButtonType.TRANSFER) }}-->
+<!--        </div>-->
+<!--      </template>-->
+<!--      <div class="flex flex-col flex-1 pt-20px px-20px" v-loading="formLoading">-->
+<!--        <el-form-->
+<!--          label-position="top"-->
+<!--          class="mb-auto"-->
+<!--          ref="transferFormRef"-->
+<!--          :model="transferForm"-->
+<!--          :rules="transferFormRule"-->
+<!--          label-width="100px"-->
+<!--        >-->
+<!--          <el-form-item label="新审批人" prop="assigneeUserId">-->
+<!--            <el-select v-model="transferForm.assigneeUserId" clearable style="width: 100%">-->
+<!--              <el-option-->
+<!--                v-for="item in userOptions"-->
+<!--                :key="item.id"-->
+<!--                :label="item.nickname"-->
+<!--                :value="item.id"-->
+<!--              />-->
+<!--            </el-select>-->
+<!--          </el-form-item>-->
+<!--          <el-form-item label="审批意见" prop="reason">-->
+<!--            <el-input-->
+<!--              v-model="transferForm.reason"-->
+<!--              clearable-->
+<!--              placeholder="请输入审批意见"-->
+<!--              type="textarea"-->
+<!--              :rows="3"-->
+<!--            />-->
+<!--          </el-form-item>-->
+<!--          <el-form-item>-->
+<!--            <el-button :disabled="formLoading" type="primary" @click="handleTransfer()">-->
+<!--              {{ getButtonDisplayName(OperationButtonType.TRANSFER) }}-->
+<!--            </el-button>-->
+<!--            <el-button @click="closePopover('transfer', transferFormRef)"> 取消 </el-button>-->
+<!--          </el-form-item>-->
+<!--        </el-form>-->
+<!--      </div>-->
+<!--    </el-popover>-->
 
 <!--    &lt;!&ndash; 【委派】按钮 &ndash;&gt;-->
 <!--     <el-popover-->
@@ -516,6 +516,7 @@ import { setConfAndFields2 } from '@/utils/formCreate'
 import * as TaskApi from '@/api/bpm/task'
 import * as ProcessInstanceApi from '@/api/bpm/processInstance'
 import * as UserApi from '@/api/system/user'
+import { SupervisionIndexApi } from '@/api/supervision/index'
 import {
   NodeType,
   OPERATION_BUTTON_NAME,
@@ -535,7 +536,6 @@ const router = useRouter() // 路由
 const message = useMessage() // 消息弹窗
 
 const userId = useUserStoreWithOut().getUser.id // 当前登录的编号
-console.log(userId)
 const emit = defineEmits(['success']) // 定义 success 事件，用于操作成功后的回调
 
 const props = defineProps<{
@@ -783,7 +783,7 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
       const nextAssigneesValid = validateNextAssignees()
       if (!nextAssigneesValid) return
 
-      // 督办单专用逻辑：验证牵头单位负责人的必填项
+      // 督办单专用逻辑：验证牵头单位和协办单位负责人的必填项
       if (props.supervisionDetailRef) {
         const leadDeptValidation = await validateLeadDeptRequirements()
         if (!leadDeptValidation) return
@@ -799,8 +799,7 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
             return
           }
 
-          console.log('督办单数据更新成功，返回数据:', updateResult.data)
-          console.log('督办单数据更新成功，继续工作流审批')
+
         } catch (error) {
           console.error('督办单数据更新失败:', error)
           message.error('更新督办单失败，无法继续审批')
@@ -829,7 +828,7 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
         data.variables = approveForm.value.value
       }
 
-      console.log('开始执行工作流审批，数据:', data)
+
       await TaskApi.approveTask(data)
 
       popOverVisible.value.approve = false
@@ -840,10 +839,22 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
       if (props.supervisionDetailRef && props.supervisionDetailRef.clearPendingAttachments) {
         try {
           props.supervisionDetailRef.clearPendingAttachments()
-          console.log('已清理待处理的附件')
+
         } catch (error) {
           console.error('清理待处理附件失败:', error)
         }
+      }
+
+      // 督办系统特殊逻辑：先调用督办拒绝接口
+      try {
+        const processInstanceId = props.processInstance?.id
+        if (processInstanceId) {
+          await SupervisionIndexApi.supervisionReject(processInstanceId)
+        }
+      } catch (error) {
+        console.error('调用督办拒绝接口失败:', error)
+        message.error('督办拒绝处理失败，无法继续审批')
+        return
       }
 
       // 审批不通过数据
@@ -1077,6 +1088,16 @@ const isShowButton = (btnType: OperationButtonType): boolean => {
   if (runningTask.value?.buttonsSetting && runningTask.value?.buttonsSetting[btnType]) {
     isShow = runningTask.value.buttonsSetting[btnType].enable
   }
+
+  // 督办系统特殊逻辑：根据节点名称控制拒绝按钮显示
+  if (btnType === OperationButtonType.REJECT) {
+    const isSupervisionAdminNode = checkIsSupervisionAdminNode()
+    if (!isSupervisionAdminNode) {
+      // 非督察办管理员节点不显示拒绝按钮
+      isShow = false
+    }
+  }
+
   return isShow
 }
 
@@ -1086,6 +1107,17 @@ const getButtonDisplayName = (btnType: OperationButtonType) => {
   if (runningTask.value?.buttonsSetting && runningTask.value?.buttonsSetting[btnType]) {
     displayName = runningTask.value.buttonsSetting[btnType].displayName
   }
+
+  // 督办系统特殊逻辑：根据节点名称修改按钮名称
+  if (btnType === OperationButtonType.APPROVE) {
+    const nodeType = getSupervisionNodeType()
+    if (nodeType === 'first_approval') {
+      displayName = '同意督办'
+    } else if (nodeType === 'reapproval') {
+      displayName = '同意办结'
+    }
+  }
+
   return displayName
 }
 
@@ -1129,13 +1161,21 @@ const getUpdatedProcessInstanceVariables = () => {
   return variables
 }
 
-/** 验证牵头单位负责人的必填项 */
+/** 验证牵头单位和协办单位负责人的必填项 */
 const validateLeadDeptRequirements = async (): Promise<boolean> => {
   try {
-    // 检查当前用户是否为牵头单位负责人
+    // 检查 supervisionDetailRef 是否存在
+    if (!props.supervisionDetailRef) {
+      return true
+    }
+
+    // 检查当前用户身份
     const isLeadDeptLeader = await props.supervisionDetailRef?.checkIsLeadDeptLeader?.()
-    if (!isLeadDeptLeader) {
-      return true // 不是牵头单位负责人，无需验证
+    const isCoDeptLeader = await props.supervisionDetailRef?.checkIsCoDeptLeader?.()
+
+    // 如果既不是牵头单位负责人也不是协办单位负责人，无需验证
+    if (!isLeadDeptLeader && !isCoDeptLeader) {
+      return true
     }
 
     // 获取当前督办单数据
@@ -1147,36 +1187,43 @@ const validateLeadDeptRequirements = async (): Promise<boolean> => {
       return true
     }
 
-    // 检查承办状况是否已填写（必填）
+    // 检查承办状况是否已填写（牵头单位负责人和协办单位负责人都必须填写）
     const leadDeptDetail = editForm?.leadDeptDetail || orderDetail.leadDeptDetail
+
     if (!leadDeptDetail || leadDeptDetail.trim() === '') {
-      message.error('作为牵头单位负责人，您必须填写承办状况后才能通过审批')
+      if (isLeadDeptLeader) {
+        message.error('作为牵头单位负责人，您必须填写承办状况后才能通过审批')
+      } else if (isCoDeptLeader) {
+        message.error('作为协办单位负责人，您必须填写承办状况后才能通过审批')
+      }
       return false
     }
 
-    // 检查协办单位是否已选择（可选但需要提醒）
-    const coDept = editForm?.coDept || orderDetail.coDept
-    if (!coDept || coDept.trim() === '') {
-      try {
-        await ElMessageBox.confirm(
-          '您还未选择协办单位。协办单位可以协助处理督办事项，建议根据实际情况选择相关部门。\n\n是否确认不选择协办单位并继续审批？',
-          '协办单位提醒',
-          {
-            confirmButtonText: '确认继续',
-            cancelButtonText: '取消审批',
-            type: 'warning',
-            dangerouslyUseHTMLString: false
-          }
-        )
-        return true // 用户确认继续
-      } catch {
-        return false // 用户取消审批
+    // 只有牵头单位负责人才需要检查协办单位选择（可选但需要提醒）
+    if (isLeadDeptLeader) {
+      const coDept = editForm?.coDept || orderDetail.coDept
+      if (!coDept || coDept.trim() === '') {
+        try {
+          await ElMessageBox.confirm(
+            '您还未选择协办单位。协办单位可以协助处理督办事项，建议根据实际情况选择相关部门。\n\n是否确认不选择协办单位并继续审批？',
+            '协办单位提醒',
+            {
+              confirmButtonText: '确认继续',
+              cancelButtonText: '取消审批',
+              type: 'warning',
+              dangerouslyUseHTMLString: false
+            }
+          )
+          return true // 用户确认继续
+        } catch {
+          return false // 用户取消审批
+        }
       }
     }
 
     return true // 所有验证通过
   } catch (error) {
-    console.error('验证牵头单位负责人必填项时出错:', error)
+    console.error('验证牵头单位和协办单位负责人必填项时出错:', error)
     return true // 出错时允许继续，避免阻塞正常流程
   }
 }
@@ -1185,6 +1232,39 @@ const validateLeadDeptRequirements = async (): Promise<boolean> => {
 const handleSignFinish = (url: string) => {
   approveReasonForm.signPicUrl = url
   approveSignFormRef.value.validate('change')
+}
+
+/** 检查当前节点是否为督察办管理员节点 */
+const checkIsSupervisionAdminNode = (): boolean => {
+  if (!runningTask.value) {
+    return false
+  }
+
+  const taskName = runningTask.value.name || ''
+
+  // 直接根据确定的节点名称判断
+  return taskName === '督察办管理员审核' || taskName === '督察办管理员复核'
+}
+
+/** 获取督办节点类型 */
+const getSupervisionNodeType = (): string => {
+  if (!runningTask.value) {
+    return 'other'
+  }
+
+  const taskName = runningTask.value.name || ''
+
+  // 直接根据确定的节点名称判断
+  if (taskName === '督察办管理员审核') {
+    return 'first_approval'
+  }
+
+  if (taskName === '督察办管理员复核') {
+    return 'reapproval'
+  }
+
+  // 其他节点（牵头单位、协办部门等）
+  return 'other'
 }
 
 defineExpose({ loadTodoTask })

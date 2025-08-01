@@ -83,21 +83,66 @@
             :rules="startUserSelectAssigneesFormRules"
             ref="startUserSelectAssigneesFormRef"
           >
-            <div class="signature-row" v-for="userTask in startUserSelectTasks" :key="userTask.id">
-              <span class="required">{{ userTask.name }}</span>
+            <!-- 经办人签字选择框 -->
+            <div class="signature-row">
+              <span class="required">经办人签字</span>
               <el-select
-                :model-value="getSelectedUserId(userTask.id)"
-                @update:model-value="(value) => handleUserSelect(userTask.id, value)"
-                placeholder="请选择审批人"
+                v-model="managerSigner"
+                placeholder="请选择经办人"
                 class="signature-input"
                 filterable
+                clearable
               >
                 <el-option
-                  v-for="user in (userTask.name === '经办人签字' ? userList : auditUserList)"
+                  v-for="user in allUsersList"
                   :key="user.id"
                   :label="user.nickname"
                   :value="user.id"
-                />
+                >
+                  <span>{{ user.nickname }}</span>
+                </el-option>
+              </el-select>
+            </div>
+            
+            <!-- 审批人签字选择框 -->
+            <div class="signature-row">
+              <span class="required">审批人签字</span>
+              <el-select
+                v-model="approverSigner"
+                placeholder="请选择审批人"
+                class="signature-input"
+                filterable
+                clearable
+              >
+                <el-option
+                  v-for="user in allUsersList"
+                  :key="user.id"
+                  :label="user.nickname"
+                  :value="user.id"
+                >
+                  <span>{{ user.nickname }}</span>
+                </el-option>
+              </el-select>
+            </div>
+            
+            <!-- 单位负责人签字选择框 -->
+            <div class="signature-row">
+              <span class="required">单位负责人签字</span>
+              <el-select
+                v-model="unitLeaderSigner"
+                placeholder="请选择单位负责人"
+                class="signature-input"
+                filterable
+                clearable
+              >
+                <el-option
+                  v-for="user in allUsersList"
+                  :key="user.id"
+                  :label="user.nickname"
+                  :value="user.id"
+                >
+                  <span>{{ user.nickname }}</span>
+                </el-option>
               </el-select>
             </div>
           </el-form>
@@ -525,28 +570,30 @@ const submitForm = async () => {
 
   // 校验指定审批人
   if (startUserSelectTasks.value?.length > 0) {
-    // 检查是否有未选择审批人的任务
-    const emptyAssignees = Object.entries(startUserSelectAssignees.value).find(
-      ([taskId, assignees]) => {
-        // 检查该任务是否存在于startUserSelectTasks中
-        const taskExists = startUserSelectTasks.value.some(task => task.id === taskId);
-        // 如果任务存在且没有选择审批人，则返回true
-        return taskExists && (!assignees || assignees.length === 0);
-      }
-    );
-
-    if (emptyAssignees) {
-      ElMessage.error('请选择所有必填的审批人');
+    // 校验三个独立的签字人是否都已选择
+    if (!managerSigner.value) {
+      ElMessage.error('请选择经办人签字');
+      return;
+    }
+    if (!approverSigner.value) {
+      ElMessage.error('请选择审批人签字');
+      return;
+    }
+    if (!unitLeaderSigner.value) {
+      ElMessage.error('请选择单位负责人签字');
       return;
     }
 
-    // 确保所有任务都有对应的审批人
-    for (const task of startUserSelectTasks.value) {
-      if (!startUserSelectAssignees.value[task.id] || startUserSelectAssignees.value[task.id].length === 0) {
-        ElMessage.error(`请为"${task.name}"选择审批人`);
-        return;
+    // 将三个签字人分配给对应的任务
+    startUserSelectTasks.value.forEach(task => {
+      if (task.name === '经办人签字') {
+        startUserSelectAssignees.value[task.id] = [managerSigner.value];
+      } else if (task.name === '审批人签字') {
+        startUserSelectAssignees.value[task.id] = [approverSigner.value];
+      } else if (task.name === '单位负责人签字') {
+        startUserSelectAssignees.value[task.id] = [unitLeaderSigner.value];
       }
-    }
+    });
   }
 
   // 验证印章单位负责人签字
@@ -568,13 +615,6 @@ const submitForm = async () => {
     url: file.url
   }))
 
-  // 将印章单位负责人签字信息添加到startUserSelectAssignees中
-  // 使用"fourth"作为键名，与其他审批人保持一致的风格
-  if (!startUserSelectAssignees.value) {
-    startUserSelectAssignees.value = {}
-  }
-  startUserSelectAssignees.value['fourth'] = [sealUnitLeaderId.value]
-
   // 构建符合后端要求的数据结构
   const submitData = {
     applyTitle: selectedUnit.value.name+'印章申请单',//表单标题
@@ -589,7 +629,15 @@ const submitForm = async () => {
   }
 
   // 设置指定审批人（包含印章单位负责人签字）
-  submitData.startUserSelectAssignees = startUserSelectAssignees.value
+  if (startUserSelectTasks.value?.length > 0) {
+    submitData.startUserSelectAssignees = startUserSelectAssignees.value
+  }
+  
+  // 添加印章单位负责人签字信息
+  if (!submitData.startUserSelectAssignees) {
+    submitData.startUserSelectAssignees = {}
+  }
+  submitData.startUserSelectAssignees['sealUnitLeader'] = [sealUnitLeaderId.value]
 
   // 提交数据到后端
   console.log('提交数据:', submitData)
@@ -638,15 +686,40 @@ onMounted(async () => {
 
         // 设置指定审批人
         if (startUserSelectTasks.value?.length > 0) {
-          // 设置校验规则
-          for (const userTask of startUserSelectTasks.value) {
-            startUserSelectAssignees.value[userTask.id] = []
-            startUserSelectAssigneesFormRules.value[userTask.id] = [
-              { required: true, message: '请选择审批人', trigger: 'blur' }
-            ]
+          // 初始化审批人列表
+          startUserSelectTasks.value.forEach((task) => {
+            startUserSelectAssignees.value[task.id] = [];
+          });
+          managerSigner.value = '';
+          approverSigner.value = '';
+          unitLeaderSigner.value = '';
+          
+          // 设置三个独立签字人的校验规则
+          if (startUserSelectTasks.value && startUserSelectTasks.value.length > 0) {
+            // 为每个任务设置校验规则
+            startUserSelectTasks.value.forEach((task) => {
+              startUserSelectAssigneesFormRules.value[task.id] = [
+                { 
+                  required: true, 
+                  message: '请选择审批人', 
+                  trigger: 'change'
+                }
+              ];
+            });
           }
+          
           // 加载经办人用户列表
           userList.value = await UserApi.getSimpleUserList()
+          
+          // 加载所有用户列表用于多选
+          try {
+            const allUsers = await UserApi.getSimpleUserList({pageSize: 1000})
+            allUsersList.value = allUsers
+            console.log('设置完整用户列表:', allUsersList.value.length)
+          } catch (error) {
+            console.error('加载用户列表失败:', error)
+            ElMessage.error('加载用户列表失败，请刷新页面重试')
+          }
         }
       } catch (error) {
         console.error('解析BPMN XML时出错:', error)
@@ -766,6 +839,12 @@ const beforeUpload = (file) => {
 const handleExceed = () => {
   ElMessage.warning('最多只能上传 10 个文件!')
 }
+
+// 合并的签字选择框相关数据
+const managerSigner = ref('')
+const approverSigner = ref('')
+const unitLeaderSigner = ref('')
+const allUsersList = ref([])
 </script>
 
 <style scoped>
