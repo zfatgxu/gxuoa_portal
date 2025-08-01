@@ -83,21 +83,28 @@
             :rules="startUserSelectAssigneesFormRules"
             ref="startUserSelectAssigneesFormRef"
           >
-            <div class="signature-row" v-for="userTask in startUserSelectTasks" :key="userTask.id">
-              <span class="required">{{ userTask.name }}</span>
+            <!-- 合并的签字选择框 -->
+            <div class="signature-row" v-if="startUserSelectTasks.length > 0">
+              <span class="required">经办人签字、审批人签字、单位负责人签字</span>
               <el-select
-                :model-value="getSelectedUserId(userTask.id)"
-                @update:model-value="(value) => handleUserSelect(userTask.id, value)"
-                placeholder="请选择审批人"
+                :model-value="combinedSigners"
+                @update:model-value="handleCombinedSignersChange"
+                placeholder="请选择3名审批人"
                 class="signature-input"
                 filterable
+                multiple
+                :multiple-limit="3"
+                collapse-tags
+                collapse-tags-tooltip
               >
                 <el-option
-                  v-for="user in (userTask.name === '经办人签字' ? userList : auditUserList)"
+                  v-for="user in allUsersList"
                   :key="user.id"
                   :label="user.nickname"
                   :value="user.id"
-                />
+                >
+                  <span>{{ user.nickname }}</span>
+                </el-option>
               </el-select>
             </div>
           </el-form>
@@ -511,12 +518,15 @@ const submitForm = async () => {
       return;
     }
 
-    // 确保所有任务都有对应的审批人
+    // 检查是否选择了3个审批人
+    if (!combinedSigners.value || combinedSigners.value.length !== 3) {
+      ElMessage.error('请选择3名审批人，不能多于或少于3名');
+      return;
+    }
+
+    // 确保所有任务都分配了相同的审批人
     for (const task of startUserSelectTasks.value) {
-      if (!startUserSelectAssignees.value[task.id] || startUserSelectAssignees.value[task.id].length === 0) {
-        ElMessage.error(`请为"${task.name}"选择审批人`);
-        return;
-      }
+      startUserSelectAssignees.value[task.id] = [...combinedSigners.value];
     }
   }
 
@@ -549,6 +559,16 @@ const submitForm = async () => {
   // 设置指定审批人
   if (startUserSelectTasks.value?.length > 0) {
     submitData.startUserSelectAssignees = startUserSelectAssignees.value
+    
+    // 添加用户角色映射信息
+    if (combinedSigners.value && combinedSigners.value.length === 3) {
+      submitData.userRoles = {
+        [combinedSigners.value[0]]: '经办人',
+        [combinedSigners.value[1]]: '审批人',
+        [combinedSigners.value[2]]: '单位负责人'
+      }
+      console.log('提交用户角色映射:', submitData.userRoles)
+    }
   }
 
   // 提交数据到后端
@@ -567,6 +587,10 @@ const submitForm = async () => {
 const bpmnXml = ref('')
 //审核人和单位负责人列表
 const auditUserList = ref<Array<any>>([])
+// 合并用户列表和审批人列表，用于合并的签字选择框
+const managerTask = ref(null) // 经办人签字任务
+const allUsersList = ref([]) // 合并后的用户列表
+const combinedSigners = ref([]) // 合并的签字人列表
 
 onMounted(async () => {
   await fetchUnitList()
@@ -595,15 +619,57 @@ onMounted(async () => {
       try {
         startUserSelectTasks.value = await parseStartUserSelectTasks(bpmnXml.value)
         console.log('解析到的可指定审批人任务:', startUserSelectTasks.value)
+        
+        // 找到经办人签字任务（用于合并的签字选择框）
+        managerTask.value = startUserSelectTasks.value.find(task => task.name === '经办人签字')
+        console.log('经办人签字任务:', managerTask.value)
+        
+        // 加载所有用户列表
+        try {
+          // 加载经办人用户列表
+          userList.value = await UserApi.getSimpleUserList()
+          console.log('加载经办人用户列表成功:', userList.value.length)
+          
+          // 加载审核人用户列表
+          auditUserList.value = await UserApi.getSimpleUserList()
+          console.log('加载审核人用户列表成功:', auditUserList.value.length)
+          
+          // 使用系统中所有用户作为可选用户列表
+          // 获取所有用户，不做任何筛选
+          const allUsers = await UserApi.getSimpleUserList({pageSize: 1000}) // 设置较大的pageSize确保获取全部用户
+          allUsersList.value = allUsers
+          console.log('设置完整用户列表:', allUsersList.value.length)
+        } catch (error) {
+          console.error('加载用户列表失败:', error)
+          ElMessage.error('加载用户列表失败，请刷新页面重试')
+        }
 
         // 设置指定审批人
         if (startUserSelectTasks.value?.length > 0) {
-          // 设置校验规则
-          for (const userTask of startUserSelectTasks.value) {
-            startUserSelectAssignees.value[userTask.id] = []
-            startUserSelectAssigneesFormRules.value[userTask.id] = [
-              { required: true, message: '请选择审批人', trigger: 'blur' }
-            ]
+          // 初始化审批人和合并签字人列表
+          startUserSelectTasks.value.forEach((task) => {
+            startUserSelectAssignees.value[task.id] = [];
+          });
+          combinedSigners.value = [];
+          
+          // 设置简化的校验规则，只验证是否选择了3个审批人
+          if (startUserSelectTasks.value && startUserSelectTasks.value.length > 0) {
+            // 使用第一个任务作为验证的关键任务
+            const firstTask = startUserSelectTasks.value[0];
+            startUserSelectAssigneesFormRules.value[firstTask.id] = [
+              { 
+                required: true, 
+                message: '请选择3名审批人', 
+                trigger: 'change',
+                validator: (rule, value, callback) => {
+                  if (!combinedSigners.value || combinedSigners.value.length !== 3) {
+                    callback(new Error('请选择3名审批人，不能多于或少于3名'));
+                  } else {
+                    callback();
+                  }
+                }
+              }
+            ];
           }
           // 加载经办人用户列表
           userList.value = await UserApi.getSimpleUserList()
@@ -682,6 +748,40 @@ const handleUserSelect = (taskId, value) => {
   startUserSelectAssignees.value[taskId] = [value]
 }
 
+// 处理合并签字人选择
+const handleCombinedSignersChange = (value: string[]) => {
+  // 保存用户选择顺序
+  combinedSigners.value = value
+  console.log('合并签字人选择:', value)
+  
+  // 将选择的用户分配给所有任务，同时保存用户角色信息
+  if (startUserSelectTasks.value && startUserSelectTasks.value.length > 0) {
+    // 为每个任务分配相同的用户列表，保持顺序
+    startUserSelectTasks.value.forEach(task => {
+      startUserSelectAssignees.value[task.id] = value
+    })
+    
+    // 在表单提交数据中添加用户角色映射
+    if (value.length === 3) {
+      // 记录用户ID和角色的映射关系
+      const userRoles = {
+        [value[0]]: '经办人',
+        [value[1]]: '审批人',
+        [value[2]]: '单位负责人'
+      }
+      
+      // 保存到表单数据中，供提交时使用
+      formData.value.userRoles = userRoles
+      console.log('用户角色映射:', userRoles)
+    }
+  }
+}
+
+// 处理多选审批人变化
+const handleMultiUserSelect = (taskId, value) => {
+  startUserSelectAssignees.value[taskId] = value
+}
+
 // 文件上传前的验证钩子
 const beforeUpload = (file) => {
   // 检查文件大小
@@ -718,6 +818,12 @@ const handleExceed = () => {
 </script>
 
 <style scoped>
+.user-order {
+  margin-left: 5px;
+  color: #409EFF;
+  font-weight: bold;
+}
+
 .form-container {
   max-width: 900px;
   margin: 0 auto;
