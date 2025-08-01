@@ -244,13 +244,10 @@
                     <span class="text-gray-500">创建时间：</span>
                     <span class="text-gray-700">{{ task.createdDate }}</span>
                     <div class="flex items-center">
-                        <span v-if="task.daysRemaining !== null" :class="getRemainingTimeClass(task)" class="ml-2">
-                            剩余{{ task.daysRemaining }}天
+                        <span v-if="getPreciseTimeRemaining(task)" :class="getPreciseTimeRemainingClass(task)" class="ml-2">
+                            {{ getPreciseTimeRemaining(task) }}
                         </span>
-                        <el-icon v-if="task.isOverdue" class="w-6 h-6 text-red-500 ml-2"><AlertTriangle /></el-icon>
-                        <span v-if="task.overdueDays" :class="getRemainingTimeClass(task)" class="ml-2">
-                            超时{{ task.overdueDays }}天
-                        </span>
+                        <el-icon v-if="isPreciseOverdue(task)" class="w-6 h-6 text-red-500 ml-2"><AlertTriangle /></el-icon>
                     </div>
                 </div>
                 <div class="flex ml-6">
@@ -323,6 +320,7 @@ interface TaskData {
   assistDepartments: string[]
   createdDate: string
   deadline: string
+  deadlineTimestamp?: number // 添加原始时间戳字段
   supervisor: string
   priority: string
   status: string
@@ -453,6 +451,83 @@ const getDeadlineColorClass = (task: TaskData) => {
   return 'text-gray-700' // 默认颜色
 }
 
+// 计算精确的剩余时间文本
+const getPreciseTimeRemaining = (task) => {
+  // 直接使用原始时间戳（数据库中的精确时间）
+  const deadlineTimestamp = task.deadlineTimestamp
+  if (!deadlineTimestamp || typeof deadlineTimestamp !== 'number') {
+    console.warn('缺少原始时间戳数据:', task)
+    return null
+  }
+
+  const now = new Date()
+  const deadlineDate = new Date(deadlineTimestamp)
+  const timeDiff = deadlineDate.getTime() - now.getTime()
+
+  // 计算绝对时间差
+  const absDiff = Math.abs(timeDiff)
+  const totalMinutes = Math.floor(absDiff / (60 * 1000))
+  const totalHours = Math.floor(absDiff / (60 * 60 * 1000))
+  const totalDays = Math.floor(absDiff / (24 * 60 * 60 * 1000))
+
+  if (timeDiff < 0) {
+    // 已超时 - 优先显示更小的时间单位
+    if (totalDays >= 1) {
+      return `超时${totalDays}天`
+    } else if (totalHours >= 1) {
+      return `超时${totalHours}小时`
+    } else if (totalMinutes >= 1) {
+      return `超时${totalMinutes}分钟`
+    } else {
+      return `刚刚超时`
+    }
+  } else {
+    // 还有剩余时间 - 优先显示更小的时间单位
+    if (totalDays >= 1) {
+      return `剩余${totalDays}天`
+    } else if (totalHours >= 1) {
+      return `剩余${totalHours}小时`
+    } else if (totalMinutes >= 1) {
+      return `剩余${totalMinutes}分钟`
+    } else {
+      return `即将到期`
+    }
+  }
+}
+
+// 判断是否精确超时（精确到分钟）
+const isPreciseOverdue = (task) => {
+  const deadlineTimestamp = task.deadlineTimestamp
+  if (!deadlineTimestamp || typeof deadlineTimestamp !== 'number') {
+    return false
+  }
+
+  const now = new Date()
+  const deadlineDate = new Date(deadlineTimestamp)
+  return now > deadlineDate
+}
+
+// 获取剩余时间的样式类
+const getPreciseTimeRemainingClass = (task) => {
+  const deadlineTimestamp = task.deadlineTimestamp
+  if (!deadlineTimestamp || typeof deadlineTimestamp !== 'number') {
+    return 'remaining-days'
+  }
+
+  const now = new Date()
+  const deadlineDate = new Date(deadlineTimestamp)
+  const timeDiff = deadlineDate.getTime() - now.getTime()
+  const totalHours = Math.abs(Math.floor(timeDiff / (60 * 60 * 1000)))
+
+  if (timeDiff < 0) {
+    return 'remaining-days overdue' // 超期显示红色
+  } else if (totalHours <= 24) {
+    return 'remaining-days urgent' // 24小时内显示橙色
+  } else {
+    return 'remaining-days' // 正常显示绿色
+  }
+}
+
 // 根据督办状态和截止时间计算显示状态
 const calculateDisplayStatus = (supervisionStatus: string, deadline: number | null): {
   daysRemaining: number | null
@@ -481,37 +556,23 @@ const calculateDisplayStatus = (supervisionStatus: string, deadline: number | nu
       }
     }
 
-    // 获取今天的日期（只保留年月日，忽略时分秒）
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    // 获取截止日期（只保留年月日，忽略时分秒）
+    // 使用精确时间比较（精确到分钟）
+    const now = new Date()
     const deadlineDate = new Date(deadline)
-    deadlineDate.setHours(0, 0, 0, 0)
+    const isOverdue = now > deadlineDate
 
-    // 计算天数差：正数表示还有剩余天数，负数表示已超时
-    const daysDiff = Math.floor((deadlineDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000))
-
-    if (daysDiff < 0) {
+    if (isOverdue) {
       // 已超时
       return {
         daysRemaining: null,
         isOverdue: true,
-        overdueDays: Math.abs(daysDiff),
-        status: '已超时'
-      }
-    } else if (daysDiff === 0) {
-      // 今天截止
-      return {
-        daysRemaining: 0,
-        isOverdue: false,
         overdueDays: null,
-        status: '进行中'
+        status: '已超时'
       }
     } else {
       // 还有剩余时间
       return {
-        daysRemaining: daysDiff,
+        daysRemaining: null,
         isOverdue: false,
         overdueDays: null,
         status: '进行中'
@@ -539,16 +600,7 @@ const getPriorityText = (priority: number | null | undefined): string => {
   }
 }
 
-// 获取剩余时间的样式类
-const getRemainingTimeClass = (task: TaskData): string => {
-  if (task.isOverdue) {
-    return 'remaining-days overdue' // 超期显示红色
-  } else if (task.daysRemaining === 0) {
-    return 'remaining-days urgent' // 今日到期显示橙色
-  } else {
-    return 'remaining-days' // 正常显示绿色
-  }
-}
+
 
 
 
@@ -607,7 +659,7 @@ const fetchData = async () => {
 
       // 设置本月督办任务状态统计
       statusStats.value = {
-        total: statistics.monthInProgress + statistics.monthOverdue + statistics.monthCompleted,
+        total: statistics.monthTotal, // 直接使用API返回的monthTotal字段
         inProgress: statistics.monthInProgress, // 进行中
         overdue: statistics.monthOverdue, // 已超时
         completed: statistics.monthCompleted // 已结束
@@ -615,6 +667,7 @@ const fetchData = async () => {
 
       console.log('本月督办任务状态统计数据:', {
         API原始数据: {
+          monthTotal: statistics.monthTotal,
           monthInProgress: statistics.monthInProgress,
           monthOverdue: statistics.monthOverdue,
           monthCompleted: statistics.monthCompleted
@@ -679,29 +732,23 @@ const fetchData = async () => {
               }
             }
 
-            // 获取今天的日期（只保留年月日，忽略时分秒）
-            const today = new Date()
-            today.setHours(0, 0, 0, 0)
-
-            // 获取截止日期（只保留年月日，忽略时分秒）
+            // 使用精确时间比较（精确到分钟）
+            const now = new Date()
             const deadlineDate = new Date(deadline)
-            deadlineDate.setHours(0, 0, 0, 0)
+            const isOverdue = now > deadlineDate
 
-            // 计算天数差：正数表示还有剩余天数，负数表示已超时
-            const daysDiff = Math.floor((deadlineDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000))
-
-            if (daysDiff < 0) {
+            if (isOverdue) {
               // 已超时
               return {
                 daysRemaining: null,
                 isOverdue: true,
-                overdueDays: Math.abs(daysDiff),
+                overdueDays: null,
                 status: '已超时'
               }
             } else {
-              // 进行中（包括今天截止的情况）
+              // 进行中
               return {
-                daysRemaining: daysDiff,
+                daysRemaining: null,
                 isOverdue: false,
                 overdueDays: null,
                 status: '进行中'
@@ -719,6 +766,7 @@ const fetchData = async () => {
             assistDepartments: parseCoDepts(supervisionData.coDeptNameMap),
             createdDate: formatOrderDate(task.createTime),
             deadline: formatOrderDate(supervisionData.deadline),
+            deadlineTimestamp: supervisionData.deadline, // 保存原始时间戳
             supervisor: supervisionData.leaderNickname || '未分配',
             priority: getPriorityText(supervisionData.priority),
             status: displayStatus?.status || '进行中', // 待办列表只显示进行中和已超时
@@ -764,6 +812,7 @@ const fetchData = async () => {
             assistDepartments: parseCoDepts(order.coDeptNameMap),
             createdDate: formatOrderDate(order.createTime),
             deadline: formatOrderDate(order.deadline),
+            deadlineTimestamp: order.deadline, // 保存原始时间戳
             supervisor: order.leaderNickname || '未分配',
             priority: getPriorityText(order.priority),
             status: displayStatus?.status || '进行中',

@@ -882,9 +882,13 @@ const createOrder = async () => {
 
     // 构建发起人自选审批人 Map
     const startUserSelectAssignees: Record<string, number[]> = {}
+    const startLeaderSelectAssignees: Record<string, number[]> = {}
 
     // First 节点先写死为 212
     startUserSelectAssignees['First'] = [212]
+
+    // Third 节点设置为空
+    startLeaderSelectAssignees['Third'] = []
 
     // 如果选择了牵头单位，需要获取该部门的负责人用户ID作为候选人
     if (orderForm.leadDeptId) {
@@ -937,7 +941,8 @@ const createOrder = async () => {
       // leadDeptDetail: '', // 承办状况 - 创建时为空
       // supervisionReapprove: null, // 督查督办复核 - 创建时为空
       summary: summaryContent, // 添加自动生成的概述信息字符串
-      startUserSelectAssignees: startUserSelectAssignees // 发起人自选审批人
+      startUserSelectAssignees: startUserSelectAssignees,
+      startLeaderSelectAssignees: startLeaderSelectAssignees// 发起人自选审批人
     }
 
     // 验证必要的ID字段
