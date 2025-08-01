@@ -82,8 +82,9 @@ const filteredList = computed(() => {
 })
 const queryParams = reactive({
   pageNo: 1,
-  pageSize: 10, // 直接指定用印申请流程的key
+  pageSize: 10,
   category: '用印申请',
+  processDefinitionKey: 'seal_apply seal_apply_special',
 })
 
 /** 查询任务列表 */
@@ -101,7 +102,7 @@ const getList = async () => {
 /** 处理审批按钮 */
 const handleAudit = (row: any) => {
   push({
-    name: 'BpmProcessInstanceDetail',
+    name: 'SealDetail',
     query: {
       id: row.processInstance.id,
       taskId: row.id

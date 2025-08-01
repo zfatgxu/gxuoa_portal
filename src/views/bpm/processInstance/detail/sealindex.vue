@@ -59,7 +59,7 @@
                         </el-col>
                         <!-- 情况二：业务表单 -->
                         <div v-if="processDefinition?.formType === BpmModelFormType.CUSTOM">
-                          <BusinessFormComponent :id="processInstance.businessKey" :activity-nodes="activityNodes" :applyUser="applyUser" :applyTime="applyTime" :status="processInstance.status"/>
+                          <BusinessFormComponent :id="sealApplyId" :activity-nodes="activityNodes" :applyUser="applyUser" :applyTime="applyTime" :status="processInstance.status"/>
                         </div>
                       </div>
                     </el-col>
@@ -71,7 +71,7 @@
                 </el-scrollbar>
               </div>
             </el-tab-pane>
-  
+
             <!-- 流程图 -->
             <!-- <el-tab-pane label="流程图" name="diagram">
               <div class="form-scroll-area">
@@ -91,7 +91,7 @@
                 />
               </div>
             </el-tab-pane> -->
-  
+
             <!-- 流转记录 -->
             <el-tab-pane label="流转记录" name="record">
               <div class="form-scroll-area">
@@ -100,7 +100,7 @@
                 </el-scrollbar>
               </div>
             </el-tab-pane>
-  
+
             <!-- 流转评论 TODO 待开发 -->
             <el-tab-pane label="流转评论" name="comment" v-if="false">
               <div class="form-scroll-area">
@@ -108,9 +108,9 @@
               </div>
             </el-tab-pane>
           </el-tabs>
-  
+
            <div class="b-t-solid border-t-1px border-[var(--el-border-color)]">
-             
+
             <SealapplyButton
               ref="operationButtonRef"
               :process-instance="processInstance"
@@ -121,8 +121,8 @@
               :writable-fields="writableFields"
               @success="refresh"
             />
-          </div> 
-          
+          </div>
+
         </el-scrollbar>
       </div>
     </ContentWrap>
@@ -136,6 +136,7 @@
   import type { ApiAttrs } from '@form-create/element-ui/types/config'
   import * as ProcessInstanceApi from '@/api/bpm/processInstance'
   import * as UserApi from '@/api/system/user'
+  import * as SealApi from '@/api/seal'
   import ProcessInstanceBpmnViewer from './ProcessInstanceBpmnViewer.vue'
   import ProcessInstanceSimpleViewer from './ProcessInstanceSimpleViewer.vue'
   import ProcessInstanceTaskList from './ProcessInstanceTaskList.vue'
@@ -148,7 +149,7 @@
   import approveSvg from '@/assets/svgs/bpm/approve.svg'
   import rejectSvg from '@/assets/svgs/bpm/reject.svg'
   import cancelSvg from '@/assets/svgs/bpm/cancel.svg'
-  
+
   defineOptions({ name: 'BpmProcessInstanceDetail' })
   const router = useRouter()
   //
@@ -165,7 +166,7 @@
     [TaskStatusEnum.REJECT]: rejectSvg,
     [TaskStatusEnum.CANCEL]: cancelSvg
   }
-  
+
   // ========== 申请信息 ==========
   const fApi = ref<ApiAttrs>() //
   const detailForm = ref({
@@ -173,12 +174,13 @@
     option: {},
     value: {}
   }) // 流程实例的表单详情
-  
+
   const writableFields: Array<string> = [] // 表单可以编辑的字段
 
     const applyUser = ref('') // 申请人
     const applyTime = ref('') // 申请时间
-  
+    const sealApplyId = ref('') // 印章申请单ID
+
   /** 获得详情 */
   const getDetail = () => {
     // 获得审批详情
@@ -186,7 +188,7 @@
     // 获得流程模型视图
     getProcessModelView()
   }
-  
+
   /** 加载流程实例 */
   const BusinessFormComponent = ref<any>(null) // 异步组件
   /** 获取审批详情 */
@@ -247,14 +249,76 @@
         })
       } else {
         // 注意：data.processDefinition.formCustomViewPath 是组件的全路径，例如说：/crm/contract/detail/index.vue
-        BusinessFormComponent.value = registerComponent(data.processDefinition.formCustomViewPath)
+        console.log('加载自定义表单组件:', data.processDefinition.formCustomViewPath)
+
+        try {
+          // 获取正确的印章申请单ID
+          let sealId = processInstance.value.businessKey
+          
+          // 检查流程定义Key是否为特殊印章流程
+          const isSpecialSealProcess = processDefinition.value.key === 'seal_apply_special'
+          console.log('当前流程类型:', processDefinition.value.key, '是否为特殊印章流程:', isSpecialSealProcess)
+          
+          // 如果businessKey为空或者是特殊印章流程，尝试通过API获取印章申请单ID
+          if (!sealId || isSpecialSealProcess) {
+            try {
+              console.log('尝试通过流程实例ID获取印章申请单ID:', processInstance.value.id)
+              const response = await SealApi.getSealApplicationIdByProcessInstanceId(processInstance.value.id)
+              if (response && response.id) {
+                sealId = response.id
+                console.log('成功获取到印章申请单ID:', sealId)
+              } else {
+                console.warn('通过流程实例ID未能获取到印章申请单ID')
+              }
+            } catch (apiError) {
+              console.error('获取印章申请单ID失败:', apiError)
+            }
+          }
+          
+          // 如果仍然无法获取ID，使用流程实例ID作为最后的备选
+          if (!sealId) {
+            console.warn('无法获取印章申请单ID，将使用流程实例ID作为备选')
+            sealId = processInstance.value.id
+          }
+          
+          console.log('最终使用的印章申请单ID:', sealId)
+
+          // 使用异步组件方式导入
+          const SealDetailComponent = defineAsyncComponent({
+            loader: () => import('../../../seal/detail.vue'),
+            onError: (error, retry, fail, attempts) => {
+              console.error('印章详情组件加载失败:', error)
+              if (attempts <= 3) {
+                console.log(`重试加载印章详情组件，第 ${attempts} 次尝试`)
+                retry()
+              } else {
+                console.error('印章详情组件加载失败，已达到最大重试次数')
+                fail()
+                message.error('加载详情组件失败，请刷新页面重试')
+              }
+            }
+          })
+
+          // 设置组件
+          BusinessFormComponent.value = SealDetailComponent
+          // 更新印章申请单ID
+          sealApplyId.value = sealId
+          console.log('印章详情组件设置完成，ID:', sealApplyId.value)
+        } catch (error) {
+          console.error('组件加载异常:', error)
+          message.error('加载详情组件失败')
+        }
       }
-  
+
       // 获取审批节点，显示 Timeline 的数据
       activityNodes.value = data.activityNodes
-  
+      console.log('审批节点:', activityNodes.value)
+
       // 获取待办任务显示操作按钮
       operationButtonRef.value?.loadTodoTask(data.todoTask)
+    } catch (error) {
+      console.error('获取审批详情失败:', error)
+      message.error('获取审批详情失败：' + error.message)
     } finally {
       processInstanceLoading.value = false
     }
@@ -354,4 +418,3 @@
     }
   }
   </style>
-  

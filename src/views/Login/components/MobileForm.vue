@@ -221,7 +221,7 @@ const signIn = async () => {
 <style lang="scss" scoped>
 :deep(.anticon) {
   &:hover {
-    color: var(--el-color-primary) !important;
+    color: var(--login-primary-color) !important;
   }
 }
 
@@ -242,7 +242,7 @@ const signIn = async () => {
   width: 100%;
   height: 100%;
   padding: 0 12px;
-  background-color: #409eff;
+  background-color: var(--login-primary-color);
   color: white;
   border: none;
   border-radius: 0 20px 20px 0;
@@ -256,11 +256,11 @@ const signIn = async () => {
   cursor: pointer;
   
   &:hover {
-    background-color: #337ecc;
+    background-color: var(--login-primary-dark);
   }
   
   &:active {
-    background-color: #2b6cb0;
+    background-color: #003b6d;
   }
 }
 </style>

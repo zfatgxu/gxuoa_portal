@@ -27,6 +27,13 @@ export const getSealApplicationById = async (id: number) => {
 
 }
 
+/*// 根据流程实例ID获取印章申请单ID
+export const getSealApplicationIdByProcessInstanceId = async (processInstanceId: string | number) => {
+  return await request.get({
+    url: '/bpm/seal/getIdByProcessInstanceId?processInstanceId=' + processInstanceId
+  })
+}*/
+
 //获取待办分页
 export const getSealTodoPage = async (data: any) => {
   return await request.get({

@@ -171,15 +171,33 @@
     handleQuery()
   }
   const handleCreate = () => {
-    // selectedUnit.value = ''
-    // fetchUnitList()
-    // dialogVisible.value = true
-    router.push({
-      name: 'SealCreate',
-      query: {
-        
+    // 显示询问弹窗
+    ElMessageBox.confirm(
+      '印章单位和审核人、单位负责人是否在同一个单位？',
+      '单位关系确认',
+      {
+        confirmButtonText: '是',
+        cancelButtonText: '否',
+        type: 'info',
+        distinguishCancelAndClose: true
       }
-    })
+    )
+      .then(() => {
+        // 如果是，跳转到原有创建页面
+        router.push({
+          name: 'SealCreate',
+          query: {}
+        })
+      })
+      .catch((action) => {
+        if (action === 'cancel') {
+          // 如果否，跳转到需要单位负责人签字的创建页面
+          router.push({
+            name: 'SealCreateSpecial',
+            query: {}
+          })
+        }
+      })
   }
   
   const handleUnitConfirm = () => {

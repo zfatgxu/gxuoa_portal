@@ -536,57 +536,57 @@
           <span v-if="Number(personnel.level) < 24" style="font-size: 14px;margin-bottom: 5px;">单位负责人签字</span>
         </div>
         <div class="action-item">
-          <div v-for="userTask in startUserSelectTasks.filter(task => task.id === 'host_sign')" :key="userTask.id">
+          <div v-for="userTask in startUserSelectTasks" :key="userTask.id">
             <div class="flex flex-wrap gap-2">
               <!-- 始终显示一个用户 -->
               <div
-                v-if="startUserSelectAssignees['host_sign'].length > 0"
-                :key="startUserSelectAssignees['host_sign'][0].id"
+                v-if="startUserSelectAssignees[userTask.id]?.length > 0"
+                :key="startUserSelectAssignees[userTask.id][0].id"
                 class="bg-gray-100 h-35px rounded-3xl flex items-center pr-8px dark:color-gray-600"
               >
                 <el-avatar class="!m-5px" :size="28">
-                  {{ startUserSelectAssignees['host_sign'][0].nickname.substring(0, 1) }}
+                  {{ startUserSelectAssignees[userTask.id][0].nickname.substring(0, 1) }}
                 </el-avatar>
-                {{ startUserSelectAssignees['host_sign'][0].nickname }}
+                {{ startUserSelectAssignees[userTask.id][0].nickname }}
                 <Icon
                   icon="ep:close"
                   class="ml-2 cursor-pointer hover:text-red-500"
-                  @click="handleRemoveApprovalUser(startUserSelectAssignees['host_sign'][0])"
+                  @click="handleRemoveApprovalUser(startUserSelectAssignees[userTask.id][0], userTask.id)"
                 />
               </div>
               <!-- 显示第二个用户（当只有两个人时） -->
               <div
-                v-if="startUserSelectAssignees['host_sign'].length === 2"
-                :key="startUserSelectAssignees['host_sign'][1].id"
+                v-if="startUserSelectAssignees[userTask.id]?.length === 2"
+                :key="startUserSelectAssignees[userTask.id][1].id"
                 class="bg-gray-100 h-35px rounded-3xl flex items-center pr-8px dark:color-gray-600"
               >
                 <el-avatar class="!m-5px" :size="28">
-                  {{ startUserSelectAssignees['host_sign'][1].nickname.substring(0, 1) }}
+                  {{ startUserSelectAssignees[userTask.id][1].nickname.substring(0, 1) }}
                 </el-avatar>
-                {{ startUserSelectAssignees['host_sign'][1].nickname }}
+                {{ startUserSelectAssignees[userTask.id][1].nickname }}
                 <Icon
                   icon="ep:close"
                   class="ml-2 cursor-pointer hover:text-red-500"
-                  @click="handleRemoveApprovalUser(startUserSelectAssignees['host_sign'][1])"
+                  @click="handleRemoveApprovalUser(startUserSelectAssignees[userTask.id][1], userTask.id)"
                 />
               </div>
 
               <!-- 显示省略号及下拉框（当超过两个人时） -->
               <el-popover
-                v-if="startUserSelectAssignees['host_sign'].length > 2"
+                v-if="startUserSelectAssignees[userTask.id]?.length > 2"
                 placement="bottom"
                 trigger="hover"
                 :width="200"
               >
                 <template #reference>
                   <div class="bg-gray-100 h-35px rounded-3xl flex items-center px-3 cursor-pointer">
-                    等{{ startUserSelectAssignees['host_sign'].length - 1 }}人
+                    等{{ startUserSelectAssignees[userTask.id].length - 1 }}人
                   </div>
                 </template>
 
                 <div class="p-2 max-h-300px overflow-auto">
                   <div
-                    v-for="user in startUserSelectAssignees['host_sign'].slice(1)"
+                    v-for="user in startUserSelectAssignees[userTask.id].slice(1)"
                     :key="user.id"
                     class="flex items-center py-1 px-2 hover:bg-gray-100 rounded"
                   >
@@ -597,15 +597,19 @@
                     <Icon
                       icon="ep:close"
                       class="ml-2 cursor-pointer hover:text-red-500"
-                      @click="handleRemoveApprovalUser(user)"
+                      @click="handleRemoveApprovalUser(user, userTask.id)"
                     />
                   </div>
                 </div>
               </el-popover>
-              <el-button v-if="Number(personnel.level) >= 24 && Number(personnel.level) != 100" type="primary" link @click="openApprovalUserSelect" :disabled="isReadOnly">
-                <Icon icon="ep:plus" />选择人员
+              <el-button v-if="Number(personnel.level) >= 24 && Number(personnel.level) != 100 && userTask.id==='host_sign'" type="primary" link @click="openApprovalUserSelect(userTask.id)" :disabled="isReadOnly">
+                <Icon icon="ep:plus" />选择代工人
+              </el-button>
+              <el-button v-if="userTask.id==='leader_sign'" type="primary" link @click="openApprovalUserSelect(userTask.id)" :disabled="isReadOnly">
+                <Icon icon="ep:plus" />选择领导
               </el-button>
             </div>
+            
           </div>
         </div>
         <div class="action-item">
@@ -614,7 +618,6 @@
       </div>
     </el-card>
   </div>
-  <!-- 用户选择弹窗 -->
   <UserSelectForm ref="userSelectFormRef" @confirm="handleUserSelectConfirm" />
 </template>
 
@@ -1101,7 +1104,7 @@ const handleSubmit = async () => {
 
     if (Number(personnel.value.level) >= 24 && Number(personnel.value.level) !== 100) {
       if (startUserSelectAssignees.value['host_sign'].length === 0) {
-        ElMessage.warning('请选择签办人')
+        ElMessage.warning('请选择代工人')
         return
       }
     }
@@ -1125,7 +1128,7 @@ const handleSubmit = async () => {
       personId: Number(personnel.value.id), // 请假人ID
       deptId: Number(personnel.value.deptId), // 部门ID
       leaderOpinion: '', // 领导意见，初始为空
-      hostId: '',
+      hostId: startUserSelectAssignees.value['leader_sign'].map((user) => user.id).join(','),
       personAdmitId: startUserSelectAssignees.value['host_sign'].map((user) => user.id).join(',')
     }
 
@@ -1441,6 +1444,16 @@ const fetchUserProfile = async () => {
         } else {
           startUserSelectAssignees.value['host_sign'] = [];
         }
+        // 解析 hostId 字符串为用户对象数组
+        if (res.hostId) {
+          const userIds = res.hostId.split(',').map(id => Number(id));
+          // 将 ID 转换为用户对象数组
+          startUserSelectAssignees.value['leader_sign'] = userList.value.filter((user: any) =>
+            userIds.includes(user.id)
+          )
+        } else {
+          startUserSelectAssignees.value['leader_sign'] = [];
+        }
         // 解析目的地数据
         if (res.destination) {
           // 首先尝试使用 ||| 分隔符解析（新格式）
@@ -1619,30 +1632,30 @@ const disabledEndDate = (index, type) => {
     return false;
   };
 };
-
 /** 打开签办人选择 */
-const openApprovalUserSelect = () => {
+const openApprovalUserSelect = (taskKey: string) => {
   userSelectFormRef.value?.open(
-    startUserSelectTasks.value['host_sign'],
+    taskKey,
     personnel.value.deptId,
-    startUserSelectAssignees.value['host_sign'],
+    startUserSelectAssignees.value[taskKey],
     personnel.value.id 
   );
 }
 
-
 /** 移除签办人 */
-const handleRemoveApprovalUser = (user: UserVO) => {
+const handleRemoveApprovalUser = (user: UserVO, taskKey: string) => {
   if (isReadOnly.value) {
     return
   }
-  startUserSelectAssignees.value['host_sign'] = startUserSelectAssignees.value['host_sign'].filter((u) => u.id !== user.id)
+  startUserSelectAssignees.value[taskKey] = startUserSelectAssignees.value[taskKey].filter((u) => u.id !== user.id)
 }
 
+
 /** 用户选择确认 */
-const handleUserSelectConfirm = (_, users: UserVO[]) => {
-  startUserSelectAssignees.value['host_sign'] = users
+const handleUserSelectConfirm = (taskKey: string,users: UserVO[]) => {
+  startUserSelectAssignees.value[taskKey] = users
 }
+
 
 // 指定审批人
 const processDefineKey = 'oa_leaveRegister' // 流程定义 Key

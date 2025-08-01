@@ -266,7 +266,7 @@ onMounted(() => {
 <style lang="scss" scoped>
 :deep(.anticon) {
   &:hover {
-    color: var(--el-color-primary) !important;
+    color: var(--login-primary-color) !important;
   }
 }
 

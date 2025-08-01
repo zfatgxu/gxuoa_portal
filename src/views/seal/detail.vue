@@ -56,6 +56,24 @@
               </span>
             </div>
           </div>
+          <!-- 印章单位负责人签字（如果存在） -->
+          <div class="signature-row" v-if="detail.sealUnitLeaderId">
+            <span class="required">印章单位负责人签字</span>
+            <span class="signature-value">
+              <span v-if="detail.sealUnitLeaderStatus === 2" style="color: #00b32a;">
+                {{ detail.sealUnitLeaderName }}（已同意）
+              </span>
+              <span v-else-if="detail.sealUnitLeaderStatus === 1" style="color: #448ef7;">
+                {{ detail.sealUnitLeaderName }}（处理中）
+              </span>
+              <span v-else-if="detail.sealUnitLeaderStatus === 3" style="color: #f46b6c;">
+                {{ detail.sealUnitLeaderName }}（不同意）
+              </span>
+              <span v-else>
+                {{ detail.sealUnitLeaderName || '未指定' }}
+              </span>
+            </span>
+          </div>
         </div>
       </div>
       <!-- 材料类型 -->
@@ -113,7 +131,7 @@
 
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { Qrcode } from '@/components/Qrcode'
 import { propTypes } from '@/utils/propTypes'
@@ -122,12 +140,14 @@ import { formatDate } from '@/utils/formatTime'
 import { KKFileView } from '@/components/KKFileView'
 import { getDictLabel } from '@/utils/dict'
 import { DICT_TYPE } from '@/utils/dict'
+import { ElMessage } from 'element-plus'
 
-//由网上印章申请，用户：  ，时间：   ，编号：  
+//由网上印章申请，用户：  ，时间：   ，编号：
 const qrText = ref('')
 
 const props = defineProps({
-  id: propTypes.number.def(undefined),
+  id: propTypes.oneOfType([propTypes.string, propTypes.number]).def(undefined),
+  applyId: propTypes.oneOfType([propTypes.string, propTypes.number]).def(undefined),
   activityNodes: propTypes.array.def([]),
   applyUser: propTypes.string.def(''),
   applyTime: propTypes.string.def(''),
@@ -135,14 +155,14 @@ const props = defineProps({
 })
 
 //父组件传入的ID和activityNodes
-
 const id = props.id
+const applyId = props.applyId
 const activityNodes = props.activityNodes
 const applyUser = props.applyUser
 const applyTime = props.applyTime
 const status = props.status
-console.log("status",status)
-console.log(activityNodes)
+console.log("印章详情组件接收到的参数：", { id, applyId, status, applyUser, applyTime })
+console.log("印章详情组件接收到的审批节点：", activityNodes)
 
 const filteredActivityNodes = computed(() => {
   return activityNodes.filter(
@@ -150,8 +170,28 @@ const filteredActivityNodes = computed(() => {
   );
 })
 
+// 初始化一个空的详情对象，包含所有可能的字段，避免渲染错误
 const detail = ref({
-  
+  applyId: '',
+  applyTitle: '',
+  materialName: '',
+  sealTypes: [],
+  handlerSignature: '',
+  reviewerSignature: '',
+  unitHeadSignature: '',
+  sealUnitLeaderSignature: '', // 印章单位负责人签字
+  contactPhone: '',
+  materialTypes: {
+    nonContract: false,
+    contractNotReviewed: false,
+    contractReviewed: false
+  },
+  attention: '',
+  attachments: [],
+  sealState: 0,
+  signers: '',
+  phone: '',
+  createTime: ''
 })
 
 const fetchDetail = async () => {
