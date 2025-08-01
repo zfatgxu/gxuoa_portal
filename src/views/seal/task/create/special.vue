@@ -83,19 +83,57 @@
             :rules="startUserSelectAssigneesFormRules"
             ref="startUserSelectAssigneesFormRef"
           >
-            <!-- 合并的签字选择框 -->
-            <div class="signature-row" v-if="startUserSelectTasks.length > 0">
-              <span class="required">经办人签字、审批人签字、单位负责人签字</span>
+            <!-- 经办人签字选择框 -->
+            <div class="signature-row">
+              <span class="required">经办人签字</span>
               <el-select
-                :model-value="combinedSigners"
-                @update:model-value="handleCombinedSignersChange"
-                placeholder="请选择3名审批人"
+                v-model="managerSigner"
+                placeholder="请选择经办人"
                 class="signature-input"
                 filterable
-                multiple
-                :multiple-limit="3"
-                collapse-tags
-                collapse-tags-tooltip
+                clearable
+              >
+                <el-option
+                  v-for="user in allUsersList"
+                  :key="user.id"
+                  :label="user.nickname"
+                  :value="user.id"
+                >
+                  <span>{{ user.nickname }}</span>
+                </el-option>
+              </el-select>
+            </div>
+            
+            <!-- 审批人签字选择框 -->
+            <div class="signature-row">
+              <span class="required">审批人签字</span>
+              <el-select
+                v-model="approverSigner"
+                placeholder="请选择审批人"
+                class="signature-input"
+                filterable
+                clearable
+              >
+                <el-option
+                  v-for="user in allUsersList"
+                  :key="user.id"
+                  :label="user.nickname"
+                  :value="user.id"
+                >
+                  <span>{{ user.nickname }}</span>
+                </el-option>
+              </el-select>
+            </div>
+            
+            <!-- 单位负责人签字选择框 -->
+            <div class="signature-row">
+              <span class="required">单位负责人签字</span>
+              <el-select
+                v-model="unitLeaderSigner"
+                placeholder="请选择单位负责人"
+                class="signature-input"
+                filterable
+                clearable
               >
                 <el-option
                   v-for="user in allUsersList"
@@ -532,11 +570,30 @@ const submitForm = async () => {
 
   // 校验指定审批人
   if (startUserSelectTasks.value?.length > 0) {
-    // 检查是否选择了3名审批人
-    if (!combinedSigners.value || combinedSigners.value.length !== 3) {
-      ElMessage.error('请选择3名审批人，不能多于或少于3名');
+    // 校验三个独立的签字人是否都已选择
+    if (!managerSigner.value) {
+      ElMessage.error('请选择经办人签字');
       return;
     }
+    if (!approverSigner.value) {
+      ElMessage.error('请选择审批人签字');
+      return;
+    }
+    if (!unitLeaderSigner.value) {
+      ElMessage.error('请选择单位负责人签字');
+      return;
+    }
+
+    // 将三个签字人分配给对应的任务
+    startUserSelectTasks.value.forEach(task => {
+      if (task.name === '经办人签字') {
+        startUserSelectAssignees.value[task.id] = [managerSigner.value];
+      } else if (task.name === '审批人签字') {
+        startUserSelectAssignees.value[task.id] = [approverSigner.value];
+      } else if (task.name === '单位负责人签字') {
+        startUserSelectAssignees.value[task.id] = [unitLeaderSigner.value];
+      }
+    });
   }
 
   // 验证印章单位负责人签字
@@ -558,13 +615,6 @@ const submitForm = async () => {
     url: file.url
   }))
 
-  // 将印章单位负责人签字信息添加到startUserSelectAssignees中
-  // 使用"fourth"作为键名，与其他审批人保持一致的风格
-  if (!startUserSelectAssignees.value) {
-    startUserSelectAssignees.value = {}
-  }
-  startUserSelectAssignees.value['fourth'] = [sealUnitLeaderId.value]
-
   // 构建符合后端要求的数据结构
   const submitData = {
     applyTitle: selectedUnit.value.name+'印章申请单',//表单标题
@@ -579,7 +629,15 @@ const submitForm = async () => {
   }
 
   // 设置指定审批人（包含印章单位负责人签字）
-  submitData.startUserSelectAssignees = startUserSelectAssignees.value
+  if (startUserSelectTasks.value?.length > 0) {
+    submitData.startUserSelectAssignees = startUserSelectAssignees.value
+  }
+  
+  // 添加印章单位负责人签字信息
+  if (!submitData.startUserSelectAssignees) {
+    submitData.startUserSelectAssignees = {}
+  }
+  submitData.startUserSelectAssignees['sealUnitLeader'] = [sealUnitLeaderId.value]
 
   // 提交数据到后端
   console.log('提交数据:', submitData)
@@ -628,31 +686,28 @@ onMounted(async () => {
 
         // 设置指定审批人
         if (startUserSelectTasks.value?.length > 0) {
-          // 初始化审批人和合并签字人列表
+          // 初始化审批人列表
           startUserSelectTasks.value.forEach((task) => {
             startUserSelectAssignees.value[task.id] = [];
           });
-          combinedSigners.value = [];
+          managerSigner.value = '';
+          approverSigner.value = '';
+          unitLeaderSigner.value = '';
           
-          // 设置简化的校验规则，只验证是否选择了3个审批人
+          // 设置三个独立签字人的校验规则
           if (startUserSelectTasks.value && startUserSelectTasks.value.length > 0) {
-            // 使用第一个任务作为验证的关键任务
-            const firstTask = startUserSelectTasks.value[0];
-            startUserSelectAssigneesFormRules.value[firstTask.id] = [
-              { 
-                required: true, 
-                message: '请选择3名审批人', 
-                trigger: 'change',
-                validator: (rule, value, callback) => {
-                  if (!combinedSigners.value || combinedSigners.value.length !== 3) {
-                    callback(new Error('请选择3名审批人，不能多于或少于3名'));
-                  } else {
-                    callback();
-                  }
+            // 为每个任务设置校验规则
+            startUserSelectTasks.value.forEach((task) => {
+              startUserSelectAssigneesFormRules.value[task.id] = [
+                { 
+                  required: true, 
+                  message: '请选择审批人', 
+                  trigger: 'change'
                 }
-              }
-            ];
+              ];
+            });
           }
+          
           // 加载经办人用户列表
           userList.value = await UserApi.getSimpleUserList()
           
@@ -786,35 +841,10 @@ const handleExceed = () => {
 }
 
 // 合并的签字选择框相关数据
-const combinedSigners = ref([])
+const managerSigner = ref('')
+const approverSigner = ref('')
+const unitLeaderSigner = ref('')
 const allUsersList = ref([])
-
-// 处理合并签字选择框变化
-const handleCombinedSignersChange = (value) => {
-  // 保存用户选择顺序
-  combinedSigners.value = value
-  console.log('合并签字人选择:', value)
-  
-  // 将选择的用户分配给所有任务，同时保存用户角色信息
-  if (startUserSelectTasks.value && startUserSelectTasks.value.length > 0) {
-    // 为每个任务分配相同的用户列表，保持顺序
-    startUserSelectTasks.value.forEach(task => {
-      startUserSelectAssignees.value[task.id] = value
-    })
-    
-    // 在表单提交数据中添加用户角色映射
-    if (value.length === 3) {
-      // 记录用户ID和角色的映射关系
-      const userRoles = {
-        [value[0]]: '经办人',
-        [value[1]]: '审批人',
-        [value[2]]: '单位负责人'
-      }
-      
-      console.log('用户角色映射:', userRoles)
-    }
-  }
-}
 </script>
 
 <style scoped>
