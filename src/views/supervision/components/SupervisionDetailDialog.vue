@@ -61,10 +61,10 @@
                     <div class="info-item-new">
                       <Icon icon="ep:user" class="item-icon" />
                       <span class="item-text">{{ orderDetail.issuer }}</span>
-                      <template v-if="orderDetail.issuerPhone">
-                        <span class="contact-info-inline">联系电话</span>
-                        <span class="phone-number">{{ orderDetail.issuerPhone }}</span>
-                      </template>
+                    </div>
+                    <div v-if="orderDetail.issuerPhone" class="info-item-new">
+                      <Icon icon="ep:phone" class="item-icon phone-icon" />
+                      <span class="phone-number">{{ orderDetail.issuerPhone }}</span>
                     </div>
                   </div>
 
@@ -73,10 +73,10 @@
                     <div class="info-item-new">
                       <Icon icon="ep:user" class="item-icon" />
                       <span class="item-text">{{ orderDetail.supervisorName }}</span>
-                      <template v-if="orderDetail.phone">
-                        <span class="contact-info-inline">联系电话</span>
-                        <span class="phone-number">{{ orderDetail.phone }}</span>
-                      </template>
+                    </div>
+                    <div v-if="orderDetail.phone" class="info-item-new">
+                      <Icon icon="ep:phone" class="item-icon phone-icon" />
+                      <span class="phone-number">{{ orderDetail.phone }}</span>
                     </div>
                   </div>
 
@@ -85,10 +85,10 @@
                     <div class="info-item-new">
                       <Icon icon="ep:user" class="item-icon" />
                       <span class="item-text">{{ orderDetail.leader }}</span>
-                      <template v-if="orderDetail.leaderPhone">
-                        <span class="contact-info-inline">联系电话</span>
-                        <span class="phone-number">{{ orderDetail.leaderPhone }}</span>
-                      </template>
+                    </div>
+                    <div v-if="orderDetail.leaderPhone" class="info-item-new">
+                      <Icon icon="ep:phone" class="item-icon phone-icon" />
+                      <span class="phone-number">{{ orderDetail.leaderPhone }}</span>
                     </div>
                   </div>
                 </div>
@@ -104,26 +104,33 @@
               <h3 class="section-title">时间信息</h3>
             </div>
             <div class="time-list">
-              <div class="time-item">
-                <Icon icon="ep:calendar" class="time-icon" />
-                <div class="time-content">
-                  <div class="time-label">创建时间</div>
-                  <div class="time-value">{{ orderDetail.createTime }}</div>
+              <div class="time-item-card">
+                <div class="time-item-header">
+                  <Icon icon="ep:calendar" class="time-icon" />
+                  <span class="time-label">创建时间</span>
                 </div>
+                <div class="time-value">{{ orderDetail.createTime }}</div>
               </div>
-              <div class="time-item">
-                <Icon icon="ep:clock" class="time-icon" />
-                <div class="time-content">
-                  <div class="time-label">截止时间</div>
+
+              <div class="time-item-card">
+                <div class="time-item-header">
+                  <Icon icon="ep:clock" class="time-icon" />
+                  <span class="time-label">截止时间</span>
+                </div>
+                <div class="time-value-with-days">
                   <div :class="getDeadlineTimeClass()">{{ orderDetail.deadline }}</div>
+                  <div v-if="getTimeRemainingText() && !isSupervisionEnded" class="remaining-days">
+                    <span :class="getTimeRemainingClass()">{{ getTimeRemainingText() }}</span>
+                  </div>
                 </div>
               </div>
-              <div class="time-item">
-                <Icon icon="ep:refresh" class="time-icon" />
-                <div class="time-content">
-                  <div class="time-label">最后更新</div>
-                  <div class="time-value">{{ orderDetail.updateTime }}</div>
+
+              <div class="time-item-card">
+                <div class="time-item-header">
+                  <Icon icon="ep:refresh" class="time-icon" />
+                  <span class="time-label">最后更新</span>
                 </div>
+                <div class="time-value">{{ orderDetail.updateTime }}</div>
               </div>
             </div>
           </div>
@@ -464,8 +471,8 @@ import childProcessSvg from '@/assets/svgs/bpm/child-process.svg'
 interface Props {
   modelValue: boolean
   taskData: any
-  processInstanceId?: string  // 新增：流程实例ID
-  supervisionStatus?: string  // 新增：督办状态（从首页传递）
+  processInstanceId?: string  // 流程实例ID
+  supervisionStatus?: string  // 督办状态（从外部页面传递）
 }
 
 const props = defineProps<Props>()
@@ -484,6 +491,84 @@ const isSupervisionEnded = computed(() => {
          props.supervisionStatus === '否决文件' ||
          props.supervisionStatus === '已结束'
 })
+
+// 获取原始时间戳（直接使用数据库中的精确时间）
+const getDeadlineTimestamp = (): number | null => {
+  // 优先使用原始时间戳，这是数据库中存储的精确时间
+  const timestamp = props.taskData?.deadlineTimestamp
+  if (timestamp && typeof timestamp === 'number') {
+    return timestamp
+  }
+
+  // 如果没有原始时间戳，说明数据有问题，返回null
+  console.warn('缺少原始时间戳数据:', props.taskData)
+  return null
+}
+
+// 获取时间剩余文本（统一使用传入的任务数据）
+const getTimeRemainingText = (): string | null => {
+  // 如果督办已结束，不显示剩余时间
+  if (isSupervisionEnded.value) return null
+
+  const deadlineTimestamp = getDeadlineTimestamp()
+  if (!deadlineTimestamp) return null
+
+  const now = new Date()
+  const deadlineDate = new Date(deadlineTimestamp)
+  const timeDiff = deadlineDate.getTime() - now.getTime()
+
+  // 计算绝对时间差
+  const absDiff = Math.abs(timeDiff)
+  const totalMinutes = Math.floor(absDiff / (60 * 1000))
+  const totalHours = Math.floor(absDiff / (60 * 60 * 1000))
+  const totalDays = Math.floor(absDiff / (24 * 60 * 60 * 1000))
+
+  if (timeDiff < 0) {
+    // 已超时 - 优先显示更小的时间单位
+    if (totalDays >= 1) {
+      return `超时${totalDays}天`
+    } else if (totalHours >= 1) {
+      return `超时${totalHours}小时`
+    } else if (totalMinutes >= 1) {
+      return `超时${totalMinutes}分钟`
+    } else {
+      return `刚刚超时`
+    }
+  } else {
+    // 还有剩余时间 - 优先显示更小的时间单位
+    if (totalDays >= 1) {
+      return `剩余${totalDays}天`
+    } else if (totalHours >= 1) {
+      return `剩余${totalHours}小时`
+    } else if (totalMinutes >= 1) {
+      return `剩余${totalMinutes}分钟`
+    } else {
+      return `即将到期`
+    }
+  }
+}
+
+// 获取剩余时间的样式类
+const getTimeRemainingClass = (): string => {
+  // 如果督办已结束，返回默认样式
+  if (isSupervisionEnded.value) return 'days-left'
+
+  const deadlineTimestamp = getDeadlineTimestamp()
+  if (!deadlineTimestamp) return 'days-left'
+
+  const now = new Date()
+  const deadlineDate = new Date(deadlineTimestamp)
+  const timeDiff = deadlineDate.getTime() - now.getTime()
+  const totalHours = Math.abs(Math.floor(timeDiff / (60 * 60 * 1000)))
+
+  if (timeDiff < 0) {
+    return 'days-overdue' // 超期显示红色
+  } else if (totalHours <= 24) {
+    return 'days-today' // 24小时内显示橙色
+  } else {
+    return 'days-left' // 正常显示绿色
+  }
+}
 
 // 历史记录弹窗状态
 const historyDialogVisible = ref(false)
@@ -1157,24 +1242,37 @@ const downloadProgressFile = (file: any) => {
 
 
 
-const getStatusText = () => {
+const getStatusText = (): string => {
   // 直接使用传递的督办状态
   return props.supervisionStatus || ' '
 }
 
 // 根据状态获取截止时间的样式类
-const getDeadlineTimeClass = () => {
-  // 直接使用从外部页面传递过来的督办状态
-  const status = props.supervisionStatus || ' '
-
-  if (status === '已超时') {
-    return 'time-value deadline-overdue' // 红色
-  } else if (status === '已结束') {
-    return 'time-value deadline-finished' // 黑色
-  } else if (status === '进行中') {
-    return 'time-value deadline-processing' // 橙色
+const getDeadlineTimeClass = (): string => {
+  // 如果督办已结束，统一显示黑色（中性色），不再有提醒意义
+  if (isSupervisionEnded.value) {
+    return 'time-value deadline-finished' // 黑色 - 已结束
   }
-  return 'time-value deadline' // 默认颜色
+
+  // 对于进行中的督办，使用时间判断来提供提醒样式
+  const deadlineTimestamp = getDeadlineTimestamp()
+  if (!deadlineTimestamp) {
+    return 'time-value deadline' // 默认颜色
+  }
+
+  const now = new Date()
+  const deadlineDate = new Date(deadlineTimestamp)
+  const isOverdue = now > deadlineDate
+  const timeDiff = deadlineDate.getTime() - now.getTime()
+  const totalHours = Math.abs(Math.floor(timeDiff / (60 * 60 * 1000)))
+
+  if (isOverdue) {
+    return 'time-value deadline-overdue' // 红色 - 已超时
+  } else if (totalHours <= 24) {
+    return 'time-value deadline-processing' // 橙色 - 24小时内
+  } else {
+    return 'time-value deadline' // 默认颜色 - 正常
+  }
 }
 
 
@@ -1260,19 +1358,7 @@ const formatFileSize = (size: number | null) => {
   color: #303133 !important;
 }
 
-/* 额外的选择器确保样式生效 */
-.el-dialog.supervision-detail-dialog .el-dialog__header .el-dialog__title {
-  font-size: 40px !important;
-  font-weight: 600 !important;
-  color: #303133 !important;
-}
 
-/* 全局选择器作为备用 */
-.el-dialog__title {
-  font-size: 20px !important;
-  font-weight: 600 !important;
-  color: #303133 !important;
-}
 
 /* 自定义标题样式 */
 .custom-dialog-title {
@@ -1312,14 +1398,7 @@ const formatFileSize = (size: number | null) => {
   border: 1px solid;
 }
 
-
-
-.status-tag-item {
-  background-color: #f0f9ff;
-  color: #409eff;
-  border-color: #b3d8ff;
-}
-
+.status-tag-item,
 .priority-tag {
   background-color: #f0f9ff;
   color: #409eff;
@@ -1423,150 +1502,204 @@ const formatFileSize = (size: number | null) => {
 .task-info-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 40px;
-  grid-template-rows: auto auto auto; /* 三行布局 */
+  gap: 20px;
+  align-items: start;
 }
 
 .task-info-col {
-  display: contents; /* 让子元素直接参与grid布局 */
-}
-
-/* 左列：下发单位、牵头部门、协办部门 */
-.task-info-col:first-child .info-group:nth-child(1) {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-.task-info-col:first-child .info-group:nth-child(2) {
-  grid-column: 1;
-  grid-row: 2;
-}
-
-.task-info-col:first-child .info-group:nth-child(3) {
-  grid-column: 1;
-  grid-row: 3;
-}
-
-/* 右列：下发人、负责人、分管领导 */
-.task-info-col:last-child .info-group:nth-child(1) {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-.task-info-col:last-child .info-group:nth-child(2) {
-  grid-column: 2;
-  grid-row: 2;
-}
-
-.task-info-col:last-child .info-group:nth-child(3) {
-  grid-column: 2;
-  grid-row: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .info-group {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s ease;
+  height: 140px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-height: 80px; /* 增加最小高度以适应换行 */
-  justify-content: flex-start;
+}
+
+.info-group:hover {
+  border-color: #409eff;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
 }
 
 .group-title {
-  color: #909399;
-  font-size: 16px;
-  font-weight: 500;
-  margin-bottom: 8px;
+  color: #606266;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.group-title::before {
+  content: '';
+  width: 3px;
+  height: 14px;
+  background: #409eff;
+  border-radius: 2px;
 }
 
 .info-item-new {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 8px 0;
-  min-height: 40px;
+  gap: 10px;
+  padding: 0;
+  min-height: auto;
+  flex: 1;
   position: relative;
 }
 
 .item-icon {
   color: #409eff;
-  font-size: 16px;
-  margin-top: 2px;
+  font-size: 18px;
+  margin-top: 1px;
   flex-shrink: 0;
 }
 
 .item-text {
   color: #303133;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 500;
   flex: 1;
   min-width: 0;
   word-wrap: break-word;
-  line-height: 1.4;
-  max-width: calc(100% - 180px); /* 限制最大宽度，为联系电话预留空间 */
+  line-height: 1.5;
+  max-width: 100%;
 }
 
 .contact-info {
   color: #909399;
-  font-size: 14px;
-  margin-left: 16px;
+  font-size: 13px;
+  margin-top: 6px;
+  padding-left: 28px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.contact-info-inline {
-  color: #909399;
-  font-size: 14px;
-  white-space: nowrap;
-  flex-shrink: 0;
-  margin-left: auto;
-  margin-right: 4px;
+.contact-info::before {
+  content: '📞';
+  font-size: 12px;
+}
+
+.phone-icon {
+  color: #409eff;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .task-info-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .info-group {
+    padding: 14px;
+    height: 130px;
+  }
+}
+
+@media (max-width: 768px) {
+  .task-info-container {
+    padding: 12px;
+  }
+
+  .info-group {
+    padding: 12px;
+    height: 120px;
+  }
+
+  .item-text {
+    font-size: 14px;
+  }
+
+  .group-title {
+    font-size: 13px;
+  }
 }
 
 .phone-number {
   color: #303133;
-  font-size: 16px;
+  font-size: 14px;
+  font-weight: 500;
   white-space: nowrap;
-  flex-shrink: 0;
-  min-width: 110px;
+  flex: 1;
+  min-width: 0;
 }
 
 /* 时间信息样式 */
 .time-section {
   border: 1px solid #e4e7ed;
   border-radius: 4px;
-  padding: 16px;
+  padding: 16px; /* 与左侧info-section保持一致 */
+  height: 100%;
 }
 
 .time-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 16px; /* 与section-title的margin-bottom保持一致 */
 }
 
 .time-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  justify-content: space-between;
+  flex: 1;
+  height: 100%;
+  min-height: 340px; /* 稍微调整最小高度以适应新的内边距 */
+  gap: 16px; /* 在space-between的基础上添加最小间距 */
 }
 
-.time-item {
+.time-item-card {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 24px 16px; /* 增加上下内边距，让卡片更饱满 */
+  transition: all 0.2s ease;
+  flex: 1; /* 让每个卡片平均分配空间 */
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* 垂直居中内容 */
+  min-height: 80px; /* 确保每个卡片有最小高度 */
+}
+
+.time-item-card:hover {
+  background: #f0f2f5;
+  transform: translateY(-1px);
+}
+
+.time-item-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.time-icon {
-  color: #409eff;
-  font-size: 16px;
-}
-
-.time-content {
-  flex: 1;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .time-label {
   font-size: 14px;
-  color: #909399;
-  margin-bottom: 4px;
+  color: #606266;
+  font-weight: 500;
+}
+
+.time-value-with-days {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.time-icon {
+  color: #409eff;
+  font-size: 18px;
 }
 
 .time-value {
@@ -1577,6 +1710,36 @@ const formatFileSize = (size: number | null) => {
 
 .time-value.deadline {
   color: #f56c6c;
+}
+
+/* 剩余天数样式 */
+.remaining-days {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.days-left {
+  color: #67c23a;
+  background: #f0f9ff;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid #b3d8ff;
+}
+
+.days-today {
+  color: #e6a23c;
+  background: #fdf6ec;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid #f5dab1;
+}
+
+.days-overdue {
+  color: #f56c6c;
+  background: #fef0f0;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid #fbc4c4;
 }
 
 /* 截止时间颜色样式 */
@@ -1631,7 +1794,8 @@ const formatFileSize = (size: number | null) => {
   gap: 16px;
 }
 
-.progress-item {
+.progress-item,
+.history-item {
   position: relative;
   display: flex;
   gap: 12px;
@@ -1641,7 +1805,8 @@ const formatFileSize = (size: number | null) => {
   background: #fff;
 }
 
-.progress-dot {
+.progress-dot,
+.history-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -1650,35 +1815,41 @@ const formatFileSize = (size: number | null) => {
   flex-shrink: 0;
 }
 
-.progress-content {
+.progress-content,
+.history-info {
   flex: 1;
 }
 
-.progress-header {
+.progress-header,
+.history-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 8px;
 }
 
-.progress-left {
+.progress-left,
+.history-left {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.progress-right {
+.progress-right,
+.history-right {
   color: #ff6b6b;
   font-size: 14px;
 }
 
-.progress-title {
+.progress-title,
+.history-title {
   font-weight: 600;
   color: #303133;
   font-size: 16px;
 }
 
-.progress-name {
+.progress-name,
+.history-name {
   color: #606266;
   font-size: 16px;
 }
@@ -1688,7 +1859,8 @@ const formatFileSize = (size: number | null) => {
   font-size: 14px;
 }
 
-.progress-description {
+.progress-description,
+.history-description {
   color: #606266;
   font-size: 16px;
   line-height: 1.5;
@@ -1761,58 +1933,6 @@ const formatFileSize = (size: number | null) => {
 .empty-history {
   padding: 40px 0;
   text-align: center;
-}
-
-.history-item {
-  position: relative;
-  display: flex;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid #e4e7ed;
-  border-radius: 6px;
-  background: #fff;
-}
-
-.history-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #409eff;
-  margin-top: 6px;
-  flex-shrink: 0;
-}
-
-.history-info {
-  flex: 1;
-}
-
-.history-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 8px;
-}
-
-.history-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.history-right {
-  color: #ff6b6b;
-  font-size: 14px;
-}
-
-.history-title {
-  font-weight: 600;
-  color: #303133;
-  font-size: 16px;
-}
-
-.history-name {
-  color: #606266;
-  font-size: 16px;
 }
 
 .history-time {
@@ -2089,120 +2209,7 @@ const formatFileSize = (size: number | null) => {
   position: relative;
 }
 
-/* 保留原有的流转记录样式作为备用 */
-.flow-timeline {
-  position: relative;
-}
 
-.flow-item {
-  position: relative;
-  display: flex;
-  gap: 16px;
-  padding: 16px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.flow-item:last-child {
-  border-bottom: none;
-}
-
-.flow-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin-top: 4px;
-  position: relative;
-  z-index: 2;
-}
-
-.flow-dot.completed {
-  background: #409eff;
-  border: 2px solid #409eff;
-}
-
-.flow-dot.pending {
-  background: #e6a23c;
-  border: 2px solid #e6a23c;
-}
-
-.flow-line {
-  position: absolute;
-  left: 5px;
-  top: 20px;
-  bottom: -16px;
-  width: 2px;
-  background: #e4e7ed;
-  z-index: 1;
-}
-
-.flow-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.flow-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
-}
-
-.flow-action-badge {
-  background: #e1f3ff;
-  color: #409eff;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.flow-dept-badge {
-  background: #f0f9ff;
-  color: #409eff;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.flow-arrow {
-  color: #909399;
-  font-size: 14px;
-  margin: 0 4px;
-}
-
-.flow-target-badge {
-  background: #e8f5e8;
-  color: #67c23a;
-  padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.flow-details {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 8px;
-  flex-wrap: wrap;
-}
-
-.flow-handler {
-  color: #606266;
-  font-size: 14px;
-}
-
-.flow-message {
-  color: #606266;
-  font-size: 14px;
-}
-
-.flow-time {
-  color: #909399;
-  font-size: 14px;
-}
 
 /* 底部内容区域 */
 .bottom-content {
@@ -2247,46 +2254,5 @@ const formatFileSize = (size: number | null) => {
   text-align: right;
 }
 
-/* 文件上传样式 */
-.upload-demo {
-  width: 100%;
-}
 
-.upload-demo :deep(.el-upload-dragger) {
-  width: 100%;
-  height: 120px;
-  border: 2px dashed #d9d9d9;
-  border-radius: 6px;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  transition: border-color 0.3s;
-}
-
-.upload-demo :deep(.el-upload-dragger:hover) {
-  border-color: #409eff;
-}
-
-.upload-icon {
-  font-size: 28px;
-  color: #8c939d;
-  margin-bottom: 16px;
-}
-
-.upload-demo :deep(.el-upload__text) {
-  color: #606266;
-  font-size: 14px;
-  text-align: center;
-}
-
-.upload-demo :deep(.el-upload__text em) {
-  color: #409eff;
-  font-style: normal;
-}
-
-.upload-demo :deep(.el-upload__tip) {
-  font-size: 12px;
-  color: #909399;
-  margin-top: 7px;
-}
 </style>

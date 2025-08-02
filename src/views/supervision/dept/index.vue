@@ -150,7 +150,7 @@
                   <span class="detail-value">{{ formatCreateTime(task.createTime) }}</span>
                 </div>
                 <div v-if="activeTab !== 'done'" class="detail-item">
-                  <span :class="getRemainingTimeClass(task)">{{ getRemainingTimeText(task) }}</span>
+                  <span :class="getPreciseTimeRemainingClass(task)">{{ getPreciseTimeRemaining(task) }}</span>
                 </div>
               </div>
             </div>
@@ -438,42 +438,61 @@ const getDeadlineClass = (task) => {
   return 'deadline-date' // 默认颜色
 }
 
-const getRemainingTimeText = (task) => {
+// 计算精确的剩余时间文本
+const getPreciseTimeRemaining = (task) => {
+  // 从任务的supervisionPageVOData中获取deadline
   const deadline = task.supervisionPageVOData?.deadline
-  const createTime = task.createTime
+  if (!deadline) return null
 
-  if (!deadline || !createTime) return ''
-
-  const deadlineDate = new Date(deadline)
-  const createDate = new Date(createTime)
   const now = new Date()
+  const deadlineDate = new Date(deadline)
+  const timeDiff = deadlineDate.getTime() - now.getTime()
 
-  // 计算剩余时间（以天为单位）
-  const remainingMs = deadlineDate.getTime() - now.getTime()
-  const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24))
+  // 计算绝对时间差
+  const absDiff = Math.abs(timeDiff)
+  const totalMinutes = Math.floor(absDiff / (60 * 1000))
+  const totalHours = Math.floor(absDiff / (60 * 60 * 1000))
+  const totalDays = Math.floor(absDiff / (24 * 60 * 60 * 1000))
 
-  if (remainingDays > 0) {
-    return `剩余${remainingDays}天`
-  } else if (remainingDays === 0) {
-    return '今日到期'
+  if (timeDiff < 0) {
+    // 已超时 - 优先显示更小的时间单位
+    if (totalDays >= 1) {
+      return `超时${totalDays}天`
+    } else if (totalHours >= 1) {
+      return `超时${totalHours}小时`
+    } else if (totalMinutes >= 1) {
+      return `超时${totalMinutes}分钟`
+    } else {
+      return `刚刚超时`
+    }
   } else {
-    return `超期${Math.abs(remainingDays)}天`
+    // 还有剩余时间 - 优先显示更小的时间单位
+    if (totalDays >= 1) {
+      return `剩余${totalDays}天`
+    } else if (totalHours >= 1) {
+      return `剩余${totalHours}小时`
+    } else if (totalMinutes >= 1) {
+      return `剩余${totalMinutes}分钟`
+    } else {
+      return `即将到期`
+    }
   }
 }
 
-const getRemainingTimeClass = (task) => {
+// 获取剩余时间的样式类
+const getPreciseTimeRemainingClass = (task) => {
   const deadline = task.supervisionPageVOData?.deadline
   if (!deadline) return 'remaining-days'
 
-  const deadlineDate = new Date(deadline)
   const now = new Date()
-  const remainingMs = deadlineDate.getTime() - now.getTime()
-  const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24))
+  const deadlineDate = new Date(deadline)
+  const timeDiff = deadlineDate.getTime() - now.getTime()
+  const totalHours = Math.abs(Math.floor(timeDiff / (60 * 60 * 1000)))
 
-  if (remainingDays < 0) {
+  if (timeDiff < 0) {
     return 'remaining-days overdue' // 超期显示红色
-  } else if (remainingDays === 0) {
-    return 'remaining-days urgent' // 今日到期显示橙色
+  } else if (totalHours <= 24) {
+    return 'remaining-days urgent' // 24小时内显示橙色
   } else {
     return 'remaining-days' // 正常显示绿色
   }
@@ -525,7 +544,7 @@ const getStatusText = (task) => {
     return '已结束'
   }
 
-  // 牵头任务和协办任务标签页中的任务根据截止时间判断状态
+  // 牵头任务和协办任务标签页中的任务根据截止时间判断状态（精确到分钟）
   const deadline = task.supervisionPageVOData?.deadline
   if (!deadline) {
     return '进行中' // 没有截止时间默认为进行中
@@ -534,7 +553,7 @@ const getStatusText = (task) => {
   const deadlineDate = new Date(deadline)
   const now = new Date()
 
-  // 如果当前时间超过截止时间，显示"已超时"，否则显示"进行中"
+  // 使用精确时间比较（精确到分钟）
   if (now > deadlineDate) {
     return '已超时'
   } else {
@@ -577,6 +596,7 @@ const viewTaskDetail = async (task) => {
       supervisor: supervisionData.leaderNickname || '',
       priority: getPriorityText(task),
       deadline: supervisionData.deadline ? dateFormatter(null, null, supervisionData.deadline) : '无',
+      deadlineTimestamp: supervisionData.deadline, // 添加原始时间戳
       createTime: dateFormatter(null, null, task.createTime),
       createdDate: dateFormatter(null, null, task.createTime),
       orderNumber: supervisionData.orderCode || '',

@@ -63,6 +63,7 @@ export interface OrderVO {
   supervisionReapprove?: number // 督察办复核状态
   summary?: string // 概述信息（字符串格式）
   startUserSelectAssignees?: Record<string, number[]> // 发起人自选审批人 Map，key为taskKey，value为用户ID数组
+  startLeaderSelectAssignees?: Record<string, number[]>
 }
 
 // 督办单响应 VO
