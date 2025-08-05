@@ -1648,47 +1648,60 @@ const formatFileSize = (size: number | null) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px; /* 与section-title的margin-bottom保持一致 */
+  margin-bottom: 0px; /* 与section-title的margin-bottom保持一致 */
 }
 
 .time-list {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start; /* 改为顶部对齐 */
   flex: 1;
   height: 100%;
-  min-height: 340px; /* 稍微调整最小高度以适应新的内边距 */
-  gap: 16px; /* 在space-between的基础上添加最小间距 */
+  min-height: 340px;
+  gap: 16px; /* 与任务信息的info-group间距保持一致 */
+  padding: 16px; /* 添加与任务信息容器相同的内边距 */
 }
 
 .time-item-card {
   background: #f8f9fa;
+  border: 1px solid #e9ecef;
   border-radius: 8px;
-  padding: 24px 16px; /* 增加上下内边距，让卡片更饱满 */
+  padding: 16px;
   transition: all 0.2s ease;
-  flex: 1; /* 让每个卡片平均分配空间 */
   display: flex;
   flex-direction: column;
-  justify-content: center; /* 垂直居中内容 */
-  min-height: 80px; /* 确保每个卡片有最小高度 */
+  height: 140px; /* 与任务信息的info-group保持一致的高度 */
+  gap: 8px;
 }
 
 .time-item-card:hover {
-  background: #f0f2f5;
-  transform: translateY(-1px);
+  border-color: #409eff;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
 }
 
 .time-item-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
 .time-label {
-  font-size: 14px;
   color: #606266;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.time-label::before {
+  content: '';
+  width: 3px;
+  height: 14px;
+  background: #409eff;
+  border-radius: 2px;
 }
 
 .time-value-with-days {
@@ -1700,12 +1713,19 @@ const formatFileSize = (size: number | null) => {
 .time-icon {
   color: #409eff;
   font-size: 18px;
+  margin-top: 1px;
+  flex-shrink: 0;
 }
 
 .time-value {
-  font-size: 16px;
   color: #303133;
+  font-size: 15px;
   font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  word-wrap: break-word;
+  line-height: 1.5;
+  max-width: 100%;
 }
 
 .time-value.deadline {
@@ -1745,19 +1765,19 @@ const formatFileSize = (size: number | null) => {
 /* 截止时间颜色样式 */
 .time-value.deadline-overdue {
   color: #F56C6C; /* 红色 - 已超时 */
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 500;
 }
 
 .time-value.deadline-finished {
   color: #303133; /* 黑色 - 已结束 */
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 500;
 }
 
 .time-value.deadline-processing {
   color: #E6A23C; /* 橙色 - 进行中 */
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 500;
 }
 

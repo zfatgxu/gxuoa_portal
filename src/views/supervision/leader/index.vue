@@ -778,7 +778,6 @@ onMounted(() => {
   font-size: 20px;
   color: #409eff;
 }
-
 .stats-cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -1105,10 +1104,6 @@ onMounted(() => {
     margin-top: 16px;
   }
 }
-
-
-
-
 
 .history-section {
   margin-top: 20px;
