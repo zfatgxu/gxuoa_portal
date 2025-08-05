@@ -1734,7 +1734,7 @@ const handleSubmit = async () => {
 
     // 保存当前消息到本地数据
     formData.messages[messageKey] = formData.messages[messageKey]
-      ? formData.messages[messageKey] + '\n' + currentMessage.value
+      ? `${formData.messages[messageKey]}\n${currentMessage.value}`
       : currentMessage.value;
 
     // 根据文档类型进行不同的处理
@@ -1794,11 +1794,35 @@ const getFilteredOptions = () => {
 }
 
 // 查看呈文详细内容
-const viewPresentationContent = () => {
+const viewPresentationContent = async () => {
   if (formData.id) {
     // router.push(`/document/document/presentation-view/${formData.id}`)
-    window.open(`/document/presentation-view/${formData.id}?hideLayout=true`, '_blank', 'width=1200,height=800,top=100,left=100,menubar=no,toolbar=no,location=no,status=no')
-
+    if (formData.documentName.includes('请假请示')) {
+      const documentData = await DocumentApi.getDocument(formData.id)
+      const documentContent = documentData.content || documentData.presentationContent || ''
+      
+      // 创建一个临时DOM元素来解析HTML
+      const tempDiv = document.createElement('div')
+      tempDiv.innerHTML = documentContent
+      
+      // 查找链接元素
+      const linkElement = tempDiv.querySelector('a')
+      const href = linkElement ? linkElement.getAttribute('href') : null
+      
+      console.log('href', href)
+      
+      if (href) {
+        // 如果是内部链接（以/开头），使用router导航
+        if (href.startsWith('/')) {
+          window.open(href, '_blank', 'width=1200,height=800,top=100,left=100,menubar=no,toolbar=no,location=no,status=no')
+        }
+      } else {
+        // 如果没有找到链接，回退到默认行为
+        window.open(`/document/presentation-view/${formData.id}?hideLayout=true`, '_blank', 'width=1200,height=800,top=100,left=100,menubar=no,toolbar=no,location=no,status=no')
+      }
+    } else {
+      window.open(`/document/presentation-view/${formData.id}?hideLayout=true`, '_blank', 'width=1200,height=800,top=100,left=100,menubar=no,toolbar=no,location=no,status=no')
+    }
   } else {
     ElMessage.warning('呈文内容不存在')
   }
