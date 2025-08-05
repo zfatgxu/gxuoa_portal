@@ -1,17 +1,4 @@
 import request from '@/config/axios';
-export interface RegisterVO {
-  personId: number // 关联人员表ID
-  deptId: number // 关联部门表ID/来文单位
-  startDate: Date // 请假开始日期
-  endDate: Date // 请假结束日期
-  destination: string // 请假期间前往地点
-  hostArrangement: string // 主持工作负责人安排
-  remark: string // 其他补充信息
-  leaderOpinion: string // 校领导审批意见
-  hostId: string // 工作主持人
-  status: number // 流转状态：1-待会签，2-待审批，3-已通过，0-未通过
-  personAdmitId: number // 审核人
-}
 export interface RegisterFileVO {
   leaveRegisterId: number // 关联LEAVE_REGISTER
   leaveFileUrl: string // 证明材料路径
@@ -46,12 +33,12 @@ export const RegisterApi = {
   },
 
   // 新增请假登记
-  createRegister: async (data: RegisterVO) => {
+  createRegister: async (data: any) => {
     return await request.post({ url: `/leave/register/create`, data })
   },
 
   // 修改请假登记
-  updateRegister: async (data: RegisterVO) => {
+  updateRegister: async (data: any) => {
     return await request.put({ url: `/leave/register/update`, data })
   },
 
@@ -132,8 +119,8 @@ export const ReasonFormApi = {
 // 销假 API
 export const CancelFormApi = {
   // 新增销假流程
-  createCancelForm: async (id: number) => {
-    return await request.get({ url: `/leave/app-cancel-form/create`, params: { registerId: id } })
+  createCancelForm: async (params:any) => {
+    return await request.get({ url: `/leave/app-cancel-form/create`,params})
   },
   // 查询销假表单id
   getCancelFormId: async (processInstanceId: string) => {

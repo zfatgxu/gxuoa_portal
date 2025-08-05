@@ -602,7 +602,7 @@
                   </div>
                 </div>
               </el-popover>
-              <el-button v-if="Number(personnel.level) >= 27 && Number(personnel.level) != 100 && userTask.id==='host_sign'" type="primary" link @click="openApprovalUserSelect(userTask.id)" :disabled="isReadOnly">
+              <el-button v-if="Number(personnel.level) >= 27 && Number(personnel.level) != 100 && userTask.id==='host_sign'" type="primary" link @click="openApprovalUserSelect(userTask.id)" >
                 <Icon icon="ep:plus" />选择代工人
               </el-button>
               <el-button v-if="userTask.id==='leader_sign'" type="primary" link @click="openApprovalUserSelect(userTask.id)" :disabled="isReadOnly">
