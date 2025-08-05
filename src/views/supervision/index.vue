@@ -600,10 +600,6 @@ const getPriorityText = (priority: number | null | undefined): string => {
   }
 }
 
-
-
-
-
 // 获取统计数据
 const getStatisticsData = async () => {
   return await SupervisionIndexApi.getStatistics()

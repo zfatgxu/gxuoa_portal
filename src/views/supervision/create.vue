@@ -387,9 +387,7 @@ const loadSupervisionTypes = async () => {
     const orderType = getSupervisionOrderType()
     // 工作督办是1，专项督办是2
     const typeValue = orderType === 'special' ? 2 : 1
-    console.log('开始加载督办分类，类型:', orderType, '参数:', typeValue)
     const result = await OrderApi.getSupervisionDetailTypes(typeValue)
-    console.log('API返回的督办分类数据:', result)
 
     // 将字符串数组转换为下拉框需要的格式
     if (result && Array.isArray(result)) {
@@ -397,10 +395,8 @@ const loadSupervisionTypes = async () => {
         value: item, // 使用字符串本身作为值
         label: item // 字符串作为显示标签
       }))
-      console.log('转换后的督办分类选项:', supervisionTypeOptions.value)
     } else {
       supervisionTypeOptions.value = []
-      console.log('API返回数据格式不正确或为空')
     }
   } catch (error) {
     console.error('获取督办分类列表失败:', error)
@@ -412,7 +408,6 @@ const loadSupervisionTypes = async () => {
     } else {
       supervisionTypeOptions.value = getIntDictOptions(DICT_TYPE.WORK_SUPERVISION_TYPE)
     }
-    console.log('使用数据字典作为备用方案:', supervisionTypeOptions.value)
   }
 }
 
@@ -579,7 +574,6 @@ const loadDeptList = async () => {
     dataLoading.value = true
     const result = await DeptApi.getSimpleDeptList()
     deptList.value = result || []
-    console.log('部门列表加载成功，数量:', deptList.value.length)
   } catch (error) {
     console.error('加载部门列表失败:', error)
     ElMessage.error('加载部门列表失败')
@@ -653,22 +647,11 @@ const handleCollaborateDeptsChange = (deptNames: string[]) => {
 
 // 处理督办人变化
 const handleSupervisorChange = async (userName: string) => {
-  console.log('=== 督办人变化调试 ===')
-  console.log('选择的督办人姓名:', userName)
-
   const user = userList.value.find(u => (u.nickname || u.username) === userName)
   if (user) {
-    console.log('找到的用户信息:', {
-      id: user.id,
-      nickname: user.nickname,
-      username: user.username,
-      mobile: user.mobile // 检查简单用户信息中是否有手机号
-    })
-
     orderForm.supervisorId = user.id
 
     // 调用API获取督办人手机号
-
     phoneLoading.value = true
     try {
       const phoneData = await OrderApi.getSupervisorPhone(user.id)
@@ -683,12 +666,12 @@ const handleSupervisorChange = async (userName: string) => {
     } catch (error) {
       orderForm.officePhone = ''
       ElMessage.warning('无法获取督办人手机号，请手动填写办公电话')
+    } finally {
+      phoneLoading.value = false
     }
   } else {
-    console.log('未找到督办人用户信息')
     ElMessage.warning('未找到督办人信息')
   }
-
 }
 
 // 获取部门负责人信息
@@ -1053,13 +1036,9 @@ const initSupervisionType = () => {
 
 // 初始化
 onMounted(async () => {
-  console.log('页面开始初始化...')
   await generateOrderNumber()
-  console.log('督办编号生成完成')
   await initData()
-  console.log('数据加载完成')
   initSupervisionType()
-  console.log('督办类型初始化完成')
 })
 </script>
 
