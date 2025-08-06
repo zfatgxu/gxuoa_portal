@@ -2076,6 +2076,10 @@ const formatFileSize = (size: number | null) => {
 /* 工作流时间线样式 */
 .workflow-timeline {
   position: relative;
+  padding: 20px 40px 20px 60px; /* 增加左右内边距 */
+  background: #fafafa;
+  border-radius: 8px;
+  margin-top: 10px;
 }
 
 .workflow-timeline .el-timeline {
@@ -2088,44 +2092,53 @@ const formatFileSize = (size: number | null) => {
 
 .workflow-timeline .el-timeline-item__wrapper {
   position: relative;
-  padding-left: 28px;
-  padding-bottom: 20px;
+  padding-left: 50px; /* 增加左边距 */
+  padding-bottom: 25px; /* 增加底部间距 */
+  margin-bottom: 10px;
 }
 
 .workflow-timeline .el-timeline-item__tail {
   position: absolute;
-  left: 4px;
+  left: 15px; /* 调整线条位置 */
   height: calc(100% - 10px);
-  border-left: 2px solid #e4e7ed;
+  border-left: 3px solid #e4e7ed; /* 加粗线条 */
 }
 
 .workflow-timeline .el-timeline-item__node {
   position: absolute;
+  left: 0; /* 调整节点位置 */
   background-color: #fff;
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* 添加阴影 */
 }
 
 .workflow-timeline .el-timeline-item__content {
   color: #303133;
+  background: #fff;
+  padding: 15px 20px; /* 增加内边距 */
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08); /* 添加卡片阴影 */
+  border: 1px solid #f0f0f0;
 }
 
 /* 工作流节点样式 */
 .workflow-node-container {
   position: absolute;
-  left: -10px;
+  left: -21px; /* 调整节点容器位置 */
   top: -6px;
-  width: 30px;
-  height: 30px;
+  width: 32px; /* 稍微增大节点 */
+  height: 32px;
   border-radius: 50%;
-  border: 1px solid #dedede;
+  border: 2px solid #fff; /* 白色边框 */
   display: flex;
   justify-content: center;
   align-items: center;
   background-color: #3f73f7;
   padding: 5px;
+  box-shadow: 0 2px 8px rgba(63, 115, 247, 0.3); /* 添加蓝色阴影 */
 }
 
 .workflow-node-img {
@@ -2149,31 +2162,38 @@ const formatFileSize = (size: number | null) => {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
+  gap: 12px; /* 增加间距 */
+  width: 100%;
 }
 
 .workflow-activity-header {
   display: flex;
   width: 100%;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .workflow-activity-name {
   font-weight: bold;
+  font-size: 16px; /* 增大字体 */
+  color: #303133;
 }
 
 .workflow-activity-time {
-  color: #a5a5a5;
-  font-size: 13px;
-  margin-top: 4px;
+  color: #909399;
+  font-size: 14px; /* 增大时间字体 */
+  margin-top: 0;
   margin-left: auto;
+  white-space: nowrap;
 }
 
 .workflow-activity-tasks {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  margin-top: 4px;
-  gap: 8px;
+  margin-top: 8px;
+  gap: 12px; /* 增加间距 */
+  width: 100%;
 }
 
 /* 工作流任务样式 */

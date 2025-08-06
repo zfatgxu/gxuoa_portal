@@ -1007,6 +1007,7 @@ const handleExceed = () => {
 
 .material-input {
   width: 100%;
+  height: 40px;
 }
 
 .material-input .el-input__inner {
@@ -1120,7 +1121,7 @@ const handleExceed = () => {
 
 .signature-input {
   flex: 1;
-  max-width: 300px;
+  max-width: 350px;
 }
 
 .material-type-content {
@@ -1293,6 +1294,6 @@ const handleExceed = () => {
 }
 
 .signature-input-small {
-  width: 150px;
+  width: 160px;
 }
 </style>

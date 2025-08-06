@@ -4,8 +4,7 @@
       <!-- 页面标题和操作按钮 -->
       <div class="page-header mb-6">
         <div class="flex justify-center items-center">
-          <h2 class="text-2xl font-bold text-red-600">督办单详情</h2>
-
+          <h2 class="text-2xl font-bold text-red-600">{{ getPageTitle() }}</h2>
         </div>
       </div>
 
@@ -664,6 +663,22 @@ const formatDate = (timestamp: number | string | null) => {
   if (isNaN(time) || time <= 0) return '未设置'
   
   return utilFormatDate(new Date(time), 'YYYY/MM/DD HH:mm')
+}
+
+// 获取页面标题
+const getPageTitle = () => {
+  if (!orderDetail.value.type) {
+    return '督办单详情'
+  }
+
+  // type: 1=工作督办, 2=专项督办
+  if (orderDetail.value.type === 1) {
+    return '广西大学工作督办单'
+  } else if (orderDetail.value.type === 2) {
+    return '广西大学专项督办单'
+  } else {
+    return '广西大学督办单'
+  }
 }
 
 // 获取督办分类名称

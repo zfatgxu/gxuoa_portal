@@ -95,6 +95,10 @@
                 style="width: 100%"
                 format="YYYY-MM-DD HH:mm"
                 value-format="YYYY-MM-DD HH:mm:ss"
+                :disabled-date="disabledDate"
+                :disabled-hours="disabledHours"
+                :disabled-minutes="disabledMinutes"
+                :default-time="defaultTime"
               />
             </el-form-item>
           </el-col>
@@ -519,7 +523,25 @@ const rules = {
     { required: true, message: '请选择重要程度', trigger: 'change' }
   ],
   deadline: [
-    { required: true, message: '请选择要求完成时间', trigger: 'change' }
+    { required: true, message: '请选择要求完成时间', trigger: 'change' },
+    {
+      validator: (rule: any, value: string, callback: any) => {
+        if (!value) {
+          callback()
+          return
+        }
+
+        const selectedDateTime = new Date(value)
+        const now = new Date()
+
+        if (selectedDateTime.getTime() <= now.getTime()) {
+          callback(new Error('完成时间不能早于当前时间'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'change'
+    }
   ],
   leadDept: [
     { required: true, message: '请选择牵头单位', trigger: 'change' }
@@ -761,6 +783,58 @@ const getReapprovalLabel = (value: number): string => {
   const dict = getIntDictOptions(DICT_TYPE.SUPERVISION_REAPPROVE_TYPE).find(d => d.value === value)
   return dict?.label || ''
 }
+
+// 计算默认时间（当前时间的下一个小时）
+const getDefaultTime = () => {
+  const now = new Date()
+  const nextHour = new Date(now)
+  nextHour.setHours(now.getHours() + 1, 0, 0, 0)
+  return nextHour
+}
+
+// 设置默认时间
+const defaultTime = ref(getDefaultTime())
+
+// 禁用今日之前的日期
+const disabledDate = (time: Date) => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0) // 设置为今天的开始时间
+  return time.getTime() < today.getTime()
+}
+
+// 禁用小时
+const disabledHours = () => {
+  const now = new Date()
+  const selectedDate = orderForm.deadline ? new Date(orderForm.deadline) : null
+
+  // 如果选择的是今天，则禁用当前小时之前的小时
+  if (selectedDate && selectedDate.toDateString() === now.toDateString()) {
+    const hours = []
+    for (let i = 0; i < now.getHours(); i++) {
+      hours.push(i)
+    }
+    return hours
+  }
+  return []
+}
+
+// 禁用分钟
+const disabledMinutes = (hour: number) => {
+  const now = new Date()
+  const selectedDate = orderForm.deadline ? new Date(orderForm.deadline) : null
+
+  // 如果选择的是今天且是当前小时，则禁用当前分钟之前的分钟
+  if (selectedDate && selectedDate.toDateString() === now.toDateString() && hour === now.getHours()) {
+    const minutes = []
+    for (let i = 0; i <= now.getMinutes(); i++) {
+      minutes.push(i)
+    }
+    return minutes
+  }
+  return []
+}
+
+
 
 // 自动生成概述内容
 const generateAutoSummary = () => {
