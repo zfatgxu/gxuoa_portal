@@ -733,7 +733,6 @@ const getCategoryLabel = (value: string | number): string => {
   if (dict) {
     return dict.label
   }
-
   // 如果都没找到，返回空字符串
   return ''
 }

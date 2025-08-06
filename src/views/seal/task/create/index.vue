@@ -48,7 +48,7 @@
           <!-- 用户添加的印章类型 -->
           <div class="seal-item" v-for="(seal, index) in customSealTypes" :key="'custom-'+index">
             <div class="seal-name-select">
-              <el-select v-model="seal.id" placeholder="请选择印章类型" size="small" class="custom-seal-select">
+              <el-select v-model="seal.id" placeholder="请选择印章类型" size="large" class="custom-seal-select">
                 <el-option
                   v-for="option in sealTypeOptions"
                   :key="option.id"
@@ -83,46 +83,26 @@
             :rules="startUserSelectAssigneesFormRules"
             ref="startUserSelectAssigneesFormRef"
           >
-            <!-- 经办人签字选择框 -->
-            <div class="signature-row">
-              <span class="required">经办人签字</span>
-              <el-select
-                v-model="managerSigner"
-                placeholder="请选择经办人"
-                class="signature-input"
-                filterable
-                clearable
-              >
-                <el-option
-                  v-for="user in allUsersList"
-                  :key="user.id"
-                  :label="user.nickname"
-                  :value="user.id"
-                >
-                  <span>{{ user.nickname }}</span>
-                </el-option>
-              </el-select>
-            </div>
-            
-            <!-- 审批人签字选择框 -->
-            <div class="signature-row">
-              <span class="required">审批人签字</span>
-              <el-select
-                v-model="approverSigner"
-                placeholder="请选择审批人"
-                class="signature-input"
-                filterable
-                clearable
-              >
-                <el-option
-                  v-for="user in allUsersList"
-                  :key="user.id"
-                  :label="user.nickname"
-                  :value="user.id"
-                >
-                  <span>{{ user.nickname }}</span>
-                </el-option>
-              </el-select>
+            <!-- 经办人和审批人签字输入框 - 合并为一行 -->
+            <div class="signature-row-combined">
+              <div class="signature-item">
+                <span class="signature-label required">经办人：</span>
+                <el-input
+                  v-model="managerSigner"
+                  placeholder="请输入经办人"
+                  class="signature-input-small"
+                  clearable
+                />
+              </div>
+              <div class="signature-item">
+                <span class="signature-label required">审批人：</span>
+                <el-input
+                  v-model="approverSigner"
+                  placeholder="请输入审批人"
+                  class="signature-input-small"
+                  clearable
+                />
+              </div>
             </div>
             
             <!-- 单位负责人签字选择框 -->
@@ -136,7 +116,7 @@
                 clearable
               >
                 <el-option
-                  v-for="user in allUsersList"
+                  v-for="user in sameDeptUsersList"
                   :key="user.id"
                   :label="user.nickname"
                   :value="user.id"
@@ -227,11 +207,19 @@
 
       <!-- 单位签字 -->
       <div class="form-section">
-        <div class="section-header required">申请人联系电话</div>
+        <div class="section-header required">联系电话</div>
         <div class="signature-content">
           <div class="signature-row">
             <el-input v-model="form.contactPhone" placeholder="请输入您的联系电话" class="signature-input" />
           </div>
+        </div>
+      </div>
+
+      <!-- 印章使用注意事项 -->
+      <div class="form-section" v-if="selectedUnit && unitNoticeContent">
+        <div class="section-header">印章使用<br/>注意事项</div>
+        <div class="notice-content">
+          <div class="notice-text" v-html="unitNoticeContent"></div>
         </div>
       </div>
 
@@ -265,6 +253,7 @@ import { ElMessage } from 'element-plus'
 import { UploadFilled, Document, Check, Close, Paperclip, Plus, Edit } from '@element-plus/icons-vue'
 import * as DefinitionApi from '@/api/bpm/definition'
 import * as UserApi from '@/api/system/user'
+import { useUserStore } from '@/store/modules/user'
 import { parseStartUserSelectTasks } from '@/utils/parseBpmn'
 import * as SealApi from '@/api/seal'
 import { DICT_TYPE, getDictOptions } from '@/utils/dict'
@@ -278,6 +267,7 @@ import { useRouter } from 'vue-router'
 // 接传过来的数据
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 
 // 表单数据
 const form = reactive({
@@ -541,13 +531,13 @@ const submitForm = async () => {
 
   // 校验指定审批人
   if (startUserSelectTasks.value?.length > 0) {
-    // 校验三个独立的签字人是否都已选择
-    if (!managerSigner.value) {
-      ElMessage.error('请选择经办人签字');
+    // 校验三个独立的签字人是否都已填写
+    if (!managerSigner.value || managerSigner.value.trim() === '') {
+      ElMessage.error('请输入经办人签字');
       return;
     }
-    if (!approverSigner.value) {
-      ElMessage.error('请选择审批人签字');
+    if (!approverSigner.value || approverSigner.value.trim() === '') {
+      ElMessage.error('请输入审批人签字');
       return;
     }
     if (!unitLeaderSigner.value) {
@@ -555,15 +545,13 @@ const submitForm = async () => {
       return;
     }
 
-    // 将三个签字人分配给对应的任务
+    // 简化后的任务映射
     startUserSelectTasks.value.forEach(task => {
-      if (task.name === '经办人签字') {
-        startUserSelectAssignees.value[task.id] = [managerSigner.value];
-      } else if (task.name === '审批人签字') {
-        startUserSelectAssignees.value[task.id] = [approverSigner.value];
-      } else if (task.name === '单位负责人签字') {
+      if (task.name === '单位负责人') {
+        // 只需要指定单位负责人
         startUserSelectAssignees.value[task.id] = [unitLeaderSigner.value];
       }
+      // 用印审核人节点不需要前端指定，后端根据部门自动分配
     });
   }
 
@@ -590,7 +578,10 @@ const submitForm = async () => {
     attachments: simplifiedFiles,//附件json，文件名，文件大小，文件路径
 
     // 印章类型表数据
-    sealTypes: [...defaultSealTypes.value, ...customSealTypes.value]
+    sealTypes: [...defaultSealTypes.value, ...customSealTypes.value],
+
+    // 申请印章所在的单位ID（后端根据此ID自动分配用印审核人）
+    applyDeptId: selectedUnit.value.id
   }
 
   // 设置指定审批人
@@ -617,10 +608,86 @@ const auditUserList = ref<Array<any>>([])
 // 合并用户列表和审批人列表，用于合并的签字选择框
 const managerTask = ref(null) // 经办人签字任务
 const allUsersList = ref([]) // 合并后的用户列表
+const sameDeptUsersList = ref([]) // 同部门用户列表
 const combinedSigners = ref([]) // 合并的签字人列表
 const managerSigner = ref('')
 const approverSigner = ref('')
 const unitLeaderSigner = ref('')
+
+// 印章使用注意事项相关
+const unitNoticeContent = ref('') // 当前单位的印章使用注意事项
+
+// 获取单位印章使用注意事项
+const getUnitNotice = async (unitId: number, unitName: string) => {
+  try {
+    // TODO: 这里调用真实的API接口
+    // const notice = await SealApi.getUnitSealNotice(unitId)
+    // unitNoticeContent.value = notice
+
+    // 模拟数据 - 根据不同单位返回不同的注意事项
+    const mockNotices = {
+      '财务处': `
+        <div style="line-height: 1.6;">
+          <p>1. 财务专用章仅限用于财务相关文件，如合同、发票、收据等；</p>
+          <p>2. 使用前必须经过财务处长审批，紧急情况可电话确认；</p>
+          <p>3. 印章使用后需在《印章使用登记表》上详细记录；</p>
+          <p>4. 严禁在空白文件上盖章，必须填写完整内容后方可用印；</p>
+          <p>5. 如有疑问请联系财务处办公室：0771-1234567。</p>
+        </div>
+      `,
+      '人事处': `
+        <div style="line-height: 1.6;">
+          <p>1. 人事专用章主要用于人事任免、工资证明、劳动合同等文件；</p>
+          <p>2. 涉及人员调动、职务变更的文件需处长亲自审核；</p>
+          <p>3. 工资证明类文件需提供相关证明材料；</p>
+          <p>4. 印章保管人员变更需及时报备；</p>
+          <p>5. 联系电话：0771-2345678。</p>
+        </div>
+      `,
+      '教务处': `
+        <div style="line-height: 1.6;">
+          <p>1. 教务专用章用于学籍管理、成绩证明、毕业证书等教学文件；</p>
+          <p>2. 学生成绩单、学历证明需经教务处长审批；</p>
+          <p>3. 考试相关文件需在考试前3天完成用印；</p>
+          <p>4. 毕业证书用印需严格按照毕业生名单核对；</p>
+          <p>5. 如需加急处理请提前说明原因，联系电话：0771-3456789。</p>
+        </div>
+      `,
+      '办公室': `
+        <div style="line-height: 1.6;">
+          <p>1. 学校公章使用需经办公室主任或校领导审批；</p>
+          <p>2. 对外正式文件、合同协议必须使用学校公章；</p>
+          <p>3. 用印时间：工作日上午8:30-11:30，下午14:30-17:30；</p>
+          <p>4. 紧急用印需提供紧急情况说明；</p>
+          <p>5. 印章使用完毕需当场归还，联系电话：0771-4567890。</p>
+        </div>
+      `,
+      '计算机与电子信息学院': `
+        <div style="line-height: 1.6;">
+          <p>1. 印章使用前需经过部门负责人审批；</p>
+          <p>2. 严格按照印章管理制度执行；</p>
+          <p>3. 使用后需及时归还并做好登记；</p>
+          <p>4. 如有疑问请联系本部门办公室。</p>
+        </div>
+      `
+    }
+
+    // 根据单位名称获取对应的注意事项，如果没有则使用通用注意事项
+    unitNoticeContent.value = mockNotices[unitName] || `
+      <div style="line-height: 1.6;">
+        <p>1. 印章使用前需经过部门负责人审批；</p>
+        <p>2. 严格按照印章管理制度执行；</p>
+        <p>3. 使用后需及时归还并做好登记；</p>
+        <p>4. 如有疑问请联系本部门办公室。</p>
+      </div>
+    `
+
+    console.log(`已加载${unitName}的印章使用注意事项`)
+  } catch (error) {
+    console.error('获取单位印章使用注意事项失败:', error)
+    unitNoticeContent.value = ''
+  }
+}
 
 onMounted(async () => {
   await fetchUnitList()
@@ -669,6 +736,19 @@ onMounted(async () => {
           const allUsers = await UserApi.getSimpleUserList({pageSize: 1000}) // 设置较大的pageSize确保获取全部用户
           allUsersList.value = allUsers
           console.log('设置完整用户列表:', allUsersList.value.length)
+
+          // 获取当前登录用户的部门ID，并获取同部门用户
+          const currentUser = userStore.getUser
+          if (currentUser && currentUser.deptId) {
+            // 根据部门ID获取同部门用户
+            const sameDeptUsers = allUsers.filter(user => user.deptId === currentUser.deptId)
+            sameDeptUsersList.value = sameDeptUsers
+            console.log('设置同部门用户列表:', sameDeptUsersList.value.length)
+          } else {
+            // 如果无法获取当前用户部门信息，则使用所有用户
+            sameDeptUsersList.value = allUsers
+            console.log('无法获取当前用户部门信息，使用所有用户作为同部门用户')
+          }
         } catch (error) {
           console.error('加载用户列表失败:', error)
           ElMessage.error('加载用户列表失败，请刷新页面重试')
@@ -724,12 +804,18 @@ const resetUnit = () => {
   customSealTypes.value = []
   // 清空审核人列表
   auditUserList.value = []
+  // 清空注意事项
+  unitNoticeContent.value = ''
 }
 
-// 监听selectedUnit变化，当选择了单位时获取印章类型
+// 监听selectedUnit变化，当选择了单位时获取印章类型和注意事项
 watch(selectedUnit, async (newVal) => {
   if (newVal) {
     getSealTypeOptions()
+
+    // 加载单位印章使用注意事项
+    await getUnitNotice(newVal.id, newVal.name)
+
     // 更新审核人列表 - 修改这部分
     try {
       // 方案1：如果后端有根据部门ID获取用户的接口，使用正确的API
@@ -753,8 +839,9 @@ watch(selectedUnit, async (newVal) => {
       }
     }
   } else {
-    // 清空审核人列表
+    // 清空审核人列表和注意事项
     auditUserList.value = []
+    unitNoticeContent.value = ''
   }
 })
 
@@ -917,7 +1004,14 @@ const handleExceed = () => {
 }
 
 .custom-seal-select {
-  width: 180px;
+  width: 300px;
+  font-size: 12px;
+}
+
+.custom-seal-select .el-input__inner {
+  font-size: 16px;
+  height: 40px;
+  line-height: 40px;
 }
 
 .seal-name-select {
@@ -1077,7 +1171,14 @@ const handleExceed = () => {
 }
 
 .custom-seal-select {
-  width: 180px;
+  width: 280px;
+  font-size: 16px;
+}
+
+.custom-seal-select .el-input__inner {
+  font-size: 16px;
+  height: 40px;
+  line-height: 40px;
 }
 
 .seal-name-select {
@@ -1102,5 +1203,56 @@ const handleExceed = () => {
 .edit-unit-btn {
   font-size: 14px;
   padding: 2px 5px;
+}
+
+/* 注意事项样式 */
+.notice-content {
+  flex: 1;
+  padding: 15px;
+  background: #e8f4fd;
+}
+
+.notice-text {
+  color: #606266;
+  font-size: 14px;
+  line-height: 1.8;
+  margin: 0;
+}
+
+.notice-text p {
+  margin: 8px 0;
+  padding-left: 0;
+}
+
+.notice-text p:first-child {
+  margin-top: 0;
+}
+
+.notice-text p:last-child {
+  margin-bottom: 0;
+}
+
+/* 经办人和审批人签字合并样式 */
+.signature-row-combined {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  margin-bottom: 15px;
+}
+
+.signature-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.signature-label {
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+}
+
+.signature-input-small {
+  width: 150px;
 }
 </style>
