@@ -29,8 +29,6 @@
         <div class="material-name-content">
           <el-input
             v-model="form.materialName"
-            type="textarea"
-            :rows="1"
             placeholder="请输入材料名称"
             class="material-input"
           />
@@ -621,7 +619,7 @@ const submitForm = async () => {
     applyDept: selectedUnit.value.id,
 
     // 签字人信息
-    signers: {
+    startUserSelectAssignees: {
       handler: getSignerInfo(managerSigner.value),
       reviewer: getSignerInfo(approverSigner.value),
       unitHead: {
@@ -1009,6 +1007,12 @@ const handleExceed = () => {
 
 .material-input {
   width: 100%;
+}
+
+.material-input .el-input__inner {
+  height: 36px;
+  line-height: 36px;
+  font-size: 14px;
 }
 
 .seal-type-content {
