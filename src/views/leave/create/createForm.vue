@@ -456,10 +456,10 @@
 
           <!-- 前往地点 -->
           <el-descriptions-item label="前往地点(必填)" label-class-name="approval-label">
-            <div v-for="(loc, index) in destinations" :key="index" style="display: flex;align-items: center;">
+            <div v-for="(loc, index) in destinations" :key="index" style="display: flex;align-items: center;margin-bottom: 10px;">
               <!-- <span class="detail-label">国内</span> -->
               <el-cascader :options="pcaTextArr" v-model="loc.destination" clearable style="width: 100%;"/>
-              <el-input v-model="loc.destinationDetail" placeholder="可选填写详细地址（如门牌号、楼层等）" clearable style="margin-left: 10px;" type="textarea" autosize/>
+<!--              <el-input v-model="loc.destinationDetail" placeholder="可选填写详细地址（如门牌号、楼层等）" clearable style="margin-left: 10px;" type="textarea" autosize/>-->
               <el-button 
                 v-if="index === destinations.length - 1" 
                 type="primary" 

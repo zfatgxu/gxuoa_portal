@@ -415,7 +415,7 @@
             <div v-for="(loc, index) in destinations" :key="index" class="detail-item">
               <!-- <span class="detail-label">国内</span> -->
               <el-cascader :options="pcaTextArr" v-model="loc.destination" :disabled="isReadOnly" clearable style="width: 100%;"/>
-              <el-input v-model="loc.destinationDetail" placeholder="可选填写详细地址（如门牌号、楼层等）" clearable style="margin-left: 10px;" :disabled="isReadOnly"/>
+<!--              <el-input v-model="loc.destinationDetail" placeholder="可选填写详细地址（如门牌号、楼层等）" clearable style="margin-left: 10px;" :disabled="isReadOnly"/>-->
             </div>
             <!-- <div class="detail-item">
               <span class="detail-label">国外</span>
@@ -1204,4 +1204,3 @@ const userSelectFormRef = ref() // 添加 ref 引用
     width: 70%;
   }
   </style>
-  
