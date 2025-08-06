@@ -30,7 +30,7 @@
           <el-input
             v-model="form.materialName"
             type="textarea"
-            :rows="3"
+            :rows="1"
             placeholder="请输入材料名称"
             class="material-input"
           />
@@ -39,16 +39,18 @@
 
       <!-- 印章类型 -->
       <div class="form-section">
-        <div class="section-header required">
-          <el-button type="primary" link @click="addCustomSeal" size="small">
-            <el-icon><Plus /></el-icon> 添加印章类型
-          </el-button>
-        </div>
+        <div class="section-header required">印章类型</div>
         <div class="seal-type-content">
+          <!-- 添加印章类型按钮 -->
+          <div class="add-seal-section">
+            <el-button type="primary" link @click="addCustomSeal" class="add-seal-btn">
+              <el-icon><Plus /></el-icon> 添加印章类型
+            </el-button>
+          </div>
           <!-- 用户添加的印章类型 -->
           <div class="seal-item" v-for="(seal, index) in customSealTypes" :key="'custom-'+index">
             <div class="seal-name-select">
-              <el-select v-model="seal.id" placeholder="请选择印章类型" size="large" class="custom-seal-select">
+              <el-select v-model="seal.id" placeholder="请选择印章类型" class="custom-seal-select">
                 <el-option
                   v-for="option in sealTypeOptions"
                   :key="option.id"
@@ -215,14 +217,6 @@
         </div>
       </div>
 
-      <!-- 印章使用注意事项 -->
-      <div class="form-section" v-if="selectedUnit && unitNoticeContent">
-        <div class="section-header">印章使用<br/>注意事项</div>
-        <div class="notice-content">
-          <div class="notice-text" v-html="unitNoticeContent"></div>
-        </div>
-      </div>
-
       <div class="form-section">
         <div class="section-header">请填写备注</div>
         <div class="notes-content">
@@ -232,6 +226,14 @@
             :rows="4"
             placeholder="请填写备注"
           />
+        </div>
+      </div>
+
+      <!-- 印章使用注意事项 -->
+      <div class="form-section" v-if="selectedUnit && unitNoticeContent">
+        <div class="section-header">印章使用注意事项</div>
+        <div class="notice-content">
+          <div class="notice-text" v-html="unitNoticeContent"></div>
         </div>
       </div>
 
@@ -484,6 +486,41 @@ const viewFile = (file) => {
   KKFileView.preview(file.url)
 }
 
+// 根据用户姓名查找用户ID，找不到就返回原始姓名
+const findUserIdByName = (userName: string) => {
+  if (!userName || userName.trim() === '') return ""
+
+  // 在所有用户列表中查找匹配的用户
+  const user = allUsersList.value.find(user =>
+    user.nickname === userName.trim() || user.username === userName.trim()
+  )
+
+  // 找到用户返回ID，找不到返回原始姓名
+  return user ? user.id : userName.trim()
+}
+
+// 获取签字人信息，找到用户ID就传ID，找不到就只传姓名
+const getSignerInfo = (userName: string) => {
+  if (!userName || userName.trim() === '') {
+    return { name: "", signed: false }
+  }
+
+  // 在所有用户列表中查找匹配的用户
+  const user = allUsersList.value.find(user =>
+    user.nickname === userName.trim() || user.username === userName.trim()
+  )
+
+  if (user) {
+    // 找到用户，返回包含ID的信息
+    return { id: user.id, name: userName.trim(), signed: false }
+  } else {
+    // 找不到用户，只返回姓名
+    return { name: userName.trim(), signed: false }
+  }
+}
+
+
+
 // 提交表单
 const submitForm = async () => {
   // 验证必填字段
@@ -544,7 +581,7 @@ const submitForm = async () => {
       ElMessage.error('请选择单位负责人签字');
       return;
     }
-
+    
     // 简化后的任务映射
     startUserSelectTasks.value.forEach(task => {
       if (task.name === '单位负责人') {
@@ -581,12 +618,18 @@ const submitForm = async () => {
     sealTypes: [...defaultSealTypes.value, ...customSealTypes.value],
 
     // 申请印章所在的单位ID（后端根据此ID自动分配用印审核人）
-    applyDeptId: selectedUnit.value.id
-  }
+    applyDept: selectedUnit.value.id,
 
-  // 设置指定审批人
-  if (startUserSelectTasks.value?.length > 0) {
-    submitData.startUserSelectAssignees = startUserSelectAssignees.value
+    // 签字人信息
+    signers: {
+      handler: getSignerInfo(managerSigner.value),
+      reviewer: getSignerInfo(approverSigner.value),
+      unitHead: {
+        id: [unitLeaderSigner.value],
+        name: sameDeptUsersList.value.find(user => user.id === unitLeaderSigner.value)?.nickname || "",
+        signed: false
+      }
+    }
   }
 
   // 提交数据到后端
@@ -949,16 +992,18 @@ const handleExceed = () => {
   border-right: 1px solid #ddd;
   font-weight: bold;
   color: #333;
+  font-size: 16px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   text-align: center;
   min-height: 60px;
+  line-height: 1.4;
 }
 
 .material-name-content {
   flex: 1;
-  padding: 15px;
+  padding: 20px 15px;
   background: #e8f4fd;
 }
 
@@ -1004,14 +1049,14 @@ const handleExceed = () => {
 }
 
 .custom-seal-select {
-  width: 300px;
-  font-size: 12px;
+  width: 250px;
+  font-size: 14px;
 }
 
 .custom-seal-select .el-input__inner {
-  font-size: 16px;
-  height: 40px;
-  line-height: 40px;
+  font-size: 14px;
+  height: 36px;
+  line-height: 36px;
 }
 
 .seal-name-select {
@@ -1170,16 +1215,7 @@ const handleExceed = () => {
   text-align: center;
 }
 
-.custom-seal-select {
-  width: 280px;
-  font-size: 16px;
-}
 
-.custom-seal-select .el-input__inner {
-  font-size: 16px;
-  height: 40px;
-  line-height: 40px;
-}
 
 .seal-name-select {
   flex: 1;
