@@ -261,7 +261,7 @@ import { useRoute } from 'vue-router'
 import { getAccessToken } from '@/utils/auth'
 import { useUpload } from '@/components/UploadFile/src/useUpload'
 import { sealApi } from '@/api/seal/seal'
-import { getSimpleDeptList } from '@/api/system/dept'
+import { getSimpleDeptList, getDept } from '@/api/system/dept'
 import { useRouter } from 'vue-router'
 
 // 接传过来的数据
@@ -661,67 +661,70 @@ const unitNoticeContent = ref('') // 当前单位的印章使用注意事项
 // 获取单位印章使用注意事项
 const getUnitNotice = async (unitId: number, unitName: string) => {
   try {
-    // TODO: 这里调用真实的API接口
-    // const notice = await SealApi.getUnitSealNotice(unitId)
-    // unitNoticeContent.value = notice
+    const notice = await getDept(unitId)
+    if (!notice.sealAttention) {
+      unitNoticeContent.value = ''
+      return
+    }
+    unitNoticeContent.value = notice.sealAttention.replace(/(\d+\.)/g, '<br>$1').replace(/^<br>/, '')
 
     // 模拟数据 - 根据不同单位返回不同的注意事项
-    const mockNotices = {
-      '财务处': `
-        <div style="line-height: 1.6;">
-          <p>1. 财务专用章仅限用于财务相关文件，如合同、发票、收据等；</p>
-          <p>2. 使用前必须经过财务处长审批，紧急情况可电话确认；</p>
-          <p>3. 印章使用后需在《印章使用登记表》上详细记录；</p>
-          <p>4. 严禁在空白文件上盖章，必须填写完整内容后方可用印；</p>
-          <p>5. 如有疑问请联系财务处办公室：0771-1234567。</p>
-        </div>
-      `,
-      '人事处': `
-        <div style="line-height: 1.6;">
-          <p>1. 人事专用章主要用于人事任免、工资证明、劳动合同等文件；</p>
-          <p>2. 涉及人员调动、职务变更的文件需处长亲自审核；</p>
-          <p>3. 工资证明类文件需提供相关证明材料；</p>
-          <p>4. 印章保管人员变更需及时报备；</p>
-          <p>5. 联系电话：0771-2345678。</p>
-        </div>
-      `,
-      '教务处': `
-        <div style="line-height: 1.6;">
-          <p>1. 教务专用章用于学籍管理、成绩证明、毕业证书等教学文件；</p>
-          <p>2. 学生成绩单、学历证明需经教务处长审批；</p>
-          <p>3. 考试相关文件需在考试前3天完成用印；</p>
-          <p>4. 毕业证书用印需严格按照毕业生名单核对；</p>
-          <p>5. 如需加急处理请提前说明原因，联系电话：0771-3456789。</p>
-        </div>
-      `,
-      '办公室': `
-        <div style="line-height: 1.6;">
-          <p>1. 学校公章使用需经办公室主任或校领导审批；</p>
-          <p>2. 对外正式文件、合同协议必须使用学校公章；</p>
-          <p>3. 用印时间：工作日上午8:30-11:30，下午14:30-17:30；</p>
-          <p>4. 紧急用印需提供紧急情况说明；</p>
-          <p>5. 印章使用完毕需当场归还，联系电话：0771-4567890。</p>
-        </div>
-      `,
-      '计算机与电子信息学院': `
-        <div style="line-height: 1.6;">
-          <p>1. 印章使用前需经过部门负责人审批；</p>
-          <p>2. 严格按照印章管理制度执行；</p>
-          <p>3. 使用后需及时归还并做好登记；</p>
-          <p>4. 如有疑问请联系本部门办公室。</p>
-        </div>
-      `
-    }
-
-    // 根据单位名称获取对应的注意事项，如果没有则使用通用注意事项
-    unitNoticeContent.value = mockNotices[unitName] || `
-      <div style="line-height: 1.6;">
-        <p>1. 印章使用前需经过部门负责人审批；</p>
-        <p>2. 严格按照印章管理制度执行；</p>
-        <p>3. 使用后需及时归还并做好登记；</p>
-        <p>4. 如有疑问请联系本部门办公室。</p>
-      </div>
-    `
+    // const mockNotices = {
+    //   '财务处': `
+    //     <div style="line-height: 1.6;">
+    //       <p>1. 财务专用章仅限用于财务相关文件，如合同、发票、收据等；</p>
+    //       <p>2. 使用前必须经过财务处长审批，紧急情况可电话确认；</p>
+    //       <p>3. 印章使用后需在《印章使用登记表》上详细记录；</p>
+    //       <p>4. 严禁在空白文件上盖章，必须填写完整内容后方可用印；</p>
+    //       <p>5. 如有疑问请联系财务处办公室：0771-1234567。</p>
+    //     </div>
+    //   `,
+    //   '人事处': `
+    //     <div style="line-height: 1.6;">
+    //       <p>1. 人事专用章主要用于人事任免、工资证明、劳动合同等文件；</p>
+    //       <p>2. 涉及人员调动、职务变更的文件需处长亲自审核；</p>
+    //       <p>3. 工资证明类文件需提供相关证明材料；</p>
+    //       <p>4. 印章保管人员变更需及时报备；</p>
+    //       <p>5. 联系电话：0771-2345678。</p>
+    //     </div>
+    //   `,
+    //   '教务处': `
+    //     <div style="line-height: 1.6;">
+    //       <p>1. 教务专用章用于学籍管理、成绩证明、毕业证书等教学文件；</p>
+    //       <p>2. 学生成绩单、学历证明需经教务处长审批；</p>
+    //       <p>3. 考试相关文件需在考试前3天完成用印；</p>
+    //       <p>4. 毕业证书用印需严格按照毕业生名单核对；</p>
+    //       <p>5. 如需加急处理请提前说明原因，联系电话：0771-3456789。</p>
+    //     </div>
+    //   `,
+    //   '办公室': `
+    //     <div style="line-height: 1.6;">
+    //       <p>1. 学校公章使用需经办公室主任或校领导审批；</p>
+    //       <p>2. 对外正式文件、合同协议必须使用学校公章；</p>
+    //       <p>3. 用印时间：工作日上午8:30-11:30，下午14:30-17:30；</p>
+    //       <p>4. 紧急用印需提供紧急情况说明；</p>
+    //       <p>5. 印章使用完毕需当场归还，联系电话：0771-4567890。</p>
+    //     </div>
+    //   `,
+    //   '计算机与电子信息学院': `
+    //     <div style="line-height: 1.6;">
+    //       <p>1. 印章使用前需经过部门负责人审批；</p>
+    //       <p>2. 严格按照印章管理制度执行；</p>
+    //       <p>3. 使用后需及时归还并做好登记；</p>
+    //       <p>4. 如有疑问请联系本部门办公室。</p>
+    //     </div>
+    //   `
+    // }
+    //
+    // // 根据单位名称获取对应的注意事项，如果没有则使用通用注意事项
+    // unitNoticeContent.value = mockNotices[unitName] || `
+    //   <div style="line-height: 1.6;">
+    //     <p>1. 印章使用前需经过部门负责人审批；</p>
+    //     <p>2. 严格按照印章管理制度执行；</p>
+    //     <p>3. 使用后需及时归还并做好登记；</p>
+    //     <p>4. 如有疑问请联系本部门办公室。</p>
+    //   </div>
+    // `
 
     console.log(`已加载${unitName}的印章使用注意事项`)
   } catch (error) {
