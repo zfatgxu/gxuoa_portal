@@ -2,7 +2,7 @@
   <div class="form-container">
     <div class="form-header">
       <h1>{{ detail.applyTitle }}</h1>
-      <p v-if="status==2" style="color: red;">盖章编号：{{ detail.sealNumber }}</p>
+      <p style="color: red;">盖章编号：{{ detail.sealNumber }}</p>
     </div>
     <el-form label-width="120px" class="seal-form">
       <!-- 材料名称 -->
