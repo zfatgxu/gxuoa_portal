@@ -64,45 +64,52 @@ const entryList = ref([
   {
     name: '公文',
     icon: new URL('@/assets/imgs/quickEntry/document.png', import.meta.url).href,
-    path: '/document',
+    path: '/gwlz/gwlztodo',
     bgColor: '#4a7eff',
     badge: '1'
   },
   {
     name: '邮件',
     icon: new URL('@/assets/imgs/quickEntry/mail.png', import.meta.url).href,
-    path: '/mail',
+    path: '/mail/index',
     bgColor: '#4cd964',
     badge: '1'
   },
   {
     name: '请假审批',
     icon: new URL('@/assets/imgs/quickEntry/leave.png', import.meta.url).href,
-    path: '/leave-approval',
+    path: '/leave/list/index',
     bgColor: '#9c88ff',
     badge: '1'
   },
-  {
-    name: '出差审批',
-    icon: new URL('@/assets/imgs/quickEntry/trip.png', import.meta.url).href,
-    path: '/visit',
-    bgColor: '#5352ed',
-    badge: '1'
-  },
+  // {
+  //   name: '出差审批',
+  //   icon: new URL('@/assets/imgs/quickEntry/trip.png', import.meta.url).href,
+  //   path: '/visit',
+  //   bgColor: '#5352ed',
+  //   badge: '1'
+  // },
   {
     name: '督查督办',
     icon: new URL('@/assets/imgs/quickEntry/supervison.png', import.meta.url).href,
-    path: '/supervision',
+    path: '/supervision/index',
     bgColor: '#70a1ff',
     badge: '1'
   },
+  // {
+  //   name: '问题反馈',
+  //   icon: new URL('@/assets/imgs/quickEntry/feedback.png', import.meta.url).href,
+  //   path: '/approval',
+  //   bgColor: '#2ed573',
+  //   badge: '1'
+  // },
   {
-    name: '问题反馈',
+    name: '印章管理',
     icon: new URL('@/assets/imgs/quickEntry/feedback.png', import.meta.url).href,
-    path: '/approval',
-    bgColor: '#2ed573',
+    path: '/seal/seal_apply',
+    bgColor: '#70a1ff',
     badge: '1'
-  }
+  },
 ])
 
 // 处理快捷入口点击
