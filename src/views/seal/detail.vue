@@ -26,15 +26,19 @@
       </div>
       <!-- 单位签字 -->
       <div class="form-section">
-        <div class="section-header">单位签字</div>
+        <div class="section-header">签字</div>
         <div class="signature-content">
           <!-- 单位签字行 - 显示所有三个审批人 -->
           <div class="signature-row">
-            <span class="required">单位签字</span>
-            <span class="signature-value">
-              <!-- 如果有审批节点数据 -->
-              <template v-if="sortedApprovers && sortedApprovers.length > 0">
-                <!-- 按照角色顺序显示审批人 -->
+            <span style="display: flex;gap: 12px;margin-bottom: 12px;">
+              <span style="margin-right: 12px;">经办人：{{ detail.handlerSignature }}</span>
+              <span>审批人：{{ detail.reviewerSignature }}</span>
+            </span>
+          
+            <span>
+            <!-- 如果有审批节点数据 -->
+            <template v-if="sortedApprovers && sortedApprovers.length > 0">
+              <!-- 按照角色顺序显示审批人 -->
                 <template v-for="(approver, index) in sortedApprovers" :key="index">
                   <!-- 根据审批节点类型添加标注 -->
                   <span 
@@ -92,7 +96,7 @@
                               <template v-else-if="activity.status === 3">不同意</template>
                               <template v-else>待审核</template>
                             ）</template>
-                            <template v-else-if="activity.name.includes('审批人')">（审批人 
+                            <template v-else-if="activity.name.includes('审批人')">（审核人 
                               <template v-if="activity.status === 2">已同意</template>
                               <template v-else-if="activity.status === 1">处理中</template>
                               <template v-else-if="activity.status === 3">不同意</template>
@@ -378,7 +382,7 @@ const sortedApprovers = computed(() => {
           
           // 确定角色，优先使用userRoles中的数据
           let roleIndex = nodeRoleIndex;
-          let roleTitle = nodeRoleTitle;
+          let roleTitle = activity.name;
           
           // 尝试从userRoles中获取角色
           if (userRoles.value && userRoles.value[userId]) {
@@ -443,11 +447,11 @@ function parseSignersToApprovers(signers) {
   console.log('可用的活动节点:', filteredActivityNodes.value);
   
   // 定义角色标题数组
-  const roleTitles = ['经办人', '审批人', '单位负责人'];
+  const roleTitles = ['经办人', '审核人', '单位负责人'];
   
   // 将签字人名单转换为审批人对象数组
   const approvers = signerNames.map((name, index) => {
-    const roleTitle = roleTitles[index] || `审批人${index + 1}`;
+    const roleTitle = roleTitles[index] || `审核人${index + 1}`;
     
     // 默认状态为待审核
     let status = 0;
@@ -554,7 +558,11 @@ const fetchDetail = async () => {
   //如果 getApplyInfoById API 已实现，请取消下面注释
   const res = await SealApi.getSealApplicationById(id)
   detail.value = res
-  
+  detail.value.handlerSignature = res.signers.split('，')[0]
+  detail.value.reviewerSignature = res.signers.split('，')[1]
+  detail.value.signers = ''
+
+  // detail.value.unitHeadSignature = res.signers.split('，')[2]
   // 临时使用模拟数据
   // detail.value = {
   //   title: '印章申请详情',
@@ -660,16 +668,13 @@ const previewFile = (file) => {
 
 .section-header {
   width: 120px;
-  padding: 20px 15px;
   background: #f8f9fa;
   border-right: 1px solid #ddd;
   font-weight: bold;
   color: #333;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  text-align: center;
-  min-height: 60px;
 }
 
 .material-name-content {
@@ -730,10 +735,7 @@ const previewFile = (file) => {
 }
 
 .signature-row {
-  display: flex;
-  align-items: center;
- padding-bottom: 15px;
-  gap: 15px;
+  
 }
 
 .signature-row:last-child {
