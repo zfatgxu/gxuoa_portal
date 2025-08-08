@@ -154,12 +154,15 @@
 
 
         <div class="progress-records" v-if="progressRecords.length > 0">
-          <div v-for="(record, index) in progressRecords" :key="index" class="progress-item">
-            <div class="progress-dot"></div>
+          <div v-for="(record, index) in progressRecords" :key="index" :class="['progress-item', { 'latest-record': record.isLatest }]">
+            <div :class="['progress-dot', { 'latest-dot': record.isLatest }]"></div>
             <div class="progress-content">
               <div class="progress-header">
                 <div class="progress-left">
-                  <span class="progress-title">{{ record.title }}</span>
+                  <span class="progress-title">
+                    {{ record.title }}
+                    <span v-if="record.isLatest" class="latest-badge">最新</span>
+                  </span>
                   <span class="progress-name" v-if="record.handler">{{ record.handler }}</span>
                 </div>
                 <div class="progress-right" v-if="record.expectedTime">
@@ -352,12 +355,15 @@
   >
     <div class="history-content" v-loading="historyLoading">
       <div v-if="allProgressRecords.length > 0">
-        <div v-for="(record, index) in allProgressRecords" :key="index" class="history-item">
-          <div class="history-dot"></div>
+        <div v-for="(record, index) in allProgressRecords" :key="index" :class="['history-item', { 'latest-record': record.isLatest }]">
+          <div :class="['history-dot', { 'latest-dot': record.isLatest }]"></div>
           <div class="history-info">
             <div class="history-header">
               <div class="history-left">
-                <span class="history-title">{{ record.title }}</span>
+                <span class="history-title">
+                  {{ record.title }}
+                  <span v-if="record.isLatest" class="latest-badge">最新</span>
+                </span>
                 <span class="history-name" v-if="record.handler">{{ record.handler }}</span>
               </div>
               <div class="history-right" v-if="record.expectedTime">
@@ -840,16 +846,36 @@ const getProgressRecords = async (processInstanceId: string, showAll: boolean = 
       }
 
       if (Array.isArray(recordsToProcess) && recordsToProcess.length > 0) {
-        const formattedRecords = recordsToProcess.map((record: any) => {
+        const formattedRecords = recordsToProcess.map((record: any, index: number) => {
           return {
             title: record.creatorDeptName || '未知部门',
             handler: record.creatorNickName || '',
             description: record.deptDetail || '暂无详细信息',
             expectedTime: record.planTime ? formatTimestamp(record.planTime) : '',
             time: record.createTime ? formatTimestamp(record.createTime) : (record.planTime ? formatTimestamp(record.planTime) : ''),
-            attachments: record.fileList && Array.isArray(record.fileList) ? record.fileList : []
+            attachments: record.fileList && Array.isArray(record.fileList) ? record.fileList : [],
+            createTime: record.createTime || 0, // 保留原始时间戳用于排序
+            isLatest: false // 标记是否为最新记录
           }
         })
+
+        // 按时间排序：最新的在前面
+        formattedRecords.sort((a, b) => (b.createTime || 0) - (a.createTime || 0))
+
+        // 标记最新的记录
+        if (formattedRecords.length > 0) {
+          formattedRecords[0].isLatest = true
+
+          // 将最新记录之外的其他记录按时间正序排列（从早到晚）
+          if (formattedRecords.length > 1) {
+            const latestRecord = formattedRecords[0]
+            const otherRecords = formattedRecords.slice(1)
+            otherRecords.sort((a, b) => (a.createTime || 0) - (b.createTime || 0))
+
+            // 重新组合：最新记录在最前面，其余按时间正序
+            formattedRecords.splice(0, formattedRecords.length, latestRecord, ...otherRecords)
+          }
+        }
 
         if (showAll) {
           // 如果是显示全部记录，更新allProgressRecords
@@ -1833,6 +1859,32 @@ const formatFileSize = (size: number | null) => {
   background: #409eff;
   margin-top: 6px;
   flex-shrink: 0;
+}
+
+/* 最新记录样式 */
+.latest-record {
+  border-color: #67c23a !important;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%) !important;
+  box-shadow: 0 2px 8px rgba(103, 194, 58, 0.15) !important;
+}
+
+.latest-dot {
+  background: #67c23a !important;
+  width: 10px !important;
+  height: 10px !important;
+  box-shadow: 0 0 0 3px rgba(103, 194, 58, 0.2);
+}
+
+.latest-badge {
+  display: inline-block;
+  background: #67c23a;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 8px;
+  vertical-align: middle;
 }
 
 .progress-content,

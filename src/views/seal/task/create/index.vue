@@ -35,6 +35,23 @@
         </div>
       </div>
 
+      <!-- 材料类型 -->
+      <div class="form-section">
+        <div class="section-header required">材料类型</div>
+        <div class="material-type-content">
+          <el-radio-group v-model="form.selectedMaterialTypes">
+            <el-radio
+              v-for="dict in getDictOptions(DICT_TYPE.SEAL_APPLY_MATERIAL_TYPES)"
+              :key="dict.value"
+              :label="dict.value"
+              class="material-checkbox"
+            >
+              {{ dict.label }}
+            </el-radio>
+          </el-radio-group>
+        </div>
+      </div>
+
       <!-- 印章类型 -->
       <div class="form-section">
         <div class="section-header required">印章类型</div>
@@ -74,81 +91,76 @@
         </div>
       </div>
 
-      <!-- 指定审批人 -->
+      <!-- 经办人、审核人和电话 -->
       <div class="form-section" v-if="startUserSelectTasks.length > 0">
-        <div class="section-header required">选择单位签字审批人</div>
-        <div class="signature-content">
-          <el-form
-            :model="startUserSelectAssignees"
-            :rules="startUserSelectAssigneesFormRules"
-            ref="startUserSelectAssigneesFormRef"
-          >
-            <!-- 经办人和审批人签字输入框 - 合并为一行 -->
-            <div class="signature-row-combined">
-              <div class="signature-item">
-                <span class="signature-label required">经办人：</span>
-                <el-input
-                  v-model="managerSigner"
-                  placeholder="请输入经办人"
-                  class="signature-input-small"
-                  clearable
-                />
-              </div>
-              <div class="signature-item">
-                <span class="signature-label required">审批人：</span>
-                <el-input
-                  v-model="approverSigner"
-                  placeholder="请输入审批人"
-                  class="signature-input-small"
-                  clearable
-                />
-              </div>
-            </div>
-            
-            <!-- 单位负责人签字选择框 -->
-            <div class="signature-row">
-              <span class="required">单位负责人签字</span>
-              <el-select
-                v-model="unitLeaderSigner"
-                placeholder="请选择单位负责人"
-                class="signature-input"
-                filterable
+        <div class="connected-fields-row">
+          <div class="connected-field-item">
+            <div class="connected-field-header required">经办人</div>
+            <div class="connected-field-content">
+              <el-input
+                v-model="managerSigner"
+                placeholder=""
+                class="connected-field-input"
                 clearable
-              >
-                <el-option
-                  v-for="user in sameDeptUsersList"
-                  :key="user.id"
-                  :label="user.nickname"
-                  :value="user.id"
-                >
-                  <span>{{ user.nickname }}</span>
-                </el-option>
-              </el-select>
+              />
             </div>
-          </el-form>
+          </div>
+          <div class="connected-field-item">
+            <div class="connected-field-header required">审核人</div>
+            <div class="connected-field-content">
+              <el-input
+                v-model="approverSigner"
+                placeholder=""
+                class="connected-field-input"
+                clearable
+              />
+            </div>
+          </div>
+          <div class="connected-field-item">
+            <div class="connected-field-header required">电话</div>
+            <div class="connected-field-content">
+              <el-input
+                v-model="form.contactPhone"
+                placeholder=""
+                class="connected-field-input"
+                clearable
+              />
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- 材料类型 -->
+      <!-- 单位负责人审核意见 -->
       <div class="form-section">
-        <div class="section-header required">材料类型</div>
-        <div class="material-type-content">
-          <el-radio-group v-model="form.selectedMaterialTypes">
-            <el-radio
-              v-for="dict in getDictOptions(DICT_TYPE.SEAL_APPLY_MATERIAL_TYPES)"
-              :key="dict.value"
-              :label="dict.value"
-              class="material-checkbox"
-            >
-              {{ dict.label }}
-            </el-radio>
-          </el-radio-group>
+        <div class="section-header">单位负责人审核意见</div>
+        <div class="notes-content">
+          <el-input
+            v-model="form.unitLeaderOpinion"
+            type="textarea"
+            :rows="3"
+            placeholder=""
+            disabled
+          />
         </div>
       </div>
 
-      <!-- 附件上传 -->
+      <!-- 用印审核 -->
       <div class="form-section">
-        <div class="section-header">附件上传</div>
+        <div class="section-header">用印审核</div>
+        <div class="notes-content">
+          <el-input
+            v-model="form.sealAuditOpinion"
+            type="textarea"
+            :rows="3"
+            placeholder=""
+            disabled
+          />
+        </div>
+      </div>
+
+      <!-- 附件 -->
+      <div class="form-section">
+        <div class="section-header">附件</div>
         <div class="upload-content">
           <el-upload
             class="upload-demo"
@@ -165,7 +177,7 @@
           >
             <el-button type="primary">
               <el-icon style="vertical-align: middle; margin-right: 4px;"><Paperclip /></el-icon>
-              添加附件
+              选择文件
             </el-button>
             <template #tip>
               <div class="el-upload__tip">
@@ -205,41 +217,61 @@
         </div>
       </div>
 
-      <!-- 单位签字 -->
+      <!-- 备注 -->
       <div class="form-section">
-        <div class="section-header required">联系电话</div>
-        <div class="signature-content">
-          <div class="signature-row">
-            <el-input v-model="form.contactPhone" placeholder="请输入您的联系电话" class="signature-input" />
-          </div>
-        </div>
-      </div>
-
-      <div class="form-section">
-        <div class="section-header">请填写备注</div>
+        <div class="section-header">备注</div>
         <div class="notes-content">
           <el-input
             v-model="form.notes"
             type="textarea"
             :rows="4"
-            placeholder="请填写备注"
+            placeholder="请输入"
           />
         </div>
       </div>
 
-      <!-- 印章使用注意事项 -->
+      <!-- 注意事项 -->
       <div class="form-section" v-if="selectedUnit && unitNoticeContent">
-        <div class="section-header">印章使用注意事项</div>
+        <div class="section-header">注意事项</div>
         <div class="notice-content">
           <div class="notice-text" v-html="unitNoticeContent"></div>
         </div>
       </div>
 
-      <!-- 提交按钮 -->
-      <div class="form-actions">
-        <el-button type="primary" size="large" @click="submitForm">
-          提交
-        </el-button>
+      <!-- 单位负责人签字和提交按钮 -->
+      <div class="form-section">
+        <div class="section-header"></div>
+        <div class="bottom-actions-content">
+          <div class="bottom-actions-row">
+            <div class="empty-space"></div>
+            <div class="right-actions">
+              <div class="unit-leader-section">
+                <span class="signature-label">单位负责人签字</span>
+                <el-select
+                  v-model="unitLeaderSigner"
+                  placeholder=""
+                  class="unit-leader-select"
+                  filterable
+                  clearable
+                >
+                  <el-option
+                    v-for="user in sameDeptUsersList"
+                    :key="user.id"
+                    :label="user.nickname"
+                    :value="user.id"
+                  >
+                    <span>{{ user.nickname }}</span>
+                  </el-option>
+                </el-select>
+              </div>
+              <div class="submit-section">
+                <el-button type="primary" size="large" @click="submitForm">
+                  提交
+                </el-button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </el-form>
   </div>
@@ -276,7 +308,9 @@ const form = reactive({
   contactPhone: '',
   selectedMaterialTypes: [], // 新增的字段
   notes: '',
-  attachments: [] // 添加附件字段
+  attachments: [], // 添加附件字段
+  sealAuditOpinion: '', // 用印审核意见
+  unitLeaderOpinion: '' // 单位负责人审核意见
 })
 
 const selectedUnit = ref('')
@@ -667,65 +701,6 @@ const getUnitNotice = async (unitId: number, unitName: string) => {
       return
     }
     unitNoticeContent.value = notice.sealAttention.replace(/(\d+\.)/g, '<br>$1').replace(/^<br>/, '')
-
-    // 模拟数据 - 根据不同单位返回不同的注意事项
-    // const mockNotices = {
-    //   '财务处': `
-    //     <div style="line-height: 1.6;">
-    //       <p>1. 财务专用章仅限用于财务相关文件，如合同、发票、收据等；</p>
-    //       <p>2. 使用前必须经过财务处长审批，紧急情况可电话确认；</p>
-    //       <p>3. 印章使用后需在《印章使用登记表》上详细记录；</p>
-    //       <p>4. 严禁在空白文件上盖章，必须填写完整内容后方可用印；</p>
-    //       <p>5. 如有疑问请联系财务处办公室：0771-1234567。</p>
-    //     </div>
-    //   `,
-    //   '人事处': `
-    //     <div style="line-height: 1.6;">
-    //       <p>1. 人事专用章主要用于人事任免、工资证明、劳动合同等文件；</p>
-    //       <p>2. 涉及人员调动、职务变更的文件需处长亲自审核；</p>
-    //       <p>3. 工资证明类文件需提供相关证明材料；</p>
-    //       <p>4. 印章保管人员变更需及时报备；</p>
-    //       <p>5. 联系电话：0771-2345678。</p>
-    //     </div>
-    //   `,
-    //   '教务处': `
-    //     <div style="line-height: 1.6;">
-    //       <p>1. 教务专用章用于学籍管理、成绩证明、毕业证书等教学文件；</p>
-    //       <p>2. 学生成绩单、学历证明需经教务处长审批；</p>
-    //       <p>3. 考试相关文件需在考试前3天完成用印；</p>
-    //       <p>4. 毕业证书用印需严格按照毕业生名单核对；</p>
-    //       <p>5. 如需加急处理请提前说明原因，联系电话：0771-3456789。</p>
-    //     </div>
-    //   `,
-    //   '办公室': `
-    //     <div style="line-height: 1.6;">
-    //       <p>1. 学校公章使用需经办公室主任或校领导审批；</p>
-    //       <p>2. 对外正式文件、合同协议必须使用学校公章；</p>
-    //       <p>3. 用印时间：工作日上午8:30-11:30，下午14:30-17:30；</p>
-    //       <p>4. 紧急用印需提供紧急情况说明；</p>
-    //       <p>5. 印章使用完毕需当场归还，联系电话：0771-4567890。</p>
-    //     </div>
-    //   `,
-    //   '计算机与电子信息学院': `
-    //     <div style="line-height: 1.6;">
-    //       <p>1. 印章使用前需经过部门负责人审批；</p>
-    //       <p>2. 严格按照印章管理制度执行；</p>
-    //       <p>3. 使用后需及时归还并做好登记；</p>
-    //       <p>4. 如有疑问请联系本部门办公室。</p>
-    //     </div>
-    //   `
-    // }
-    //
-    // // 根据单位名称获取对应的注意事项，如果没有则使用通用注意事项
-    // unitNoticeContent.value = mockNotices[unitName] || `
-    //   <div style="line-height: 1.6;">
-    //     <p>1. 印章使用前需经过部门负责人审批；</p>
-    //     <p>2. 严格按照印章管理制度执行；</p>
-    //     <p>3. 使用后需及时归还并做好登记；</p>
-    //     <p>4. 如有疑问请联系本部门办公室。</p>
-    //   </div>
-    // `
-
     console.log(`已加载${unitName}的印章使用注意事项`)
   } catch (error) {
     console.error('获取单位印章使用注意事项失败:', error)
@@ -1276,27 +1251,92 @@ const handleExceed = () => {
   margin-bottom: 0;
 }
 
-/* 经办人和审批人签字合并样式 */
-.signature-row-combined {
+/* 经办人、审核人和电话连接布局 */
+.connected-fields-row {
   display: flex;
-  align-items: center;
-  gap: 30px;
-  margin-bottom: 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
-.signature-item {
+.connected-field-item {
+  flex: 1;
+  display: flex;
+  border-right: 1px solid #ddd;
+}
+
+.connected-field-item:last-child {
+  border-right: none;
+}
+
+.connected-field-header {
+  width: 119px;
+  min-width: 80px;
+  padding: 20px 15px;
+  background: #f8f9fa;
+  border-right: 1px solid #ddd;
+  font-weight: bold;
+  color: #333;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 60px;
+  line-height: 1.4;
+}
+
+.connected-field-header.required::before {
+  content: "* ";
+  color: #f56c6c;
+}
+
+.connected-field-content {
+  flex: 1;
+  padding: 15px;
+  background: white;
+  display: flex;
+  align-items: center;
+}
+
+.connected-field-input {
+  width: 100%;
+}
+
+/* 底部操作区域样式 */
+.bottom-actions-content {
+  flex: 1;
+  padding: 15px;
+}
+
+.bottom-actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.empty-space {
+  flex: 1;
+}
+
+.right-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.unit-leader-section {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.signature-label {
-  font-weight: 500;
-  color: #333;
-  white-space: nowrap;
+.unit-leader-select {
+  width: 150px;
 }
 
-.signature-input-small {
-  width: 160px;
+.submit-section {
+  flex-shrink: 0;
 }
 </style>

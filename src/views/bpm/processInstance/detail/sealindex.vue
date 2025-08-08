@@ -59,14 +59,16 @@
                         </el-col>
                         <!-- 情况二：业务表单 -->
                         <div v-if="processDefinition?.formType === BpmModelFormType.CUSTOM">
-                          <component 
-                            :is="BusinessFormComponent" 
-                            :id="sealApplyId" 
-                            :activity-nodes="activityNodes" 
-                            :applyUser="applyUser" 
-                            :applyTime="applyTime" 
+                          <component
+                            :is="BusinessFormComponent"
+                            ref="sealDetailRef"
+                            :id="sealApplyId"
+                            :activity-nodes="activityNodes"
+                            :applyUser="applyUser"
+                            :applyTime="applyTime"
                             :status="processInstance.status"
                             :process-instance="processInstance"
+                            :current-task="currentTask"
                           />
                         </div>
                       </div>
@@ -128,6 +130,7 @@
               :normal-form-api="fApi"
               :writable-fields="writableFields"
               @success="refresh"
+              @modifyMaterial="handleModifyMaterial"
             />
           </div>
 
@@ -188,6 +191,8 @@
     const applyUser = ref('') // 申请人
     const applyTime = ref('') // 申请时间
     const sealApplyId = ref('') // 印章申请单ID
+    const currentTask = ref({}) // 当前任务信息
+    const sealDetailRef = ref() // 印章详情组件引用
 
   /** 获得详情 */
   const getDetail = () => {
@@ -398,6 +403,12 @@
       activityNodes.value = data.activityNodes
       console.log('审批节点:', activityNodes.value)
 
+      // 设置当前任务信息
+      if (data.todoTask) {
+        currentTask.value = data.todoTask
+        console.log('当前任务信息:', currentTask.value)
+      }
+
       // 获取待办任务显示操作按钮
       operationButtonRef.value?.loadTodoTask(data.todoTask)
     } catch (error) {
@@ -450,6 +461,24 @@
   const refresh = () => {
     // 重新获取详情
     getDetail()
+  }
+
+  /**
+   * 处理修改材料事件
+   */
+  const handleModifyMaterial = async (resolve) => {
+    try {
+      if (sealDetailRef.value && sealDetailRef.value.updateSealApplication) {
+        const updateSuccess = await sealDetailRef.value.updateSealApplication()
+        resolve(updateSuccess)
+      } else {
+        console.error('无法获取印章详情组件引用')
+        resolve(false)
+      }
+    } catch (error) {
+      console.error('调用印章详情组件更新方法失败:', error)
+      resolve(false)
+    }
   }
   
   /** 当前的Tab */

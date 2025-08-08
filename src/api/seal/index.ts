@@ -59,3 +59,14 @@ export const updateSealState = async (data: { id: number | string, sealState: nu
     }
   })
 }
+
+// 更新印章申请（驳回修改时使用）
+export const updateSealApplication = async (data: any) => {
+  return await request.put({
+    url: '/seal/seal_apply/update',
+    data: data,
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+}

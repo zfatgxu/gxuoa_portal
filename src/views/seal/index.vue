@@ -7,11 +7,21 @@
         </el-form-item>
         <el-form-item label="材料类型">
           <el-select v-model="queryParams.materialType" clearable placeholder="请选择材料类型" style="width: 280px">
-            <el-option 
-              v-for="dict in getDictOptions(DICT_TYPE.SEAL_APPLY_MATERIAL_TYPES)" 
-              :key="dict.value" 
-              :label="dict.label" 
-              :value="dict.value" 
+            <el-option
+              v-for="dict in getDictOptions(DICT_TYPE.SEAL_APPLY_MATERIAL_TYPES)"
+              :key="dict.value"
+              :label="dict.label"
+              :value="dict.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="审批状态">
+          <el-select v-model="queryParams.status" clearable placeholder="请选择审批状态" style="width: 200px">
+            <el-option
+              v-for="dict in getDictOptions(DICT_TYPE.SEAL_APPLY_STATE)"
+              :key="dict.value"
+              :label="dict.label"
+              :value="dict.value"
             />
           </el-select>
         </el-form-item>
@@ -45,31 +55,15 @@
     <!-- 列表 -->
     <ContentWrap>
       <el-table v-loading="loading" :data="list">
-        <el-table-column align="center" label="申请编号" prop="id" />
-        <el-table-column align="center" label="申请人">
-          <template #default>
-            {{ userStore.user.nickname }}
+        <el-table-column align="center" label="盖章编码" prop="sealNumber" />
+        <el-table-column align="center" label="经办人">
+          <template #default="scope">
+            {{ getFirstSigner(scope.row.signers) }}
           </template>
         </el-table-column>
         <el-table-column align="center" label="审批状态" prop="status">
           <template #default="scope">
             <dict-tag :type="DICT_TYPE.SEAL_APPLY_STATE" :value="scope.row.status" />
-          </template>
-        </el-table-column>
-        <el-table-column align="center" label="用印状态" prop="sealState">
-          <template #default="scope">
-            <div style="display: flex; align-items: center; justify-content: center;">
-              <dict-tag
-                :type="DICT_TYPE.SEAL_STATE"
-                :value="scope.row.sealState"
-              />
-              <el-checkbox
-                :model-value="scope.row.sealState === 1"
-                :disabled="scope.row.sealState == 1"
-                @change="(val) => handleSealStateChange(scope.row, val)"
-                style="margin-left: 6px;"
-              />
-            </div>
           </template>
         </el-table-column>
         <el-table-column align="center" label="材料名称" prop="materialName" />
@@ -119,8 +113,6 @@
   import { DICT_TYPE } from '@/utils/dict'
   import { getSimpleDeptList } from '@/api/system/dept'
   import * as SealApi from '@/api/seal'
-  import { ElMessageBox, ElMessage } from 'element-plus'
-
   import { useUserStore } from '@/store/modules/user'
   import { getDictLabel, getDictOptions } from '@/utils/dict'
 
@@ -133,6 +125,7 @@
   const queryParams = ref({
     materialName: '',
     materialType: '',
+    status: '',
     pageNo: 1,
     pageSize: 10
   })
@@ -162,9 +155,10 @@
     getSealApplicationPage(queryParams.value)
   }
   const resetQuery = () => {
-    queryParams.value = { 
-      materialName: '', 
+    queryParams.value = {
+      materialName: '',
       materialType: '',
+      status: '',
       pageNo: 1,
       pageSize: queryParams.value.pageSize
     }
@@ -220,6 +214,13 @@
   
   const viewDetail = (row: any) => {
     router.push({ name: 'SealDetail', query: { id: row.processInstanceId } })
+  }
+
+  // 获取第一个经办人姓名
+  const getFirstSigner = (signers: string) => {
+    if (!signers) return ''
+    const signerArray = signers.split('，')
+    return signerArray[0] || ''
   }
 
   // 处理用印状态变更

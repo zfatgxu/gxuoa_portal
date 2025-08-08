@@ -493,6 +493,8 @@
           </el-form>
         </div>
       </el-popover> 
+
+
       <!-- 【再次提交】 按钮-->
        <div
         @click="handleReCreate()"
@@ -504,7 +506,7 @@
         "
       >
         <Icon :size="14" icon="ep:refresh" />&nbsp; 再次提交
-      </div> 
+      </div>
     </div>
   
     <!-- 签名弹窗 -->
@@ -535,7 +537,7 @@
   
   const userId = useUserStoreWithOut().getUser.id // 当前登录的编号
   console.log(userId)
-  const emit = defineEmits(['success']) // 定义 success 事件，用于操作成功后的回调
+  const emit = defineEmits(['success', 'modifyMaterial']) // 定义事件，用于操作成功后的回调
   
   const props = defineProps<{
     processInstance: any // 流程实例信息
@@ -671,6 +673,8 @@
   const cancelFormRule = reactive<FormRules<typeof cancelForm>>({
     cancelReason: [{ required: true, message: '取消理由不能为空', trigger: 'blur' }]
   })
+
+
   
   /** 监听 approveFormFApis，实现它对应的 form-create 初始化后，隐藏掉对应的表单提交按钮 */
   watch(
@@ -778,6 +782,17 @@
       }
   
       if (pass) {
+        // 如果是驳回修改状态，先调用更新接口
+        if (isModifyMaterialTask()) {
+          const updateSuccess = await new Promise((resolve) => {
+            emit('modifyMaterial', resolve)
+          })
+
+          if (!updateSuccess) {
+            return
+          }
+        }
+
         const nextAssigneesValid = validateNextAssignees()
         if (!nextAssigneesValid) return
         const variables = getUpdatedProcessInstanceVariables()
@@ -966,6 +981,8 @@
     }
   }
   
+
+
   /** 处理再次提交 */
   const handleReCreate = async () => {
     // 跳转发起流程界面
@@ -1037,6 +1054,15 @@
       isShow = runningTask.value.buttonsSetting[btnType].enable
     }
     return isShow
+  }
+
+  /** 判断是否为修改材料任务 */
+  const isModifyMaterialTask = (): boolean => {
+    if (!runningTask.value || !runningTask.value.name) {
+      return false
+    }
+    const taskName = runningTask.value.name
+    return taskName.includes('申请人修改材料')
   }
   
   /** 获取按钮的显示名称 */
@@ -1115,4 +1141,3 @@
     }
   }
   </style>
-  

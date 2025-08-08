@@ -35,11 +35,11 @@
           </el-col>
         </el-row>
 
-        <!-- 第二行：文件标题 -->
+        <!-- 第二行：督办事项 -->
         <el-row :gutter="20">
           <el-col :span="24">
-            <el-form-item label="文件标题：" prop="title">
-              <el-input v-model="orderForm.title" placeholder="请输入文件标题" />
+            <el-form-item label="督办事项：" prop="title">
+              <el-input v-model="orderForm.title" placeholder="请输入督办事项" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -60,14 +60,47 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="督办依据：" prop="basis">
-              <el-select v-model="orderForm.basis" placeholder="请选择督办依据" style="width: 100%">
-                <el-option
-                  v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_REASON)"
-                  :key="dict.value"
-                  :label="dict.label"
-                  :value="dict.value"
-                />
-              </el-select>
+              <div class="custom-select-container">
+                <el-select
+                  v-model="orderForm.basis"
+                  placeholder="请选择督办依据或输入自定义内容"
+                  filterable
+                  allow-create
+                  default-first-option
+                  @change="handleBasisChange"
+                  class="basis-select"
+                >
+                  <el-option
+                    v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_REASON)"
+                    :key="dict.value"
+                    :label="dict.label"
+                    :value="dict.value"
+                  >
+                    <div class="dict-option-content">
+                      <span>{{ dict.label }}</span>
+                      <el-button
+                        type="danger"
+                        link
+                        size="small"
+                        @click.stop="deleteDictItem(dict)"
+                        class="delete-dict-btn"
+                      >
+                        删除
+                      </el-button>
+                    </div>
+                  </el-option>
+                </el-select>
+                <el-button
+                  v-if="showAddToDictButton"
+                  type="primary"
+                  link
+                  @click="addBasisToDict"
+                  class="add-to-dict-btn"
+                  :loading="addingToDict"
+                >
+                  添加为常用
+                </el-button>
+              </div>
             </el-form-item>
           </el-col>
         </el-row>
@@ -347,13 +380,16 @@ import * as DeptApi from '@/api/system/dept'
 import * as UserApi from '@/api/system/user'
 import { OrderApi, type OrderVO } from '@/api/supervision'
 import { DICT_TYPE, getIntDictOptions, getStrDictOptions } from '@/utils/dict'
+import { useDictStoreWithOut } from '@/store/modules/dict'
 import { Icon } from '@/components/Icon'
+import { createDictData, deleteDictData, getDictDataByType } from '@/api/system/dict/dict.data'
 
 defineOptions({ name: 'SupervisionOrderCreate' })
 
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
+const dictStore = useDictStoreWithOut()
 
 // 获取返回路径的函数
 const getReturnPath = () => {
@@ -466,6 +502,11 @@ const searchUsers = (query: string) => {
   userSearchKeyword.value = query
 }
 
+// 督办依据相关
+const showAddToDictButton = ref(false)
+const addingToDict = ref(false)
+const customBasisValue = ref('')
+
 // 督办单表单数据
 const orderForm = reactive({
   orderNumber: '', // 督办编号
@@ -497,12 +538,12 @@ const rules = {
     { required: true, message: '督办编号不能为空', trigger: 'blur' }
   ],
   title: [
-    { required: true, message: '请输入文件标题', trigger: 'blur' },
-    { min: 1, max: 200, message: '文件标题长度在 1 到 200 个字符', trigger: 'blur' },
+    { required: true, message: '请输入督办事项', trigger: 'blur' },
+    { min: 1, max: 200, message: '督办事项长度在 1 到 200 个字符', trigger: 'blur' },
     {
       validator: (rule: any, value: string, callback: Function) => {
         if (!value || !value.trim()) {
-          callback(new Error('文件标题不能为空'))
+          callback(new Error('督办事项不能为空'))
         } else {
           callback()
         }
@@ -834,7 +875,128 @@ const disabledMinutes = (hour: number) => {
   return []
 }
 
+// 处理督办依据变化
+const handleBasisChange = (value: any) => {
+  // 检查是否是自定义输入的内容（字符串且不在现有字典中）
+  if (typeof value === 'string') {
+    const existingOptions = getIntDictOptions(DICT_TYPE.SUPERVISION_REASON)
+    const isExisting = existingOptions.some(option => option.label === value || option.value === value)
 
+    if (!isExisting && value.trim() !== '') {
+      // 这是自定义输入的内容
+      customBasisValue.value = value
+      showAddToDictButton.value = true
+    } else {
+      showAddToDictButton.value = false
+      customBasisValue.value = ''
+    }
+  } else {
+    // 这是从字典选择的数值
+    showAddToDictButton.value = false
+    customBasisValue.value = ''
+  }
+}
+
+// 添加督办依据到数据字典
+const addBasisToDict = async () => {
+  if (!customBasisValue.value.trim()) {
+    ElMessage.warning('请输入有效的督办依据内容')
+    return
+  }
+
+  try {
+    addingToDict.value = true
+
+    // 获取现有字典数据的最大值，用于生成新的value和sort
+    const existingOptions = getIntDictOptions(DICT_TYPE.SUPERVISION_REASON)
+    const maxValue = existingOptions.length > 0
+      ? Math.max(...existingOptions.map(item => item.value))
+      : 0
+
+    // 获取现有字典数据的最大排序值，用于生成新的sort
+    const maxSort = existingOptions.length > 0
+      ? Math.max(...existingOptions.map(item => item.sort || 0))
+      : 0
+
+    // 构造字典数据
+    const dictData = {
+      label: customBasisValue.value.trim(),
+      value: (maxValue + 1).toString(), // 新的值
+      dictType: DICT_TYPE.SUPERVISION_REASON,
+      sort: maxSort + 1, // 动态计算排序值，确保新添加的项排在最后
+      status: 0, // 启用状态
+      colorType: 'default',
+      cssClass: '',
+      remark: '用户自定义添加'
+    }
+
+    // 调用真实的API添加到数据字典
+    await createDictData(dictData)
+
+    ElMessage.success('督办依据已添加为常用选项，下次可直接选择')
+
+    // 刷新字典缓存，让新添加的选项立即可用
+    await dictStore.resetDict()
+
+    // 隐藏添加按钮
+    showAddToDictButton.value = false
+
+    // 将自定义值设置为新添加的值（数字类型）
+    orderForm.basis = maxValue + 1
+
+    // 清空自定义值
+    customBasisValue.value = ''
+
+  } catch (error) {
+    console.error('添加督办依据到字典失败:', error)
+    ElMessage.error('添加督办依据到字典失败，请重试')
+  } finally {
+    addingToDict.value = false
+  }
+}
+
+// 删除字典项
+const deleteDictItem = async (dict: any) => {
+  ElMessageBox.confirm(
+    `确定要删除督办依据"${dict.label}"吗？删除后将无法恢复。`,
+    '确认删除',
+    {
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  ).then(async () => {
+    try {
+      // 通过字典类型获取完整的字典数据列表，找到对应的ID
+      const fullDictList = await getDictDataByType(DICT_TYPE.SUPERVISION_REASON)
+      const targetDict = fullDictList.find((item: any) => item.value === dict.value.toString())
+
+      if (!targetDict || !targetDict.id) {
+        ElMessage.error('无法找到要删除的字典项')
+        return
+      }
+
+      // 调用真实的删除数据字典API
+      await deleteDictData(targetDict.id)
+
+      ElMessage.success(`督办依据"${dict.label}"已删除`)
+
+      // 刷新字典缓存，让删除的变化立即生效
+      await dictStore.resetDict()
+
+      // 如果当前选中的就是被删除的项，清空选择
+      if (orderForm.basis === dict.value) {
+        orderForm.basis = undefined
+      }
+
+    } catch (error) {
+      console.error('删除督办依据失败:', error)
+      ElMessage.error('删除督办依据失败，请重试')
+    }
+  }).catch(() => {
+    // 用户取消，不做任何操作
+  })
+}
 
 // 自动生成概述内容
 const generateAutoSummary = () => {
@@ -842,7 +1004,7 @@ const generateAutoSummary = () => {
 
   // 添加标题
   if (orderForm.title) {
-    summaryItems.push(`文件标题：${orderForm.title}`)
+    summaryItems.push(`督办事项：${orderForm.title}`)
   }
 
   // 添加分类
@@ -1233,6 +1395,56 @@ onMounted(async () => {
   content: '*';
   color: #f56c6c;
   margin-right: 4px;
+}
+
+/* 自定义选择器容器 */
+.custom-select-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.custom-select-container .el-select {
+  flex: 1;
+  min-width: 0;
+}
+
+.basis-select {
+  width: 100% !important;
+}
+
+.add-to-dict-btn {
+  font-size: 12px;
+  padding: 4px 8px;
+  white-space: nowrap;
+  color: #409eff;
+  flex-shrink: 0;
+}
+
+.add-to-dict-btn:hover {
+  color: #66b1ff;
+}
+
+/* 字典选项内容 */
+.dict-option-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.delete-dict-btn {
+  font-size: 11px;
+  padding: 2px 4px;
+  color: #f56c6c;
+  opacity: 0.7;
+}
+
+.delete-dict-btn:hover {
+  opacity: 1;
+  color: #f78989;
 }
 
 </style>

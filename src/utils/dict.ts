@@ -13,11 +13,13 @@ const dictStore = useDictStoreWithOut()
  * @returns {*|Array} 数据字典数组
  */
 export interface DictDataType {
+  id?: number // 添加ID字段
   dictType: string
   label: string
   value: string | number | boolean
   colorType: ElementPlusInfoType | ''
   cssClass: string
+  sort?: number // 添加排序字段
 }
 
 export interface NumberDictDataType extends DictDataType {
