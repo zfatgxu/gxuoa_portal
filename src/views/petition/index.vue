@@ -371,6 +371,7 @@ const entryList = ref([
     name: '新建信访',
     icon: new URL('@/assets/imgs/petition/1.png', import.meta.url).href,
     bgColor: '#4a7eff',
+    path: '/petition/create'
   },
   {
     name: '导出报告',
