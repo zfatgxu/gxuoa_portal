@@ -1,28 +1,9 @@
 <template>
-  <!-- 顶部筛选表单 -->
-  <ContentWrap>
-    <el-form :inline="true" :model="queryParams" @submit.prevent>
-      <el-form-item label="材料名称">
-        <el-input v-model="queryParams.materialName" placeholder="请输入材料名称" clearable style="width: 200px" />
-      </el-form-item>
-      <el-form-item label="盖章编码">
-        <el-input v-model="queryParams.sealNumber" placeholder="请输入盖章编码" clearable style="width: 200px" />
-      </el-form-item>
-      <el-form-item label="用印状态">
-        <el-select v-model="queryParams.sealState" clearable placeholder="请选择用印状态" style="width: 200px">
-          <el-option label="已用印" :value="1" />
-          <el-option label="待用印" :value="2" />
-        </el-select>
-      </el-form-item>
-      <el-form-item>
-        <el-button @click="resetQuery">重置</el-button>
-      </el-form-item>
-    </el-form>
-  </ContentWrap>
+
 
   <!-- 列表 -->
   <ContentWrap>
-    <el-table v-loading="loading" :data="pagedList">
+    <el-table v-loading="loading" :data="list">
       <el-table-column align="center" label="盖章编码" prop="applyData.sealNumber" min-width="140" />
       <el-table-column align="center" label="用印状态" min-width="120">
         <template #default="scope">
@@ -88,7 +69,7 @@
     <Pagination
       v-model:limit="queryParams.pageSize"
       v-model:page="queryParams.pageNo"
-      :total="filteredList.length"
+      :total="total"
       @pagination="handlePagination"
     />
   </ContentWrap>
@@ -107,64 +88,21 @@ const { push } = useRouter() // 路由
 const loading = ref(true) // 列表的加载中
 const total = ref(0) // 列表的总页数
 const list = ref([]) // 列表的数据
-// 过滤后的完整列表
-const filteredList = computed(() => {
-  let result = list.value.filter(item => item.applyData !== null)
 
-  // 材料名称搜索过滤
-  if (queryParams.materialName) {
-    const materialName = queryParams.materialName.toLowerCase()
-    result = result.filter(item => {
-      const itemMaterialName = item.applyData?.materialName?.toLowerCase() || ''
-      return itemMaterialName.includes(materialName)
-    })
-  }
 
-  // 盖章编码搜索过滤
-  if (queryParams.sealNumber) {
-    const sealNumber = queryParams.sealNumber.toLowerCase()
-    result = result.filter(item => {
-      const itemSealNumber = item.applyData?.sealNumber?.toLowerCase() || ''
-      return itemSealNumber.includes(sealNumber)
-    })
-  }
 
-  // 用印状态过滤
-  if (queryParams.sealState !== undefined && queryParams.sealState !== null) {
-    result = result.filter(item => item.applyData?.sealState === queryParams.sealState)
-  }
-
-  return result
-})
-
-// 当前页显示的数据
-const pagedList = computed(() => {
-  const start = (queryParams.pageNo - 1) * queryParams.pageSize
-  const end = start + queryParams.pageSize
-  return filteredList.value.slice(start, end)
-})
 const queryParams = reactive({
   pageNo: 1,
   pageSize: 10,
   category: '用印申请',
   processDefinitionKey: 'seal_apply seal_apply_special',
-  materialName: '', // 材料名称搜索
-  sealNumber: '', // 盖章编码搜索
-  sealState: undefined, // 用印状态筛选
 })
 
 /** 查询任务列表 */
 const getList = async () => {
   loading.value = true
   try {
-    // 只传递分页和基础查询参数，不传递搜索和筛选参数
-    const baseParams = {
-      pageNo: queryParams.pageNo,
-      pageSize: queryParams.pageSize,
-      category: queryParams.category,
-      processDefinitionKey: queryParams.processDefinitionKey,
-    }
-    const data = await SealApi.getSealDonePage(baseParams)
+    const data = await SealApi.getSealDonePage(queryParams)
     list.value = data.list
     total.value = data.total
   } finally {
@@ -183,19 +121,11 @@ const handleAudit = (row: any) => {
   })
 }
 
-/** 重置按钮操作 */
-const resetQuery = () => {
-  queryParams.materialName = ''
-  queryParams.sealNumber = ''
-  queryParams.sealState = undefined
-  queryParams.pageNo = 1 // 重置到第一页
-  // 前端过滤，不需要重新请求接口
-}
+
 
 /** 分页处理 */
 const handlePagination = () => {
-  // 前端分页，不需要重新请求接口
-  // pagedList 会自动根据 queryParams.pageNo 和 queryParams.pageSize 的变化重新计算
+  getList() // 重新请求数据
 }
 
 /** 处理用印状态变更 */

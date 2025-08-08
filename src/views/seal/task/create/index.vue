@@ -92,7 +92,7 @@
       </div>
 
       <!-- 经办人、审核人和电话 -->
-      <div class="form-section" v-if="startUserSelectTasks.length > 0">
+      <div class="form-section">
         <div class="connected-fields-row">
           <div class="connected-field-item">
             <div class="connected-field-header required">经办人</div>
@@ -1254,7 +1254,6 @@ const handleExceed = () => {
 /* 经办人、审核人和电话连接布局 */
 .connected-fields-row {
   display: flex;
-  border: 1px solid #ddd;
   border-radius: 4px;
   overflow: hidden;
 }
@@ -1270,7 +1269,7 @@ const handleExceed = () => {
 }
 
 .connected-field-header {
-  width: 119px;
+  width: 120px;
   min-width: 80px;
   padding: 20px 15px;
   background: #f8f9fa;

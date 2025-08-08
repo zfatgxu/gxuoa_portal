@@ -177,7 +177,7 @@
             <div v-for="(opinion, index) in getSealAuditOpinions()" :key="index" class="opinion-box" :class="{ 'mb-3': index < getSealAuditOpinions().length - 1 }">
               <div class="opinion-header">
                 <span class="approver-name">{{ opinion.approver }}</span>
-                <span v-if="shouldShowSealAuditStatusTag(opinion.status)" class="approval-status" :class="getStatusClass(opinion.status)">
+                <span v-if="opinion.statusText" class="approval-status" :class="getStatusClass(opinion.status)">
                   {{ opinion.statusText }}
                 </span>
                 <span class="approval-time" v-if="opinion.time">
@@ -985,7 +985,7 @@ const getUnitLeaderOpinion = () => {
   }
 }
 
-// 获取用印审核意见（所有历史记录）
+// 获取用印审核意见（返回已完成审批的记录）
 const getSealAuditOpinions = () => {
   const opinions = []
 
@@ -999,32 +999,33 @@ const getSealAuditOpinions = () => {
     sealAuditActivities.forEach((activity, activityIndex) => {
       if (activity.tasks && activity.tasks.length > 0) {
         activity.tasks.forEach((task, taskIndex) => {
-          // 特殊处理：如果审批人为空，认为是自动通过
-          if (!task.assigneeUser) {
-            opinions.push({
-              approver: '系统自动',
-              status: 2,
-              statusText: '自动通过',
-              content: task.reason || '审批人为空，自动通过',
-              time: task.startTime ? formatDate(task.startTime) : ''
-            })
-          } else {
-            // 收集所有状态的审批记录，但通过模板中的shouldShowSealAuditStatusTag控制显示
-            const statusText = activity.status === 2 ? '已同意' :
-                              activity.status === 1 ? '处理中' : ''  // 其他状态不显示文本
-            opinions.push({
-              approver: task.assigneeUser.nickname,
-              status: activity.status,
-              statusText: statusText,
-              content: task.reason || '',
-              time: task.endTime ? formatDate(task.endTime) : ''
-            })
+          // 收集所有已完成审批的记录（不是处理中状态的都算完成）
+          if (activity.status !== 1 && activity.status !== 0) {
+            // 特殊处理：如果审批人为空，认为是自动通过
+            if (!task.assigneeUser) {
+              opinions.push({
+                approver: '系统自动',
+                status: 2,
+                statusText: '已同意',
+                content: task.reason || '审批人为空，自动通过',
+                time: task.startTime ? formatDate(task.startTime) : ''
+              })
+            } else {
+              // 只有同意状态才显示标签，其他状态（包括拒绝）不显示标签
+              const statusText = activity.status === 2 ? '已同意' : ''
+              opinions.push({
+                approver: task.assigneeUser.nickname,
+                status: activity.status,
+                statusText: statusText,
+                content: task.reason || '',
+                time: task.endTime ? formatDate(task.endTime) : ''
+              })
+            }
           }
         })
       }
     })
   }
-
 
   return opinions
 }
@@ -1503,7 +1504,6 @@ defineExpose({
 /* 经办人、审核人和电话连接布局 */
 .connected-fields-row {
   display: flex;
-  border: 1px solid #ddd;
   border-radius: 4px;
   overflow: hidden;
   width: 100%;
@@ -1521,7 +1521,7 @@ defineExpose({
 }
 
 .connected-field-header {
-  width: 119px;
+  width: 120px;
   min-width: 119px;
   padding: 20px 15px;
   background: #f8f9fa;
