@@ -281,4 +281,12 @@ export enum DICT_TYPE {
   PARITY = 'parity', // 生育次数
   LEAVE_STATUS = 'leave_status', // 请假流转状态
   CANCELSTATUE = 'cancelStatue', // 销假状态
+
+  // ========== Petition - 信访模块  ==========
+  PETITIONER_TYPE = 'petitioner_type', // 信访人身份类别
+  PETITION_CHANNEL = 'petition_channel', // 信访渠道
+  PURPOSE_CATEGORY = 'purpose_category', // 目的分类
+  CONTENT_CATEGORY = 'content_category', // 内容分类
+  SUPERVISION_OPINION = 'supervision_opinion', // 督办主任意见
+  PETITION_COMPLETION = 'petition_completion', // 信访办结审核
 }

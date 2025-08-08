@@ -292,26 +292,14 @@ const remainingRouter: AppRouteRecordRaw[] = [
     },
     children: [
       {
-        path: 'petitioner',
-        component: () => import('@/views/petition/petitioner/index.vue'),
-        name: 'PetitionPetitioner',
+        path: 'create',
+        component: () => import('@/views/petition/write/index.vue'),
+        name: 'PetitionCreate',
         meta: {
           noCache: true,
           hidden: true,
           canTo: true,
-          title: '信访人信息',
-          activeMenu: '/petition'
-        }
-      },
-      {
-        path: 'petitioner/index',
-        component: () => import('@/views/petition/petitioner/index.vue'),
-        name: 'PetitionPetitionerIndex',
-        meta: {
-          noCache: true,
-          hidden: true,
-          canTo: true,
-          title: '信访人信息',
+          title: '信访写信',
           activeMenu: '/petition'
         }
       },

@@ -441,13 +441,14 @@
                   :http-request="customUpload"
                   :on-preview="handlePreview"
                   :before-remove="beforeRemove"
+                  :before-upload="beforeUpload"
                   multiple
                   v-model:file-list="fileList"
                   accept=".jpg,.png,.pdf,.doc,.docx,.xls,.xlsx"
                 >
                   <el-button type="primary">点击上传</el-button>
                   <template #tip>
-                    <div class="el-upload__tip">支持jpg/png/pdf/doc/docx/xls/xlsx格式，单个文件不超过10MB</div>
+                    <div>支持jpg/png/pdf/doc/docx/xls/xlsx格式，单个文件不超过20MB</div>
                   </template>
                 </el-upload>
               </div>
@@ -932,6 +933,16 @@ const beforeRemove = (file: UploadFile) => {
     }
   );
 };
+
+const beforeUpload = (file: UploadFile) => {
+  const fileSize = file.size / 1024 / 1024;
+  if (fileSize > 20) {
+    ElMessage.error('文件大小超过20MB，无法上传');
+    return false;
+  }
+  return true;
+}
+
 // 起止日期为空时，清空事由
 const handleReasonChange = () => {
   if (!dateRange.value || dateRange.value.length === 0) {
