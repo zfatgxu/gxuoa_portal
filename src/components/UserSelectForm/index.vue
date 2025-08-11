@@ -135,9 +135,12 @@ const filterUserList = async (deptId?: number) => {
 
     // 直接使用已保存的部门列表数据进行过滤
     const deptIds = getChildDeptIds(deptId, deptList.value)
-
     // 过滤出这些部门下的用户
-    filteredUserList.value = userList.value.filter((user) => deptIds.includes(user.deptId))
+    console.log(userList.value)
+    filteredUserList.value = userList.value.filter((user) =>
+      user.deptIds && user.deptIds.some(id => deptIds.includes(id))
+    )
+    console.log(filteredUserList.value)
   } finally {
     formLoading.value = false
   }

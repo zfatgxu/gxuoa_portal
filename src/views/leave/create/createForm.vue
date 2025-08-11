@@ -1327,7 +1327,7 @@ const fetchUserProfile = async () => {
       if (res) {
         personnel.value = {
           id: res.id,
-          deptId: res.dept?.id || '',
+          deptId: res.deptIds || '',
           name: res.nickname || '',
           department: res.dept?.name || '',
           title: res.posts?.[0]?.name || '',
