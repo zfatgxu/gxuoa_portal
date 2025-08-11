@@ -759,8 +759,16 @@ onMounted(async () => {
           // 获取当前登录用户的部门ID，并获取同部门用户
           const currentUser = userStore.getUser
           if (currentUser && currentUser.deptId) {
-            // 根据部门ID获取同部门用户
-            const sameDeptUsers = allUsers.filter(user => user.deptId === currentUser.deptId)
+            // 根据部门ID获取同部门用户，适配新的数据结构
+            const sameDeptUsers = allUsers.filter(user => {
+              // 兼容新格式（deptIds数组）和旧格式（deptId）
+              if (user.deptIds && Array.isArray(user.deptIds)) {
+                return user.deptIds.includes(currentUser.deptId)
+              } else if (user.deptId) {
+                return user.deptId === currentUser.deptId
+              }
+              return false
+            })
             sameDeptUsersList.value = sameDeptUsers
             console.log('设置同部门用户列表:', sameDeptUsersList.value.length)
           } else {
@@ -835,31 +843,49 @@ watch(selectedUnit, async (newVal) => {
     // 加载单位印章使用注意事项
     await getUnitNotice(newVal.id, newVal.name)
 
-    // 更新审核人列表 - 修改这部分
+    // 更新审核人列表和同部门用户列表
     try {
-      // 方案1：如果后端有根据部门ID获取用户的接口，使用正确的API
-      // auditUserList.value = await UserApi.getSimpleUserList({ deptId: newVal.id })
-
-      // 方案2：如果没有专门的接口，可以获取所有用户然后前端过滤
+      // 获取所有用户然后前端过滤
       const allUsers = await UserApi.getSimpleUserList()
-      auditUserList.value = allUsers.filter(user => user.deptId === newVal.id)
 
-      // 方案 3：暂时使用所有用户列表（临时解决方案）
-      // auditUserList.value = await UserApi.getSimpleUserList()
+      // 适配新的用户数据结构：用户现在可能属于多个部门，使用deptIds数组
+      const filterUsersByDept = (users, deptId) => {
+        return users.filter(user => {
+          // 兼容新格式（deptIds数组）和旧格式（deptId）
+          if (user.deptIds && Array.isArray(user.deptIds)) {
+            return user.deptIds.includes(deptId)
+          } else if (user.deptId) {
+            return user.deptId === deptId
+          }
+          return false
+        })
+      }
+
+      // 更新审核人列表（根据选择的单位过滤）
+      auditUserList.value = filterUsersByDept(allUsers, newVal.id)
+
+      // 更新同部门用户列表（用于单位负责人选择）
+      sameDeptUsersList.value = filterUsersByDept(allUsers, newVal.id)
+
+      console.log('更新选择单位的用户列表:', {
+        unitId: newVal.id,
+        unitName: newVal.name,
+        totalUsers: allUsers.length,
+        auditUsers: auditUserList.value.length,
+        sameDeptUsers: sameDeptUsersList.value.length
+      })
 
     } catch (error) {
-      console.error('获取审核人列表失败:', error)
-      ElMessage.error('获取审核人列表失败')
-      // 失败时使用空列表或所有用户列表作为备选
-      try {
-        auditUserList.value = await UserApi.getSimpleUserList()
-      } catch (fallbackError) {
-        auditUserList.value = []
-      }
+      console.error('获取用户列表失败:', error)
+      ElMessage.error('获取用户列表失败')
+      // 失败时使用空列表作为备选
+      auditUserList.value = []
+      sameDeptUsersList.value = []
     }
   } else {
-    // 清空审核人列表和注意事项
+    // 清空审核人列表、同部门用户列表和注意事项
     auditUserList.value = []
+    sameDeptUsersList.value = []
     unitNoticeContent.value = ''
   }
 })
