@@ -48,7 +48,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="8" style="margin-left: 20px;margin-right: 20px;">
-            <el-input v-model="formData.otherPetitionerUnit" placeholder="输入单位名称" clearable @change="searchPetitionerDepts"/>
+            <el-input v-model="inputPetitionerUnit" placeholder="输入单位名称" clearable @change="searchPetitionerDepts"/>
           </el-col>
         </el-row>
 
@@ -155,15 +155,15 @@
             <el-form-item label=" ">
               <el-upload
                 ref="uploadRef"
-                :http-request="customUpload"
+                :http-request="(options) => customUpload(options, 'petition')"
                 :on-preview="previewFile"
                 :before-remove="beforeRemove"
                 :before-upload="beforeUpload"
                 multiple
-                v-model:file-list="fileList"
+                v-model:file-list="petitionList"
                 accept=".jpg,.png,.pdf,.doc,.docx,.xls,.xlsx"
               >
-                <el-button type="primary">上传附件</el-button>
+                <el-button type="primary" :icon=Paperclip>上传附件</el-button>
                 <template #tip>
                   <div>
                     支持上传 doc、docx、pdf、xls、xlsx、jpg、jpeg、png、txt 格式文件，单个文件不超过20MB
@@ -200,7 +200,7 @@
         <el-row style="justify-content: space-between;">
           <el-col :span="10">
             <el-form-item label="牵头单位:">
-              <el-select v-model="formData.acceptanceUnit" placeholder="请选择单位" clearable>
+              <el-select v-model="formData.acceptanceUnit" placeholder="请选择牵头单位" clearable>
                 <el-option
                   v-for="dept in deptList"
                   :key="dept.id"
@@ -222,7 +222,7 @@
         <el-row>
           <el-col :span="10">
             <el-form-item label="协办单位:">
-              <el-select v-model="formData.cooperationUnit" placeholder="请选择单位" clearable>
+              <el-select v-model="cooperationUnit" placeholder="请选择协办单位" clearable>
                 <el-option
                   v-for="dept in filteredCollaborateDepts"
                   :key="dept.id"
@@ -234,9 +234,9 @@
             </el-form-item>
           </el-col>
           <el-col :span="10" style="margin-left: 20px;margin-right: 20px;">
-            <el-input v-model="formData.otherCooperationUnit" placeholder="输入单位名称" clearable @change="searchCollaborateDepts"/>
+            <el-input v-model="inputCollaborateUnit" placeholder="输入单位名称" clearable @change="searchCollaborateDepts"/>
           </el-col>
-          <el-button type="primary" size="small" @click="addCooperationUnit(formData.cooperationUnit)">添加</el-button>
+          <el-button type="primary" size="small" @click="addCooperationUnit(cooperationUnit)">添加</el-button>
         </el-row>
 
         <el-row>
@@ -262,7 +262,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="10" style="margin-left: 20px;margin-right: 20px;">
-            <el-input v-model="formData.otherSupervisor" placeholder="输入姓名" clearable @change="searchSupervisorateUsers"/>
+            <el-input v-model="inputSupervisor" placeholder="输入姓名" clearable @change="searchSupervisorateUsers"/>
           </el-col>
         </el-row>
 
@@ -294,7 +294,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="10" style="margin-left: 20px;margin-right: 20px;">
-            <el-input v-model="formData.otherCountersigner" placeholder="输入姓名" clearable @change="searchCountersignerUsers"/>
+            <el-input v-model="inputCountersigner" placeholder="输入姓名" clearable @change="searchCountersignerUsers"/>
           </el-col>
         </el-row>
 
@@ -313,7 +313,7 @@
             </el-form-item>
           </el-col>
           <el-col :span="10" style="margin-left: 20px;margin-right: 20px;">
-            <el-input v-model="formData.otherReviewer" placeholder="输入姓名" clearable @change="searchReviewerUsers"/>
+            <el-input v-model="inputReviewer" placeholder="输入姓名" clearable @change="searchReviewerUsers"/>
           </el-col>
         </el-row>
 
@@ -327,7 +327,24 @@
         <el-row>
           <el-col>
             <el-form-item label=" ">
-              <el-button type="primary" :icon=Paperclip>上传处理报告附件</el-button>
+              <el-upload
+                ref="uploadRef"
+                :http-request="(options) => customUpload(options, 'petitionHandling')"
+                :on-preview="previewFile"
+                :before-remove="beforeRemove"
+                :before-upload="beforeUpload"
+                multiple
+                v-model:file-list="petitionHandlingFileList"
+                accept=".jpg,.png,.pdf,.doc,.docx,.xls,.xlsx"
+                :file-list-type="'petitionHandling'"
+              >
+                <el-button type="primary" :icon=Paperclip>上传处理报告附件</el-button>
+                <template #tip>
+                  <div>
+                    支持上传 doc、docx、pdf、xls、xlsx、jpg、jpeg、png、txt 格式文件，单个文件不超过20MB
+                  </div>
+                </template>
+              </el-upload>
             </el-form-item>
           </el-col>
         </el-row>
@@ -335,7 +352,24 @@
         <el-row>
           <el-col>
             <el-form-item label=" ">
-              <el-button type="primary" :icon=Paperclip>上传答复意见附件</el-button>
+              <el-upload
+                ref="uploadRef"
+                :http-request="(options) => customUpload(options, 'petitionReply')"
+                :on-preview="previewFile"
+                :before-remove="beforeRemove"
+                :before-upload="beforeUpload"
+                multiple
+                v-model:file-list="petitionReplyFileList"
+                accept=".jpg,.png,.pdf,.doc,.docx,.xls,.xlsx"
+                :file-list-type="'petitionReply'"
+              >
+                <el-button type="primary" :icon=Paperclip>上传答复意见附件</el-button>
+                <template #tip>
+                  <div>
+                    支持上传 doc、docx、pdf、xls、xlsx、jpg、jpeg、png、txt 格式文件，单个文件不超过20MB
+                  </div>
+                </template>
+              </el-upload>
             </el-form-item>
           </el-col>
         </el-row>
@@ -356,7 +390,7 @@
         </el-row>
 
         <div class="form-actions">
-          <el-button type="primary" @click="submitForm">保存</el-button>
+          <el-button type="primary" @click="saveForm">保存</el-button>
           <el-button type="primary" @click="nextStep">下一步</el-button>
         </div>
       </el-form>
@@ -376,6 +410,12 @@ import { Paperclip } from '@element-plus/icons-vue'
 import { KKFileView } from '@/components/KKFileView'
 import type { UploadFile, UploadUserFile } from 'element-plus';
 import * as FileApi from '@/api/infra/file'
+// 各文本输入值
+const inputPetitionerUnit = ref('')
+const inputCollaborateUnit = ref('')
+const inputSupervisor = ref('')
+const inputCountersigner = ref('')
+const inputReviewer = ref('')
 // 生成信访编号
 const generatePetitionNumber = () => {
   const now = new Date()
@@ -401,39 +441,93 @@ const previewFile = (file: any) => {
   }
 }
 
-const fileList = ref<UploadUserFile[]>([]);
+const petitionList = ref<UploadUserFile[]>([]);
+const petitionHandlingFileList = ref<UploadUserFile[]>([]);
+const petitionReplyFileList = ref<UploadUserFile[]>([]);
+
 const uploadedFileIds = ref<string[]>([]);
-const customUpload = async (options) => {
+const customUpload = async (options: any, fileListType: string) => {
   const { file, onSuccess, onError } = options
+  
   try {
     // 创建 FormData
     const formData = new FormData()
     formData.append('file', file)
     const result = await FileApi.updateFile(formData)
     file.url = result.data
-    const index = fileList.value.findIndex(item => item.uid === file.uid);
-    fileList.value[index].url = file.url;
+    let index = -1
+
     // 由于 upload 方法返回的是 Promise<T>，我们需要获取实际的响应数据
     const response = await result
-
     if (response.code === 0) {
-      // 如果上传成功，调用成功回调并传递响应数据
+      // 如果上传成功，调用成功回调并传递响应数据 
       onSuccess(response)
+      switch (fileListType) {
+        case 'petitionHandling':
+          index = petitionHandlingFileList.value.findIndex((item: any) => item.uid === file.uid)
+          if (index !== -1) {
+            petitionHandlingFileList.value[index].url = file.url
+          }
+          break
+        case 'petitionReply':
+          index = petitionReplyFileList.value.findIndex((item: any) => item.uid === file.uid)
+          if (index !== -1) {
+            petitionReplyFileList.value[index].url = file.url
+          }
+          break
+        case 'petition':
+          index = petitionList.value.findIndex((item: any) => item.uid === file.uid)
+          if (index !== -1) {
+            petitionList.value[index].url = file.url
+          }
+          break
+      }
     } else {
       // 如果上传失败，调用错误回调
       const error = new Error(response.msg || '文件上传失败')
       // 从文件列表中移除失败的文件
       if (index !== -1) {
-        fileList.value.splice(index, 1)
+        switch (fileListType) {
+          case 'petitionHandling':
+            petitionHandlingFileList.value.splice(index, 1)
+            break
+          case 'petitionReply':
+            petitionReplyFileList.value.splice(index, 1)
+            break
+          case 'petition':
+            petitionList.value.splice(index, 1)
+            break
+        }
       }
       onError(error)
     }
   } catch (error) {
     console.error('文件上传失败:', error)
     // 从文件列表中移除失败的文件
-    const index = fileList.value.findIndex(item => item.uid === file.uid)
+    let index = -1
+    switch (fileListType) {
+      case 'petitionHandling':
+        index = petitionHandlingFileList.value.findIndex((item: any) => item.uid === file.uid)
+        break
+      case 'petitionReply':
+        index = petitionReplyFileList.value.findIndex((item: any) => item.uid === file.uid)
+        break
+      case 'petition':
+        index = petitionList.value.findIndex((item: any) => item.uid === file.uid)
+        break
+    }
     if (index !== -1) {
-      fileList.value.splice(index, 1)
+      switch (fileListType) {
+        case 'petitionHandling':
+          petitionHandlingFileList.value.splice(index, 1)
+          break
+        case 'petitionReply':
+          petitionReplyFileList.value.splice(index, 1)
+          break
+        case 'petition':
+          petitionList.value.splice(index, 1)
+          break
+      }
     }
     onError(error)
   }
@@ -443,7 +537,7 @@ const beforeRemove = (file: UploadFile) => {
   return ElMessageBox.confirm(`确定移除 ${file.name}？`).then(
     () => {
       // 从已上传文件ID列表中移除
-      const index = uploadedFileIds.value.findIndex(id => id === file.uid);
+      const index = uploadedFileIds.value.findIndex((id: any) => id === file.uid);
       if (index > -1) {
         uploadedFileIds.value.splice(index, 1);
       }
@@ -456,7 +550,7 @@ const beforeRemove = (file: UploadFile) => {
 };
 
 const beforeUpload = (file: UploadFile) => {
-  const fileSize = file.size / 1024 / 1024;
+  const fileSize = file?.size / 1024 / 1024;
   if (fileSize > 20) {
     ElMessage.error('文件大小超过20MB，无法上传');
     return false;
@@ -470,8 +564,6 @@ const formData = reactive({
   petitioner: '', // 信访人
   petitionerType: '', // 信访人身份类别
   petitionerUnit: '', // 信访人单位
-  otherPetitionerUnit: '', 
-  otherCollaborateUnits: '', 
   documentTitle: '', // 文件标题
   petitionChannel: '', // 信访渠道
   purposeCategory: '', // 目的分类
@@ -482,21 +574,19 @@ const formData = reactive({
   content: '', // 具体内容
   proposedOpinion: '', // 拟办意见
   directorOpinion: '', // 督查办主任意见
-  acceptanceUnit: '', // 受理单位
+  acceptanceUnit: '', // 牵头单位
   requiredCompletionTime: '', // 要求完成时间
-  cooperationUnit: '', // 协办单位
-  otherCooperationUnit: '', // 其他协办单位
   cooperationUnits: [], // 已选协办单位列表
   supervisor: '', // 督办人
-  otherSupervisor: '', // 其他督办人
   officePhone: '', // 办公电话
   responsibleLeader: '', // 分管领导
   countersigner: '', // 会签人
-  otherCountersigner: '', // 其他会签人
   reviewer: '', // 阅批人
-  otherReviewer: '', // 其他阅批人
   petitionHandling: '', // 信访处理
-  completionReview: '' // 办结审核
+  completionReview: '', // 办结审核
+  petitionList: [],// 信访附件列表
+  petitionHandlingFileList: [], // 处理报告附件列表
+  petitionReplyFileList: [], // 答复意见附件列表
 })
 
 // 表单验证规则
@@ -650,31 +740,65 @@ const handleSupervisorChange = async (userId: number) => {
     }
   } 
 
-  if (user.deptId) {
-    const dept = await DeptApi.getDept(user.deptId)
-
-    // 处理分管领导信息
-    if (dept.leaderUserId) {
-      const leader = userList.value.find(u => u.id === dept.leaderUserId)
-      if (leader) {
-        formData.responsibleLeader = leader.nickname || leader.username
+  if (user.deptIds) {
+    const leaderNames: string[] = []
+    for (const deptId of user.deptIds) {
+      const dept = await DeptApi.getDept(deptId)
+      // 处理分管领导信息
+      if (dept.leaderUserId) {
+        const leader = userList.value.find(u => u.id === dept.leaderUserId)
+        if (leader) {
+          // 避免重复添加相同的领导
+          if (!leaderNames.includes(leader.nickname)) {
+            leaderNames.push(leader.nickname)
+          }
+        } else {
+          // 如果在当前用户列表中没找到，清空分管领导字段
+          ElMessage.warning('用户列表中没找到该用户,请手动输入')
+        } 
       } else {
-        // 如果在当前用户列表中没找到，清空分管领导字段
-        formData.responsibleLeader = ''
-        ElMessage.warning('用户列表中没找到该用户,请手动输入')
-      } 
-    } else {
       // 如果部门没有设置负责人，清空分管领导字段并提示用户
-      formData.responsibleLeader = ''
       ElMessage.warning('所选部门未设置负责人,请手动输入')
     }
+   }
+   formData.responsibleLeader = leaderNames.join(',')
   }
 }
 
-// 提交表单
-const submitForm = () => {
-  documentFormRef.value.validate((valid) => {
+// 保存表单
+const saveForm = () => {
+  documentFormRef.value.validate((valid: boolean) => {
     if (valid) {
+      // 处理信访附件列表
+      formData.petitionList = petitionList.value.map(file => {
+        return {
+          name: file.name,
+          size: file.size,
+          url: file.url
+        }
+      })
+      
+      // 处理处理报告附件列表
+      formData.petitionHandlingFileList = petitionHandlingFileList.value.map(file => {
+        return {
+          name: file.name,
+          size: file.size,
+          url: file.url
+        }
+      })
+      
+      // 处理答复意见附件列表
+      formData.petitionReplyFileList = petitionReplyFileList.value.map(file => {
+        return {
+          name: file.name,
+          size: file.size,
+          url: file.url
+        }
+      })
+      // 将表单数据保存到本地存储
+      const formDataToSave = {...formData,}
+      localStorage.setItem('petition_form_data', JSON.stringify(formDataToSave))
+      console.log(formData)
       ElMessage.success('表单保存成功')
       // 这里可以添加保存表单数据的逻辑
     } else {
@@ -682,6 +806,47 @@ const submitForm = () => {
       return false
     }
   })
+}
+
+// 从本地缓存加载表单数据
+const loadFormDataFromCache = () => {
+  const cachedData = localStorage.getItem('petition_form_data')
+  if (cachedData) {
+    try {
+      const parsedData = JSON.parse(cachedData)
+      
+      // 恢复基本表单数据
+      Object.keys(formData).forEach(key => {
+        if (key !== 'petitionList' && key !== 'petitionHandlingFileList' && key !== 'petitionReplyFileList') {
+          if (parsedData[key] !== undefined) {
+            formData[key] = parsedData[key]
+          }
+        }
+      })
+      
+      // 恢复附件列表
+      if (Array.isArray(parsedData.petitionList)) {
+        petitionList.value = parsedData.petitionList
+      }
+      
+      if (Array.isArray(parsedData.petitionHandlingFileList)) {
+        petitionHandlingFileList.value = parsedData.petitionHandlingFileList
+      }
+      
+      if (Array.isArray(parsedData.petitionReplyFileList)) {
+        petitionReplyFileList.value = parsedData.petitionReplyFileList
+      }
+      
+      ElMessage.info('已从本地缓存恢复表单数据')
+    } catch (error) {
+      console.error('解析缓存数据失败:', error)
+    }
+  }
+}
+
+// 清除本地缓存的表单数据
+const clearFormDataCache = () => {
+  localStorage.removeItem('petition_form_data')
 }
 
 // 下一步
@@ -696,16 +861,16 @@ const nextStep = () => {
     }
   })
 }
-
+const cooperationUnit = ref('')
 // 添加协办单位
-const addCooperationUnit = (unit) => {
+const addCooperationUnit = (unit: string) => {
   if (unit) {
     formData.cooperationUnits.push(unit)
   }
 }
 
 // 移除协办单位
-const removeCooperationUnit = (unit) => {
+const removeCooperationUnit = (unit: string) => {
   const index = formData.cooperationUnits.indexOf(unit)
   if (index !== -1) {
     formData.cooperationUnits.splice(index, 1)
@@ -715,6 +880,7 @@ onMounted(async () => {
   await loadDeptList()
   await loadUserList()
   formData.petitionNumber = generatePetitionNumber()
+  loadFormDataFromCache()
 })
 </script>
 
