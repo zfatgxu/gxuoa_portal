@@ -512,18 +512,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
           activeMenu: '/seal'
         }
       },
-      {
-        path: 'createSpecial',
-        component: () => import('@/views/seal/task/create/special.vue'),
-        name: 'SealCreateSpecial',
-        meta: {
-          noCache: true,
-          hidden: true,
-          canTo: true,
-          title: '发起印章申请(含单位负责人)',
-          activeMenu: '/seal'
-        }
-      },
+
       {
         path: 'detail',
         component: () => import('@/views/bpm/processInstance/detail/sealindex.vue'),

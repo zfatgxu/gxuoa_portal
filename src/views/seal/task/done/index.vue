@@ -14,7 +14,7 @@
             </span>
             <el-checkbox
               :model-value="scope.row.applyData.sealState === 1"
-              :disabled="scope.row.applyData.sealState == 1"
+              :disabled="scope.row.applyData.sealState == 1 || !canOperateSealState(scope.row) || !isSealNumberApproved(scope.row)"
               @change="(val) => handleSealStateChange(scope.row, val)"
               style="margin-left: 6px;"
             />
@@ -80,10 +80,12 @@ import { dateFormatter, formatPast2 } from '@/utils/formatTime'
 import * as TaskApi from '@/api/bpm/task'
 import * as SealApi from '@/api/seal/index'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useUserStore } from '@/store/modules/user'
 
 defineOptions({ name: 'SealDoneTask' })
 
 const { push } = useRouter() // 路由
+const userStore = useUserStore() // 用户信息
 
 const loading = ref(true) // 列表的加载中
 const total = ref(0) // 列表的总页数
@@ -128,8 +130,44 @@ const handlePagination = () => {
   getList() // 重新请求数据
 }
 
+/** 检查盖章编码是否为审核通过状态（A开头） */
+const isSealNumberApproved = (row: any) => {
+  const sealNumber = row.applyData?.sealNumber
+  if (!sealNumber || typeof sealNumber !== 'string') {
+    return false
+  }
+  // A开头表示审核通过，B开头表示审核中或已拒绝
+  return sealNumber.startsWith('A')
+}
+
+/** 检查当前用户是否有权限操作用印状态 */
+const canOperateSealState = (row: any) => {
+  // 获取当前登录用户ID
+  const currentUserId = userStore.getUser.id
+
+  // 检查是否有部门审核人列表
+  if (!row.applyData?.deptAuditors || !Array.isArray(row.applyData.deptAuditors)) {
+    return false
+  }
+
+  // 检查当前用户是否在部门审核人列表中
+  return row.applyData.deptAuditors.some((auditor: any) => auditor.auditor === currentUserId)
+}
+
 /** 处理用印状态变更 */
 const handleSealStateChange = async (row: any, checked: boolean) => {
+  // 检查盖章编码状态
+  if (!isSealNumberApproved(row)) {
+    ElMessage.warning('只有审核通过的申请（盖章编码A开头）才能操作用印状态')
+    return
+  }
+
+  // 检查权限
+  if (!canOperateSealState(row)) {
+    ElMessage.warning('您没有权限操作此申请的用印状态，只有部门用印审核人才能操作')
+    return
+  }
+
   // 根据勾选状态确定新的状态码
   const newSealState = checked ? 1 : 2
   const stateText = checked ? '已用印' : '未用印'

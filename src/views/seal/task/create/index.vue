@@ -861,15 +861,22 @@ watch(selectedUnit, async (newVal) => {
         })
       }
 
-      // 更新审核人列表（根据选择的单位过滤）
-      auditUserList.value = filterUsersByDept(allUsers, newVal.id)
+      // 更新审核人列表（使用当前登录用户的部门ID，而不是选择的用印单位ID）
+      const currentUser = userStore.getUser
+      if (currentUser && currentUser.deptId) {
+        auditUserList.value = filterUsersByDept(allUsers, currentUser.deptId)
+        // 同部门用户列表（用于单位负责人选择）也应该使用当前用户的部门ID
+        sameDeptUsersList.value = filterUsersByDept(allUsers, currentUser.deptId)
+      } else {
+        // 如果无法获取当前用户部门信息，则使用所有用户
+        auditUserList.value = allUsers
+        sameDeptUsersList.value = allUsers
+      }
 
-      // 更新同部门用户列表（用于单位负责人选择）
-      sameDeptUsersList.value = filterUsersByDept(allUsers, newVal.id)
-
-      console.log('更新选择单位的用户列表:', {
-        unitId: newVal.id,
-        unitName: newVal.name,
+      console.log('更新用户列表（基于当前用户部门）:', {
+        selectedUnitId: newVal.id,
+        selectedUnitName: newVal.name,
+        currentUserDeptId: currentUser?.deptId,
         totalUsers: allUsers.length,
         auditUsers: auditUserList.value.length,
         sameDeptUsers: sameDeptUsersList.value.length

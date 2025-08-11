@@ -177,7 +177,7 @@
             <div v-for="(opinion, index) in getSealAuditOpinions()" :key="index" class="opinion-box" :class="{ 'mb-3': index < getSealAuditOpinions().length - 1 }">
               <div class="opinion-header">
                 <span class="approver-name">{{ opinion.approver }}</span>
-                <span v-if="opinion.statusText" class="approval-status" :class="getStatusClass(opinion.status)">
+                <span v-if="shouldShowSealAuditStatusTag(opinion.status)" class="approval-status" :class="getStatusClass(opinion.status)">
                   {{ opinion.statusText }}
                 </span>
                 <span class="approval-time" v-if="opinion.time">
@@ -947,11 +947,12 @@ const getUnitLeaderOpinions = () => {
               status: 2,
               statusText: '自动通过',
               content: task.reason || '审批人为空，自动通过',
-              time: task.startTime ? formatDate(task.startTime) : ''
+              time: task.endTime ? formatDate(task.endTime) : ''
             })
           } else {
             const statusText = activity.status === 2 ? '已同意' :
-                              activity.status === 1 ? '处理中' : ''  // 其他状态不显示文本
+                              activity.status === 1 ? '处理中' :
+                              activity.status === 5 ? '已驳回' : ''  // 其他状态不显示文本
             opinions.push({
               approver: task.assigneeUser.nickname,
               status: activity.status,
@@ -1008,11 +1009,12 @@ const getSealAuditOpinions = () => {
                 status: 2,
                 statusText: '已同意',
                 content: task.reason || '审批人为空，自动通过',
-                time: task.startTime ? formatDate(task.startTime) : ''
+                time: task.endTime ? formatDate(task.endTime) : ''
               })
             } else {
-              // 只有同意状态才显示标签，其他状态（包括拒绝）不显示标签
-              const statusText = activity.status === 2 ? '已同意' : ''
+              // 显示同意和驳回状态的标签
+              const statusText = activity.status === 2 ? '已同意' :
+                                activity.status === 5 ? '已驳回' : ''
               opinions.push({
                 approver: task.assigneeUser.nickname,
                 status: activity.status,
@@ -1051,14 +1053,14 @@ const shouldShowStatusTag = (status) => {
   return status === 2  // 只显示已同意(2)的标签
 }
 
-// 判断是否显示单位负责人状态标签（显示已同意和处理中）
+// 判断是否显示单位负责人状态标签（显示已同意、处理中和已驳回）
 const shouldShowUnitLeaderStatusTag = (status) => {
-  return status === 2 || status === 1  // 显示已同意(2)和处理中(1)的标签
+  return status === 2 || status === 1 || status === 5  // 显示已同意(2)、处理中(1)和已驳回(5)的标签
 }
 
-// 判断是否显示用印审核状态标签（只显示已同意）
+// 判断是否显示用印审核状态标签（显示已同意和已驳回）
 const shouldShowSealAuditStatusTag = (status) => {
-  return status === 2  // 只显示已同意(2)的标签
+  return status === 2 || status === 5  // 显示已同意(2)和已驳回(5)的标签
 }
 
 // 获取审批状态对应的样式类
@@ -1066,6 +1068,7 @@ const getStatusClass = (status) => {
   switch (status) {
     case 2: return 'status-approved'    // 已同意
     case 1: return 'status-processing'  // 处理中
+    case 5: return 'status-rejected'    // 已驳回
     default: return 'status-pending'    // 其他状态（不会显示，但保留样式）
   }
 }

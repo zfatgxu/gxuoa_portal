@@ -11,7 +11,7 @@
         v-if="runningTask && isHandleTaskStatus() && isShowButton(OperationButtonType.APPROVE)"
       >
         <template #reference>
-          <el-button plain type="success" @click="openPopover('approve')">
+          <el-button plain type="success" @click="handleApproveClick()">
             <Icon icon="ep:select" />&nbsp; {{ getButtonDisplayName(OperationButtonType.APPROVE) }}
           </el-button>
         </template>
@@ -526,6 +526,7 @@
   } from '@/components/SimpleProcessDesignerV2/src/consts'
   import { BpmModelFormType, BpmProcessInstanceStatus } from '@/utils/constants'
   import type { FormInstance, FormRules } from 'element-plus'
+  import { ElMessageBox } from 'element-plus'
   import SignDialog from './SignDialog.vue'
   import ProcessInstanceTimeline from '../detail/ProcessInstanceTimeline.vue'
   import { isEmpty } from '@/utils/is'
@@ -1071,9 +1072,73 @@
     if (runningTask.value?.buttonsSetting && runningTask.value?.buttonsSetting[btnType]) {
       displayName = runningTask.value.buttonsSetting[btnType].displayName
     }
+
+    // 如果是申请人修改材料节点，将"通过"按钮改为"再次提交"
+    if (isModifyMaterialTask() && btnType === OperationButtonType.APPROVE) {
+      displayName = '再次提交'
+    }
+
     return displayName
   }
-  
+
+  /** 处理通过按钮点击事件 */
+  const handleApproveClick = async () => {
+    // 如果是申请人修改材料节点，直接提交，不弹出审批意见框
+    if (isModifyMaterialTask()) {
+      await handleDirectApprove()
+    } else {
+      // 其他节点正常弹出审批意见框
+      openPopover('approve')
+    }
+  }
+
+  /** 直接审批通过（不需要填写审批意见） */
+  const handleDirectApprove = async () => {
+    try {
+      // 二次确认
+      await ElMessageBox.confirm(
+        '确认要再次提交此申请吗？',
+        '提示',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning',
+        }
+      )
+
+      formLoading.value = true
+
+      // 校验流程表单必填字段
+      const valid = await validateNormalForm()
+      if (!valid) {
+        message.warning('表单校验不通过，请先完善表单!!')
+        return
+      }
+
+      const variables = getUpdatedProcessInstanceVariables()
+      // 审批通过数据
+      const data = {
+        id: runningTask.value.id,
+        reason: '再次提交', // 默认审批意见
+        variables // 把修改的字段值赋于流程实例变量
+      } as any
+
+      await TaskApi.approveTask(data)
+      message.success('提交成功')
+      // 加载最新数据
+      reload()
+    } catch (error) {
+      if (error === 'cancel') {
+        // 用户取消操作，不显示错误信息
+        return
+      }
+      console.error('提交失败:', error)
+      message.error('提交失败，请重试')
+    } finally {
+      formLoading.value = false
+    }
+  }
+
   const loadTodoTask = (task: any) => {
     approveForm.value = {}
     runningTask.value = task

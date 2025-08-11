@@ -63,7 +63,17 @@
         </el-table-column>
         <el-table-column align="center" label="审批状态" prop="status">
           <template #default="scope">
-            <dict-tag :type="DICT_TYPE.SEAL_APPLY_STATE" :value="scope.row.status" />
+            <span :class="getApprovalStatusClass(scope.row.status)">
+              {{ getApprovalStatusText(scope.row.status) }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column align="center" label="用印状态" min-width="120">
+          <template #default="scope">
+            <span
+              :class="scope.row.sealState === 1 ? 'seal-status-used' : 'seal-status-pending'">
+              {{ scope.row.sealState === 1 ? '已用印' : '待用印' }}
+            </span>
           </template>
         </el-table-column>
         <el-table-column align="center" label="材料名称" prop="materialName" />
@@ -223,6 +233,42 @@
     return signerArray[0] || ''
   }
 
+  // 获取审批状态样式类
+  const getApprovalStatusClass = (status: number) => {
+    switch (status) {
+      case 1: // 审批中
+        return 'approval-status-running'
+      case 2: // 审批通过
+        return 'approval-status-approved'
+      case 3: // 审批不通过
+        return 'approval-status-rejected'
+      case 4: // 已取消
+        return 'approval-status-cancelled'
+      case 5: // 已驳回
+        return 'approval-status-rejected-back'
+      default:
+        return ''
+    }
+  }
+
+  // 获取审批状态文本
+  const getApprovalStatusText = (status: number) => {
+    switch (status) {
+      case 1:
+        return '审批中'
+      case 2:
+        return '审批通过'
+      case 3:
+        return '审批不通过'
+      case 4:
+        return '已取消'
+      case 5:
+        return '已驳回'
+      default:
+        return '未知状态'
+    }
+  }
+
   // 处理用印状态变更
   const handleSealStateChange = (row: any, checked: boolean) => {
     if (row.status !== 2) {
@@ -266,3 +312,71 @@
     getSealApplicationPage(queryParams.value)
   })
   </script>
+
+  <style scoped>
+  .seal-status-used {
+    color: #f39c12;
+    font-weight: bold;
+  }
+
+  .seal-status-pending {
+    color: #409eff;
+    font-weight: bold;
+  }
+
+  /* 审批状态样式 */
+  .approval-status-running {
+    color: #e6a23c;
+    background-color: #fdf6ec;
+    border: 1px solid #f5dab1;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    display: inline-block;
+  }
+
+  .approval-status-approved {
+    color: #67c23a;
+    background-color: #f0f9ff;
+    border: 1px solid #b3d8b3;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    display: inline-block;
+  }
+
+  .approval-status-rejected {
+    color: #f56c6c;
+    background-color: #fef0f0;
+    border: 1px solid #fbc4c4;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    display: inline-block;
+  }
+
+  .approval-status-cancelled {
+    color: #909399;
+    background-color: #f4f4f5;
+    border: 1px solid #d3d3d3;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    display: inline-block;
+  }
+
+  .approval-status-rejected-back {
+    color: #e74c3c;
+    background-color: #fdf2f2;
+    border: 1px solid #f5b7b1;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    display: inline-block;
+  }
+  </style>
