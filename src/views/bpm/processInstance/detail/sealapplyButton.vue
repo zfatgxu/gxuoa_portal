@@ -1085,7 +1085,58 @@
   const handleApproveClick = async () => {
     // 如果是申请人修改材料节点，直接提交，不弹出审批意见框
     if (isModifyMaterialTask()) {
-      await handleDirectApprove()
+      try {
+        // 二次确认
+        await ElMessageBox.confirm(
+          '确认要再次提交此申请吗？',
+          '提示',
+          {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning',
+          }
+        )
+
+        formLoading.value = true
+
+        // 校验流程表单必填字段
+        const valid = await validateNormalForm()
+        if (!valid) {
+          message.warning('表单校验不通过，请先完善表单!!')
+          return
+        }
+
+        // 先调用更新接口
+        const updateSuccess = await new Promise((resolve) => {
+          emit('modifyMaterial', resolve)
+        })
+
+        if (!updateSuccess) {
+          return
+        }
+
+        const variables = getUpdatedProcessInstanceVariables()
+        // 审批通过数据
+        const data = {
+          id: runningTask.value.id,
+          reason: '再次提交', // 默认审批意见
+          variables // 把修改的字段值赋于流程实例变量
+        } as any
+
+        await TaskApi.approveTask(data)
+        message.success('提交成功')
+        // 加载最新数据
+        reload()
+      } catch (error) {
+        if (error === 'cancel') {
+          // 用户取消操作，不显示错误信息
+          return
+        }
+        console.error('再次提交失败:', error)
+        message.error('再次提交失败：' + (error.message || error))
+      } finally {
+        formLoading.value = false
+      }
     } else {
       // 其他节点正常弹出审批意见框
       openPopover('approve')

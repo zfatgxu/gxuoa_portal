@@ -16,6 +16,7 @@
               :model-value="scope.row.applyData.sealState === 1"
               :disabled="scope.row.applyData.sealState == 1 || !canOperateSealState(scope.row) || !isSealNumberApproved(scope.row)"
               @change="(val) => handleSealStateChange(scope.row, val)"
+              @click="(event) => handleCheckboxClick(scope.row, event)"
               style="margin-left: 6px;"
             />
           </div>
@@ -152,6 +153,27 @@ const canOperateSealState = (row: any) => {
 
   // 检查当前用户是否在部门审核人列表中
   return row.applyData.deptAuditors.some((auditor: any) => auditor.auditor === currentUserId)
+}
+
+/** 处理复选框点击事件（包括禁用状态的点击） */
+const handleCheckboxClick = (row: any, event: Event) => {
+  // 如果复选框是禁用状态，显示相应的提示信息
+  const isDisabled = row.applyData.sealState == 1 || !canOperateSealState(row) || !isSealNumberApproved(row)
+
+  if (isDisabled) {
+    // 阻止默认行为
+    event.preventDefault()
+    event.stopPropagation()
+
+    // 根据不同的禁用原因显示不同的提示
+    if (row.applyData.sealState == 1) {
+      ElMessage.info('该申请已经是"已用印"状态，无需再次操作')
+    } else if (!isSealNumberApproved(row)) {
+      ElMessage.warning('只有审核通过的申请（盖章编码A开头）才能操作用印状态')
+    } else if (!canOperateSealState(row)) {
+      ElMessage.warning('您没有权限操作此申请的用印状态，只有部门用印审核人才能操作')
+    }
+  }
 }
 
 /** 处理用印状态变更 */
