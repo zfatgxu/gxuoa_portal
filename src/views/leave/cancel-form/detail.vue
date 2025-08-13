@@ -412,15 +412,26 @@
   
             <!-- 前往地点 -->
             <el-descriptions-item label="前往地点(必填)" label-class-name="approval-label">
-              <div v-for="(loc, index) in destinations" :key="index" class="detail-item">
-                <!-- <span class="detail-label">国内</span> -->
-                <el-cascader :options="pcaTextArr" v-model="loc.destination" :disabled="isReadOnly" clearable style="width: 100%;"/>
-<!--                <el-input v-model="loc.destinationDetail" placeholder="可选填写详细地址（如门牌号、楼层等）" clearable style="margin-left: 10px;" :disabled="isReadOnly"/>-->
+              <div v-for="(loc, index) in destinations" :key="index" style="margin-bottom: 15px;">
+                <div class="detail-item">
+                  <span class="detail-label">地点类型</span>
+                  <el-tag>{{ loc.locationType === 'domestic' ? '国内' : '国外' }}</el-tag>
+                </div>
+                
+                <!-- 国内地址显示 -->
+                <div v-if="loc.locationType === 'domestic'" class="detail-item">
+                  <span class="detail-label">目的地</span>
+                  <span>{{ loc.destination.join(' / ') }}</span>
+                </div>
+                
+                <!-- 国外地址显示 -->
+                <div v-if="loc.locationType === 'foreign'" class="detail-item">
+                  <span class="detail-label">详细地址</span>
+                  <span>{{ loc.foreignAddress }}</span>
+                </div>
+                
+                <div v-if="index < destinations.length - 1" class="item-divider"></div>
               </div>
-              <!-- <div class="detail-item">
-                <span class="detail-label">国外</span>
-                <el-input v-model="personalPhone" placeholder="请输入国外地址"/>
-              </div> -->
             </el-descriptions-item>
   
             <!-- 请假期间主持工作负责人安排 -->
@@ -659,8 +670,10 @@
   const remarks = ref('');
   const destinations = ref([
     {
-      destination: '',
-      destinationDetail: ''
+      locationType: 'domestic',
+      destination: [],
+      destinationDetail: '',
+      foreignAddress: ''
     }
   ]);
   // 获取请假人信息
@@ -700,7 +713,6 @@
           trainingList.value = [];
           businessList.value = [];
           academicMeetings.value = [];
-          personalList.value = [];
     res2.forEach(item => {
       // 根据类型设置选中的事由
       if (!selectedReasons.value.includes(item.type)) {
@@ -784,31 +796,111 @@
           remarks.value = res.remark;
           // 解析目的地数据
           if (res.destination) {
-            // 首先尝试使用 ||| 分隔符解析（新格式）
+            // 检查是否使用 ||| 分隔符
             if (res.destination.includes('|||')) {
               const multiDestinations = res.destination.split('|||');
               destinations.value = multiDestinations.map(dest => {
-                // 对每个地点，使用逗号分隔省市区和详细地址
-                const parts = dest.split(',');
+                const trimmedDest = dest.trim();
+                
+                // 检查是否是国内地址
+                if (trimmedDest.startsWith('国内 /')) {
+                  const parts = trimmedDest.substring(4).trim().split('/').map(p => p.trim());
+                  return {
+                    locationType: 'domestic',
+                    destination: parts,
+                    destinationDetail: '',
+                    foreignAddress: ''
+                  };
+                }
+                
+                // 检查是否是国外地址
+                if (trimmedDest.startsWith('国外 /')) {
+                  return {
+                    locationType: 'foreign',
+                    destination: [],
+                    destinationDetail: '',
+                    foreignAddress: trimmedDest.substring(4).trim()
+                  };
+                }
+                
+                // 兼容旧格式（使用逗号分隔的省市区）
+                if (trimmedDest.includes(',')) {
+                  const parts = trimmedDest.split(',');
+                  return {
+                    locationType: 'domestic',
+                    destination: parts.slice(0, 3),
+                    destinationDetail: parts.slice(3).join(','),
+                    foreignAddress: ''
+                  };
+                }
+                
+                // 兼容旧格式（使用/分隔但没有国内前缀的省市区）
+                if (trimmedDest.includes('/')) {
+                  return {
+                    locationType: 'domestic',
+                    destination: trimmedDest.split('/'),
+                    destinationDetail: '',
+                    foreignAddress: ''
+                  };
+                }
+                
+                // 默认当作国内地址处理
                 return {
-                  destination: parts.slice(0, 3), 
-                  destinationDetail: parts.slice(3).join(',')
+                  locationType: 'domestic',
+                  destination: trimmedDest ? [trimmedDest] : [],
+                  destinationDetail: '',
+                  foreignAddress: ''
                 };
               });
-            console.log(destinations.value)
             } else {
-              // 兼容旧格式（只使用逗号分隔）
-              const destParts = res.destination.split(',');
-              // 如果地点数据包含超过省市区的部分，则最后一部分为详细地址
-              if (destParts.length > 3) {
+              const trimmedDest = res.destination.trim();
+              
+              // 检查是否是国内地址
+              if (trimmedDest.startsWith('国内 /')) {
+                const parts = trimmedDest.substring(4).trim().split('/').map(p => p.trim());
                 destinations.value = [{
-                  destination: destParts.slice(0, 3), 
-                  destinationDetail: destParts.slice(3).join(',')
+                  locationType: 'domestic',
+                  destination: parts,
+                  destinationDetail: '',
+                  foreignAddress: ''
                 }];
-              } else {
+              }
+              // 检查是否是国外地址
+              else if (trimmedDest.startsWith('国外 /')) {
                 destinations.value = [{
-                  destination: destParts, 
-                  destinationDetail: ''
+                  locationType: 'foreign',
+                  destination: [],
+                  destinationDetail: '',
+                  foreignAddress: trimmedDest.substring(4).trim()
+                }];
+              }
+              // 兼容旧格式（使用逗号分隔）
+              else if (trimmedDest.includes(',')) {
+                const destParts = trimmedDest.split(',');
+                // 如果地点数据包含超过省市区的部分，则最后一部分为详细地址
+                destinations.value = [{
+                  locationType: 'domestic',
+                  destination: destParts.slice(0, 3),
+                  destinationDetail: destParts.length > 3 ? destParts.slice(3).join(',') : '',
+                  foreignAddress: ''
+                }];
+              }
+              // 兼容旧格式（使用/分隔但没有国内前缀的省市区）
+              else if (trimmedDest.includes('/')) {
+                destinations.value = [{
+                  locationType: 'domestic',
+                  destination: trimmedDest.split('/'),
+                  destinationDetail: '',
+                  foreignAddress: ''
+                }];
+              }
+              // 默认当作国内地址处理
+              else {
+                destinations.value = [{
+                  locationType: 'domestic',
+                  destination: trimmedDest ? [trimmedDest] : [],
+                  destinationDetail: '',
+                  foreignAddress: ''
                 }];
               }
             }
