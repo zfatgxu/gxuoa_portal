@@ -53,17 +53,23 @@ export interface OrderVO {
   priority: number // 紧急程度
   deadline: string // 完成期限
   leadDept: number // 牵头单位ID
-  significance?: number // 重要程度
   coDept?: string // 协办单位ID（逗号分隔）
   supervisor: number // 督办人ID
   content: string // 督办内容
   undertakeMatter: string // 承办事项
-  supervisionApprove?: number // 督察办审批状态
-  leadDeptDetail?: string // 牵头单位承办情况
-  supervisionReapprove?: number // 督察办复核状态
+  reportFrequency?: string // 汇报频次 (对应数据库 report_frequency)
+  isProjectSupervision?: boolean // 是否立项督办 (对应数据库 isProjectSupervision)
+  isSupervisionClosed?: boolean // 是否结束督办 (对应数据库 isSupervisionClosed)
+  leader?: number // 分管校领导ID (对应数据库 leader)
+  otherLeaders?: string // 其他校领导ID（逗号分隔，对应数据库 other_leaders）
   summary?: string // 概述信息（字符串格式）
   startUserSelectAssignees?: Record<string, number[]> // 发起人自选审批人 Map，key为taskKey，value为用户ID数组
-  startLeaderSelectAssignees?: Record<string, number[]>
+  startLeaderSelectAssignees?: Record<string, number[]> // 发起人自选审批人 Map，key为taskKey，value为用户ID数组
+  // 以下字段已废弃但保留兼容性，前端不需要传递
+  significance?: number // 重要程度 (已废弃)
+  supervisionApprove?: number // 督察办审批状态 (已废弃)
+  leadDeptDetail?: string // 牵头单位承办情况 (已废弃)
+  supervisionReapprove?: number // 督察办复核状态 (已废弃)
 }
 
 // 督办单响应 VO
@@ -77,14 +83,15 @@ export interface OrderRespVO {
   priority: number // 紧急程度
   deadline: number // 完成期限（时间戳）
   leadDept: number | null // 牵头单位ID
-  significance: number // 重要程度
   coDept: string | null // 协办单位
   supervisor: number // 督办人ID
   content: string // 督办内容
   undertakeMatter: string // 承办事项
-  supervisionApprove: number | null // 督察办审批状态
-  leadDeptDetail: string | null // 牵头单位承办情况
-  supervisionReapprove: number | null // 督察办复核状态
+  reportFrequency?: string // 汇报频次 (对应数据库 report_frequency)
+  isProjectSupervision?: boolean // 是否立项督办 (对应数据库 isProjectSupervision)
+  isSupervisionClosed?: boolean // 是否结束督办 (对应数据库 isSupervisionClosed)
+  leader?: number // 分管校领导ID (对应数据库 leader)
+  otherLeaders?: string // 其他校领导ID（逗号分隔，对应数据库 other_leaders）
   supervisionStatus?: string // 督办状态：processing=流程中，completed=结办文件，rejected=否决文件
   summary?: string // 概述信息
   officePhone?: string // 办公电话
@@ -103,12 +110,33 @@ export interface OrderRespVO {
   creatorName?: string // 创建人姓名
   isOverdue?: boolean // 是否超期
   remainingDays?: number // 剩余天数
+  // 以下字段已废弃但保留兼容性
+  significance?: number // 重要程度 (已废弃)
+  supervisionApprove?: number | null // 督察办审批状态 (已废弃)
+  leadDeptDetail?: string | null // 牵头单位承办情况 (已废弃)
+  supervisionReapprove?: number | null // 督察办复核状态 (已废弃)
 }
 
 // 督办分类选项接口响应
 export interface SupervisionDetailTypeVO {
   value: number // 分类值
   label: string // 分类名称
+}
+
+// 督办分类保存请求VO
+export interface SupervisionTypeSaveReqVO {
+  id?: number // 表id
+  supervisionOrderType: number // 督办单类型：1=工作督办，2=专项督办
+  type: string // 具体类型
+  deleted?: boolean // 删除标识
+}
+
+// 督办分类响应VO
+export interface SupervisionTypeRespVO {
+  id: number // 表id
+  supervisionOrderType: number // 督办单类型：1=工作督办，2=专项督办
+  type: string // 具体类型
+  deleted?: boolean // 删除标识
 }
 
 // 督办单 API
@@ -119,8 +147,18 @@ export const OrderApi = {
   },
 
   // 获取督办分类列表
-  getSupervisionDetailTypes: async (type: number): Promise<string[]> => {
+  getSupervisionDetailTypes: async (type: number): Promise<string[] | SupervisionTypeRespVO[]> => {
     return await request.get({ url: `/bpm/supervision/getListSupervisiondatailType/${type}` })
+  },
+
+  // 创建督办分类
+  createSupervisionType: async (data: SupervisionTypeSaveReqVO): Promise<number> => {
+    return await request.post({ url: `/supervision/type/create`, data })
+  },
+
+  // 删除督办分类
+  deleteSupervisionType: async (id: number) => {
+    return await request.delete({ url: `/supervision/type/delete?id=${id}` })
   },
 
   // 创建督办单

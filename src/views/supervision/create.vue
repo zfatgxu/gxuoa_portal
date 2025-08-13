@@ -1,246 +1,205 @@
 <template>
   <ContentWrap>
     <div class="supervision-order-create">
-      <!-- 页面标题 -->
-      <div class="page-header mb-6 text-center">
-        <h2 class="text-2xl font-bold text-red-600">{{ pageTitle }}</h2>
+      <!-- 页面标题 - 移到表格外面 -->
+      <div class="page-header-outside">
+        <h1 class="form-title">{{ pageTitle }}</h1>
       </div>
 
       <!-- 督办单表单 -->
-      <el-form
-        :model="orderForm"
-        :rules="rules"
-        ref="orderFormRef"
-        label-width="120px"
-        class="order-form"
-        v-loading="dataLoading"
-        element-loading-text="正在加载数据..."
-        :show-message="true"
-        :inline-message="false"
-        status-icon
-      >
-        <!-- 第一行：督办编号放右边 -->
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <!-- 空白占位 -->
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="督办编号：" prop="orderNumber">
-              <el-input
-                v-model="orderForm.orderNumber"
-                placeholder="正在生成督办编号..."
-                readonly
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
+      <div class="order-form-container" v-loading="dataLoading" element-loading-text="正在加载数据...">
 
-        <!-- 第二行：督办事项 -->
-        <el-row :gutter="20">
-          <el-col :span="24">
-            <el-form-item label="督办事项：" prop="title">
-              <el-input v-model="orderForm.title" placeholder="请输入督办事项" />
-            </el-form-item>
-          </el-col>
-        </el-row>
+        <!-- 表单主体 -->
+        <el-form
+          :model="orderForm"
+          :rules="rules"
+          ref="orderFormRef"
+          class="order-form"
+          :show-message="true"
+          :inline-message="false"
+          status-icon
+        >
+          <!-- 表格式布局 -->
+          <div class="form-table">
+            <!-- 督办编号行 -->
+            <div class="form-row">
+              <div class="form-content full-width order-number-content">
+                <span class="order-number-label">{{ orderNumberLabel }}：</span>
+                <span class="order-number-display">{{ orderForm.orderNumber || '正在生成...' }}</span>
+              </div>
+            </div>
 
-        <!-- 第三行：督办分类、督办依据 -->
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="督办分类：" prop="category">
-              <el-select v-model="orderForm.category" placeholder="请选择督办分类" style="width: 100%">
-                <el-option
-                  v-for="dict in supervisionTypeOptions"
-                  :key="dict.value"
-                  :label="dict.label"
-                  :value="dict.value"
+            <!-- 督办事项 -->
+            <div class="form-row">
+              <div class="form-label required">督办事项</div>
+              <div class="form-content full-width">
+                <el-input v-model="orderForm.title" placeholder="请输入督办事项" />
+              </div>
+            </div>
+
+            <!-- 主要内容 -->
+            <div class="form-row">
+              <div class="form-label required">主要内容</div>
+              <div class="form-content full-width">
+                <el-input
+                  type="textarea"
+                  v-model="orderForm.content"
+                  placeholder="请输入主要内容"
+                  :rows="4"
+                  maxlength="2000"
+                  show-word-limit
                 />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="督办依据：" prop="basis">
-              <div class="custom-select-container">
-                <el-select
-                  v-model="orderForm.basis"
-                  placeholder="请选择督办依据或输入自定义内容"
-                  filterable
-                  allow-create
-                  default-first-option
-                  @change="handleBasisChange"
-                  class="basis-select"
-                >
+              </div>
+            </div>
+
+            <!-- 督办分类和督办依据 -->
+            <div class="form-row">
+              <div class="form-label required">督办分类</div>
+              <div class="form-content half-width">
+                <div class="custom-select-container">
+                  <el-select
+                    v-model="orderForm.category"
+                    placeholder="请选择督办分类"
+                    filterable
+                    allow-create
+                    default-first-option
+                    @change="handleCategoryChange"
+                    class="category-select"
+                  >
+                    <el-option
+                      v-for="dict in supervisionTypeOptions"
+                      :key="dict.value"
+                      :label="dict.label"
+                      :value="dict.value"
+                    >
+                      <div class="dict-option-content">
+                        <span>{{ dict.label }}</span>
+                        <el-button
+                          v-if="dict.id"
+                          type="text"
+                          size="small"
+                          class="delete-dict-btn"
+                          @click.stop="deleteCategoryDictItem(dict)"
+                        >
+                          删除
+                        </el-button>
+                      </div>
+                    </el-option>
+                  </el-select>
+                  <el-button
+                    v-if="showAddCategoryToDictButton"
+                    type="text"
+                    size="small"
+                    class="add-to-dict-btn"
+                    :loading="addingCategoryToDict"
+                    @click="addCategoryToDict"
+                  >
+                    添加为常用选项
+                  </el-button>
+                </div>
+              </div>
+              <div class="form-label">督办依据</div>
+              <div class="form-content half-width">
+                <div class="custom-select-container">
+                  <el-select
+                    v-model="orderForm.basis"
+                    placeholder="请选择督办依据"
+                    filterable
+                    allow-create
+                    default-first-option
+                    @change="handleBasisChange"
+                    class="basis-select"
+                  >
+                    <el-option
+                      v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_REASON)"
+                      :key="dict.value"
+                      :label="dict.label"
+                      :value="dict.value"
+                    >
+                      <div class="dict-option-content">
+                        <span>{{ dict.label }}</span>
+                        <el-button
+                          type="text"
+                          size="small"
+                          class="delete-dict-btn"
+                          @click.stop="deleteBasisDictItem(dict)"
+                        >
+                          删除
+                        </el-button>
+                      </div>
+                    </el-option>
+                  </el-select>
+                  <el-button
+                    v-if="showAddBasisToDictButton"
+                    type="text"
+                    size="small"
+                    class="add-to-dict-btn"
+                    :loading="addingBasisToDict"
+                    @click="addBasisToDict"
+                  >
+                    添加为常用选项
+                  </el-button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 紧急程度和完成期限 -->
+            <div class="form-row">
+              <div class="form-label required">紧急程度</div>
+              <div class="form-content half-width">
+                <el-select v-model="orderForm.urgencyLevel" placeholder="请选择紧急程度" class="form-select">
                   <el-option
-                    v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_REASON)"
+                    v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_PRIORITY_TYPE)"
                     :key="dict.value"
                     :label="dict.label"
                     :value="dict.value"
-                  >
-                    <div class="dict-option-content">
-                      <span>{{ dict.label }}</span>
-                      <el-button
-                        type="danger"
-                        link
-                        size="small"
-                        @click.stop="deleteDictItem(dict)"
-                        class="delete-dict-btn"
-                      >
-                        删除
-                      </el-button>
-                    </div>
-                  </el-option>
+                  />
                 </el-select>
-                <el-button
-                  v-if="showAddToDictButton"
-                  type="primary"
-                  link
-                  @click="addBasisToDict"
-                  class="add-to-dict-btn"
-                  :loading="addingToDict"
-                >
-                  添加为常用
-                </el-button>
               </div>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 第四行：紧急程度、要求完成时间 -->
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="紧急程度：" prop="urgencyLevel">
-              <el-select v-model="orderForm.urgencyLevel" placeholder="请选择紧急程度" style="width: 100%">
-                <el-option
-                  v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_PRIORITY_TYPE)"
-                  :key="dict.value"
-                  :label="dict.label"
-                  :value="dict.value"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="要求完成时间：" prop="deadline" label-width="140px">
-              <el-date-picker
-                v-model="orderForm.deadline"
-                type="datetime"
-                placeholder="请选择完成时间"
-                style="width: 100%"
-                format="YYYY-MM-DD HH:mm"
-                value-format="YYYY-MM-DD HH:mm:ss"
-                :disabled-date="disabledDate"
-                :disabled-hours="disabledHours"
-                :disabled-minutes="disabledMinutes"
-                :default-time="defaultTime"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 第五行：牵头单位、重要程度 -->
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="牵头单位：" prop="leadDept">
-              <el-select
-                v-model="orderForm.leadDept"
-                placeholder="牵头部门"
-                style="width: 100%"
-                @change="handleLeadDeptChange"
-              >
-                <el-option
-                  v-for="dept in deptList"
-                  :key="dept.id"
-                  :label="dept.name"
-                  :value="dept.name"
-                  :data-id="dept.id"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="重要程度：" prop="importance">
-              <el-select v-model="orderForm.importance" placeholder="请选择重要程度" style="width: 100%">
-                <el-option
-                  v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_SIGNIFICANCE_TYPE)"
-                  :key="dict.value"
-                  :label="dict.label"
-                  :value="dict.value"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 第六行：协办单位 -->
-        <el-row :gutter="20">
-          <el-col :span="24">
-            <el-form-item label="协办单位：" prop="collaborateDepts" >
-              <el-select
-                v-model="orderForm.collaborateDepts"
-                multiple
-                placeholder="协办单位由牵头单位选择"
-                style="width: 100%;"
-                :collapse-tags="true"
-                :max-collapse-tags="2"
-                filterable
-                clearable
-                remote
-                :remote-method="searchDepts"
-                :loading="false"
-                @change="handleCollaborateDeptsChange"
-                disabled
-              >
-                <el-option
-                  v-for="dept in filteredCollaborateDepts"
-                  :key="dept.id"
-                  :label="dept.name"
-                  :value="dept.name"
-                  :data-id="dept.id"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 已选择的协办单位显示区域 -->
-        <el-row :gutter="20" v-if="orderForm.collaborateDepts && orderForm.collaborateDepts.length > 0">
-          <el-col :span="24">
-            <div class="selected-depts-container">
-              <div class="selected-depts-header">已选择的协办单位：</div>
-              <div class="selected-depts-box">
-                <el-tag
-                  v-for="(dept, index) in orderForm.collaborateDepts"
-                  :key="index"
-                  closable
-                  @close="removeDept(dept)"
-                  class="dept-tag"
-                  type="success"
-                >
-                  {{ dept }}
-                </el-tag>
+              <div class="form-label required">完成期限</div>
+              <div class="form-content half-width">
+                <div class="deadline-container">
+                  <el-date-picker
+                    v-model="orderForm.deadline"
+                    type="datetime"
+                    placeholder="请选择完成期限"
+                    format="YYYY-MM-DD HH:mm"
+                    value-format="YYYY-MM-DD HH:mm:ss"
+                    :disabled-date="disabledDate"
+                    :disabled-hours="disabledHours"
+                    :disabled-minutes="disabledMinutes"
+                    :default-time="defaultTime"
+                    class="deadline-picker"
+                  />
+                  <el-select v-model="orderForm.reportFrequency" placeholder="汇报频次" class="report-frequency-select">
+                    <el-option label="每日汇报" value="daily" />
+                    <el-option label="每周汇报" value="weekly" />
+                    <el-option label="每月汇报" value="monthly" />
+                    <el-option label="阶段性汇报" value="phase" />
+                  </el-select>
+                </div>
               </div>
             </div>
-          </el-col>
-        </el-row>
 
-        <!-- 第七行：督办人 -->
-        <el-row :gutter="20">
-          <el-col :span="24">
-            <el-form-item label="督办人：" prop="supervisorName">
-              <div class="search-container">
+            <!-- 分管校领导和其他校领导 -->
+            <div class="form-row">
+              <div class="form-label">分管校领导</div>
+              <div class="form-content half-width">
+                <el-input v-model="orderForm.leader" placeholder="自动获取" readonly class="form-input" />
+              </div>
+              <div class="form-label">其他校领导</div>
+              <div class="form-content half-width">
                 <el-select
-                  v-model="orderForm.supervisorName"
-                  placeholder="搜索并选择督办人"
-                  style="width: 200px;"
-                  filterable
-                  clearable
-                  remote
-                  :remote-method="searchUsers"
-                  :loading="false"
-                  @change="handleSupervisorChange"
+                  v-model="orderForm.otherLeaders"
+                  multiple
+                  placeholder="请选择其他校领导"
+                  :collapse-tags="true"
+                  :max-collapse-tags="3"
+                  class="form-select"
+                  @change="handleOtherLeadersChange"
                 >
                   <el-option
-                    v-for="user in filteredUserList"
+                    v-for="user in userList"
                     :key="user.id"
                     :label="user.nickname || user.username"
                     :value="user.nickname || user.username"
@@ -248,124 +207,134 @@
                   />
                 </el-select>
               </div>
-            </el-form-item>
-          </el-col>
-        </el-row>
+            </div>
 
-        <!-- 第八行：办公电话和分管领导 -->
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="办公电话：" prop="officePhone">
-              <el-input
-                v-model="orderForm.officePhone"
-                :placeholder="phoneLoading ? '手动填写' : '自动生成'"
-                :loading="phoneLoading"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="分管领导：" prop="leader">
-              <el-input v-model="orderForm.leader" placeholder="自动获取" />
-            </el-form-item>
-          </el-col>
-        </el-row>
+            <!-- 牵头单位和协办单位 -->
+            <div class="form-row">
+              <div class="form-label required">牵头单位</div>
+              <div class="form-content half-width">
+                <el-select
+                  v-model="orderForm.leadDept"
+                  placeholder="牵头单位由督办人选择"
+                  @change="handleLeadDeptChange"
+                  class="form-select"
+                  disabled
+                >
+                  <el-option
+                    v-for="dept in deptList"
+                    :key="dept.id"
+                    :label="dept.name"
+                    :value="dept.name"
+                    :data-id="dept.id"
+                  />
+                </el-select>
+              </div>
+              <div class="form-label">协办单位</div>
+              <div class="form-content half-width">
+                <el-select
+                  v-model="orderForm.collaborateDepts"
+                  multiple
+                  placeholder="协办单位由牵头单位选择"
+                  :collapse-tags="true"
+                  :max-collapse-tags="1"
+                  filterable
+                  clearable
+                  @change="handleCollaborateDeptsChange"
+                  class="form-select"
+                  disabled
+                >
+                  <el-option
+                    v-for="dept in availableCollaborateDepts"
+                    :key="dept.id"
+                    :label="dept.name"
+                    :value="dept.name"
+                    :data-id="dept.id"
+                  />
+                </el-select>
+              </div>
+            </div>
 
-        <!-- 主要内容 -->
-        <el-row :gutter="20">
-          <el-col :span="24">
-            <el-form-item label="主要内容：" prop="content">
-              <el-input 
-                type="textarea" 
-                v-model="orderForm.content" 
-                placeholder="请输入主要内容"
-                :rows="6"
-                maxlength="2000"
-                show-word-limit
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 承办事项 -->
-        <el-row :gutter="20">
-          <el-col :span="24">
-            <el-form-item label="承办事项：" prop="tasks">
-              <el-input 
-                type="textarea" 
-                v-model="orderForm.tasks" 
-                placeholder="请输入承办事项"
-                :rows="4"
-                maxlength="1000"
-                show-word-limit
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 督察办审批 -->
-        <el-row :gutter="20">
-          <el-col :span="24">
-            <el-form-item label="督察办审批：" prop="inspectionApproval">
-              <el-select v-model="orderForm.inspectionApproval" placeholder="待审批" style="width: 200px" disabled>
-                <el-option
-                  v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_APPROVE_TYPE)"
-                  :key="dict.value"
-                  :label="dict.label"
-                  :value="dict.value"
+            <!-- 督办人和联系电话 -->
+            <div class="form-row">
+              <div class="form-label required">督办人</div>
+              <div class="form-content half-width">
+                <el-select
+                  v-model="orderForm.supervisorNames"
+                  multiple
+                  placeholder="请选择督办人"
+                  filterable
+                  clearable
+                  :collapse-tags="true"
+                  :max-collapse-tags="3"
+                  @change="handleSupervisorChange"
+                  class="form-select"
+                >
+                  <el-option
+                    v-for="user in userList"
+                    :key="user.id"
+                    :label="user.nickname || user.username"
+                    :value="user.nickname || user.username"
+                    :data-id="user.id"
+                  />
+                </el-select>
+              </div>
+              <div class="form-label">联系电话</div>
+              <div class="form-content half-width">
+                <el-input
+                  v-model="orderForm.officePhone"
+                  placeholder="请输入联系电话"
+                  class="form-input"
                 />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
+              </div>
+            </div>
 
-        <!-- 牵头单位承办情况 -->
-        <div class="section-title">
-          <h3 class="text-lg font-medium text-red-600 mb-4">单位承办情况：</h3>
-        </div>
-
-        <!-- 承办状况 -->
-        <el-row :gutter="20">
-          <el-col :span="24">
-            <el-form-item label="承办状况：" prop="handlingDetails" >
-              <el-input 
-                type="textarea" 
-                v-model="orderForm.handlingDetails" 
-                placeholder="待各单位输入"
-                :rows="6"
-                disabled
-                maxlength="2000"
-                show-word-limit
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 督查督办复核 -->
-        <el-row :gutter="20">
-          <el-col :span="24">
-            <el-form-item label="督查督办复核：" prop="supervisionReview">
-              <el-select v-model="orderForm.supervisionReview" placeholder="待复核" style="width: 200px" disabled>
-                <el-option
-                  v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_REAPPROVE_TYPE)"
-                  :key="dict.value"
-                  :label="dict.label"
-                  :value="dict.value"
+            <!-- 工作推进情况 -->
+            <div class="form-row">
+              <div class="form-label">工作推进情况</div>
+              <div class="form-content full-width">
+                <el-input
+                  type="textarea"
+                  v-model="orderForm.handlingDetails"
+                  placeholder="待各单位输入"
+                  :rows="4"
+                  disabled
+                  maxlength="2000"
+                  show-word-limit
                 />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
+              </div>
+            </div>
 
-        <!-- 操作按钮 -->
-        <div class="form-actions mt-8 text-center">
-          <el-button type="primary" @click="createOrder" size="large" :loading="submitLoading">
-            创建督办单
-          </el-button>
-          <el-button @click="handleCancel" size="large">
-            取消
-          </el-button>
-        </div>
-      </el-form>
+            <!-- 是否立项督办 -->
+            <div class="form-row">
+              <div class="form-label">是否立项督办</div>
+              <div class="form-content full-width">
+                <el-radio-group v-model="orderForm.isProjectSupervision" disabled>
+                  <el-radio :label="true">是</el-radio>
+                  <el-radio :label="false">否</el-radio>
+                </el-radio-group>
+              </div>
+            </div>
+
+            <!-- 是否结束督办 -->
+            <div class="form-row">
+              <div class="form-label">是否结束督办</div>
+              <div class="form-content full-width">
+                <el-radio-group v-model="orderForm.isSupervisionClosed" disabled>
+                  <el-radio :label="true">是</el-radio>
+                  <el-radio :label="false">否</el-radio>
+                </el-radio-group>
+              </div>
+            </div>
+          </div>
+
+          <!-- 操作按钮 -->
+          <div class="form-actions">
+            <el-button type="primary" @click="createOrder" size="large" :loading="submitLoading">
+              提交
+            </el-button>
+          </div>
+        </el-form>
+      </div>
     </div>
   </ContentWrap>
 </template>
@@ -378,7 +347,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
 import * as DeptApi from '@/api/system/dept'
 import * as UserApi from '@/api/system/user'
-import { OrderApi, type OrderVO } from '@/api/supervision'
+import { OrderApi, type OrderVO, type SupervisionTypeSaveReqVO, type SupervisionTypeRespVO } from '@/api/supervision'
 import { DICT_TYPE, getIntDictOptions, getStrDictOptions } from '@/utils/dict'
 import { useDictStoreWithOut } from '@/store/modules/dict'
 import { Icon } from '@/components/Icon'
@@ -418,6 +387,12 @@ const pageTitle = computed(() => {
   return orderType === 'special' ? '广西大学专项督办单' : '广西大学工作督办单'
 })
 
+// 督办编号标签
+const orderNumberLabel = computed(() => {
+  const orderType = getSupervisionOrderType()
+  return orderType === 'special' ? '督查编号' : '督办编号'
+})
+
 // 督办分类选项
 const supervisionTypeOptions = ref<any[]>([])
 
@@ -429,12 +404,23 @@ const loadSupervisionTypes = async () => {
     const typeValue = orderType === 'special' ? 2 : 1
     const result = await OrderApi.getSupervisionDetailTypes(typeValue)
 
-    // 将字符串数组转换为下拉框需要的格式
+    // 处理返回的数据格式
     if (result && Array.isArray(result)) {
-      supervisionTypeOptions.value = result.map((item, index) => ({
-        value: item, // 使用字符串本身作为值
-        label: item // 字符串作为显示标签
-      }))
+      // 检查返回的是对象数组还是字符串数组
+      if (result.length > 0 && typeof result[0] === 'object' && result[0].id) {
+        // 新格式：对象数组，包含id和type字段
+        supervisionTypeOptions.value = result.map((item) => ({
+          id: item.id, // 保存ID用于删除
+          value: item.type, // 使用type字段作为值
+          label: item.type // type字段作为显示标签
+        }))
+      } else {
+        // 旧格式：字符串数组
+        supervisionTypeOptions.value = result.map((item) => ({
+          value: item, // 使用字符串本身作为值
+          label: item // 字符串作为显示标签
+        }))
+      }
     } else {
       supervisionTypeOptions.value = []
     }
@@ -503,9 +489,14 @@ const searchUsers = (query: string) => {
 }
 
 // 督办依据相关
-const showAddToDictButton = ref(false)
-const addingToDict = ref(false)
+const showAddBasisToDictButton = ref(false)
+const addingBasisToDict = ref(false)
 const customBasisValue = ref('')
+
+// 督办分类相关
+const showAddCategoryToDictButton = ref(false)
+const addingCategoryToDict = ref(false)
+const customCategoryValue = ref('')
 
 // 督办单表单数据
 const orderForm = reactive({
@@ -514,22 +505,25 @@ const orderForm = reactive({
   category: undefined, // 督办分类（字符串类型）
   basis: undefined, // 督办依据（数字类型）
   urgencyLevel: undefined, // 紧急程度（数字类型）
-  deadline: '', // 完成时间
+  reportFrequency: '', // 汇报频次 (对应数据库 report_frequency)
+  deadline: '', // 完成期限
   leadDept: '', // 牵头单位名称（用于显示）
   leadDeptId: 0, // 牵头单位ID（用于提交）
-  importance: undefined, // 重要程度（数字类型）
   collaborateDepts: [], // 协办单位名称数组（用于显示）
   collaborateDeptIds: [], // 协办单位ID数组（用于提交）
-  supervisorName: '', // 督办人姓名（用于显示）
-  supervisorId: 0, // 督办人ID（用于提交）
+  supervisorNames: [], // 督办人姓名数组（用于显示，支持多选）
+  supervisorIds: [], // 督办人ID数组（用于提交，支持多选）
   officePhone: '',
-  leader: '',
+  leader: '', // 分管校领导姓名（用于显示）
+  leaderId: 0, // 分管校领导ID（用于提交）
+  otherLeaders: [], // 其他校领导姓名数组（用于显示）
+  otherLeaderIds: [], // 其他校领导ID数组（用于提交）
   content: '', // 主要内容
   tasks: '', // 承办事项
   // 以下字段在创建阶段不可编辑，由工作流程控制
-  inspectionApproval: undefined, // 督察办审批（数字类型） - 仅用于界面显示
-  handlingDetails: '', // 牵头单位承办情况 - 仅用于界面显示
-  supervisionReview: undefined // 督查督办复核（数字类型） - 仅用于界面显示
+  handlingDetails: '', // 工作推进情况 - 仅用于界面显示
+  isProjectSupervision: null, // 是否立项督办 (对应数据库 isProjectSupervision)
+  isSupervisionClosed: null // 是否结束督办 (对应数据库 isSupervisionClosed)
 })
 
 // 表单验证规则
@@ -560,11 +554,8 @@ const rules = {
   urgencyLevel: [
     { required: true, message: '请选择紧急程度', trigger: 'change' }
   ],
-  importance: [
-    { required: true, message: '请选择重要程度', trigger: 'change' }
-  ],
   deadline: [
-    { required: true, message: '请选择要求完成时间', trigger: 'change' },
+    { required: true, message: '请选择完成期限', trigger: 'change' },
     {
       validator: (rule: any, value: string, callback: any) => {
         if (!value) {
@@ -576,7 +567,7 @@ const rules = {
         const now = new Date()
 
         if (selectedDateTime.getTime() <= now.getTime()) {
-          callback(new Error('完成时间不能早于当前时间'))
+          callback(new Error('完成期限不能早于当前时间'))
         } else {
           callback()
         }
@@ -587,8 +578,18 @@ const rules = {
   leadDept: [
     { required: true, message: '请选择牵头单位', trigger: 'change' }
   ],
-  supervisorName: [
-    { required: true, message: '请选择督办人', trigger: 'change' }
+  supervisorNames: [
+    { required: true, message: '请选择督办人', trigger: 'change' },
+    {
+      validator: (rule: any, value: string[], callback: Function) => {
+        if (!value || value.length === 0) {
+          callback(new Error('请至少选择一个督办人'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'change'
+    }
   ],
   content: [
     { required: true, message: '请输入主要内容', trigger: 'blur' },
@@ -709,32 +710,59 @@ const handleCollaborateDeptsChange = (deptNames: string[]) => {
 }
 
 // 处理督办人变化
-const handleSupervisorChange = async (userName: string) => {
-  const user = userList.value.find(u => (u.nickname || u.username) === userName)
-  if (user) {
-    orderForm.supervisorId = user.id
-
-    // 调用API获取督办人手机号
-    phoneLoading.value = true
-    try {
-      const phoneData = await OrderApi.getSupervisorPhone(user.id)
-
-      // 后端直接返回手机号字符串
-      if (phoneData && typeof phoneData === 'string' && phoneData.trim() !== '') {
-        orderForm.officePhone = phoneData.trim()
-      } else {
-        orderForm.officePhone = ''
-        ElMessage.warning('督办人未设置手机号，请手动填写办公电话')
-      }
-    } catch (error) {
-      orderForm.officePhone = ''
-      ElMessage.warning('无法获取督办人手机号，请手动填写办公电话')
-    } finally {
-      phoneLoading.value = false
+const handleSupervisorChange = async (userNames: string[]) => {
+  // 更新督办人ID数组
+  orderForm.supervisorIds = []
+  userNames.forEach(name => {
+    const user = userList.value.find(u => (u.nickname || u.username) === name)
+    if (user) {
+      orderForm.supervisorIds.push(user.id)
     }
+  })
+
+  // 只有选择单个督办人时才自动获取手机号
+  if (userNames.length === 1) {
+    const user = userList.value.find(u => (u.nickname || u.username) === userNames[0])
+    if (user) {
+      // 调用API获取督办人手机号
+      phoneLoading.value = true
+      try {
+        const phoneData = await OrderApi.getSupervisorPhone(user.id)
+
+        // 后端直接返回手机号字符串
+        if (phoneData && typeof phoneData === 'string' && phoneData.trim() !== '') {
+          orderForm.officePhone = phoneData.trim()
+        } else {
+          orderForm.officePhone = ''
+          ElMessage.warning('督办人未设置手机号，请手动填写办公电话')
+        }
+      } catch (error) {
+        orderForm.officePhone = ''
+        ElMessage.warning('无法获取督办人手机号，请手动填写办公电话')
+      } finally {
+        phoneLoading.value = false
+      }
+    }
+  } else if (userNames.length > 1) {
+    // 多选时清空手机号，提示用户手动填写
+    orderForm.officePhone = ''
+    ElMessage.info('选择多个督办人时，请手动填写联系电话')
   } else {
-    ElMessage.warning('未找到督办人信息')
+    // 没有选择督办人时清空手机号
+    orderForm.officePhone = ''
   }
+}
+
+// 处理其他校领导变化
+const handleOtherLeadersChange = (userNames: string[]) => {
+  // 更新其他校领导ID数组
+  orderForm.otherLeaderIds = []
+  userNames.forEach(name => {
+    const user = userList.value.find(u => (u.nickname || u.username) === name)
+    if (user) {
+      orderForm.otherLeaderIds.push(user.id)
+    }
+  })
 }
 
 // 获取部门负责人信息
@@ -747,19 +775,23 @@ const getDeptLeaderInfo = async (deptId: number) => {
       const leader = userList.value.find(u => u.id === dept.leaderUserId)
       if (leader) {
         orderForm.leader = leader.nickname || leader.username
+        orderForm.leaderId = leader.id // 同时保存ID
       } else {
         // 如果在当前用户列表中没找到，清空分管领导字段
         orderForm.leader = ''
+        orderForm.leaderId = 0
       }
     } else {
       // 如果部门没有设置负责人，清空分管领导字段并提示用户
       orderForm.leader = ''
+      orderForm.leaderId = 0
       ElMessage.warning('所选部门未设置负责人，提交时将使用督办人作为默认审批人')
     }
 
   } catch (error) {
     console.error('获取部门信息失败:', error)
     orderForm.leader = ''
+    orderForm.leaderId = 0
     ElMessage.error('获取部门信息失败，请重新选择')
   }
 }
@@ -885,14 +917,14 @@ const handleBasisChange = (value: any) => {
     if (!isExisting && value.trim() !== '') {
       // 这是自定义输入的内容
       customBasisValue.value = value
-      showAddToDictButton.value = true
+      showAddBasisToDictButton.value = true
     } else {
-      showAddToDictButton.value = false
+      showAddBasisToDictButton.value = false
       customBasisValue.value = ''
     }
   } else {
     // 这是从字典选择的数值
-    showAddToDictButton.value = false
+    showAddBasisToDictButton.value = false
     customBasisValue.value = ''
   }
 }
@@ -905,7 +937,7 @@ const addBasisToDict = async () => {
   }
 
   try {
-    addingToDict.value = true
+    addingBasisToDict.value = true
 
     // 获取现有字典数据的最大值，用于生成新的value和sort
     const existingOptions = getIntDictOptions(DICT_TYPE.SUPERVISION_REASON)
@@ -939,7 +971,7 @@ const addBasisToDict = async () => {
     await dictStore.resetDict()
 
     // 隐藏添加按钮
-    showAddToDictButton.value = false
+    showAddBasisToDictButton.value = false
 
     // 将自定义值设置为新添加的值（数字类型）
     orderForm.basis = maxValue + 1
@@ -951,12 +983,12 @@ const addBasisToDict = async () => {
     console.error('添加督办依据到字典失败:', error)
     ElMessage.error('添加督办依据到字典失败，请重试')
   } finally {
-    addingToDict.value = false
+    addingBasisToDict.value = false
   }
 }
 
-// 删除字典项
-const deleteDictItem = async (dict: any) => {
+// 删除督办依据字典项
+const deleteBasisDictItem = async (dict: any) => {
   ElMessageBox.confirm(
     `确定要删除督办依据"${dict.label}"吗？删除后将无法恢复。`,
     '确认删除',
@@ -998,6 +1030,111 @@ const deleteDictItem = async (dict: any) => {
   })
 }
 
+// 处理督办分类变化
+const handleCategoryChange = (value: any) => {
+  // 检查是否是自定义输入的内容（字符串且不在现有选项中）
+  if (typeof value === 'string') {
+    const isExisting = supervisionTypeOptions.value.some(option => option.label === value || option.value === value)
+
+    if (!isExisting && value.trim() !== '') {
+      // 这是自定义输入的内容
+      customCategoryValue.value = value
+      showAddCategoryToDictButton.value = true
+    } else {
+      showAddCategoryToDictButton.value = false
+      customCategoryValue.value = ''
+    }
+  } else {
+    // 这是从选项中选择的值
+    showAddCategoryToDictButton.value = false
+    customCategoryValue.value = ''
+  }
+}
+
+// 添加督办分类
+const addCategoryToDict = async () => {
+  if (!customCategoryValue.value.trim()) {
+    ElMessage.warning('请输入有效的督办分类内容')
+    return
+  }
+
+  try {
+    addingCategoryToDict.value = true
+
+    const orderType = getSupervisionOrderType()
+
+    // 构造督办分类数据
+    const typeData = {
+      supervisionOrderType: orderType === 'special' ? 2 : 1, // 督办单类型：1=工作督办，2=专项督办
+      type: customCategoryValue.value.trim(), // 具体类型
+      deleted: false
+    }
+
+    // 调用API创建督办分类
+    await OrderApi.createSupervisionType(typeData)
+
+    ElMessage.success('督办分类已添加为常用选项，下次可直接选择')
+
+    // 重新加载督办分类列表
+    await loadSupervisionTypes()
+
+    // 隐藏添加按钮
+    showAddCategoryToDictButton.value = false
+
+    // 将自定义值设置为新添加的值（字符串类型）
+    orderForm.category = customCategoryValue.value.trim()
+
+    // 清空自定义值
+    customCategoryValue.value = ''
+
+  } catch (error) {
+    console.error('添加督办分类失败:', error)
+    ElMessage.error('添加督办分类失败，请重试')
+  } finally {
+    addingCategoryToDict.value = false
+  }
+}
+
+// 删除督办分类
+const deleteCategoryDictItem = async (dict: any) => {
+  ElMessageBox.confirm(
+    `确定要删除督办分类"${dict.label}"吗？删除后将无法恢复。`,
+    '确认删除',
+    {
+      confirmButtonText: '确定删除',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  ).then(async () => {
+    try {
+      // 检查是否有ID
+      if (dict.id) {
+        // 有ID，直接删除
+        await OrderApi.deleteSupervisionType(dict.id)
+        ElMessage.success(`督办分类"${dict.label}"已删除`)
+      } else {
+        // 没有ID，说明是旧格式数据或字典数据，无法删除
+        ElMessage.warning('该督办分类无法删除，请联系管理员')
+        return
+      }
+
+      // 重新加载督办分类列表
+      await loadSupervisionTypes()
+
+      // 如果当前选中的就是被删除的项，清空选择
+      if (orderForm.category === dict.value) {
+        orderForm.category = undefined
+      }
+
+    } catch (error) {
+      console.error('删除督办分类失败:', error)
+      ElMessage.error('删除督办分类失败，请重试')
+    }
+  }).catch(() => {
+    // 用户取消，不做任何操作
+  })
+}
+
 // 自动生成概述内容
 const generateAutoSummary = () => {
   const summaryItems: string[] = []
@@ -1023,8 +1160,8 @@ const generateAutoSummary = () => {
   }
 
   // 添加督办人
-  if (orderForm.supervisorName) {
-    summaryItems.push(`督办人：${orderForm.supervisorName}`)
+  if (orderForm.supervisorNames && orderForm.supervisorNames.length > 0) {
+    summaryItems.push(`督办人：${orderForm.supervisorNames.join('、')}`)
   }
 
   // 添加时间
@@ -1043,7 +1180,7 @@ const validateRequiredFields = () => {
     missingFields.push('督办编号')
   }
   if (!orderForm.title?.trim()) {
-    missingFields.push('文件标题')
+    missingFields.push('督办事项')
   }
   if (!orderForm.category) {
     missingFields.push('督办分类')
@@ -1051,16 +1188,13 @@ const validateRequiredFields = () => {
   if (!orderForm.urgencyLevel) {
     missingFields.push('紧急程度')
   }
-  if (!orderForm.importance) {
-    missingFields.push('重要程度')
-  }
   if (!orderForm.deadline) {
-    missingFields.push('要求完成时间')
+    missingFields.push('完成期限')
   }
   if (!orderForm.leadDept) {
     missingFields.push('牵头单位')
   }
-  if (!orderForm.supervisorName) {
+  if (!orderForm.supervisorNames || orderForm.supervisorNames.length === 0) {
     missingFields.push('督办人')
   }
   if (!orderForm.content?.trim()) {
@@ -1117,10 +1251,10 @@ const createOrder = async () => {
           // 使用部门负责人的用户ID作为候选人
           startUserSelectAssignees['Second'] = [deptDetail.leaderUserId]
         } else {
-          // 如果部门没有设置负责人，使用督办人作为默认候选人
-          if (orderForm.supervisorId) {
-            startUserSelectAssignees['Second'] = [orderForm.supervisorId]
-            ElMessage.warning('所选牵头单位未设置负责人，将使用督办人作为默认审批人')
+          // 如果部门没有设置负责人，使用第一个督办人作为默认候选人
+          if (orderForm.supervisorIds && orderForm.supervisorIds.length > 0) {
+            startUserSelectAssignees['Second'] = [orderForm.supervisorIds[0]]
+            ElMessage.warning('所选牵头单位未设置负责人，将使用第一个督办人作为默认审批人')
           } else {
             ElMessage.error('牵头单位未设置负责人且督办人信息缺失，请重新选择')
             return
@@ -1128,10 +1262,10 @@ const createOrder = async () => {
         }
       } catch (error) {
         console.error('获取部门负责人信息失败:', error)
-        // 如果获取失败，使用督办人作为默认候选人
-        if (orderForm.supervisorId) {
-          startUserSelectAssignees['Second'] = [orderForm.supervisorId]
-          ElMessage.warning('获取牵头单位负责人信息失败，将使用督办人作为默认审批人')
+        // 如果获取失败，使用第一个督办人作为默认候选人
+        if (orderForm.supervisorIds && orderForm.supervisorIds.length > 0) {
+          startUserSelectAssignees['Second'] = [orderForm.supervisorIds[0]]
+          ElMessage.warning('获取牵头单位负责人信息失败，将使用第一个督办人作为默认审批人')
         } else {
           ElMessage.error('获取部门信息失败且督办人信息缺失，请重试')
           return
@@ -1149,22 +1283,22 @@ const createOrder = async () => {
       priority: orderForm.urgencyLevel,
       deadline: orderForm.deadline,
       leadDept: orderForm.leadDeptId,
-      significance: orderForm.importance, // 直接使用数字值
       coDept: orderForm.collaborateDeptIds.join(','), // 协办单位ID用逗号分隔
-      supervisor: orderForm.supervisorId,
+      supervisor: orderForm.supervisorIds.length > 0 ? orderForm.supervisorIds[0] : 0, // 使用第一个督办人作为主督办人
       content: orderForm.content,
       undertakeMatter: orderForm.tasks,
-      // 以下字段在创建时不设置，由工作流程自动处理
-      // supervisionApprove: null, // 督察办审批 - 创建时为空
-      // leadDeptDetail: '', // 承办状况 - 创建时为空
-      // supervisionReapprove: null, // 督查督办复核 - 创建时为空
+      reportFrequency: orderForm.reportFrequency, // 汇报频次
+      isProjectSupervision: orderForm.isProjectSupervision, // 是否立项督办
+      isSupervisionClosed: orderForm.isSupervisionClosed, // 是否结束督办
+      leader: orderForm.leaderId, // 分管校领导ID
+      otherLeaders: orderForm.otherLeaderIds.join(','), // 其他校领导ID（逗号分隔）
       summary: summaryContent, // 添加自动生成的概述信息字符串
       startUserSelectAssignees: startUserSelectAssignees,
       startLeaderSelectAssignees: startLeaderSelectAssignees// 发起人自选审批人
     }
 
     // 验证必要的ID字段
-    if (!submitData.leadDept || !submitData.supervisor) {
+    if (!submitData.leadDept || !submitData.supervisor || orderForm.supervisorIds.length === 0) {
       ElMessage.error('请确保已正确选择牵头单位和督办人')
       return
     }
@@ -1226,21 +1360,24 @@ const resetForm = async () => {
   orderForm.category = undefined
   orderForm.basis = undefined
   orderForm.urgencyLevel = undefined
+  orderForm.reportFrequency = ''
   orderForm.deadline = ''
   orderForm.leadDept = ''
   orderForm.leadDeptId = 0
-  orderForm.importance = undefined
   orderForm.collaborateDepts = []
   orderForm.collaborateDeptIds = []
-  orderForm.supervisorName = ''
-  orderForm.supervisorId = 0
+  orderForm.supervisorNames = []
+  orderForm.supervisorIds = []
   orderForm.officePhone = ''
   orderForm.leader = ''
+  orderForm.leaderId = 0
+  orderForm.otherLeaders = []
+  orderForm.otherLeaderIds = []
   orderForm.content = ''
   orderForm.tasks = ''
-  orderForm.inspectionApproval = undefined
   orderForm.handlingDetails = ''
-  orderForm.supervisionReview = undefined
+  orderForm.isProjectSupervision = null
+  orderForm.isSupervisionClosed = null
 
   // 清除验证错误信息
   orderFormRef.value?.clearValidate()
@@ -1282,119 +1419,280 @@ onMounted(async () => {
   max-width: 1000px;
   margin: 0 auto;
   padding: 20px;
+  background: transparent;
+  min-height: 100vh;
 }
 
-.order-form {
+.order-form-container {
   background: white;
-  padding: 30px;
+  border: 2px solid #e8eaed;
   border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-}
-
-.section-title {
-  margin: 30px 0 20px 0;
-  padding-top: 20px;
-  border-top: 1px solid #ebeef5;
-}
-
-.form-actions {
-  border-top: 1px solid #ebeef5;
-  padding-top: 30px;
-  margin-top: 30px;
-}
-
-:deep(.el-form-item__label) {
-  font-weight: 500;
-  color: #303133;
-}
-
-:deep(.el-input__wrapper) {
-  border-radius: 4px;
-}
-
-:deep(.el-textarea__inner) {
-  border-radius: 4px;
-}
-
-/* 确保标签不换行 */
-:deep(.el-form-item__label) {
-  white-space: nowrap;
-}
-
-/* 统一搜索容器样式 */
-.search-container {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: nowrap; /* 不换行 */
-}
-
-.search-container .el-select,
-.search-container .el-input,
-.search-container .el-button {
-  margin: 0;
-  flex-shrink: 0; /* 防止元素被压缩 */
-}
-
-
-
-/* 已选择部门显示容器 */
-.selected-depts-container {
-  margin-top: -10px; /* 减少与上方的间距 */
-  margin-bottom: 20px; /* 与督办人保持距离 */
-  margin-left: 120px; /* 与协办单位标签对齐 */
-  border: 1px solid #e4e7ed;
-  border-radius: 6px;
-  background-color: #fafafa;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  margin: 20px auto;
+  max-width: 900px;
   overflow: hidden;
 }
 
-.selected-depts-header {
-  background-color: #f5f7fa;
-  padding: 8px 12px;
-  font-size: 14px;
-  font-weight: 500;
-  color: #606266;
-  border-bottom: 1px solid #e4e7ed;
+.page-header-outside {
+  position: relative;
+  padding: 20px 0 10px 0;
+  margin-bottom: 20px;
+  text-align: center;
 }
 
-.selected-depts-box {
-  padding: 12px;
-  min-height: 60px;
+.form-title {
+  font-family: "STXiaobiao", "SimSun", "KaiTi", "Microsoft YaHei", serif;
+  font-size: 28px;
+  font-weight: bold;
+  color: #d32f2f;
+  text-align: center;
+  margin: 0;
+  line-height: 1.3;
+  text-shadow: 0 1px 2px rgba(211, 47, 47, 0.1);
+}
+
+/* 督办编号在表格内显示 */
+.order-number-content {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-right: 20px;
+  gap: 5px;
+}
+
+.order-number-label {
+  font-size: 15px;
+  color: #d32f2f;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+}
+
+.order-number-display {
+  font-size: 14px;
+  color: #666;
+  font-weight: normal;
+}
+
+
+
+.order-form {
+  padding: 0;
+}
+
+.form-table {
+  width: 100%;
+}
+
+.form-row {
+  display: flex;
+  border-bottom: 1px solid #e8eaed;
+  min-height: 50px;
+  align-items: stretch;
+  transition: background-color 0.2s ease;
+}
+
+.form-row:hover {
+  background-color: #fafafa;
+}
+
+.form-row:last-child {
+  border-bottom: none;
+}
+
+.form-label {
+  background: white;
+  color: #d32f2f;
+  border-right: 1px solid #e8eaed;
+  padding: 12px 16px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+  min-width: 120px;
+  width: 120px;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+}
+
+/* 确保第二个标签有左边框 */
+.form-row .form-label:nth-child(3) {
+  border-left: 1px solid #e8eaed;
+}
+
+.form-label.required::before {
+  content: '*';
+  color: #d32f2f;
+  margin-right: 4px;
+  font-weight: bold;
+}
+
+.form-content {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.form-content.full-width {
+  flex: 1;
+}
+
+.form-content.half-width {
+  flex: 1;
+  min-width: 0;
+  border-right: 1px solid #e8eaed;
+}
+
+.form-content.half-width:first-child {
+  flex: 0.8;
+}
+
+.form-content.half-width:last-child {
+  flex: 1.2;
+  border-right: none;
+}
+
+.form-content.quarter-width {
+  flex: 0 0 200px;
+}
+
+.form-actions {
+  text-align: center;
+  padding: 30px 20px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-top: 1px solid #e8eaed;
+  border-radius: 0 0 12px 12px;
+}
+
+/* 移除Element Plus默认样式 */
+:deep(.el-form-item) {
+  margin-bottom: 0;
+}
+
+:deep(.el-form-item__label) {
+  display: none;
+}
+
+:deep(.el-form-item__content) {
+  margin-left: 0 !important;
+  width: 100%;
+}
+
+:deep(.el-input__wrapper) {
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e8eaed;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+
+
+:deep(.el-textarea__inner) {
+  border-radius: 6px;
+  border: 1px solid #e8eaed;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: white;
+  resize: none;
+  transition: all 0.2s ease;
+}
+
+
+
+:deep(.el-select .el-input__wrapper) {
+  border-radius: 6px;
+  border: 1px solid #e8eaed;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: white;
+  transition: all 0.2s ease;
+}
+
+:deep(.el-date-editor .el-input__wrapper) {
+  border-radius: 6px;
+  border: 1px solid #e8eaed;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: white;
+  transition: all 0.2s ease;
+  min-width: 200px;
+}
+
+/* 完成期限容器样式 */
+.deadline-container {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+}
+
+.deadline-picker {
+  width: 100px;  /* 直接设置固定宽度 */
+}
+
+.report-frequency-select {
+  width: 130px;  /* 调整宽度以完整显示汇报频次选项 */
+}
+
+/* 统一表单控件样式 */
+.form-select {
+  width: 100% !important;
+}
+
+.form-input {
+  width: 100% !important;
+}
+
+
+
+/* 单选按钮组样式 */
+:deep(.el-radio-group) {
+  display: flex;
+  gap: 20px;
+}
+
+:deep(.el-radio) {
+  margin-right: 0;
+  font-weight: 500;
+}
+/* 提交按钮样式 */
+:deep(.el-button--primary) {
+  background: linear-gradient(135deg, #1976d2 0%, #1976d2 100%);
+  border: none;
+  border-radius: 8px;
+  padding: 12px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.3);
+  transition: all 0.3s ease;
+  font-family: "STXiaobiao", "SimSun", "Microsoft YaHei", serif;
+}
+
+:deep(.el-button--primary:hover) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(25, 118, 210, 0.4);
+  background: linear-gradient(135deg, #1e88e5 0%, #1976d2 100%);
+}
+
+:deep(.el-button--primary:active) {
+  transform: translateY(0);
+}
+
+/* 已选择部门显示 */
+.selected-depts-display {
+  margin-top: 8px;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  align-items: flex-start;
-  align-content: flex-start;
+  gap: 6px;
 }
 
 .dept-tag {
   margin: 0;
-}
-
-/* 必填项提示样式 */
-.required-tips {
-  color: #909399;
   font-size: 12px;
-  margin-top: 10px;
-}
-
-.required-tips .el-icon {
-  color: #f56c6c;
-}
-
-/* 增强表单验证错误提示的可见性 */
-:deep(.el-form-item__error) {
-  font-size: 12px;
-  color: #f56c6c;
-  padding-top: 4px;
-}
-
-/* 必填字段标签样式 */
-:deep(.el-form-item.is-required .el-form-item__label::before) {
-  content: '*';
-  color: #f56c6c;
-  margin-right: 4px;
 }
 
 /* 自定义选择器容器 */
@@ -1409,6 +1707,10 @@ onMounted(async () => {
 .custom-select-container .el-select {
   flex: 1;
   min-width: 0;
+}
+
+.category-select {
+  width: 100% !important;
 }
 
 .basis-select {
@@ -1447,4 +1749,92 @@ onMounted(async () => {
   color: #f78989;
 }
 
+/* 表单验证错误提示 */
+:deep(.el-form-item__error) {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  font-size: 12px;
+  color: #f56c6c;
+  padding-top: 2px;
+  z-index: 1;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .supervision-order-create {
+    padding: 10px;
+  }
+
+  .order-form-container {
+    margin: 10px 0;
+    max-width: none;
+    border-width: 1px;
+  }
+
+  .page-header {
+    padding: 20px 15px;
+  }
+
+  .form-title {
+    font-size: 24px;
+    letter-spacing: 1px;
+  }
+
+  .order-number-section {
+    position: static;
+    text-align: center;
+    margin-top: 15px;
+    background: none;
+    border: none;
+    padding: 0;
+  }
+
+  .form-row {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .form-label {
+    width: 100%;
+    min-width: auto;
+    border-right: none;
+    border-bottom: 1px solid #333;
+    justify-content: flex-start;
+    padding: 10px 16px;
+  }
+
+  .form-content {
+    width: 100%;
+    padding: 12px 16px;
+  }
+
+  .form-content.half-width,
+  .form-content.quarter-width {
+    flex: 1;
+  }
+
+  .section-title {
+    padding: 12px 20px;
+  }
+
+  .form-actions {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .form-title {
+    font-size: 20px;
+  }
+
+  .form-label {
+    font-size: 13px;
+  }
+
+  :deep(.el-button--primary) {
+    padding: 10px 25px;
+    font-size: 14px;
+  }
+}
 </style>

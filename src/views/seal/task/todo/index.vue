@@ -1,5 +1,31 @@
 <template>
-
+  <!-- 搜索筛选表单 -->
+  <ContentWrap>
+    <el-form :inline="true" :model="queryParams" @submit.prevent>
+      <el-form-item label="盖章编码">
+        <el-input
+          v-model="queryParams.sealNumber"
+          placeholder="请输入盖章编码"
+          clearable
+          style="width: 220px"
+          @keyup.enter="handleQuery"
+        />
+      </el-form-item>
+      <el-form-item label="材料名称">
+        <el-input
+          v-model="queryParams.materialName"
+          placeholder="请输入材料名称"
+          clearable
+          style="width: 220px"
+          @keyup.enter="handleQuery"
+        />
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" @click="handleQuery">查询</el-button>
+        <el-button @click="resetQuery">重置</el-button>
+      </el-form-item>
+    </el-form>
+  </ContentWrap>
 
   <!-- 列表 -->
   <ContentWrap>
@@ -72,6 +98,8 @@ const queryParams = reactive({
   pageSize: 10,
   // 修改为数组形式，包含普通印章申请和特殊印章申请两个流程
   processDefinitionKey: 'seal_apply seal_apply_special',
+  sealNumber: '', // 盖章编码搜索
+  materialName: '', // 材料名称搜索
 })
 
 /** 查询任务列表 */
@@ -85,6 +113,20 @@ const getList = async () => {
   } finally {
     loading.value = false
   }
+}
+
+/** 查询按钮操作 */
+const handleQuery = () => {
+  queryParams.pageNo = 1 // 重置到第一页
+  getList()
+}
+
+/** 重置按钮操作 */
+const resetQuery = () => {
+  queryParams.sealNumber = ''
+  queryParams.materialName = ''
+  queryParams.pageNo = 1
+  getList()
 }
 
 /** 分页处理 */

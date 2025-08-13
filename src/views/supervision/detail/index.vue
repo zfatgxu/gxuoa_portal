@@ -533,7 +533,6 @@ const orderDetail = ref<OrderRespVO>({
   deadline: 0,
   leadDept: null,
   leadDeptName: '',
-  significance: 1,
   coDept: null,
   supervisor: 0,
   supervisorName: '',
@@ -541,12 +540,19 @@ const orderDetail = ref<OrderRespVO>({
   leader: '',
   content: '',
   undertakeMatter: '',
-  supervisionApprove: null,
-  leadDeptDetail: null,
-  supervisionReapprove: null,
+  reportFrequency: '', // 汇报频次
+  isProjectSupervision: false, // 是否立项督办
+  isSupervisionClosed: false, // 是否结束督办
+  leader: 0, // 分管校领导ID
+  otherLeaders: '', // 其他校领导ID（逗号分隔）
   summary: '',
   processInstanceId: '',
-  createTime: 0
+  createTime: 0,
+  // 已废弃字段保留兼容性
+  significance: 1,
+  supervisionApprove: null,
+  leadDeptDetail: null,
+  supervisionReapprove: null
 })
 
 // 编辑表单数据

@@ -1,5 +1,33 @@
 <template>
-
+  <!-- 搜索筛选表单 -->
+  <ContentWrap>
+    <el-form :inline="true" :model="queryParams" @submit.prevent>
+      <el-form-item label="盖章编码">
+        <el-input
+          v-model="queryParams.sealNumber"
+          placeholder="请输入盖章编码"
+          clearable
+          style="width: 220px"
+          @keyup.enter="handleQuery"
+        />
+      </el-form-item>
+      <el-form-item label="用印状态">
+        <el-select
+          v-model="queryParams.sealState"
+          clearable
+          placeholder="请选择用印状态"
+          style="width: 200px"
+        >
+          <el-option label="已用印" :value="1" />
+          <el-option label="待用印" :value="2" />
+        </el-select>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" @click="handleQuery">查询</el-button>
+        <el-button @click="resetQuery">重置</el-button>
+      </el-form-item>
+    </el-form>
+  </ContentWrap>
 
   <!-- 列表 -->
   <ContentWrap>
@@ -98,7 +126,9 @@ const queryParams = reactive({
   pageNo: 1,
   pageSize: 10,
   category: '用印申请',
-  processDefinitionKey: 'seal_apply seal_apply_special',
+  processDefinitionKey: 'seal_apply',
+  sealNumber: '', // 盖章编码搜索
+  sealState: undefined, // 用印状态筛选
 })
 
 /** 查询任务列表 */
@@ -129,6 +159,20 @@ const handleAudit = (row: any) => {
 /** 分页处理 */
 const handlePagination = () => {
   getList() // 重新请求数据
+}
+
+/** 查询按钮操作 */
+const handleQuery = () => {
+  queryParams.pageNo = 1 // 重置到第一页
+  getList()
+}
+
+/** 重置按钮操作 */
+const resetQuery = () => {
+  queryParams.sealNumber = ''
+  queryParams.sealState = undefined
+  queryParams.pageNo = 1
+  getList()
 }
 
 /** 检查盖章编码是否为审核通过状态（A开头） */
