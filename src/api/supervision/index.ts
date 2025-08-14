@@ -52,12 +52,12 @@ export interface OrderVO {
   reason?: number // 督办依据
   priority: number // 紧急程度
   deadline: string // 完成期限
-  leadDept: number // 牵头单位ID
+  leadDept: number | string // 牵头单位ID，创建时可为空字符串
   coDept?: string // 协办单位ID（逗号分隔）
   supervisor: number // 督办人ID
   content: string // 督办内容
   undertakeMatter: string // 承办事项
-  reportFrequency?: string // 汇报频次 (对应数据库 report_frequency)
+  reportFrequency?: number // 汇报频次 (对应数据库 report_frequency) 1=每日 2=每周 3=每月 4=阶段性
   isProjectSupervision?: boolean // 是否立项督办 (对应数据库 isProjectSupervision)
   isSupervisionClosed?: boolean // 是否结束督办 (对应数据库 isSupervisionClosed)
   leader?: number // 分管校领导ID (对应数据库 leader)
@@ -67,9 +67,9 @@ export interface OrderVO {
   startLeaderSelectAssignees?: Record<string, number[]> // 发起人自选审批人 Map，key为taskKey，value为用户ID数组
   // 以下字段已废弃但保留兼容性，前端不需要传递
   significance?: number // 重要程度 (已废弃)
-  supervisionApprove?: number // 督察办审批状态 (已废弃)
+  supervisionApprove?: number // 督查办审批状态 (已废弃)
   leadDeptDetail?: string // 牵头单位承办情况 (已废弃)
-  supervisionReapprove?: number // 督察办复核状态 (已废弃)
+  supervisionReapprove?: number // 督查办复核状态 (已废弃)
 }
 
 // 督办单响应 VO
@@ -87,7 +87,7 @@ export interface OrderRespVO {
   supervisor: number // 督办人ID
   content: string // 督办内容
   undertakeMatter: string // 承办事项
-  reportFrequency?: string // 汇报频次 (对应数据库 report_frequency)
+  reportFrequency?: number // 汇报频次 (对应数据库 report_frequency) 1=每日 2=每周 3=每月 4=阶段性
   isProjectSupervision?: boolean // 是否立项督办 (对应数据库 isProjectSupervision)
   isSupervisionClosed?: boolean // 是否结束督办 (对应数据库 isSupervisionClosed)
   leader?: number // 分管校领导ID (对应数据库 leader)
@@ -112,9 +112,9 @@ export interface OrderRespVO {
   remainingDays?: number // 剩余天数
   // 以下字段已废弃但保留兼容性
   significance?: number // 重要程度 (已废弃)
-  supervisionApprove?: number | null // 督察办审批状态 (已废弃)
+  supervisionApprove?: number | null // 督查办审批状态 (已废弃)
   leadDeptDetail?: string | null // 牵头单位承办情况 (已废弃)
-  supervisionReapprove?: number | null // 督察办复核状态 (已废弃)
+  supervisionReapprove?: number | null // 督查办复核状态 (已废弃)
 }
 
 // 督办分类选项接口响应
@@ -142,8 +142,8 @@ export interface SupervisionTypeRespVO {
 // 督办单 API
 export const OrderApi = {
   // 生成督办单唯一编码
-  generateSupervisionOrderCode: async (): Promise<string> => {
-    return await request.get({ url: `/bpm/supervision/generate-code` })
+  generateSupervisionOrderCode: async (type: number): Promise<string> => {
+    return await request.get({ url: `/bpm/supervision/generate-code`, params: { type } })
   },
 
   // 获取督办分类列表
@@ -308,9 +308,9 @@ export interface SupervisionOrderDetailVO {
   leaderNickname?: string // 分管领导姓名
   content: string // 督办内容
   undertakeMatter: string // 承办事项
-  supervisionApprove: number // 督察办审批状态
+  supervisionApprove: number // 督查办审批状态
   deptDetail: string // 牵头单位承办情况
-  supervisionReapprove: number | null // 督察办复核状态
+  supervisionReapprove: number | null // 督查办复核状态
   processInstanceId: string // 流程实例ID
   summary: string // 概述信息
   supervisionStatus?: string // 督办状态

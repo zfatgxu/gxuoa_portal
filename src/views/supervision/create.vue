@@ -172,10 +172,10 @@
                     class="deadline-picker"
                   />
                   <el-select v-model="orderForm.reportFrequency" placeholder="汇报频次" class="report-frequency-select">
-                    <el-option label="每日汇报" value="daily" />
-                    <el-option label="每周汇报" value="weekly" />
-                    <el-option label="每月汇报" value="monthly" />
-                    <el-option label="阶段性汇报" value="phase" />
+                    <el-option label="每日汇报" :value="1" />
+                    <el-option label="每周汇报" :value="2" />
+                    <el-option label="每月汇报" :value="3" />
+                    <el-option label="阶段性汇报" :value="4" />
                   </el-select>
                 </div>
               </div>
@@ -185,7 +185,7 @@
             <div class="form-row">
               <div class="form-label">分管校领导</div>
               <div class="form-content half-width">
-                <el-input v-model="orderForm.leader" placeholder="自动获取" readonly class="form-input" />
+                <el-input value="由督办人选择牵头单位后自动获取" placeholder="由督办人选择牵头单位后自动获取" disabled class="form-input" />
               </div>
               <div class="form-label">其他校领导</div>
               <div class="form-content half-width">
@@ -211,46 +211,23 @@
 
             <!-- 牵头单位和协办单位 -->
             <div class="form-row">
-              <div class="form-label required">牵头单位</div>
+              <div class="form-label">牵头单位</div>
               <div class="form-content half-width">
-                <el-select
-                  v-model="orderForm.leadDept"
-                  placeholder="牵头单位由督办人选择"
-                  @change="handleLeadDeptChange"
-                  class="form-select"
+                <el-input
+                  value="由督办人选择"
+                  placeholder="由督办人选择"
+                  class="form-input"
                   disabled
-                >
-                  <el-option
-                    v-for="dept in deptList"
-                    :key="dept.id"
-                    :label="dept.name"
-                    :value="dept.name"
-                    :data-id="dept.id"
-                  />
-                </el-select>
+                />
               </div>
               <div class="form-label">协办单位</div>
               <div class="form-content half-width">
-                <el-select
-                  v-model="orderForm.collaborateDepts"
-                  multiple
-                  placeholder="协办单位由牵头单位选择"
-                  :collapse-tags="true"
-                  :max-collapse-tags="1"
-                  filterable
-                  clearable
-                  @change="handleCollaborateDeptsChange"
-                  class="form-select"
+                <el-input
+                  value="由牵头单位选择"
+                  placeholder="由牵头单位选择"
+                  class="form-input"
                   disabled
-                >
-                  <el-option
-                    v-for="dept in availableCollaborateDepts"
-                    :key="dept.id"
-                    :label="dept.name"
-                    :value="dept.name"
-                    :data-id="dept.id"
-                  />
-                </el-select>
+                />
               </div>
             </div>
 
@@ -505,7 +482,7 @@ const orderForm = reactive({
   category: undefined, // 督办分类（字符串类型）
   basis: undefined, // 督办依据（数字类型）
   urgencyLevel: undefined, // 紧急程度（数字类型）
-  reportFrequency: '', // 汇报频次 (对应数据库 report_frequency)
+  reportFrequency: undefined, // 汇报频次 (对应数据库 report_frequency) 1=每日 2=每周 3=每月 4=阶段性
   deadline: '', // 完成期限
   leadDept: '', // 牵头单位名称（用于显示）
   leadDeptId: 0, // 牵头单位ID（用于提交）
@@ -575,9 +552,7 @@ const rules = {
       trigger: 'change'
     }
   ],
-  leadDept: [
-    { required: true, message: '请选择牵头单位', trigger: 'change' }
-  ],
+  // leadDept 不再是必填项，由督办人在后续流程中选择
   supervisorNames: [
     { required: true, message: '请选择督办人', trigger: 'change' },
     {
@@ -623,7 +598,10 @@ const rules = {
 // 方法
 const generateOrderNumber = async () => {
   try {
-    const orderCode = await OrderApi.generateSupervisionOrderCode()
+    const orderType = getSupervisionOrderType()
+    // 工作督办是1，专项督办是2
+    const typeValue = orderType === 'special' ? 2 : 1
+    const orderCode = await OrderApi.generateSupervisionOrderCode(typeValue)
     orderForm.orderNumber = orderCode
   } catch (error) {
     console.error('生成督办编号失败:', error)
@@ -1154,10 +1132,7 @@ const generateAutoSummary = () => {
     summaryItems.push(`紧急程度：${getPriorityLabel(orderForm.urgencyLevel)}`)
   }
 
-  // 添加牵头单位
-  if (orderForm.leadDept) {
-    summaryItems.push(`牵头单位：${orderForm.leadDept}`)
-  }
+  // 牵头单位由督办人在后续流程中选择，创建阶段不包含在概述中
 
   // 添加督办人
   if (orderForm.supervisorNames && orderForm.supervisorNames.length > 0) {
@@ -1191,9 +1166,7 @@ const validateRequiredFields = () => {
   if (!orderForm.deadline) {
     missingFields.push('完成期限')
   }
-  if (!orderForm.leadDept) {
-    missingFields.push('牵头单位')
-  }
+  // 牵头单位不再在创建阶段验证，由督办人在后续流程中选择
   if (!orderForm.supervisorNames || orderForm.supervisorNames.length === 0) {
     missingFields.push('督办人')
   }
@@ -1232,45 +1205,16 @@ const createOrder = async () => {
     // 准备提交数据，转换为API需要的格式
     const orderType = getSupervisionOrderType()
 
-    // 构建发起人自选审批人 Map
+    // 构建发起人自选审批人 Map（根据新流程配置）
     const startUserSelectAssignees: Record<string, number[]> = {}
     const startLeaderSelectAssignees: Record<string, number[]> = {}
 
-    // First 节点先写死为 212
-    startUserSelectAssignees['First'] = [212]
-
-    // Third 节点设置为空
-    startLeaderSelectAssignees['Third'] = []
-
-    // 如果选择了牵头单位，需要获取该部门的负责人用户ID作为候选人
-    if (orderForm.leadDeptId) {
-      try {
-        // 获取部门详细信息
-        const deptDetail = await DeptApi.getDept(orderForm.leadDeptId)
-        if (deptDetail && deptDetail.leaderUserId) {
-          // 使用部门负责人的用户ID作为候选人
-          startUserSelectAssignees['Second'] = [deptDetail.leaderUserId]
-        } else {
-          // 如果部门没有设置负责人，使用第一个督办人作为默认候选人
-          if (orderForm.supervisorIds && orderForm.supervisorIds.length > 0) {
-            startUserSelectAssignees['Second'] = [orderForm.supervisorIds[0]]
-            ElMessage.warning('所选牵头单位未设置负责人，将使用第一个督办人作为默认审批人')
-          } else {
-            ElMessage.error('牵头单位未设置负责人且督办人信息缺失，请重新选择')
-            return
-          }
-        }
-      } catch (error) {
-        console.error('获取部门负责人信息失败:', error)
-        // 如果获取失败，使用第一个督办人作为默认候选人
-        if (orderForm.supervisorIds && orderForm.supervisorIds.length > 0) {
-          startUserSelectAssignees['Second'] = [orderForm.supervisorIds[0]]
-          ElMessage.warning('获取牵头单位负责人信息失败，将使用第一个督办人作为默认审批人')
-        } else {
-          ElMessage.error('获取部门信息失败且督办人信息缺失，请重试')
-          return
-        }
-      }
+    // 根据新流程：发起人 -> 督查办副主任 -> 督查办主任 -> 督办人
+    // 这里需要根据实际的用户ID配置审批人
+    // 暂时使用督办人作为后续流程的审批人
+    if (orderForm.supervisorIds && orderForm.supervisorIds.length > 0) {
+      // 设置督办人为后续流程的审批人
+      startUserSelectAssignees['First'] = orderForm.supervisorIds
     }
 
     const submitData: OrderVO = {
@@ -1282,24 +1226,24 @@ const createOrder = async () => {
       reason: orderForm.basis, // 直接使用数字值
       priority: orderForm.urgencyLevel,
       deadline: orderForm.deadline,
-      leadDept: orderForm.leadDeptId,
-      coDept: orderForm.collaborateDeptIds.join(','), // 协办单位ID用逗号分隔
+      leadDept: '', // 牵头单位由督办人在后续流程中选择，创建时为空
+      coDept: '', // 协办单位由牵头单位选择，创建时为空
       supervisor: orderForm.supervisorIds.length > 0 ? orderForm.supervisorIds[0] : 0, // 使用第一个督办人作为主督办人
       content: orderForm.content,
       undertakeMatter: orderForm.tasks,
-      reportFrequency: orderForm.reportFrequency, // 汇报频次
+      reportFrequency: orderForm.reportFrequency ? Number(orderForm.reportFrequency) : undefined, // 汇报频次
       isProjectSupervision: orderForm.isProjectSupervision, // 是否立项督办
       isSupervisionClosed: orderForm.isSupervisionClosed, // 是否结束督办
-      leader: orderForm.leaderId, // 分管校领导ID
+      // leader 字段在创建阶段不需要传递，由后续流程根据牵头单位自动确定
       otherLeaders: orderForm.otherLeaderIds.join(','), // 其他校领导ID（逗号分隔）
       summary: summaryContent, // 添加自动生成的概述信息字符串
       startUserSelectAssignees: startUserSelectAssignees,
       startLeaderSelectAssignees: startLeaderSelectAssignees// 发起人自选审批人
     }
 
-    // 验证必要的ID字段
-    if (!submitData.leadDept || !submitData.supervisor || orderForm.supervisorIds.length === 0) {
-      ElMessage.error('请确保已正确选择牵头单位和督办人')
+    // 验证必要的ID字段（牵头单位不再在创建阶段验证）
+    if (!submitData.supervisor || orderForm.supervisorIds.length === 0) {
+      ElMessage.error('请确保已正确选择督办人')
       return
     }
 
@@ -1360,7 +1304,7 @@ const resetForm = async () => {
   orderForm.category = undefined
   orderForm.basis = undefined
   orderForm.urgencyLevel = undefined
-  orderForm.reportFrequency = ''
+  orderForm.reportFrequency = undefined
   orderForm.deadline = ''
   orderForm.leadDept = ''
   orderForm.leadDeptId = 0

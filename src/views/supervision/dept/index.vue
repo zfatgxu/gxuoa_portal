@@ -318,7 +318,7 @@ const loadTaskList = async () => {
       // 已完成标签页，调用 done-page 接口时添加 category 参数
       const doneParams = {
         ...params,
-        category: '督察督办'
+        category: '督查督办'
       }
       result = await SupervisionTaskApi.getSupervisionDonePage(doneParams)
     }
