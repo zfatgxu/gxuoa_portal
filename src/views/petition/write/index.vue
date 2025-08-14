@@ -214,7 +214,7 @@
           </el-col>
           <el-col :span="10">
             <el-form-item label="要求完成时间:" label-width="150px!important">
-              <el-date-picker v-model="formData.requiredCompletionTime" type="date" placeholder="选择日期"/>
+              <el-date-picker v-model="formData.requiredCompletionTime" type="date" placeholder="选择日期" value-format="YYYY-MM-DD HH:mm:ss"/>
             </el-form-item>
           </el-col>
         </el-row>
@@ -242,7 +242,7 @@
         <el-row>
           <el-col>
             <el-form-item label=" ">
-              <el-input v-model="formData.cooperationUnits" type="textarea" :autosize="{ minRows: 4 }" placeholder="已添加部门"/>
+              <el-input v-model="cooperationUnits" type="textarea" :autosize="{ minRows: 4 }" placeholder="已添加部门"/>
             </el-form-item>
           </el-col>
         </el-row>
@@ -410,6 +410,8 @@ import { Paperclip } from '@element-plus/icons-vue'
 import { KKFileView } from '@/components/KKFileView'
 import type { UploadFile, UploadUserFile } from 'element-plus';
 import * as FileApi from '@/api/infra/file'
+import { InfoApi } from '@/api/petition/info'
+import dayjs from 'dayjs'
 // 各文本输入值
 const inputPetitionerUnit = ref('')
 const inputCollaborateUnit = ref('')
@@ -576,11 +578,11 @@ const formData = reactive({
   directorOpinion: '', // 督查办主任意见
   acceptanceUnit: '', // 牵头单位
   requiredCompletionTime: '', // 要求完成时间
-  cooperationUnits: [], // 已选协办单位列表
+  cooperationUnits: '', // 已选协办单位列表
   supervisor: '', // 督办人
   officePhone: '', // 办公电话
   responsibleLeader: '', // 分管领导
-  countersigner: '', // 会签人
+  counterSigner: '', // 会签人
   reviewer: '', // 阅批人
   petitionHandling: '', // 信访处理
   completionReview: '', // 办结审核
@@ -766,9 +768,8 @@ const handleSupervisorChange = async (userId: number) => {
 }
 
 // 保存表单
-const saveForm = () => {
-  documentFormRef.value.validate((valid: boolean) => {
-    if (valid) {
+const saveForm = async () => {
+
       // 处理信访附件列表
       formData.petitionList = petitionList.value.map(file => {
         return {
@@ -795,17 +796,15 @@ const saveForm = () => {
           url: file.url
         }
       })
-      // 将表单数据保存到本地存储
-      const formDataToSave = {...formData,}
-      localStorage.setItem('petition_form_data', JSON.stringify(formDataToSave))
-      console.log(formData)
+      // 处理时间格式
+      formData.requiredCompletionTime = dayjs(formData.requiredCompletionTime).format('YYYY-MM-DD HH:mm:ss')
+      // 将协办单位列表转换为字符串
+      formData.cooperationUnits = cooperationUnits.value.join(',')
+      // 将表单数据保存
+      const res = await InfoApi.createInfo(formData)
+      console.log(res)
       ElMessage.success('表单保存成功')
       // 这里可以添加保存表单数据的逻辑
-    } else {
-      ElMessage.error('表单验证失败，请检查必填项')
-      return false
-    }
-  })
 }
 
 // 从本地缓存加载表单数据
@@ -862,20 +861,14 @@ const nextStep = () => {
   })
 }
 const cooperationUnit = ref('')
+const cooperationUnits = ref<string[]>([])
 // 添加协办单位
 const addCooperationUnit = (unit: string) => {
-  if (unit) {
-    formData.cooperationUnits.push(unit)
+  if (unit && !cooperationUnits.value.includes(unit)) {
+    cooperationUnits.value.push(unit)
   }
 }
 
-// 移除协办单位
-const removeCooperationUnit = (unit: string) => {
-  const index = formData.cooperationUnits.indexOf(unit)
-  if (index !== -1) {
-    formData.cooperationUnits.splice(index, 1)
-  }
-}
 onMounted(async () => {
   await loadDeptList()
   await loadUserList()

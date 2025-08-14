@@ -248,6 +248,8 @@ import { formatDate } from '@/utils/formatTime'
 import { useRouter } from 'vue-router'
 import { ArrowRightBold, OfficeBuilding, Edit } from '@element-plus/icons-vue'
 const { push } = useRouter()
+import { InfoApi } from '@/api/petition/info/index'
+import router from '@/router'
 
 // 定义任务数据类型
 interface TaskData {
@@ -536,10 +538,11 @@ const fetchData = async () => {
 
     if (activeTab.value === 'todo') {
       // 待办列表标签页 - 使用督办待办任务接口
-      supervisionPromise = SupervisionTaskApi.getTodoPage({
+      supervisionPromise = InfoApi.getInfoPage({
         pageNo: pagination.value.pageNo,
         pageSize: pagination.value.pageSize
       })
+      console.log('获取督办数据成功', supervisionPromise)
     } else {
       // 工作督办和专项督办
       const typeParam = activeTab.value === 'work' ? 1 : 2
@@ -797,8 +800,12 @@ const currentTabTotal = computed(() => {
 
 // 打开详情弹框
 const openDetailDialog = (task: TaskData) => {
-  selectedTask.value = task
-  detailDialogVisible.value = true
+  router.push({
+    path: '/petition/detail',
+    query: {
+      id: task.id
+    }
+  })
 }
 
 // 处理审批按钮（参考部门界面实现）

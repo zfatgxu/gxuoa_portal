@@ -300,7 +300,19 @@ const remainingRouter: AppRouteRecordRaw[] = [
           hidden: true,
           canTo: true,
           title: '信访写信',
-          activeMenu: '/petition'
+          activeMenu: '/petition',
+        }
+      },
+      {
+        path: 'detail',
+        component: () => import('@/views/petition/write/detail.vue'),
+        name: 'PetitionDetail',
+        meta: {
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          title: '信访详情',
+          activeMenu: '/petition',
         }
       },
       {
