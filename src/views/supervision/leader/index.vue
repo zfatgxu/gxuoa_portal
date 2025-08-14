@@ -403,7 +403,7 @@ const loadTaskList = async () => {
     const params = {
       pageNo: pagination.pageNo || 1,
       pageSize: pagination.pageSize || 10,
-      category: '督察督办'
+      category: '督查督办'
     }
 
     console.log('API请求参数:', params) // 添加调试日志
