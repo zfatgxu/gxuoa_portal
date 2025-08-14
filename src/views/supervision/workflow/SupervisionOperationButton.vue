@@ -1093,7 +1093,7 @@ const isShowButton = (btnType: OperationButtonType): boolean => {
   if (btnType === OperationButtonType.REJECT) {
     const isSupervisionAdminNode = checkIsSupervisionAdminNode()
     if (!isSupervisionAdminNode) {
-      // 非督察办管理员节点不显示拒绝按钮
+      // 非督查办管理员节点不显示拒绝按钮
       isShow = false
     }
   }
@@ -1234,7 +1234,7 @@ const handleSignFinish = (url: string) => {
   approveSignFormRef.value.validate('change')
 }
 
-/** 检查当前节点是否为督察办管理员节点 */
+/** 检查当前节点是否为督查办管理员节点 */
 const checkIsSupervisionAdminNode = (): boolean => {
   if (!runningTask.value) {
     return false
@@ -1243,7 +1243,7 @@ const checkIsSupervisionAdminNode = (): boolean => {
   const taskName = runningTask.value.name || ''
 
   // 直接根据确定的节点名称判断
-  return taskName === '督察办管理员审核' || taskName === '督察办管理员复核'
+  return taskName === '督查办管理员审核' || taskName === '督查办管理员复核'
 }
 
 /** 获取督办节点类型 */
@@ -1255,11 +1255,11 @@ const getSupervisionNodeType = (): string => {
   const taskName = runningTask.value.name || ''
 
   // 直接根据确定的节点名称判断
-  if (taskName === '督察办管理员审核') {
+  if (taskName === '督查办管理员审核') {
     return 'first_approval'
   }
 
-  if (taskName === '督察办管理员复核') {
+  if (taskName === '督查办管理员复核') {
     return 'reapproval'
   }
 

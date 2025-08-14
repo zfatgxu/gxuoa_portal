@@ -1,324 +1,275 @@
 <template>
   <ContentWrap>
     <div class="supervision-order-detail">
-      <!-- 页面标题和操作按钮 -->
-      <div class="page-header mb-6">
-        <div class="flex justify-center items-center">
-          <h2 class="text-2xl font-bold text-red-600">{{ getPageTitle() }}</h2>
-        </div>
+      <!-- 页面标题 - 移到表格外面 -->
+      <div class="page-header-outside">
+        <h1 class="form-title">{{ getPageTitle() }}</h1>
       </div>
 
       <!-- 督办单详情表单 -->
-      <el-form
-        :model="orderDetail"
-        label-width="120px"
-        class="order-form"
-        v-loading="loading"
-        element-loading-text="正在加载数据..."
-      >
-        <!-- 第一行：督办编号放右边 -->
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <!-- 空白占位 -->
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="督办编号：">
-              <el-input
-                :value="orderDetail.orderCode"
-                readonly
-                placeholder="督办编号"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
+      <div class="order-form-container" v-loading="loading" element-loading-text="正在加载数据...">
+        <!-- 表单主体 -->
+        <el-form
+          :model="orderDetail"
+          class="order-form"
+        >
+          <!-- 表格式布局 -->
+          <div class="form-table">
+            <!-- 督办编号行 -->
+            <div class="form-row">
+              <div class="form-content full-width order-number-content">
+                <span class="order-number-label">{{ getOrderNumberLabel() }}：</span>
+                <span class="order-number-display">{{ orderDetail.orderCode || '未生成' }}</span>
+              </div>
+            </div>
 
-        <!-- 第二行：文件标题 -->
-        <el-row :gutter="20">
-          <el-col :span="24">
-            <el-form-item label="文件标题：">
-              <el-input :value="orderDetail.orderTitle" readonly />
-            </el-form-item>
-          </el-col>
-        </el-row>
+            <!-- 督办事项 -->
+            <div class="form-row">
+              <div class="form-label">督办事项</div>
+              <div class="form-content full-width">
+                <el-input :value="orderDetail.orderTitle" readonly />
+              </div>
+            </div>
 
-        <!-- 第三行：督办分类、督办依据 -->
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="督办分类：">
-              <el-input :value="orderDetail.detailType || getTypeName(orderDetail.type)" readonly />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="督办依据：">
-              <el-input :value="getReasonName(orderDetail.reason)" readonly />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 第四行：紧急程度、要求完成时间 -->
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="紧急程度：">
-              <el-input :value="getPriorityName(orderDetail.priority)" readonly />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="要求完成时间：" label-width="140px">
-              <el-input :value="formatDate(orderDetail.deadline)" readonly />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 第五行：牵头单位、重要程度 -->
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="牵头单位：">
-              <el-input :value="orderDetail.leadDeptName || getDeptName(orderDetail.leadDept)" readonly />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="重要程度：">
-              <el-input :value="getSignificanceName(orderDetail.significance)" readonly />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 第六行：协办单位 -->
-        <el-row :gutter="20">
-          <el-col :span="24">
-            <el-form-item label="协办单位：">
-              <!-- 牵头单位可编辑 -->
-              <el-select
-                v-if="canEditCollaborateDepts"
-                v-model="editForm.collaborateDepts"
-                multiple
-                filterable
-                placeholder="请选择协办单位"
-                style="width: 100%"
-                @change="handleCollaborateDeptsChange"
-              >
-                <el-option
-                  v-for="dept in deptList"
-                  :key="dept.id"
-                  :label="dept.name"
-                  :value="dept.name"
+            <!-- 主要内容 -->
+            <div class="form-row">
+              <div class="form-label">主要内容</div>
+              <div class="form-content full-width">
+                <el-input
+                  type="textarea"
+                  :value="orderDetail.content"
+                  readonly
+                  :rows="4"
                 />
-              </el-select>
-              <!-- 只读模式 -->
-              <div v-else class="readonly-tags">
-                <el-tag
-                  v-for="dept in getCollaborateDepts(orderDetail.coDept)"
-                  :key="dept"
-                  type="success"
-                  class="dept-tag"
+              </div>
+            </div>
+
+            <!-- 督办分类和督办依据 -->
+            <div class="form-row">
+              <div class="form-label">督办分类</div>
+              <div class="form-content half-width">
+                <el-input :value="orderDetail.detailType || getTypeName(orderDetail.type)" readonly />
+              </div>
+              <div class="form-label">督办依据</div>
+              <div class="form-content half-width">
+                <el-input :value="getReasonName(orderDetail.reason)" readonly />
+              </div>
+            </div>
+
+            <!-- 紧急程度和完成期限 -->
+            <div class="form-row">
+              <div class="form-label">紧急程度</div>
+              <div class="form-content half-width">
+                <el-input :value="getPriorityName(orderDetail.priority)" readonly />
+              </div>
+              <div class="form-label">完成期限</div>
+              <div class="form-content half-width">
+                <div class="deadline-container">
+                  <el-input :value="formatDate(orderDetail.deadline)" readonly class="deadline-display" />
+                  <el-input :value="getReportFrequencyName(orderDetail.reportFrequency)" readonly class="report-frequency-display" />
+                </div>
+              </div>
+            </div>
+
+            <!-- 分管校领导和其他校领导 -->
+            <div class="form-row">
+              <div class="form-label">分管校领导</div>
+              <div class="form-content half-width">
+                <el-input :value="orderDetail.leader || '(自动生成)'" readonly />
+              </div>
+              <div class="form-label">其他校领导</div>
+              <div class="form-content half-width">
+                <el-input :value="getOtherLeadersDisplay(orderDetail.otherLeaders)" readonly />
+              </div>
+            </div>
+
+            <!-- 牵头单位和协办单位 -->
+            <div class="form-row">
+              <div class="form-label">牵头单位</div>
+              <div class="form-content half-width">
+                <el-input :value="orderDetail.leadDeptName || getDeptName(orderDetail.leadDept) || '待督办人选择'" readonly />
+              </div>
+              <div class="form-label">协办单位</div>
+              <div class="form-content half-width">
+                <!-- 牵头单位可编辑 -->
+                <el-select
+                  v-if="canEditCollaborateDepts"
+                  v-model="editForm.collaborateDepts"
+                  multiple
+                  filterable
+                  placeholder="请选择协办单位"
+                  style="width: 100%"
+                  @change="handleCollaborateDeptsChange"
                 >
-                  {{ dept }}
-                </el-tag>
-                <span v-if="!orderDetail.coDept" class="text-gray-500">无协办单位</span>
-              </div>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 第七行：督办人 -->
-        <el-row :gutter="20">
-          <el-col :span="24">
-            <el-form-item label="督办人：">
-              <el-input :value="orderDetail.supervisorName || '未分配'" readonly />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 第八行：办公电话和分管领导 -->
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="办公电话：">
-              <el-input :value="orderDetail.officePhone || getUserMobile(orderDetail.supervisor) || '未设置'" readonly />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="分管领导：">
-              <el-input :value="orderDetail.leader || '(自动生成)'" readonly />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 第九行：主要内容 -->
-        <el-row :gutter="20">
-          <el-col :span="24">
-            <el-form-item label="主要内容：">
-              <el-input
-                :value="orderDetail.content"
-                type="textarea"
-                :rows="6"
-                readonly
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 第十行：承办事项 -->
-        <el-row :gutter="20">
-          <el-col :span="24">
-            <el-form-item label="承办事项：">
-              <el-input
-                :value="orderDetail.undertakeMatter"
-                type="textarea"
-                :rows="4"
-                readonly
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 督察办审批 -->
-        <el-row :gutter="20">
-          <el-col :span="24">
-            <el-form-item label="督察办审批：">
-              <el-input
-                :value="getSupervisionApprovalText(orderDetail.supervisionApprove)"
-                readonly
-                style="width: 200px"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 牵头单位承办情况 -->
-        <div class="section-title">
-          <h3 class="text-lg font-medium text-red-600 mb-4">单位承办情况：</h3>
-        </div>
-
-        <!-- 承办状况 -->
-        <el-row :gutter="20">
-          <el-col :span="24">
-            <el-form-item label="承办状况：">
-              <!-- 牵头单位和协办单位可编辑 -->
-              <el-input
-                v-if="canEditLeadDeptDetail"
-                v-model="editForm.leadDeptDetail"
-                type="textarea"
-                :rows="6"
-                placeholder="请输入承办状况"
-              />
-              <!-- 只读模式 -->
-              <el-input
-                v-else
-                :value="orderDetail.leadDeptDetail || '暂无'"
-                type="textarea"
-                :rows="6"
-                readonly
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 督查督办复核 -->
-        <el-row :gutter="20">
-          <el-col :span="24">
-            <el-form-item label="督查督办复核：">
-              <el-input
-                :value="getSupervisionReapprovalText(orderDetail.supervisionReapprove)"
-                readonly
-                style="width: 200px"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <!-- 概述部分 -->
-        <div class="section-title">
-          <h3 class="text-lg font-medium text-red-600 mb-4">概述：</h3>
-        </div>
-
-        <!-- 概述内容 -->
-        <el-row :gutter="20">
-          <el-col :span="24">
-            <el-form-item>
-              <div class="summary-content-simple">
-                <div v-if="parsedSummary && parsedSummary.length > 0">
-                  <div v-for="(item, index) in parsedSummary" :key="index" class="summary-item-simple">
-                    <strong>{{ item.label }}：</strong>{{ item.value }}
-                  </div>
-                </div>
-                <div v-else class="no-summary-simple">
-                  暂无概述信息
+                  <el-option
+                    v-for="dept in deptList"
+                    :key="dept.id"
+                    :label="dept.name"
+                    :value="dept.name"
+                  />
+                </el-select>
+                <!-- 只读模式 -->
+                <div v-else class="readonly-tags">
+                  <el-tag
+                    v-for="dept in getCollaborateDepts(orderDetail.coDept)"
+                    :key="dept"
+                    type="success"
+                    class="dept-tag"
+                  >
+                    {{ dept }}
+                  </el-tag>
+                  <span v-if="!orderDetail.coDept" class="text-gray-500">待牵头单位选择</span>
                 </div>
               </div>
-            </el-form-item>
-          </el-col>
-        </el-row>
+            </div>
 
-        <!-- 附件上传区域 - 使用自定义上传 -->
-        <el-row :gutter="20" v-if="hasEditPermission">
-          <el-col :span="24">
-            <h3 class="section-title attachment-title">附件管理</h3>
-            <el-form-item label="上传附件：">
-              <el-upload
-                ref="uploadRef"
-                v-model:file-list="fileList"
-                :http-request="customUpload"
-                :limit="10"
-                :multiple="true"
-                :auto-upload="true"
-                :show-file-list="true"
-                :on-error="handleCustomUploadError"
-                :on-remove="handleFileRemove"
-                :before-upload="beforeUpload"
-                accept=".doc,.docx,.pdf,.xls,.xlsx,.jpg,.jpeg,.png,.txt"
-                action="#"
-              >
-                <el-button type="primary">选取文件</el-button>
-                <template #tip>
-                  <div class="el-upload__tip">
-                    支持上传 doc、docx、pdf、xls、xlsx、jpg、jpeg、png、txt 格式文件，单个文件不超过50MB，最多上传10个文件
+            <!-- 督办人和联系电话 -->
+            <div class="form-row">
+              <div class="form-label">督办人</div>
+              <div class="form-content half-width">
+                <el-input :value="orderDetail.supervisorName || '未分配'" readonly />
+              </div>
+              <div class="form-label">联系电话</div>
+              <div class="form-content half-width">
+                <el-input :value="orderDetail.officePhone || getUserMobile(orderDetail.supervisor) || '未设置'" readonly />
+              </div>
+            </div>
+
+            <!-- 承办事项 -->
+            <div class="form-row">
+              <div class="form-label">承办事项</div>
+              <div class="form-content full-width">
+                <el-input
+                  type="textarea"
+                  :value="orderDetail.undertakeMatter"
+                  readonly
+                  :rows="4"
+                />
+              </div>
+            </div>
+
+            <!-- 工作推进情况 -->
+            <div class="form-row">
+              <div class="form-label">工作推进情况</div>
+              <div class="form-content full-width">
+                <!-- 牵头单位和协办单位可编辑 -->
+                <el-input
+                  v-if="canEditLeadDeptDetail"
+                  v-model="editForm.leadDeptDetail"
+                  type="textarea"
+                  :rows="4"
+                  placeholder="请输入承办状况"
+                />
+                <!-- 只读模式 -->
+                <el-input
+                  v-else
+                  :value="orderDetail.leadDeptDetail || '待各单位输入'"
+                  type="textarea"
+                  :rows="4"
+                  readonly
+                />
+              </div>
+            </div>
+
+            <!-- 是否立项督办 -->
+            <div class="form-row">
+              <div class="form-label">是否立项督办</div>
+              <div class="form-content full-width">
+                <el-input :value="orderDetail.isProjectSupervision ? '是' : '否'" readonly />
+              </div>
+            </div>
+
+            <!-- 是否结束督办 -->
+            <div class="form-row">
+              <div class="form-label">是否结束督办</div>
+              <div class="form-content full-width">
+                <el-input :value="orderDetail.isSupervisionClosed ? '是' : '否'" readonly />
+              </div>
+            </div>
+
+            <!-- 概述 -->
+            <div class="form-row">
+              <div class="form-label">概述</div>
+              <div class="form-content full-width">
+                <div class="summary-content-inline">
+                  <div v-if="parsedSummary && parsedSummary.length > 0">
+                    <div v-for="(item, index) in parsedSummary" :key="index" class="summary-item-inline">
+                      <strong>{{ item.label }}：</strong>{{ item.value }}
+                    </div>
                   </div>
-                </template>
-              </el-upload>
-            </el-form-item>
-          </el-col>
-        </el-row>
+                  <div v-else class="no-summary-inline">
+                    暂无概述信息
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-form>
+      </div>
 
+      <!-- 附件管理部分 -->
+      <div class="attachment-section" v-if="hasEditPermission || existingAttachments.length > 0">
+        <h3 class="section-title">附件管理</h3>
 
+        <!-- 附件上传区域 -->
+        <div v-if="hasEditPermission" class="upload-section">
+          <el-upload
+            ref="uploadRef"
+            v-model:file-list="fileList"
+            :http-request="customUpload"
+            :limit="10"
+            :multiple="true"
+            :auto-upload="true"
+            :show-file-list="true"
+            :on-error="handleCustomUploadError"
+            :on-remove="handleFileRemove"
+            :before-upload="beforeUpload"
+            accept=".doc,.docx,.pdf,.xls,.xlsx,.jpg,.jpeg,.png,.txt"
+            action="#"
+          >
+            <el-button type="primary">选取文件</el-button>
+            <template #tip>
+              <div class="el-upload__tip">
+                支持上传 doc、docx、pdf、xls、xlsx、jpg、jpeg、png、txt 格式文件，单个文件不超过20MB，最多上传10个文件
+              </div>
+            </template>
+          </el-upload>
+        </div>
 
         <!-- 已有附件列表 -->
-        <el-row :gutter="20" v-if="existingAttachments.length > 0">
-          <el-col :span="24">
-            <h3 class="section-title attachment-title">已有附件</h3>
-            <el-table :data="existingAttachments" style="width: 100%">
-              <el-table-column prop="name" label="文件名" min-width="200" />
-              <el-table-column prop="size" label="文件大小" width="120">
-                <template #default="scope">
-                  {{ formatFileSize(scope.row.size) }}
-                </template>
-              </el-table-column>
-              <el-table-column prop="createTime" label="上传时间" width="180">
-                <template #default="scope">
-                  {{ formatDate(scope.row.createTime) }}
-                </template>
-              </el-table-column>
-              <el-table-column label="操作" width="150">
-                <template #default="scope">
-                  <el-button link type="primary" @click="downloadAttachment(scope.row)">
-                    下载
-                  </el-button>
-                  <el-button
-                    v-if="hasEditPermission"
-                    link
-                    type="danger"
-                    @click="deleteAttachment(scope.row)"
-                  >
-                    删除
-                  </el-button>
-                </template>
-              </el-table-column>
-            </el-table>
-          </el-col>
-        </el-row>
-
-      </el-form>
+        <div v-if="existingAttachments.length > 0" class="existing-attachments">
+          <h4 class="attachment-subtitle">已有附件</h4>
+          <el-table :data="existingAttachments" style="width: 100%">
+            <el-table-column prop="name" label="文件名" min-width="200" />
+            <el-table-column prop="size" label="文件大小" width="120">
+              <template #default="scope">
+                {{ formatFileSize(scope.row.size) }}
+              </template>
+            </el-table-column>
+            <el-table-column prop="createTime" label="上传时间" width="180">
+              <template #default="scope">
+                {{ formatDate(scope.row.createTime) }}
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="150">
+              <template #default="scope">
+                <el-button link type="primary" @click="downloadAttachment(scope.row)">
+                  下载
+                </el-button>
+                <el-button
+                  v-if="hasEditPermission"
+                  link
+                  type="danger"
+                  @click="deleteAttachment(scope.row)"
+                >
+                  删除
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
     </div>
-
   </ContentWrap>
 </template>
 
@@ -477,10 +428,10 @@ const beforeUpload = (file: any) => {
     return false
   }
 
-  // 检查文件大小 (50MB)
-  const isValidSize = file.size < 50 * 1024 * 1024
+  // 检查文件大小 (20MB)
+  const isValidSize = file.size < 20 * 1024 * 1024
   if (!isValidSize) {
-    ElMessage.error('上传文件大小不能超过50MB!')
+    ElMessage.error('上传文件大小不能超过20MB!')
     return false
   }
 
@@ -685,6 +636,55 @@ const getPageTitle = () => {
   } else {
     return '广西大学督办单'
   }
+}
+
+// 获取督办编号标签
+const getOrderNumberLabel = () => {
+  if (!orderDetail.value.type) {
+    return '督办编号'
+  }
+
+  // type: 1=工作督办, 2=专项督办
+  if (orderDetail.value.type === 1) {
+    return '督办编号'  // 工作督办单显示"督办编号"
+  } else if (orderDetail.value.type === 2) {
+    return '督查编号'  // 专项督办单显示"督查编号"
+  } else {
+    return '督办编号'
+  }
+}
+
+// 获取汇报频次名称
+const getReportFrequencyName = (frequency: number | undefined) => {
+  if (!frequency) return '未设置'
+
+  const frequencyMap = {
+    1: '每日汇报',
+    2: '每周汇报',
+    3: '每月汇报',
+    4: '阶段性汇报'
+  }
+
+  return frequencyMap[frequency] || '未知频次'
+}
+
+// 获取其他校领导显示文本
+const getOtherLeadersDisplay = (otherLeaders: string | undefined) => {
+  if (!otherLeaders) return '无'
+
+  // 如果是逗号分隔的ID，需要转换为姓名
+  const leaderIds = otherLeaders.split(',').filter(id => id.trim())
+  if (leaderIds.length === 0) return '无'
+
+  const leaderNames = leaderIds.map(id => {
+    const leaderId = parseInt(id.trim())
+    if (isNaN(leaderId)) return id.trim()
+
+    const user = userList.value.find(u => u.id === leaderId)
+    return user?.nickname || user?.username || `未知用户(${leaderId})`
+  })
+
+  return leaderNames.join('、')
 }
 
 // 获取督办分类名称
@@ -1187,37 +1187,190 @@ defineExpose({
 
 <style scoped>
 .supervision-order-detail {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
 }
 
-.order-form {
-  background: white;
-  padding: 30px;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+/* 页面标题样式 - 与创建页面一致 */
+.page-header-outside {
+  text-align: center;
+  margin-bottom: 30px;
 }
 
-.section-title {
-  margin: 30px 0 20px 0;
-  padding-top: 20px;
-  border-top: 1px solid #ebeef5;
-  color: #303133;
+.form-title {
+  font-size: 28px;
+  font-weight: bold;
+  color: #d32f2f;
+  letter-spacing: 2px;
+  line-height: 1.4;
+  margin: 0;
+  font-family: "STXiaobiao", "SimSun", "Microsoft YaHei", serif;
+}
+
+/* 表单容器样式 - 与创建页面一致 */
+.order-form-container {
+  background: white;
+  border: 2px solid #e8eaed;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  margin: 20px auto;
+  max-width: 1000px;
+}
+
+/* 督办编号样式 - 与创建页面一致 */
+.order-number-content {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-right: 20px;
+  gap: 5px;
+}
+
+.order-number-label {
+  font-size: 15px;
+  color: #d32f2f;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+}
+
+.order-number-display {
+  font-size: 14px;
+  color: #666;
+  font-weight: normal;
+}
+
+/* 表单样式 - 与创建页面一致 */
+.order-form {
+  padding: 0;
+}
+
+.form-table {
+  width: 100%;
+}
+
+.form-row {
+  display: flex;
+  border-bottom: 1px solid #e8eaed;
+  min-height: 50px;
+  align-items: stretch;
+  transition: background-color 0.2s ease;
+}
+
+.form-row:hover {
+  background-color: #fafafa;
+}
+
+.form-row:last-child {
+  border-bottom: none;
+}
+
+.form-label {
+  background: white;
+  color: #d32f2f;
+  border-right: 1px solid #e8eaed;
+  padding: 12px 16px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+  min-width: 120px;
+  width: 120px;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
+}
+
+/* 确保第二个标签有左边框 */
+.form-row .form-label:nth-child(3) {
+  border-left: 1px solid #e8eaed;
+}
+
+.form-content {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  background: white;
+  transition: all 0.2s ease;
+}
+
+.form-content.full-width {
+  flex: 1;
+}
+
+.form-content.half-width {
+  flex: 1;
+  min-width: 0;
+  border-right: 1px solid #e8eaed;
+}
+
+.form-content.half-width:first-child {
+  flex: 0.8;
+}
+
+.form-content.half-width:last-child {
+  flex: 1.2;
+  border-right: none;
+}
+
+/* 移除Element Plus默认样式 */
+:deep(.el-form-item) {
+  margin-bottom: 0;
 }
 
 :deep(.el-form-item__label) {
-  font-weight: 500;
-  color: #303133;
-  white-space: nowrap;
+  display: none;
+}
+
+:deep(.el-form-item__content) {
+  margin-left: 0 !important;
+  width: 100%;
 }
 
 :deep(.el-input__wrapper) {
-  border-radius: 4px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e8eaed;
+  background: white;
+  transition: all 0.2s ease;
 }
 
 :deep(.el-textarea__inner) {
-  border-radius: 4px;
+  border-radius: 6px;
+  border: 1px solid #e8eaed;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: white;
+  resize: none;
+  transition: all 0.2s ease;
+}
+
+:deep(.el-select .el-input__wrapper) {
+  border-radius: 6px;
+  border: 1px solid #e8eaed;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: white;
+  transition: all 0.2s ease;
+}
+
+/* 完成期限容器样式 */
+.deadline-container {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+}
+
+.deadline-display {
+  flex: 1;
+}
+
+.report-frequency-display {
+  width: 130px;
 }
 
 /* 只读标签样式 */
@@ -1229,91 +1382,66 @@ defineExpose({
   align-items: center;
 }
 
-/* 附件上传样式 */
-.upload-tip {
-  margin-top: 8px;
-}
-
-/* 自定义上传样式 */
-.uploaded-urls {
-  margin-top: 16px;
-  padding: 12px;
-  background-color: #f5f7fa;
-  border-radius: 4px;
-}
-
-.uploaded-urls h4 {
-  margin: 0 0 8px 0;
-  color: #606266;
-  font-size: 14px;
-}
-
-.uploaded-urls ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.uploaded-urls li {
-  margin-bottom: 4px;
-  word-break: break-all;
-
-  font-size: 16px;
-  font-weight: 600;
-  margin: 20px 0 15px 0;
-  padding-bottom: 8px;
-  border-bottom: 2px solid #409eff;
-}
-
 .readonly-tags .el-tag {
   margin: 0;
 }
 
-/* 概述内容样式 */
-.summary-content {
-  min-height: 100px;
-  background: #fafafa;
-  border: 1px solid #e4e7ed;
-  border-radius: 6px;
-  padding: 20px;
-  margin-bottom: 20px;
+/* 内联概述样式 */
+.summary-content-inline {
+  width: 100%;
 }
 
-.summary-item {
+.summary-item-inline {
   margin-bottom: 8px;
   line-height: 1.6;
+  font-size: 14px;
 }
 
-.summary-item strong {
+.summary-item-inline strong {
   color: #303133;
   margin-right: 8px;
 }
 
-.no-summary {
+.no-summary-inline {
   color: #909399;
   font-style: italic;
-  text-align: center;
-  padding: 20px 0;
+  font-size: 14px;
 }
 
-/* 简化的概述内容样式 - 去掉框框 */
-.summary-content-simple {
+/* 附件部分样式 */
+.attachment-section {
+  background: white;
+  border: 2px solid #e8eaed;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  margin: 20px auto;
+  max-width: 1000px;
+  padding: 30px;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #d32f2f;
+  letter-spacing: 1px;
   margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e8eaed;
 }
 
-.summary-item-simple {
-  margin-bottom: 8px;
-  line-height: 1.6;
+.upload-section {
+  margin-bottom: 30px;
 }
 
-.summary-item-simple strong {
-  color: #303133;
-  margin-right: 8px;
+.existing-attachments {
+  margin-top: 20px;
 }
 
-.no-summary-simple {
-  color: #909399;
-  font-style: italic;
+.attachment-subtitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #606266;
+  margin-bottom: 15px;
 }
 
 /* 部门标签样式 */
@@ -1321,24 +1449,13 @@ defineExpose({
   margin-right: 8px;
   margin-bottom: 4px;
 }
-
-/* 附件管理标题样式 */
-.attachment-title {
-  color: #dc2626 !important;
-  font-weight: 600;
-}
-
-/* 操作按钮样式 */
-.action-buttons {
-  display: flex;
-  gap: 8px;
-}
 /* 只读输入框样式 */
 :deep(.el-input.is-disabled .el-input__wrapper) {
   background-color: #f5f7fa;
   border-color: #e4e7ed;
   color: #606266;
 }
+
 :deep(.el-textarea.is-disabled .el-textarea__inner) {
   background-color: #f5f7fa;
   border-color: #e4e7ed;
@@ -1358,5 +1475,48 @@ defineExpose({
   border-color: #e4e7ed;
   color: #606266;
   cursor: default;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .supervision-order-detail {
+    padding: 10px;
+  }
+
+  .order-form-container, .attachment-section {
+    margin: 10px 0;
+    max-width: none;
+    border-width: 1px;
+    padding: 20px;
+  }
+
+  .form-title {
+    font-size: 24px;
+    letter-spacing: 1px;
+  }
+
+  .form-row {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  .form-label {
+    width: 100%;
+    min-width: auto;
+    border-right: none;
+    border-bottom: 1px solid #e8eaed;
+    justify-content: flex-start;
+    padding: 10px 16px;
+  }
+
+  .form-content {
+    width: 100%;
+    padding: 12px 16px;
+  }
+
+  .form-content.half-width {
+    flex: 1;
+    border-right: none;
+  }
 }
 </style>
