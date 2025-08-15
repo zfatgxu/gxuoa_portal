@@ -109,7 +109,7 @@
 
     <!-- Task List -->
     <div class="p-6">
-        <div v-for="task in filteredTasks" :key="task.id" class="rounded-lg p-6 mb-4 hover:shadow-lg transition-shadow" style="border: 1px solid #e5e7eb;">
+        <div v-for="task in tasks" :key="task.id" class="rounded-lg p-6 mb-4 hover:shadow-lg transition-shadow" style="border: 1px solid #e5e7eb;">
         <div class="flex items-start justify-between">
             <div class="flex-1">
             <div class="flex items-center justify-between mb-3">
@@ -118,12 +118,12 @@
                     <span
                     :class="[
                         'px-2 py-1 rounded text-xs font-medium w-20',
-                        task.priority === '高优先级' ? 'bg-red-100 text-red-800' :
-                        task.priority === '中优先级' ? 'bg-yellow-100 text-yellow-800' :
+                        task.urgencyLevel === 3 ? 'bg-red-100 text-red-800' :
+                        task.urgencyLevel === 2 ? 'bg-yellow-100 text-yellow-800' :
                         'bg-green-100 text-green-800'
                     ]"
                     style="font-weight: bold;">
-                    {{ task.priority }}
+                    {{ getDictLabel(DICT_TYPE.SUPERVISION_PRIORITY_TYPE, task.urgencyLevel) }}
                     </span>
                     <span
                     :class="[
@@ -145,24 +145,24 @@
                 <div class="flex items-center">
                   <el-icon class="w-4 h-4 text-gray-400 mr-2"><Users /></el-icon>
                 <span class="text-gray-500">信访人：</span>
-                <span class="text-gray-700">黄二二</span>
+                <span class="text-gray-700">{{ task.petitioner }}</span>
                 </div>
                 <div class="flex items-center">
                   <el-icon class="w-4 h-4 text-gray-400 mr-2"><OfficeBuilding /></el-icon>
                 <span class="text-gray-500">信访单位：</span>
                 <span >
-                    超自然科学管理局
+                    {{ task.petitionerUnit }}
                 </span>
                 </div>
                 <div class="flex items-center">
                   <el-icon class="w-4 h-4 text-gray-400 mr-2"><Edit /></el-icon>
                   <span class="text-gray-500">目的分类：</span>
-                  <span class="text-gray-700">咨询求助</span>
+                  <span class="text-gray-700">{{ getDictLabel(DICT_TYPE.PURPOSE_CATEGORY, task.purposeCategory) }}</span>
                 </div>
                 <div class="flex items-center">
                   <el-icon class="w-4 h-4 text-gray-400 mr-2"><Edit /></el-icon>
                   <span class="text-gray-500">内容分类：</span>
-                  <span class="text-gray-700">教学管理</span>
+                  <span class="text-gray-700">{{ getDictLabel(DICT_TYPE.CONTENT_CATEGORY, task.contentCategory) }}</span>
                 </div>
             </div>
             <div class="flex items-center text-sm mt-3">
@@ -177,7 +177,7 @@
                       <span class="text-gray-700">{{ task.createdDate }}</span>
                     </span>
                     <span class="text-gray-500">截止时间：
-                      <span class="text-red">{{ task.createdDate }}</span>
+                      <span class="text-red">{{ task.deadline }}</span>
                     </span>
                     <div class="flex items-center">
                         <span v-if="task.daysRemaining" class="ml-2 text-orange-600">
@@ -247,10 +247,9 @@ import { ElMessage } from 'element-plus'
 import { formatDate } from '@/utils/formatTime'
 import { useRouter } from 'vue-router'
 import { ArrowRightBold, OfficeBuilding, Edit } from '@element-plus/icons-vue'
-const { push } = useRouter()
 import { InfoApi } from '@/api/petition/info/index'
-import router from '@/router'
-
+import { DICT_TYPE, getDictLabel } from '@/utils/dict'
+const { push } = useRouter()
 // 定义任务数据类型
 interface TaskData {
   id: number
@@ -270,6 +269,11 @@ interface TaskData {
   processInstanceId?: string
   supervisionStatus?: string
   taskId?: number // 任务ID，用于待办列表标签页的办理功能
+  petitioner: string
+  petitionerUnit: string
+  urgencyLevel: number
+  purposeCategory: number
+  contentCategory: number
 }
 
 // 定义任务统计数据类型
@@ -542,15 +546,14 @@ const fetchData = async () => {
         pageNo: pagination.value.pageNo,
         pageSize: pagination.value.pageSize
       })
-      console.log('获取督办数据成功', supervisionPromise)
     } else {
       // 工作督办和专项督办
       const typeParam = activeTab.value === 'work' ? 1 : 2
-      supervisionPromise = SupervisionIndexApi.getIndexData({
-        pageNo: pagination.value.pageNo,
-        pageSize: pagination.value.pageSize,
-        type: typeParam
-      })
+      // supervisionPromise = SupervisionIndexApi.getIndexData({
+      //   pageNo: pagination.value.pageNo,
+      //   pageSize: pagination.value.pageSize,
+      //   type: typeParam
+      // })
     }
 
     const [statisticsResult, supervisionResult] = await Promise.allSettled([
@@ -671,32 +674,26 @@ const fetchData = async () => {
 
           return {
             id: order.id || task.id,
-            title: order.orderTitle || task.name || '',
-            description: order.content || '',
-            leadDepartment: order.leadDeptName || '未知部门',
-            assistDepartments: parseCoDepts(order.coDeptNameMap),
+            title: order.orderTitle || task.documentTitle || '',
+            description: order.content || task.content || '',
+            petitioner: order.petitionNumber || task.petitioner || '',
+            petitionerUnit: order.petitionerUnit || task.petitionerUnit || '',
             createdDate: formatOrderDate(task.createTime || order.createTime),
-            deadline: formatOrderDate(order.deadline),
-            supervisor: order.leaderNickname || '未分配',
-            priority: getPriorityText(order.priority), // 使用与工作督办相同的优先级处理
+            deadline: formatOrderDate(order.deadline || task.requiredCompletionTime),
+            urgencyLevel: task.urgencyLevel, // 使用与工作督办相同的优先级处理
             status: displayStatus?.status || '进行中', // 待办列表只显示进行中和已超时
             overdueDays: displayStatus?.overdueDays || null,
             isOverdue: displayStatus?.isOverdue || false,
             daysRemaining: displayStatus?.daysRemaining || null,
             type: 'todo', // 标记为待办
             processInstanceId: task.processInstance?.id || order.processInstanceId || '',
-            supervisionStatus: order.supervisionStatus || '',
-            taskId: task.id // 保存任务ID用于办理
+            purposeCategory: task.purposeCategory || order.purposeCategory || '',
+            contentCategory: task.contentCategory || order.contentCategory || '',
           } as TaskData
         })
       } else {
         // 处理工作督办和专项督办数据（督办单格式）
         const supervisionOrders = supervisionResponse.list
-
-        // 调试：统计不同类型的督办数量
-        const workCount = supervisionOrders.filter(order => order.type === 1).length
-        const specialCount = supervisionOrders.filter(order => order.type === 2).length
-        console.log(`工作督办数量: ${workCount}, 专项督办数量: ${specialCount}`)
 
         processedTasks = supervisionOrders.map((order) => {
           // 使用新的状态计算函数，传入 supervisionStatus 和 deadline
@@ -739,6 +736,7 @@ const fetchData = async () => {
       }
 
       tasks.value = processedTasks
+      console.log('获取督办数据成功', tasks.value)
     } else {
       console.error('获取督办数据失败', supervisionResult.reason)
       ElMessage.error('获取督办数据失败')
@@ -778,20 +776,20 @@ onMounted(() => {
 })
 
 
-const filteredTasks = computed(() => {
-  return tasks.value.filter(task => {
-    // 不需要再按type过滤，因为后端已经按类型返回了数据
-    const matchesSearch = !searchQuery.value ||
-      task.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      task.description.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const matchesDepartment = !selectedDepartment.value ||
-      task.leadDepartment === selectedDepartment.value ||
-      task.assistDepartments.includes(selectedDepartment.value)
-    const matchesStatus = !selectedStatus.value || task.status === selectedStatus.value
+// const filteredTasks = computed(() => {
+//   return tasks.value.filter(task => {
+//     // 不需要再按type过滤，因为后端已经按类型返回了数据
+//     const matchesSearch = !searchQuery.value ||
+//       task.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+//       task.description.toLowerCase().includes(searchQuery.value.toLowerCase())
+//     const matchesDepartment = !selectedDepartment.value ||
+//       task.leadDepartment === selectedDepartment.value ||
+//       task.assistDepartments.includes(selectedDepartment.value)
+//     const matchesStatus = !selectedStatus.value || task.status === selectedStatus.value
 
-    return matchesSearch && matchesDepartment && matchesStatus
-  })
-})
+//     return matchesSearch && matchesDepartment && matchesStatus
+//   })
+// })
 
 // 计算当前标签页的总数量（用于分页显示）
 const currentTabTotal = computed(() => {
@@ -800,7 +798,7 @@ const currentTabTotal = computed(() => {
 
 // 打开详情弹框
 const openDetailDialog = (task: TaskData) => {
-  router.push({
+  push({
     path: '/petition/detail',
     query: {
       id: task.id

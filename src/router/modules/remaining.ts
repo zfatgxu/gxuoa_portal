@@ -505,6 +505,20 @@ const remainingRouter: AppRouteRecordRaw[] = [
     ]
   },
   {
+    path: '/leave-document/detail',
+    component: () => import('@/views/leave/create/detail.vue'),
+    name: 'LeaveDetails',
+    meta: {
+      title: '公文流转请假详情',
+      noCache: false,
+      hidden: true,
+      // 确保没有限制滚动的配置
+      fullscreen: false,
+      // 确保使用标准布局
+      layout: 'default'
+    }
+  },
+  {
     path: '/seal',
     component: Layout,
     name: 'SealCenter',

@@ -282,7 +282,7 @@
         <el-row>
           <el-col :span="10">
             <el-form-item label="会签人:">
-              <el-select v-model="formData.countersigner" placeholder="请选择会签人" clearable>
+              <el-select v-model="formData.counterSigner" placeholder="请选择会签人" clearable>
                 <el-option
                   v-for="user in filteredCountersignerUsers"
                   :key="user.id"
@@ -801,51 +801,8 @@ const saveForm = async () => {
       // 将协办单位列表转换为字符串
       formData.cooperationUnits = cooperationUnits.value.join(',')
       // 将表单数据保存
-      const res = await InfoApi.createInfo(formData)
-      console.log(res)
+      await InfoApi.createInfo(formData)
       ElMessage.success('表单保存成功')
-      // 这里可以添加保存表单数据的逻辑
-}
-
-// 从本地缓存加载表单数据
-const loadFormDataFromCache = () => {
-  const cachedData = localStorage.getItem('petition_form_data')
-  if (cachedData) {
-    try {
-      const parsedData = JSON.parse(cachedData)
-      
-      // 恢复基本表单数据
-      Object.keys(formData).forEach(key => {
-        if (key !== 'petitionList' && key !== 'petitionHandlingFileList' && key !== 'petitionReplyFileList') {
-          if (parsedData[key] !== undefined) {
-            formData[key] = parsedData[key]
-          }
-        }
-      })
-      
-      // 恢复附件列表
-      if (Array.isArray(parsedData.petitionList)) {
-        petitionList.value = parsedData.petitionList
-      }
-      
-      if (Array.isArray(parsedData.petitionHandlingFileList)) {
-        petitionHandlingFileList.value = parsedData.petitionHandlingFileList
-      }
-      
-      if (Array.isArray(parsedData.petitionReplyFileList)) {
-        petitionReplyFileList.value = parsedData.petitionReplyFileList
-      }
-      
-      ElMessage.info('已从本地缓存恢复表单数据')
-    } catch (error) {
-      console.error('解析缓存数据失败:', error)
-    }
-  }
-}
-
-// 清除本地缓存的表单数据
-const clearFormDataCache = () => {
-  localStorage.removeItem('petition_form_data')
 }
 
 // 下一步
@@ -873,7 +830,6 @@ onMounted(async () => {
   await loadDeptList()
   await loadUserList()
   formData.petitionNumber = generatePetitionNumber()
-  loadFormDataFromCache()
 })
 </script>
 
