@@ -85,7 +85,7 @@
       />
       <el-table-column align="center" label="操作" fixed="right" width="80">
         <template #default="scope">
-          <el-button link type="primary" @click="handleAudit(scope.row)">历史</el-button>
+          <el-button link type="primary" @click="handleAudit(scope.row)">详情</el-button>
         </template>
       </el-table-column>
       <template #empty>

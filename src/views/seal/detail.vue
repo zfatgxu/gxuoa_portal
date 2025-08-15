@@ -144,7 +144,7 @@
         <div class="section-header">单位负责人审核意见</div>
         <div class="approval-opinion-content">
           <div v-if="getUnitLeaderOpinions().length > 0">
-            <div v-for="(opinion, index) in getUnitLeaderOpinions()" :key="index" class="opinion-box" :class="{ 'mb-3': index < getUnitLeaderOpinions().length - 1 }">
+            <div v-for="(opinion, index) in getUnitLeaderOpinions()" :key="index" class="opinion-box">
               <div class="opinion-header">
                 <span class="approver-name">{{ opinion.approver }}</span>
                 <span v-if="shouldShowUnitLeaderStatusTag(opinion.status)" class="approval-status" :class="getStatusClass(opinion.status)">
@@ -152,9 +152,6 @@
                 </span>
                 <span class="approval-time" v-if="opinion.time">
                   {{ opinion.time }}
-                </span>
-                <span class="opinion-round" v-if="getUnitLeaderOpinions().length > 1">
-                  第{{ index + 1 }}次审批
                 </span>
               </div>
               <div class="opinion-content">
@@ -174,7 +171,7 @@
         <div class="section-header">用印审核</div>
         <div class="approval-opinion-content">
           <div v-if="getSealAuditOpinions().length > 0">
-            <div v-for="(opinion, index) in getSealAuditOpinions()" :key="index" class="opinion-box" :class="{ 'mb-3': index < getSealAuditOpinions().length - 1 }">
+            <div v-for="(opinion, index) in getSealAuditOpinions()" :key="index" class="opinion-box">
               <div class="opinion-header">
                 <span class="approver-name">{{ opinion.approver }}</span>
                 <span v-if="shouldShowSealAuditStatusTag(opinion.status)" class="approval-status" :class="getStatusClass(opinion.status)">
@@ -182,9 +179,6 @@
                 </span>
                 <span class="approval-time" v-if="opinion.time">
                   {{ opinion.time }}
-                </span>
-                <span class="opinion-round" v-if="getSealAuditOpinions().length > 1">
-                  第{{ index + 1 }}次审批
                 </span>
               </div>
               <div class="opinion-content">
@@ -926,46 +920,49 @@ const getFileIconClass = (filename) => {
   return 'document-icon'
 }
 
-// 获取单位负责人审核意见（所有历史记录）
+// 获取单位负责人审核意见（只显示最新的一次审核结果）
 const getUnitLeaderOpinions = () => {
   const opinions = []
 
-  // 如果有活动节点数据，获取所有相关的审批记录
+  // 如果有活动节点数据，获取最新的审批记录
   if (filteredActivityNodes.value && filteredActivityNodes.value.length > 0) {
     // 找到所有单位负责人相关的活动节点
     const unitLeaderActivities = filteredActivityNodes.value.filter(activity => {
       return activity.name === '单位负责人'
     })
 
-    unitLeaderActivities.forEach((activity, activityIndex) => {
-      if (activity.tasks && activity.tasks.length > 0) {
-        activity.tasks.forEach((task, taskIndex) => {
-          // 特殊处理：如果审批人为空，认为是自动通过
-          if (!task.assigneeUser) {
-            opinions.push({
-              approver: '系统自动',
-              status: 2,
-              statusText: '自动通过',
-              content: task.reason || '审批人为空，自动通过',
-              time: task.endTime ? formatDate(task.endTime) : ''
-            })
-          } else {
-            const statusText = activity.status === 2 ? '已同意' :
-                              activity.status === 1 ? '处理中' :
-                              activity.status === 5 ? '已驳回' : ''  // 其他状态不显示文本
-            opinions.push({
-              approver: task.assigneeUser.nickname,
-              status: activity.status,
-              statusText: statusText,
-              content: task.reason || '',
-              time: task.endTime ? formatDate(task.endTime) : ''
-            })
-          }
-        })
-      }
-    })
-  }
+    // 只处理最新的活动节点（最后一个）
+    if (unitLeaderActivities.length > 0) {
+      const latestActivity = unitLeaderActivities[unitLeaderActivities.length - 1]
 
+      if (latestActivity.tasks && latestActivity.tasks.length > 0) {
+        // 只处理最新任务（最后一个）
+        const latestTask = latestActivity.tasks[latestActivity.tasks.length - 1]
+
+        // 特殊处理：如果审批人为空，认为是自动通过
+        if (!latestTask.assigneeUser) {
+          opinions.push({
+            approver: '系统自动',
+            status: 2,
+            statusText: '自动通过',
+            content: latestTask.reason || '审批人为空，自动通过',
+            time: latestTask.endTime ? formatDate(latestTask.endTime) : ''
+          })
+        } else {
+          const statusText = latestActivity.status === 2 ? '已同意' :
+                            latestActivity.status === 1 ? '处理中' :
+                            latestActivity.status === 5 ? '已驳回' : ''  // 其他状态不显示文本
+          opinions.push({
+            approver: latestTask.assigneeUser.nickname,
+            status: latestActivity.status,
+            statusText: statusText,
+            content: latestTask.reason || '',
+            time: latestTask.endTime ? formatDate(latestTask.endTime) : ''
+          })
+        }
+      }
+    }
+  }
 
   return opinions
 }
@@ -986,47 +983,51 @@ const getUnitLeaderOpinion = () => {
   }
 }
 
-// 获取用印审核意见（返回已完成审批的记录）
+// 获取用印审核意见（只显示最新的一次审核结果）
 const getSealAuditOpinions = () => {
   const opinions = []
 
-  // 如果有活动节点数据，获取所有相关的审批记录
+  // 如果有活动节点数据，获取最新的审批记录
   if (filteredActivityNodes.value && filteredActivityNodes.value.length > 0) {
     // 找到所有用印审核相关的活动节点
     const sealAuditActivities = filteredActivityNodes.value.filter(activity => {
       return activity.name === '用印审核人'
     })
 
-    sealAuditActivities.forEach((activity, activityIndex) => {
-      if (activity.tasks && activity.tasks.length > 0) {
-        activity.tasks.forEach((task, taskIndex) => {
-          // 收集所有已完成审批的记录（不是处理中状态的都算完成）
-          if (activity.status !== 1 && activity.status !== 0) {
-            // 特殊处理：如果审批人为空，认为是自动通过
-            if (!task.assigneeUser) {
-              opinions.push({
-                approver: '系统自动',
-                status: 2,
-                statusText: '已同意',
-                content: task.reason || '审批人为空，自动通过',
-                time: task.endTime ? formatDate(task.endTime) : ''
-              })
-            } else {
-              // 显示同意和驳回状态的标签
-              const statusText = activity.status === 2 ? '已同意' :
-                                activity.status === 5 ? '已驳回' : ''
-              opinions.push({
-                approver: task.assigneeUser.nickname,
-                status: activity.status,
-                statusText: statusText,
-                content: task.reason || '',
-                time: task.endTime ? formatDate(task.endTime) : ''
-              })
-            }
+    // 只处理最新的活动节点（最后一个）
+    if (sealAuditActivities.length > 0) {
+      const latestActivity = sealAuditActivities[sealAuditActivities.length - 1]
+
+      if (latestActivity.tasks && latestActivity.tasks.length > 0) {
+        // 只处理最新任务（最后一个）
+        const latestTask = latestActivity.tasks[latestActivity.tasks.length - 1]
+
+        // 只显示已完成审批的记录（不是处理中状态的都算完成）
+        if (latestActivity.status !== 1 && latestActivity.status !== 0) {
+          // 特殊处理：如果审批人为空，认为是自动通过
+          if (!latestTask.assigneeUser) {
+            opinions.push({
+              approver: '系统自动',
+              status: 2,
+              statusText: '已同意',
+              content: latestTask.reason || '审批人为空，自动通过',
+              time: latestTask.endTime ? formatDate(latestTask.endTime) : ''
+            })
+          } else {
+            // 显示同意和驳回状态的标签
+            const statusText = latestActivity.status === 2 ? '已同意' :
+                              latestActivity.status === 5 ? '已驳回' : ''
+            opinions.push({
+              approver: latestTask.assigneeUser.nickname,
+              status: latestActivity.status,
+              statusText: statusText,
+              content: latestTask.reason || '',
+              time: latestTask.endTime ? formatDate(latestTask.endTime) : ''
+            })
           }
-        })
+        }
       }
-    })
+    }
   }
 
   return opinions
@@ -1695,17 +1696,5 @@ defineExpose({
   font-size: 14px;
 }
 
-/* 多次审批记录样式 */
-.mb-3 {
-  margin-bottom: 12px;
-}
 
-.opinion-round {
-  background: #f0f2f5;
-  color: #666;
-  padding: 2px 6px;
-  border-radius: 10px;
-  font-size: 11px;
-  margin-left: 8px;
-}
 </style>

@@ -1,25 +1,38 @@
 <template>
   <div class="form-container">
     <div class="form-header">
-      <!-- 未选择单位时显示选择框 -->
-      <div v-if="!selectedUnit">
-        <el-select
-          v-model="selectedUnit"
-          placeholder="请选择一个单位申请印章"
-          filterable
-          style="width: 300px;"
-          :loading="unitListLoading"
-        >
-          <el-option v-for="unit in unitList" :key="unit.id" :label="unit.name" :value="unit" />
-        </el-select>
+      <!-- 编辑模式：直接显示标题 -->
+      <div v-if="isEditMode" class="edit-mode-header">
+        <h1>{{ editModeTitle }}</h1>
+        <p v-if="editModeSealNumber" style="color: red;">盖章编号：{{ editModeSealNumber }}</p>
       </div>
-      <!-- 选择单位后显示完整h1标题 -->
-      <div v-else class="title-with-edit">
-        <h1>{{ selectedUnit.name }} 用印申请单</h1>
-        <el-button type="primary" link @click="resetUnit" class="edit-unit-btn">
-          <el-icon><Edit /></el-icon> 更改单位
-        </el-button>
-      </div>
+      <!-- 创建模式：原有逻辑 -->
+      <template v-else>
+        <!-- 未选择单位时显示选择框 -->
+        <div v-if="!selectedUnit">
+          <el-select
+            v-model="selectedUnit"
+            placeholder="请选择一个单位申请印章"
+            filterable
+            style="width: 300px;"
+            :loading="unitListLoading"
+          >
+            <el-option v-for="unit in unitList" :key="unit.id" :label="unit.name" :value="unit" />
+          </el-select>
+        </div>
+        <!-- 选择单位后显示完整h1标题 -->
+        <div v-else class="title-with-edit">
+          <h1>{{ selectedUnit.name }} 用印申请单</h1>
+          <el-button
+            type="primary"
+            link
+            @click="resetUnit"
+            class="edit-unit-btn"
+          >
+            <el-icon><Edit /></el-icon> 更改单位
+          </el-button>
+        </div>
+      </template>
     </div>
 
     <el-form :model="form" label-width="120px" class="seal-form">
@@ -247,7 +260,13 @@
             <div class="right-actions">
               <div class="unit-leader-section">
                 <span class="signature-label">单位负责人签字</span>
+                <!-- 编辑模式：直接显示文本 -->
+                <div v-if="isEditMode" class="unit-leader-display">
+                  {{ unitLeaderName }}
+                </div>
+                <!-- 创建模式：显示下拉框 -->
                 <el-select
+                  v-else
                   v-model="unitLeaderSigner"
                   placeholder=""
                   class="unit-leader-select"
@@ -300,6 +319,11 @@ import { useRouter } from 'vue-router'
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+
+// 编辑模式相关（参考请假模块实现）
+const editId = computed(() => route.query.id as string | undefined)
+const isEditMode = computed(() => !!editId.value)
+const isReadOnly = ref(false) // 只读模式（可用于查看详情）
 
 // 表单数据
 const form = reactive({
@@ -609,19 +633,23 @@ const submitForm = async () => {
       ElMessage.error('请输入审批人签字');
       return;
     }
-    if (!unitLeaderSigner.value) {
+    // 编辑模式下单位负责人签字不需要验证（已禁用显示文本）
+    if (!isEditMode.value && !unitLeaderSigner.value) {
       ElMessage.error('请选择单位负责人签字');
       return;
     }
     
-    // 简化后的任务映射
-    startUserSelectTasks.value.forEach(task => {
-      if (task.name === '单位负责人') {
-        // 只需要指定单位负责人
-        startUserSelectAssignees.value[task.id] = [unitLeaderSigner.value];
-      }
-      // 用印审核人节点不需要前端指定，后端根据部门自动分配
-    });
+    // 编辑模式下不需要重新分配任务
+    if (!isEditMode.value) {
+      // 简化后的任务映射
+      startUserSelectTasks.value.forEach(task => {
+        if (task.name === '单位负责人') {
+          // 只需要指定单位负责人
+          startUserSelectAssignees.value[task.id] = [unitLeaderSigner.value];
+        }
+        // 用印审核人节点不需要前端指定，后端根据部门自动分配
+      });
+    }
   }
 
   // 验证材料类型
@@ -645,7 +673,7 @@ const submitForm = async () => {
     materialTypes: form.selectedMaterialTypes,//材料类型
     attention: form.notes,//注意事项
     attachments: simplifiedFiles,//附件json，文件名，文件大小，文件路径
-
+    id:Number,
     // 印章类型表数据
     sealTypes: [...defaultSealTypes.value, ...customSealTypes.value],
 
@@ -657,23 +685,31 @@ const submitForm = async () => {
       handler: getSignerInfo(managerSigner.value),
       reviewer: getSignerInfo(approverSigner.value),
       unitHead: {
-        id: [unitLeaderSigner.value],
-        name: sameDeptUsersList.value.find(user => user.id === unitLeaderSigner.value)?.nickname || "",
+        id: isEditMode.value ? [] : [unitLeaderSigner.value],
+        name: isEditMode.value ? unitLeaderName.value : (sameDeptUsersList.value.find(user => user.id === unitLeaderSigner.value)?.nickname || ""),
         signed: false
       }
     }
   }
 
-  // 提交数据到后端
+  // 提交数据到后端（参考请假模块实现）
   console.log('提交数据:', submitData)
   console.log('上传文件:', uploadedFiles)
   try {
-    await SealApi.submitSealApplication(submitData)
-    ElMessage.success('申请提交成功')
+    if (editId.value) {
+      // 编辑模式：调用更新接口
+      submitData.id = Number(editId.value)
+      await SealApi.updateSealApplication(submitData)
+      ElMessage.success('修改成功')
+    } else {
+      // 创建模式：调用创建接口
+      await SealApi.submitSealApplication(submitData)
+      ElMessage.success('申请提交成功')
+    }
     //跳转到印章申请列表
     router.push('/seal/seal_apply')
   } catch (error) {
-    ElMessage.error('申请提交失败')
+    ElMessage.error(editId.value ? '修改失败' : '申请提交失败')
   }
 }
 
@@ -688,6 +724,11 @@ const combinedSigners = ref([]) // 合并的签字人列表
 const managerSigner = ref('')
 const approverSigner = ref('')
 const unitLeaderSigner = ref('')
+const unitLeaderName = ref('') // 编辑模式下显示的单位负责人姓名
+
+// 编辑模式标题相关
+const editModeTitle = ref('') // 编辑模式下的标题
+const editModeSealNumber = ref('') // 编辑模式下的盖章编号
 
 // 印章使用注意事项相关
 const unitNoticeContent = ref('') // 当前单位的印章使用注意事项
@@ -708,13 +749,85 @@ const getUnitNotice = async (unitId: number, unitName: string) => {
   }
 }
 
-onMounted(async () => {
-  await fetchUnitList()
+// 编辑模式数据回显
+const loadEditData = async () => {
+  if (!editId.value) return
 
-  //获取默认印章类型数据
-  //await getDefaultSealTypes()
-  //获取印章类型选项
-  await getSealTypeOptions()
+  try {
+    const data = await SealApi.getSealApplicationById(editId.value)
+    console.log('加载编辑数据:', data)
+
+    // 设置编辑模式标题（按照详情页面的映射逻辑）
+    editModeTitle.value = data.applyTitle || ''
+    editModeSealNumber.value = data.sealNumber || ''
+
+    // 回填表单数据
+    form.materialName = data.materialName || ''
+    form.selectedMaterialTypes = data.materialType || ''
+    form.contactPhone = data.phone || ''
+    form.attention = data.attention || ''
+    form.notes = data.attention || '' // 备注字段
+
+    // 回填经办人、审核人和单位负责人
+    if (data.signers) {
+      const signerArray = data.signers.split('，')
+      managerSigner.value = signerArray[0] || ''
+      approverSigner.value = signerArray[1] || ''
+      unitLeaderName.value = signerArray[2] || '' // 编辑模式下直接显示姓名
+    }
+
+    // 回填单位信息（根据applyDept获取单位信息）
+    const deptInfo = await getDept(data.applyDept)
+    selectedUnit.value = {
+      id: deptInfo.id,
+      name: deptInfo.name
+    }
+
+    // 在设置单位信息后，重新获取该单位的印章类型选项
+    if (selectedUnit.value) {
+      await getSealTypeOptions()
+    }
+
+    // 回填印章类型
+    if (data.sealTypes && data.sealTypes.length > 0) {
+      customSealTypes.value = data.sealTypes.map(seal => ({
+        id: seal.id,
+        name: seal.name,
+        quantity: seal.quantity || 1
+      }))
+    }
+
+    // 回填附件
+    if (data.attachments && data.attachments.length > 0) {
+      uploadedFiles.value = data.attachments.map(att => ({
+        id: att.id,
+        name: att.name,
+        size: att.size || '未知大小',
+        url: att.url,
+        status: 'success',
+        type: getFileType(att.name)
+      }))
+    }
+
+  } catch (error) {
+    console.error('加载编辑数据失败:', error)
+    ElMessage.error('加载数据失败')
+  }
+}
+
+
+
+onMounted(async () => {
+  // 编辑模式下跳过不必要的数据加载，提升性能
+  if (editId.value) {
+    // 编辑模式：只加载必要数据
+    isReadOnly.value = true
+    await loadEditData() // 在loadEditData中会根据单位信息获取印章类型
+  } else {
+    // 创建模式：正常加载所有数据
+    await fetchUnitList()
+    await getSealTypeOptions()
+  }
 
   try {
     //获取流程定义
@@ -973,6 +1086,22 @@ const handleExceed = () => {
   font-weight: bold;
   color: #333;
   margin: 0;
+}
+
+.edit-mode-header {
+  text-align: center;
+}
+
+.edit-mode-header h1 {
+  margin: 0 0 10px 0;
+  font-size: 24px;
+  font-weight: bold;
+  color: #303133;
+}
+
+.edit-mode-header p {
+  margin: 0;
+  font-size: 14px;
 }
 
 .seal-form {
@@ -1366,6 +1495,17 @@ const handleExceed = () => {
 
 .unit-leader-select {
   width: 150px;
+}
+
+.unit-leader-display {
+  width: 150px;
+  padding: 8px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  background-color: #f5f7fa;
+  color: #606266;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .submit-section {

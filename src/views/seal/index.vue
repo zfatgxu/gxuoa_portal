@@ -95,9 +95,17 @@
         </el-table-column>
         <el-table-column align="center" label="申请单标题" prop="applyTitle" />
         <el-table-column align="center" label="联系方式" prop="phone" />
-        <el-table-column align="center" label="操作" width="120">
+        <el-table-column align="center" label="操作" width="160">
           <template #default="scope">
             <el-button size="mini" @click="viewDetail(scope.row)">详情</el-button>
+            <el-button
+              v-if="showEditButton(scope.row)"
+              size="mini"
+              type="primary"
+              @click="handleEdit(scope.row)"
+            >
+              编辑
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -224,6 +232,21 @@
   
   const viewDetail = (row: any) => {
     router.push({ name: 'SealDetail', query: { id: row.processInstanceId } })
+  }
+
+  // 判断是否显示编辑按钮
+  const showEditButton = (row: any) => {
+    // 当前任务节点是"单位负责人"时显示编辑按钮
+    return row.currentTaskName === '单位负责人'
+  }
+
+  // 处理编辑操作
+  const handleEdit = (row: any) => {
+    // 跳转到创建页面，传递id参数（参考请假模块实现）
+    router.push({
+      name: 'SealCreate',
+      query: { id: row.id }
+    })
   }
 
   // 获取第一个经办人姓名
