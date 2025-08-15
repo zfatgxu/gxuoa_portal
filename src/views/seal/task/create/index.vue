@@ -493,12 +493,12 @@ const leaderList = ref([])
 // 文件上传到minio
 const { uploadUrl, httpRequest } = useUpload()
 const fileList = ref([])
-const uploadedFiles = reactive([])
+const uploadedFiles = ref([])
 
 // 文件上传成功处理
 const handleUploadSuccess = (response, file) => {
   // 接口返回的数据结构中包含文件信息
-  uploadedFiles.push({
+  uploadedFiles.value.push({
     name: file.name,
     size: formatFileSize(file.size),
     status: 'success', // 添加这一行，设置状态为success
@@ -518,7 +518,7 @@ const handleUploadError = (error, file) => {
 
 // 删除文件
 const removeFile = (index) => {
-  uploadedFiles.splice(index, 1)
+  uploadedFiles.value.splice(index, 1)
   ElMessage.success('文件已删除')
 }
 
@@ -659,7 +659,7 @@ const submitForm = async () => {
   }
 
   // 处理文件数据，只保留名称、大小和URL
-  const simplifiedFiles = uploadedFiles.map(file => ({
+  const simplifiedFiles = uploadedFiles.value.map(file => ({
     name: file.name,
     size: file.size,
     url: file.url
@@ -670,10 +670,10 @@ const submitForm = async () => {
     applyTitle: selectedUnit.value.name+'印章申请单',//表单标题
     materialName: form.materialName,//材料名称
     phone: form.contactPhone,//联系电话
-    materialTypes: form.selectedMaterialTypes,//材料类型
+    materialType: form.selectedMaterialTypes,//材料类型
     attention: form.notes,//注意事项
     attachments: simplifiedFiles,//附件json，文件名，文件大小，文件路径
-    id:Number,
+    id: '',
     // 印章类型表数据
     sealTypes: [...defaultSealTypes.value, ...customSealTypes.value],
 
@@ -688,7 +688,8 @@ const submitForm = async () => {
         id: isEditMode.value ? [] : [unitLeaderSigner.value],
         name: isEditMode.value ? unitLeaderName.value : (sameDeptUsersList.value.find(user => user.id === unitLeaderSigner.value)?.nickname || ""),
         signed: false
-      }
+      },
+    signers:''
     }
   }
 
@@ -698,7 +699,9 @@ const submitForm = async () => {
   try {
     if (editId.value) {
       // 编辑模式：调用更新接口
-      submitData.id = Number(editId.value)
+      submitData.id = editId.value
+      // 编辑模式下签字人信息格式修改
+      submitData.signers = [managerSigner.value, approverSigner.value, unitLeaderName.value].join('，')
       await SealApi.updateSealApplication(submitData)
       ElMessage.success('修改成功')
     } else {
@@ -801,11 +804,11 @@ const loadEditData = async () => {
     if (data.attachments && data.attachments.length > 0) {
       uploadedFiles.value = data.attachments.map(att => ({
         id: att.id,
-        name: att.name,
-        size: att.size || '未知大小',
-        url: att.url,
+        name: att.attachmentName,
+        size: att.attachmentSize || '未知大小',
+        url: att.attachmentUrl,
         status: 'success',
-        type: getFileType(att.name)
+        type: getFileType(att.attachmentName)
       }))
     }
 
@@ -1047,7 +1050,7 @@ const beforeUpload = (file) => {
   }
 
   // 检查上传数量
-  if (uploadedFiles.length >= 10) {
+  if (uploadedFiles.value.length >= 10) {
     ElMessage.error('最多只能上传10个文件!')
     return false
   }
