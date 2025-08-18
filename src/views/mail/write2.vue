@@ -11,36 +11,83 @@
     </div>
     
     <!-- 主体内容区 -->
-    <div class="mail-layout">
-      <!-- 左侧菜单 -->
-      <div class="mail-sidebar">
+    <div class="content-wrapper">
+      <!-- 左侧边栏 -->
+      <div class="sidebar">
+        <!-- 顶部按钮区域 -->
         <div class="sidebar-top">
-          <div class="write-btn">
-            <font-awesome-icon :icon="['fas', 'pen-to-square']" />
-            <span>写信</span>
-          </div>
-          <div class="inbox-btn">
-            <font-awesome-icon :icon="['fas', 'envelope']" />
-            <span>收信</span>
-          </div>
-          <div class="inbox-btn">
-            <font-awesome-icon :icon="['fas', 'file']" />
-            <span>草稿</span>
-          </div>
+          <button class="compose-btn active">
+            <span class="icon">
+              <svg width="20" height="20" viewBox="0 0 20 20">
+                <path fill="#f5a623" d="M16.5,2.9c-0.2-0.2-0.5-0.3-0.8-0.3c-0.3,0-0.6,0.1-0.8,0.3L4.2,13.6c-0.4,0.4-0.4,1.1,0,1.5c0.4,0.4,1.1,0.4,1.5,0L16.5,4.4c0.4-0.4,0.4-1.1,0-1.5C16.5,2.9,16.5,2.9,16.5,2.9z M13.1,8.9l-1.5-1.5L15,4l1.5,1.5L13.1,8.9z M4.9,15.7l-1.5,1.5c-0.2,0.2-0.5,0.3-0.8,0.3s-0.6-0.1-0.8-0.3c-0.4-0.4-0.4-1.1,0-1.5l1.5-1.5L4.9,15.7z"/>
+              </svg>
+            </span>
+            写信
+          </button>
+          <button class="inbox-btn">
+            <span class="icon">📥</span>
+            收件箱
+          </button>
         </div>
-        <div class="sidebar-menu">
-          <div v-for="(item, index) in sidebarItems" :key="index" class="menu-item">
-            <font-awesome-icon :icon="getMenuIcon(item.icon)" />
-            <span>{{ item.name }}</span>
-            <span v-if="item.count" class="count">({{ item.count }})</span>
+
+        <!-- 文件夹列表 -->
+        <div class="folder-list">
+          <div class="folder-item">
+            <span class="folder-icon">
+              <!-- 信箱SVG -->
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="12" rx="3" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M2 6l8 6 8-6" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
+            </span>
+            <span class="folder-name">收件箱</span><span class="folder-badge">1</span>
+          </div>
+          <div class="folder-item">
+            <span class="folder-icon">
+              <!-- 星标SVG -->
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="10,2 12,7.5 18,7.5 13,11.5 15,17 10,13.5 5,17 7,11.5 2,7.5 8,7.5" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
+            </span>
+            <span class="folder-name">星标邮件</span>
+          </div>
+          <div class="folder-item">
+            <span class="folder-icon">
+              <!-- 纸飞机SVG -->
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="2,18 18,10 2,2 5,10 2,18" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
+            </span>
+            <span class="folder-name">已发送</span>
+          </div>
+          <div class="folder-item">
+            <span class="folder-icon">
+              <!-- 文件夹SVG -->
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="10" rx="2" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M2 6l6-4 4 4h6" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
+            </span>
+            <span class="folder-name">草稿箱</span><span class="folder-badge">4</span>
+          </div>
+          <div class="folder-item">
+            <span class="folder-icon">
+              <!-- 垃圾桶SVG -->
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="5" y="7" width="10" height="9" rx="2" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M3 7h14" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M8 10v3" stroke="#ff9800" stroke-width="1.2"/><path d="M12 10v3" stroke="#ff9800" stroke-width="1.2"/></svg>
+            </span>
+            <span class="folder-name">已删除</span>
+          </div>
+          <div class="folder-item">
+            <span class="folder-icon">
+              <!-- 垃圾箱SVG -->
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="12" rx="3" stroke="#ff9800" stroke-width="1.5" fill="none"/><rect x="8" y="10" width="4" height="4" rx="1" stroke="#ff9800" stroke-width="1.2" fill="none"/></svg>
+            </span>
+            <span class="folder-name">垃圾箱</span><span class="folder-badge">8</span>
+          </div>
+          <div class="folder-item">
+            <span class="folder-icon">
+              <!-- 文件夹SVG -->
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="2,18 18,10 2,2 5,10 2,18" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
+            </span>
+            <span class="folder-name">我的文件夹</span>
           </div>
         </div>
       </div>
       
-      <!-- 中间内容区 -->
-      <div class="mail-content">
-        <!-- 写信工具栏 -->
-        <div class="mail-toolbar">
+      <!-- 主内容区域 -->
+      <div class="main-content">
+        <!-- 工具栏 -->
+        <div class="toolbar">
           <div class="toolbar-left">
             <div class="tool-btn primary" @click="sendMail">
               <el-icon><Position /></el-icon>
@@ -336,6 +383,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
+import '@/views/mail/mail.css'
 
 // 导入Font Awesome组件和图标
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -626,119 +674,70 @@ onMounted(() => {
 }
 
 /* 主体布局 */
-.mail-layout {
+.content-wrapper {
   display: flex;
   flex: 1;
-  overflow: hidden;
-  background-color: #fff;
-  border-radius: 4px;
-  margin: 10px;
-  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.05);
-}
-
-/* 左侧菜单 */
-.mail-sidebar {
-  width: 150px;
-  border-right: 1px solid #e6e6e6;
-  background-color: #fff;
-  overflow-y: auto;
-  flex-shrink: 0;
-}
-
-.sidebar-top {
-  padding: 15px 0;
-  border-bottom: 1px solid #e6e6e6;
-}
-
-.write-btn, .inbox-btn {
-  display: flex;
-  align-items: center;
-  padding: 10px 15px;
-  cursor: pointer;
-  font-weight: bold;
+  background-color: #e3f2fd;
+  padding: 0 8px 8px 8px;
   gap: 8px;
 }
 
-.write-btn {
-  color: #ff6b6b;
-}
-
-.inbox-btn {
-  color: #4e73df;
-}
-
-.sidebar-menu {
-  padding: 10px 0;
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  padding: 10px 15px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  color: #606266;
-  gap: 8px;
-}
-
-.menu-item:hover {
-  background-color: #f5f7fa;
-}
-
-.menu-item svg {
-  width: 16px;
-  height: 16px;
-}
-
-.menu-item .count {
-  margin-left: 5px;
-  font-size: 12px;
-  color: #909399;
-}
-
-/* 中间内容区 */
-.mail-content {
+/* 主内容区域 */
+.main-content {
   flex: 1;
+  background-color: #fff;
+  border-radius: 20px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.07);
+  margin: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  min-width: 0; /* 防止内容溢出 */
 }
 
-/* 写信工具栏 */
-.mail-toolbar {
+/* 工具栏 */
+.toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 15px;
-  border-bottom: 1px solid #e6e6e6;
-  background-color: #f8f9fa;
+  padding: 12px 20px;
+  height: 66px;
+  background-color: #fff;
+  border-bottom: 2px solid #e3f2fd;
 }
 
 .toolbar-left {
   display: flex;
+  gap: 10px;
   align-items: center;
-  gap: 5px;
 }
 
 .tool-btn {
+  height: 33px;
+  padding: 0 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  background-color: #ffffff;
+  cursor: pointer;
+  font-size: 15px;
+  color: #222;
   display: flex;
   align-items: center;
-  padding: 5px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  color: #606266;
-  font-size: 14px;
+  gap: 6px;
+  box-sizing: border-box;
 }
 
 .tool-btn:hover {
-  background-color: #ecf5ff;
+  background-color: #f0f0f0;
 }
 
 .tool-btn.primary {
-  background-color: #4e73df;
+  background-color: #4285f4;
   color: white;
+  border-color: #4285f4;
+}
+
+.tool-btn.primary:hover {
+  background-color: #3367d6;
 }
 
 .tool-btn .el-icon {
@@ -748,19 +747,22 @@ onMounted(() => {
 .toolbar-right {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
+  font-size: 12px;
+  color: #666;
 }
 
 .time {
-  font-size: 14px;
-  color: #909399;
+  font-size: 12px;
+  color: #666;
   margin-right: 10px;
 }
 
 /* 邮件表单 */
 .mail-form {
   padding: 10px 15px;
-  border-bottom: 1px solid #e6e6e6;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #fff;
 }
 
 .form-row {
@@ -810,11 +812,11 @@ onMounted(() => {
 /* 编辑器工具栏 */
 .editor-toolbar {
   padding: 8px 15px;
-  border-bottom: 1px solid #e6e6e6;
+  border-bottom: 1px solid #e0e0e0;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  background-color: #f8f9fa;
+  background-color: #f5faff;
   align-items: center;
 }
 
@@ -874,7 +876,7 @@ onMounted(() => {
 /* 发件人信息 */
 .sender-info {
   padding: 10px 15px;
-  border-top: 1px solid #e6e6e6;
+  border-top: 1px solid #e0e0e0;
   font-size: 14px;
   color: #606266;
   background-color: #f8f9fa;
@@ -888,29 +890,33 @@ onMounted(() => {
 
 /* 联系人列表 */
 .contact-list {
-  width: 240px;
+  width: 220px;
   background-color: #fff;
-  border-left: 1px solid #e6e6e6;
+  border-left: 1px solid #e0e0e0;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  margin-left: 8px;
+  overflow: hidden;
 }
 
 .contact-header {
   padding: 12px 15px;
   font-size: 16px;
   font-weight: bold;
-  border-bottom: 1px solid #e6e6e6;
+  border-bottom: 1px solid #e0e0e0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   color: #4e73df;
-  background-color: #f8f9fa;
+  background-color: #f5faff;
 }
 
 .contact-search {
   padding: 10px;
-  border-bottom: 1px solid #e6e6e6;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .contact-groups {
@@ -931,6 +937,8 @@ onMounted(() => {
   background-color: #f5f7fa;
   font-size: 14px;
   color: #606266;
+  border-radius: 4px;
+  margin: 2px 4px;
 }
 
 .group-header .el-icon {
@@ -955,6 +963,8 @@ onMounted(() => {
   align-items: center;
   cursor: pointer;
   transition: background-color 0.2s;
+  border-radius: 4px;
+  margin: 2px 4px;
 }
 
 .contact-item:hover {
