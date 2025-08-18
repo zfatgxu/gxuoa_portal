@@ -1,35 +1,6 @@
 <template>
   <div class="mail-container">
     <!-- 顶部标题栏 -->
-    <div class="header">
-      <div class="header-left header-left-icons">
-  <span class="header-icon header-icon--bl">
-    <svg width="1.5em" height="1.5em" viewBox="0 0 32 32" fill="none">
-      <rect x="4" y="8" width="24" height="16" rx="4" fill="#2196f3"/>
-      <path d="M4 8l12 10l12-10" stroke="#fff" stroke-width="2" fill="none"/>
-    </svg>
-  </span>
-        <span class="header-title">内部邮件</span>
-        <span class="header-icon header-icon--tr">
-    <svg width="1.5em" height="1.5em" viewBox="0 0 32 32" fill="none">
-      <rect x="4" y="8" width="24" height="16" rx="4" fill="#ffa726"/>
-      <path d="M4 8l12 10l12-10" stroke="#fff" stroke-width="2" fill="none"/>
-    </svg>
-  </span>
-      </div>
-      <div class="header-right">
-        <div class="header-search">
-    <span class="search-icon">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <circle cx="7" cy="7" r="6" stroke="#bdbdbd" stroke-width="1.5" fill="none"/>
-        <path d="M12 12l-2.5-2.5" stroke="#bdbdbd" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-    </span>
-          <input class="search-input" type="text" placeholder="搜索" />
-        </div>
-      </div>
-    </div>
-
     <div class="content-wrapper">
       <!-- 左侧边栏 -->
       <div class="sidebar">

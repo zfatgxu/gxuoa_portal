@@ -11,7 +11,7 @@
 .content-wrapper {
     display: flex;
     flex: 1;
-    background-color: #e3f2fd;
+    background-color: #ffffff;
     padding: 0 8px 8px 8px; /* 顶部padding为0，左右下为8px */
     gap: 8px;
 }
@@ -24,7 +24,7 @@
     padding: 16px 20px;
     height: 56px;
     border-bottom: 1px solid #e0e0e0;
-    background-color: #f5faff;
+    background-color: #ffffff;
     position: relative;
     z-index: 10;
 }
@@ -407,12 +407,19 @@
 
 .header {
     height: 4.2em;
-    background: #eaf6fd;
+    background: #ffffff;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 2em;
     border-bottom: 1.5px solid #e3f2fd;
+}
+
+/* 顶部图片样式 */
+.header-image {
+    height: 60px;
+    display: block;
+    object-fit: contain;
 }
 
 .header-left {
