@@ -6,17 +6,25 @@
       <div class="sidebar">
         <!-- 顶部按钮区域 -->
         <div class="sidebar-top">
-          <button class="compose-btn active">
-            <span class="icon">
-              <svg width="20" height="20" viewBox="0 0 20 20">
-                <path fill="#f5a623" d="M16.5,2.9c-0.2-0.2-0.5-0.3-0.8-0.3c-0.3,0-0.6,0.1-0.8,0.3L4.2,13.6c-0.4,0.4-0.4,1.1,0,1.5c0.4,0.4,1.1,0.4,1.5,0L16.5,4.4c0.4-0.4,0.4-1.1,0-1.5C16.5,2.9,16.5,2.9,16.5,2.9z M13.1,8.9l-1.5-1.5L15,4l1.5,1.5L13.1,8.9z M4.9,15.7l-1.5,1.5c-0.2,0.2-0.5,0.3-0.8,0.3s-0.6-0.1-0.8-0.3c-0.4-0.4-0.4-1.1,0-1.5l1.5-1.5L4.9,15.7z"/>
+          <button class="compose-btn">
+            <span class="icon icon--compose">
+              <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 14l8.5-8.5c.6-.6 1.6-.6 2.2 0l1.8 1.8c.6.6.6 1.6 0 2.2L7 18H3v-4z" fill="#f5a623"/>
+                <path d="M12.3 3.7l4 4" stroke="#f5a623" stroke-width="1.5" stroke-linecap="round"/>
               </svg>
             </span>
-            写信
+            <span class="btn-text">写信</span>
           </button>
+          <div class="sidebar-divider"></div>
           <button class="inbox-btn">
-            <span class="icon">📥</span>
-            收件箱
+            <span class="icon icon--inbox">
+              <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="8" width="16" height="10" rx="2" fill="#FFB74D"/>
+                <rect x="6" y="4" width="8" height="6" rx="1" fill="#E3F2FD" stroke="#64B5F6" stroke-width="1"/>
+                <path d="M6 7l4 2 4-2" fill="none" stroke="#64B5F6" stroke-width="1"/>
+              </svg>
+            </span>
+            <span class="btn-text">收信</span>
           </button>
         </div>
 

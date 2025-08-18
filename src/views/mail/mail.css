@@ -153,29 +153,29 @@
 
 .compose-btn, .inbox-btn {
     width: 100%;
-    padding: 10px 8px;
-    margin-bottom: 6px;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    background-color: #ffffff;
+    padding: 8px 6px;
+    margin: 8px 0;
+    border: none;
+    background-color: transparent;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 16px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 6px;
-    color: #333;
+    justify-content: flex-start;
+    gap: 8px;
+    color: #0b2a5a;
+    font-weight: 800;
 }
 
-.compose-btn.active {
-    background-color: #4285f4;
-    color: white;
-    border-color: #4285f4;
+.sidebar-divider {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 6px 2px;
 }
 
-.compose-btn:hover, .inbox-btn:hover {
-    background-color: #f0f0f0;
-}
+.compose-btn.active { color: #0b2a5a; }
+
+.compose-btn:hover, .inbox-btn:hover { opacity: 0.9; }
 
 .compose-btn.active:hover {
     background-color: #3367d6;
@@ -184,6 +184,8 @@
 .icon {
     font-size: 14px;
 }
+
+.btn-text { letter-spacing: 1px; }
 
 .folder-list {
     flex: 1;
