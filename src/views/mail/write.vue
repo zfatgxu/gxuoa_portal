@@ -663,7 +663,7 @@ onMounted(() => {
 .sidebar :deep(.sidebar-top) {
   margin: 0 -8px 20px -8px;
   background: #fff;
-  border-radius: 8px;
+  border-radius: 18px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   padding: 12px 8px 8px 8px;
   border-bottom: 2px solid #e3f2fd;
@@ -704,7 +704,7 @@ onMounted(() => {
   background: #fff;
   margin: 0 -8px -8px -8px;
   padding: 8px;
-  border-radius: 8px;
+  border-radius: 18px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 
@@ -783,7 +783,7 @@ onMounted(() => {
 .content-wrapper {
   display: flex;
   flex: 1;
-  background-color: #e3f2fd;
+  background-color: #f5f7f9;
   padding: 0 8px 8px 8px;
   gap: 8px;
 }
@@ -792,7 +792,7 @@ onMounted(() => {
 .main-content {
   flex: 1;
   background-color: #fff;
-  border-radius: 20px;
+  border-radius: 18px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.07);
   margin: 0;
   display: flex;

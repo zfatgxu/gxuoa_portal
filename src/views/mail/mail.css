@@ -4,14 +4,14 @@
     flex-direction: column;
     height: 100vh;
     font-family: 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
-    background-color: #f5f5f5;
+    background-color: #ffffff;
 }
 
 /* .content-wrapper: 调整内边距和gap以控制整体布局 */
 .content-wrapper {
     display: flex;
     flex: 1;
-    background-color: #ffffff;
+    background-color: #f5f7f9;
     padding: 0 8px 8px 8px; /* 顶部padding为0，左右下为8px */
     gap: 8px;
 }
@@ -247,7 +247,7 @@
 .main-content {
     flex: 1;
     background-color: #fff;
-    border-radius: 20px;
+    border-radius: 18px;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.07);
     margin: 0; /* 移除所有margin */
     display: flex;
