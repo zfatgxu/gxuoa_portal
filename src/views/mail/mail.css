@@ -4,14 +4,14 @@
     flex-direction: column;
     height: 100vh;
     font-family: 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
-    background-color: #f5f5f5;
+    background-color: #ffffff;
 }
 
 /* .content-wrapper: 调整内边距和gap以控制整体布局 */
 .content-wrapper {
     display: flex;
     flex: 1;
-    background-color: #e3f2fd;
+    background-color: #f5f7f9;
     padding: 0 8px 8px 8px; /* 顶部padding为0，左右下为8px */
     gap: 8px;
 }
@@ -21,10 +21,10 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 16px;
-    height: 60px;
+    padding: 16px 20px;
+    height: 56px;
     border-bottom: 1px solid #e0e0e0;
-    background-color: #f5faff;
+    background-color: #ffffff;
     position: relative;
     z-index: 10;
 }
@@ -80,10 +80,10 @@
     text-align: center;
     flex: 1 1 auto;
     z-index: 1;
-    font-size: 2.3em;
-    font-weight: 900;
+    font-size: 1.8em;
+    font-weight: 700;
     color: #1976d2;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.02em;
     font-family: 'Microsoft YaHei', 'PingFang SC', 'Arial', sans-serif;
 }
 
@@ -135,7 +135,7 @@
 
 /* 左侧边栏 */
 .sidebar {
-    width: 120px;
+    width: 180px;
     background: transparent;
     display: flex;
     flex-direction: column;
@@ -153,37 +153,39 @@
 
 .compose-btn, .inbox-btn {
     width: 100%;
-    padding: 8px 4px;
-    margin-bottom: 4px;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    background-color: #ffffff;
+    padding: 8px 6px;
+    margin: 8px 0;
+    border: none;
+    background-color: transparent;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 16px;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 4px;
-    color: #333;
+    justify-content: flex-start;
+    gap: 8px;
+    color: #0b2a5a;
+    font-weight: 800;
 }
 
-.compose-btn.active {
-    background-color: #4285f4;
-    color: white;
-    border-color: #4285f4;
+.sidebar-divider {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 6px 2px;
 }
 
-.compose-btn:hover, .inbox-btn:hover {
-    background-color: #f0f0f0;
-}
+.compose-btn.active { color: #0b2a5a; }
+
+.compose-btn:hover, .inbox-btn:hover { opacity: 0.9; }
 
 .compose-btn.active:hover {
     background-color: #3367d6;
 }
 
 .icon {
-    font-size: 12px;
+    font-size: 14px;
 }
+
+.btn-text { letter-spacing: 1px; }
 
 .folder-list {
     flex: 1;
@@ -199,12 +201,12 @@
 .folder-item {
     display: flex;
     align-items: center;
-    padding: 6px 4px;
+    padding: 8px 6px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 14px;
     color: #333;
     border-radius: 12px;
-    margin-bottom: 2px;
+    margin-bottom: 3px;
 }
 
 .folder-item:hover {
@@ -216,13 +218,24 @@
 }
 
 .folder-icon {
-    margin-right: 4px;
-    font-size: 12px;
+    margin-right: 8px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
 }
 
 .folder-name {
     flex: 1;
+    font-size: 13px;
+}
+
+.folder-badge {
+    background-color: #e0e0e0;
+    border-radius: 10px;
+    padding: 0 6px;
     font-size: 11px;
+    color: #666;
+    margin-left: 4px;
 }
 
 .star {
@@ -232,14 +245,14 @@
 
 /* 主内容区域 */
 .main-content {
-  flex: 1;
-  background-color: #fff;
-  border-radius: 20px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.07);
-  margin: 0; /* 移除所有margin */
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+    flex: 1;
+    background-color: #fff;
+    border-radius: 18px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.07);
+    margin: 0; /* 移除所有margin */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 /* 工具栏 */
@@ -347,47 +360,47 @@
 
 /* 邮件列表 */
 .group-label-bar {
-  background: #fff; /* 背景色变为白 */
-  border-top: 2px solid #fbbc04; /* 顶部为橘黄分界线 */
-  border-bottom: none; /* 移除底部分界线 */
-  padding: 8px 18px 6px 12px;
-  margin-top: 10px;
-  border-radius: 0;
-  display: flex;
-  align-items: center;
+    background: #fff; /* 背景色变为白 */
+    border-top: 2px solid #fbbc04; /* 顶部为橘黄分界线 */
+    border-bottom: none; /* 移除底部分界线 */
+    padding: 8px 18px 6px 12px;
+    margin-top: 10px;
+    border-radius: 0;
+    display: flex;
+    align-items: center;
 }
 .group-label {
-  font-size: 15px;
-  color: #000; /* 字体颜色改为黑色 */
-  font-weight: bold; /* 保持加粗 */
-  letter-spacing: 1px;
+    font-size: 15px;
+    color: #000; /* 字体颜色改为黑色 */
+    font-weight: bold; /* 保持加粗 */
+    letter-spacing: 1px;
 }
 
 .email-list {
-  flex: 1; /* Allow the list to grow and fill available space */
-  overflow-y: auto; /* Enable vertical scrolling when content overflows */
-  max-height: calc(100vh - 280px); /* Fallback max-height */
-  background: #fff;
-  border-top: 1px solid #f0f0f0;
-  padding: 0 16px;
+    flex: 1; /* Allow the list to grow and fill available space */
+    overflow-y: auto; /* Enable vertical scrolling when content overflows */
+    max-height: calc(100vh - 280px); /* Fallback max-height */
+    background: #fff;
+    border-top: 1px solid #f0f0f0;
+    padding: 0 16px;
 }
 
 /* 自定义邮件列表的滚动条样式 */
 .email-list::-webkit-scrollbar {
-  width: 6px; /* 设置滚动条宽度，使其变细 */
+    width: 6px; /* 设置滚动条宽度，使其变细 */
 }
 
 .email-list::-webkit-scrollbar-track {
-  background: transparent; /* 轨道背景透明 */
+    background: transparent; /* 轨道背景透明 */
 }
 
 .email-list::-webkit-scrollbar-thumb {
-  background-color: #ccc; /* 滑块颜色设为灰色 */
-  border-radius: 10px; /* 设置滑块圆角 */
+    background-color: #ccc; /* 滑块颜色设为灰色 */
+    border-radius: 10px; /* 设置滑块圆角 */
 }
 
 .email-list::-webkit-scrollbar-thumb:hover {
-  background-color: #aaa; /* 鼠标悬停时滑块颜色加深 */
+    background-color: #aaa; /* 鼠标悬停时滑块颜色加深 */
 }
 
 .time-section {
@@ -395,31 +408,38 @@
 }
 
 .header {
-height: 4.2em;
-background: #eaf6fd;
-display: flex;
-align-items: center;
-justify-content: space-between;
-padding: 0 2em;
-border-bottom: 1.5px solid #e3f2fd;
+    height: 4.2em;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2em;
+    border-bottom: 1.5px solid #e3f2fd;
+}
+
+/* 顶部图片样式 */
+.header-image {
+    height: 60px;
+    display: block;
+    object-fit: contain;
 }
 
 .header-left {
-display: flex;
-align-items: center;
-gap: 0.7em;
+    display: flex;
+    align-items: center;
+    gap: 0.7em;
 }
 
 .header-icon svg {
-display: block;
+    display: block;
 }
 
 .header-title {
-font-size: 2.3em;
-font-weight: 900;
-color: #1976d2;
-letter-spacing: 0.05em;
-font-family: 'Microsoft YaHei', 'PingFang SC', 'Arial', sans-serif;
+    font-size: 2.3em;
+    font-weight: 900;
+    color: #1976d2;
+    letter-spacing: 0.05em;
+    font-family: 'Microsoft YaHei', 'PingFang SC', 'Arial', sans-serif;
 }
 
 .header-search {
@@ -429,47 +449,47 @@ font-family: 'Microsoft YaHei', 'PingFang SC', 'Arial', sans-serif;
     border-radius: 0.7em;
     box-shadow: 0 1px 4px rgba(33,150,243,0.07);
     padding: 0 1.2em;
-    height: 2.4em;
-    width: 14.4em;
+    height: 2.2em;
+    width: 13em;
     border: 1px solid #e0e0e0;
 }
 
 .search-icon {
-display: flex;
-align-items: center;
-margin-right: 0.5em;
+    display: flex;
+    align-items: center;
+    margin-right: 0.5em;
 }
 
 .search-input {
-border: none;
-outline: none;
-font-size: 1em;
-background: transparent;
-color: #333;
-width: 6em;
+    border: none;
+    outline: none;
+    font-size: 1em;
+    background: transparent;
+    color: #333;
+    width: 6em;
 }
 
 .search-input::placeholder {
-color: #888;
+    color: #888;
 }
 
 .email-item {
-display: flex;
-align-items: center;
-padding: 0.9em 0; 
-border-bottom: 1px solid #f0f0f0;
-cursor: pointer;
-font-size: 12px;
+    display: flex;
+    align-items: center;
+    padding: 0.9em 0;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    font-size: 12px;
 }
 
 .email-item:hover {
-background-color: #f8f9fa;
+    background-color: #f8f9fa;
 }
 
 .email-checkbox {
-width: 14px;
-height: 14px;
-margin-right: 8px;
+    width: 14px;
+    height: 14px;
+    margin-right: 8px;
     width: 14px;
     height: 14px;
     margin-right: 8px;
@@ -607,7 +627,7 @@ margin-right: 8px;
 /* 响应式设计 */
 @media (max-width: 768px) {
     .sidebar {
-        width: 100px;
+        width: 140px;
     }
 
     .search-input {
