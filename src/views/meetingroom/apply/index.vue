@@ -724,7 +724,7 @@ const GoToApplyForm = () => {
   }
 
   // 跳转到申请表页面
-  router.push('/meeting/ApplyForm')
+  router.push('/meetingroom/apply')
 }
 
 // 初始化数据
