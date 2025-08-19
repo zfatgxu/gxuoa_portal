@@ -1,106 +1,85 @@
 <template>
   <div class="mail-container">
     <!-- 顶部标题栏 -->
-    <div class="header">
-      <div class="header-left header-left-icons">
-  <span class="header-icon header-icon--bl">
-    <svg width="1.5em" height="1.5em" viewBox="0 0 32 32" fill="none">
-      <rect x="4" y="8" width="24" height="16" rx="4" fill="#2196f3"/>
-      <path d="M4 8l12 10l12-10" stroke="#fff" stroke-width="2" fill="none"/>
-    </svg>
-  </span>
-  <span class="header-title">内部邮件</span>
-  <span class="header-icon header-icon--tr">
-    <svg width="1.5em" height="1.5em" viewBox="0 0 32 32" fill="none">
-      <rect x="4" y="8" width="24" height="16" rx="4" fill="#ffa726"/>
-      <path d="M4 8l12 10l12-10" stroke="#fff" stroke-width="2" fill="none"/>
-    </svg>
-  </span>
-</div>
-      <div class="header-right">
-  <div class="header-search">
-    <span class="search-icon">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <circle cx="7" cy="7" r="6" stroke="#bdbdbd" stroke-width="1.5" fill="none"/>
-        <path d="M12 12l-2.5-2.5" stroke="#bdbdbd" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-    </span>
-    <input class="search-input" type="text" placeholder="搜索" />
-  </div>
-</div>
-    </div>
-
     <div class="content-wrapper">
       <!-- 左侧边栏 -->
       <div class="sidebar">
         <!-- 顶部按钮区域 -->
         <div class="sidebar-top">
-          <button class="compose-btn active">
-            <span class="icon">
-              <svg width="20" height="20" viewBox="0 0 20 20">
-                <path fill="#f5a623" d="M16.5,2.9c-0.2-0.2-0.5-0.3-0.8-0.3c-0.3,0-0.6,0.1-0.8,0.3L4.2,13.6c-0.4,0.4-0.4,1.1,0,1.5c0.4,0.4,1.1,0.4,1.5,0L16.5,4.4c0.4-0.4,0.4-1.1,0-1.5C16.5,2.9,16.5,2.9,16.5,2.9z M13.1,8.9l-1.5-1.5L15,4l1.5,1.5L13.1,8.9z M4.9,15.7l-1.5,1.5c-0.2,0.2-0.5,0.3-0.8,0.3s-0.6-0.1-0.8-0.3c-0.4-0.4-0.4-1.1,0-1.5l1.5-1.5L4.9,15.7z"/>
+          <button class="compose-btn">
+            <span class="icon icon--compose">
+              <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 14l8.5-8.5c.6-.6 1.6-.6 2.2 0l1.8 1.8c.6.6.6 1.6 0 2.2L7 18H3v-4z" fill="#f5a623"/>
+                <path d="M12.3 3.7l4 4" stroke="#f5a623" stroke-width="1.5" stroke-linecap="round"/>
               </svg>
             </span>
-            写信
+            <span class="btn-text">写信</span>
           </button>
+          <div class="sidebar-divider"></div>
           <button class="inbox-btn">
-            <span class="icon">📥</span>
-            收件箱
+            <span class="icon icon--inbox">
+              <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="8" width="16" height="10" rx="2" fill="#FFB74D"/>
+                <rect x="6" y="4" width="8" height="6" rx="1" fill="#E3F2FD" stroke="#64B5F6" stroke-width="1"/>
+                <path d="M6 7l4 2 4-2" fill="none" stroke="#64B5F6" stroke-width="1"/>
+              </svg>
+            </span>
+            <span class="btn-text">收信</span>
           </button>
         </div>
 
         <!-- 文件夹列表 -->
         <div class="folder-list">
-  <div class="folder-item" :class="{active: selectedFolder==='inbox'}" @click="selectFolder('inbox')">
+          <div class="folder-item" :class="{active: selectedFolder==='inbox'}" @click="selectFolder('inbox')">
     <span class="folder-icon">
       <!-- 信箱SVG -->
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="12" rx="3" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M2 6l8 6 8-6" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
     </span>
-    <span class="folder-name">收件箱</span><span class="folder-badge">1</span>
-  </div>
-  <div class="folder-item" :class="{active: selectedFolder==='starred'}" @click="selectFolder('starred')">
+            <span class="folder-name">收件箱</span><span class="folder-badge">1</span>
+          </div>
+          <div class="folder-item" :class="{active: selectedFolder==='starred'}" @click="selectFolder('starred')">
     <span class="folder-icon">
       <!-- 星标SVG -->
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="10,2 12,7.5 18,7.5 13,11.5 15,17 10,13.5 5,17 7,11.5 2,7.5 8,7.5" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
     </span>
-    <span class="folder-name">星标邮件</span>
-  </div>
-  <div class="folder-item" :class="{active: selectedFolder==='sent'}" @click="selectFolder('sent')">
+            <span class="folder-name">星标邮件</span>
+          </div>
+          <div class="folder-item" :class="{active: selectedFolder==='sent'}" @click="selectFolder('sent')">
     <span class="folder-icon">
       <!-- 纸飞机SVG -->
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="2,18 18,10 2,2 5,10 2,18" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
     </span>
-    <span class="folder-name">已发送</span>
-  </div>
-  <div class="folder-item">
+            <span class="folder-name">已发送</span>
+          </div>
+          <div class="folder-item">
     <span class="folder-icon">
       <!-- 文件夹SVG -->
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="10" rx="2" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M2 6l6-4 4 4h6" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
     </span>
-    <span class="folder-name">草稿箱</span><span class="folder-badge">4</span>
-  </div>
-  <div class="folder-item">
+            <span class="folder-name">草稿箱</span><span class="folder-badge">4</span>
+          </div>
+          <div class="folder-item">
     <span class="folder-icon">
       <!-- 垃圾桶SVG -->
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="5" y="7" width="10" height="9" rx="2" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M3 7h14" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M8 10v3" stroke="#ff9800" stroke-width="1.2"/><path d="M12 10v3" stroke="#ff9800" stroke-width="1.2"/></svg>
     </span>
-    <span class="folder-name">已删除</span>
-  </div>
-  <div class="folder-item">
+            <span class="folder-name">已删除</span>
+          </div>
+          <div class="folder-item">
     <span class="folder-icon">
       <!-- 垃圾箱SVG -->
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="12" rx="3" stroke="#ff9800" stroke-width="1.5" fill="none"/><rect x="8" y="10" width="4" height="4" rx="1" stroke="#ff9800" stroke-width="1.2" fill="none"/></svg>
     </span>
-    <span class="folder-name">垃圾箱</span><span class="folder-badge">8</span>
-  </div>
-  <div class="folder-item">
+            <span class="folder-name">垃圾箱</span><span class="folder-badge">8</span>
+          </div>
+          <div class="folder-item">
     <span class="folder-icon">
       <!-- 文件夹SVG -->
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="2,18 18,10 2,2 5,10 2,18" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
     </span>
-    <span class="folder-name">我的文件夹</span>
-  </div>
-</div>
+            <span class="folder-name">我的文件夹</span>
+          </div>
+        </div>
       </div>
 
       <!-- 主内容区域 -->

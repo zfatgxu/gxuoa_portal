@@ -926,6 +926,29 @@ const remainingRouter: AppRouteRecordRaw[] = [
     ]
   },
   {
+    path:'/meetingroom',
+    component: Layout,
+    name: 'MeetingRoom',
+    meta: {
+      hidden: true
+    },
+    children: [
+      {
+        path: 'apply',
+        name: 'MeetingRoomApply',
+        component: () => import('@/views/meetingroom/apply/ApplyForm.vue'),
+        meta: {
+          title: '会议室申请',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: 'ep:edit',
+          activeMenu: '/meetingroom'
+        }
+      }
+    ]
+  },
+  {
     path: '/iot',
     component: Layout,
     name: 'IOT',

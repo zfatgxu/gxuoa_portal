@@ -28,7 +28,7 @@ export interface RoomApplyVO {
   meetingRoomTimeId: number
   participantsNum: number
   equipments: String,
-  meetingRoomTimeId: number
+  //meetingRoomTimeId: number
 }
 
 // 会议室申请 API
