@@ -368,37 +368,21 @@ const checkUnitHasSeals = async (unitName: string) => {
 }
 
 const fetchUnitList = async () => {
-  unitListLoading.value = true
-  try {
-    const res = await getSimpleDeptList()
-    // 兼容返回结构
-    const allUnits = Array.isArray(res) ? res : (res.data || [])
-
-    // 过滤出有印章的单位
-    const unitsWithSeals = []
-
-    // 并发检查所有单位是否有印章
-    const checkPromises = allUnits.map(async (unit) => {
-      const hasSeals = await checkUnitHasSeals(unit.name)
-      if (hasSeals) {
-        return unit
+  const res = await sealApi.getsealDept()
+  if (res) {
+    // 处理数据格式 [{机电学院：124}] 转换为 {id: 124, name: '机电学院'}
+    for (const item of res) {
+      // 遍历每个对象的键值对
+      for (const name in item) {
+        if (Object.prototype.hasOwnProperty.call(item, name)) {
+          const id = item[name]
+          unitList.value.push({
+            id: id,
+            name: name,
+          })
+        }
       }
-      return null
-    })
-
-    const results = await Promise.all(checkPromises)
-
-    // 过滤掉null值（没有印章的单位）
-    unitList.value = results.filter(unit => unit !== null)
-
-    console.log(`总单位数: ${allUnits.length}, 有印章的单位数: ${unitList.value.length}`)
-
-  } catch (error) {
-    console.error('获取单位列表失败:', error)
-    ElMessage.error('获取单位列表失败')
-    unitList.value = []
-  } finally {
-    unitListLoading.value = false
+    }
   }
 }
 
@@ -428,7 +412,7 @@ const sealTypeOptions = ref([])
 const getSealTypeOptions = async () => {
   try {
     // 从数据库获取印章类型选项
-    const res = await sealApi.getsealPage({ pageSize: 100, orgName: selectedUnit.value.name })
+    const res = await sealApi.getsealPage({ orgId: selectedUnit.value.id })
 
     sealTypeOptions.value = res.list.map(item => {
       return {
@@ -446,6 +430,10 @@ const customSealTypes = ref([])
 
 // 添加用户自定义印章类型
 const addCustomSeal = () => {
+  if (!selectedUnit.value) {
+    ElMessage.error('请先选择一个单位')
+    return
+  }
   getSealTypeOptions()
   customSealTypes.value.push({
     id: '',
@@ -1362,8 +1350,6 @@ const handleExceed = () => {
 :deep(.el-input-number .el-input__inner) {
   text-align: center;
 }
-
-
 
 .seal-name-select {
   flex: 1;
