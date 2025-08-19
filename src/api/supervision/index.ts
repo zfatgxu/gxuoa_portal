@@ -27,9 +27,9 @@ export interface OrderExportReqVO {
 // 督办单工作流更新请求（只传递修改的字段）
 export interface OrderWorkflowUpdateReqVO {
   id: number // 督办单ID（必传）
+  leadDept?: number // 牵头单位ID（督办人选择时设置）
   coDept?: string // 协办单位ID（逗号分隔）
   deptDetail?: string // 牵头单位承办情况
-  startLeaderSelectAssignees?: Record<string, number[]> // 发起人自选审批人 Map，key为taskKey，value为用户ID数组
   fileList?: AttachmentFileInfo[] // 附件列表
 }
 
@@ -54,17 +54,16 @@ export interface OrderVO {
   deadline: string // 完成期限
   leadDept: number | string // 牵头单位ID，创建时可为空字符串
   coDept?: string // 协办单位ID（逗号分隔）
-  supervisor: number // 督办人ID
+  supervisor: string // 督办人ID（支持多选，逗号分隔），创建时必填
   content: string // 督办内容
-  undertakeMatter: string // 承办事项
-  reportFrequency?: number // 汇报频次 (对应数据库 report_frequency) 1=每日 2=每周 3=每月 4=阶段性
-  isProjectSupervision?: boolean // 是否立项督办 (对应数据库 isProjectSupervision)
-  isSupervisionClosed?: boolean // 是否结束督办 (对应数据库 isSupervisionClosed)
-  leader?: number // 分管校领导ID (对应数据库 leader)
+  undertakeMatter?: string // 承办事项 - 创建时不传递，由后续流程填写
+  reportFrequency?: number // 汇报频次 (对应数据库 report_frequency)
+  isProjectSupervision?: boolean // 是否立项督办 (对应数据库 isProjectSupervision) - 创建时不传递
+  isSupervisionClosed?: boolean // 是否结束督办 (对应数据库 isSupervisionClosed) - 创建时不传递
+  leader?: number // 分管校领导ID，由后端根据牵头单位自动获取，前端不传递
   otherLeaders?: string // 其他校领导ID（逗号分隔，对应数据库 other_leaders）
   summary?: string // 概述信息（字符串格式）
-  startUserSelectAssignees?: Record<string, number[]> // 发起人自选审批人 Map，key为taskKey，value为用户ID数组
-  startLeaderSelectAssignees?: Record<string, number[]> // 发起人自选审批人 Map，key为taskKey，value为用户ID数组
+  // 工作流审批人配置由后端自动设置，前端不传递
   // 以下字段已废弃但保留兼容性，前端不需要传递
   significance?: number // 重要程度 (已废弃)
   supervisionApprove?: number // 督查办审批状态 (已废弃)
@@ -84,37 +83,24 @@ export interface OrderRespVO {
   deadline: number // 完成期限（时间戳）
   leadDept: number | null // 牵头单位ID
   coDept: string | null // 协办单位
-  supervisor: number // 督办人ID
+  supervisors: Array<{
+    id: number
+    name: string
+    phone: string
+  }> // 督办人数组（包含详细信息）
+  leadLeaders: Array<{
+    id: number
+    name: string
+    type: string // "分管领导" 或 "其他分管领导"
+  }> // 分管领导和其他校领导数组
   content: string // 督办内容
-  undertakeMatter: string // 承办事项
-  reportFrequency?: number // 汇报频次 (对应数据库 report_frequency) 1=每日 2=每周 3=每月 4=阶段性
-  isProjectSupervision?: boolean // 是否立项督办 (对应数据库 isProjectSupervision)
-  isSupervisionClosed?: boolean // 是否结束督办 (对应数据库 isSupervisionClosed)
-  leader?: number // 分管校领导ID (对应数据库 leader)
-  otherLeaders?: string // 其他校领导ID（逗号分隔，对应数据库 other_leaders）
-  supervisionStatus?: string // 督办状态：processing=流程中，completed=结办文件，rejected=否决文件
+  deptDetail?: string | null // 工作推进情况
+  reportFrequency?: number // 汇报频次
+  isProjectSupervision?: boolean | null // 是否立项督办
+  isSupervisionClosed?: boolean | null // 是否结束督办
   summary?: string // 概述信息
-  officePhone?: string // 办公电话
-  leader?: string // 分管领导
-  leadDeptLeader?: string // 牵头单位负责人
-  supervisorPhone?: string // 督办人电话（后端返回字段）
-  processInstanceId: string // 流程实例ID
+  processInstanceId?: string // 流程实例ID
   createTime: number // 创建时间（时间戳）
-
-  // 扩展字段（可能由后端计算返回）
-  typeName?: string // 督办分类名称
-  priorityName?: string // 紧急程度名称
-  leadDeptName?: string // 牵头单位名称
-  supervisorName?: string // 督办人姓名
-  statusText?: string // 状态文本
-  creatorName?: string // 创建人姓名
-  isOverdue?: boolean // 是否超期
-  remainingDays?: number // 剩余天数
-  // 以下字段已废弃但保留兼容性
-  significance?: number // 重要程度 (已废弃)
-  supervisionApprove?: number | null // 督查办审批状态 (已废弃)
-  leadDeptDetail?: string | null // 牵头单位承办情况 (已废弃)
-  supervisionReapprove?: number | null // 督查办复核状态 (已废弃)
 }
 
 // 督办分类选项接口响应

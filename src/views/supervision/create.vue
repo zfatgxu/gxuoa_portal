@@ -172,10 +172,12 @@
                     class="deadline-picker"
                   />
                   <el-select v-model="orderForm.reportFrequency" placeholder="汇报频次" class="report-frequency-select">
-                    <el-option label="每日汇报" :value="1" />
-                    <el-option label="每周汇报" :value="2" />
-                    <el-option label="每月汇报" :value="3" />
-                    <el-option label="阶段性汇报" :value="4" />
+                    <el-option
+                      v-for="dict in getIntDictOptions(DICT_TYPE.REPORT_FREQUENCY)"
+                      :key="dict.value"
+                      :label="dict.label"
+                      :value="dict.value"
+                    />
                   </el-select>
                 </div>
               </div>
@@ -190,7 +192,7 @@
               <div class="form-label">其他校领导</div>
               <div class="form-content half-width">
                 <el-select
-                  v-model="orderForm.otherLeaders"
+                  v-model="orderForm.otherLeaderIds"
                   multiple
                   placeholder="请选择其他校领导"
                   :collapse-tags="true"
@@ -202,8 +204,7 @@
                     v-for="user in userList"
                     :key="user.id"
                     :label="user.nickname || user.username"
-                    :value="user.nickname || user.username"
-                    :data-id="user.id"
+                    :value="user.id"
                   />
                 </el-select>
               </div>
@@ -236,7 +237,7 @@
               <div class="form-label required">督办人</div>
               <div class="form-content half-width">
                 <el-select
-                  v-model="orderForm.supervisorNames"
+                  v-model="orderForm.supervisorIds"
                   multiple
                   placeholder="请选择督办人"
                   filterable
@@ -250,8 +251,7 @@
                     v-for="user in userList"
                     :key="user.id"
                     :label="user.nickname || user.username"
-                    :value="user.nickname || user.username"
-                    :data-id="user.id"
+                    :value="user.id"
                   />
                 </el-select>
               </div>
@@ -553,11 +553,11 @@ const rules = {
     }
   ],
   // leadDept 不再是必填项，由督办人在后续流程中选择
-  supervisorNames: [
+  supervisorIds: [
     { required: true, message: '请选择督办人', trigger: 'change' },
     {
-      validator: (rule: any, value: string[], callback: Function) => {
-        if (!value || value.length === 0) {
+      validator: (rule: any, value: number[], callback: Function) => {
+        if (!Array.isArray(value) || value.length === 0) {
           callback(new Error('请至少选择一个督办人'))
         } else {
           callback()
@@ -688,40 +688,39 @@ const handleCollaborateDeptsChange = (deptNames: string[]) => {
 }
 
 // 处理督办人变化
-const handleSupervisorChange = async (userNames: string[]) => {
-  // 更新督办人ID数组
-  orderForm.supervisorIds = []
-  userNames.forEach(name => {
-    const user = userList.value.find(u => (u.nickname || u.username) === name)
-    if (user) {
-      orderForm.supervisorIds.push(user.id)
-    }
-  })
+const handleSupervisorChange = async (userIds: number[]) => {
+  // 确保数组初始化
+  if (!Array.isArray(userIds)) {
+    userIds = []
+  }
+
+  // 防抖处理，避免快速切换导致的竞态条件
+  if (phoneLoading.value) {
+    return
+  }
 
   // 只有选择单个督办人时才自动获取手机号
-  if (userNames.length === 1) {
-    const user = userList.value.find(u => (u.nickname || u.username) === userNames[0])
-    if (user) {
-      // 调用API获取督办人手机号
-      phoneLoading.value = true
-      try {
-        const phoneData = await OrderApi.getSupervisorPhone(user.id)
+  if (userIds.length === 1) {
+    const userId = userIds[0]
+    // 调用API获取督办人手机号
+    phoneLoading.value = true
+    try {
+      const phoneData = await OrderApi.getSupervisorPhone(userId)
 
-        // 后端直接返回手机号字符串
-        if (phoneData && typeof phoneData === 'string' && phoneData.trim() !== '') {
-          orderForm.officePhone = phoneData.trim()
-        } else {
-          orderForm.officePhone = ''
-          ElMessage.warning('督办人未设置手机号，请手动填写办公电话')
-        }
-      } catch (error) {
+      // 后端直接返回手机号字符串
+      if (phoneData && typeof phoneData === 'string' && phoneData.trim() !== '') {
+        orderForm.officePhone = phoneData.trim()
+      } else {
         orderForm.officePhone = ''
-        ElMessage.warning('无法获取督办人手机号，请手动填写办公电话')
-      } finally {
-        phoneLoading.value = false
+        ElMessage.warning('督办人未设置手机号，请手动填写办公电话')
       }
+    } catch (error) {
+      orderForm.officePhone = ''
+      ElMessage.warning('无法获取督办人手机号，请手动填写办公电话')
+    } finally {
+      phoneLoading.value = false
     }
-  } else if (userNames.length > 1) {
+  } else if (userIds.length > 1) {
     // 多选时清空手机号，提示用户手动填写
     orderForm.officePhone = ''
     ElMessage.info('选择多个督办人时，请手动填写联系电话')
@@ -732,15 +731,13 @@ const handleSupervisorChange = async (userNames: string[]) => {
 }
 
 // 处理其他校领导变化
-const handleOtherLeadersChange = (userNames: string[]) => {
-  // 更新其他校领导ID数组
-  orderForm.otherLeaderIds = []
-  userNames.forEach(name => {
-    const user = userList.value.find(u => (u.nickname || u.username) === name)
-    if (user) {
-      orderForm.otherLeaderIds.push(user.id)
-    }
-  })
+const handleOtherLeadersChange = (userIds: number[]) => {
+  // 确保数组初始化
+  if (!Array.isArray(userIds)) {
+    orderForm.otherLeaderIds = []
+  } else {
+    orderForm.otherLeaderIds = [...userIds] // 创建副本避免引用问题
+  }
 }
 
 // 获取部门负责人信息
@@ -820,20 +817,7 @@ const getPriorityLabel = (value: number): string => {
   return dict?.label || ''
 }
 
-const getSignificanceLabel = (value: number): string => {
-  const dict = getIntDictOptions(DICT_TYPE.SUPERVISION_SIGNIFICANCE_TYPE).find(d => d.value === value)
-  return dict?.label || ''
-}
 
-const getApprovalLabel = (value: number): string => {
-  const dict = getIntDictOptions(DICT_TYPE.SUPERVISION_APPROVE_TYPE).find(d => d.value === value)
-  return dict?.label || ''
-}
-
-const getReapprovalLabel = (value: number): string => {
-  const dict = getIntDictOptions(DICT_TYPE.SUPERVISION_REAPPROVE_TYPE).find(d => d.value === value)
-  return dict?.label || ''
-}
 
 // 计算默认时间（当前时间的下一个小时）
 const getDefaultTime = () => {
@@ -1135,8 +1119,15 @@ const generateAutoSummary = () => {
   // 牵头单位由督办人在后续流程中选择，创建阶段不包含在概述中
 
   // 添加督办人
-  if (orderForm.supervisorNames && orderForm.supervisorNames.length > 0) {
-    summaryItems.push(`督办人：${orderForm.supervisorNames.join('、')}`)
+  if (Array.isArray(orderForm.supervisorIds) && orderForm.supervisorIds.length > 0) {
+    const supervisorNames = orderForm.supervisorIds.map(id => {
+      const user = userList.value.find(u => u.id === id)
+      return user ? (user.nickname || user.username) : '未知用户'
+    }).filter(name => name !== '未知用户')
+
+    if (supervisorNames.length > 0) {
+      summaryItems.push(`督办人：${supervisorNames.join('、')}`)
+    }
   }
 
   // 添加时间
@@ -1167,7 +1158,7 @@ const validateRequiredFields = () => {
     missingFields.push('完成期限')
   }
   // 牵头单位不再在创建阶段验证，由督办人在后续流程中选择
-  if (!orderForm.supervisorNames || orderForm.supervisorNames.length === 0) {
+  if (!Array.isArray(orderForm.supervisorIds) || orderForm.supervisorIds.length === 0) {
     missingFields.push('督办人')
   }
   if (!orderForm.content?.trim()) {
@@ -1205,18 +1196,6 @@ const createOrder = async () => {
     // 准备提交数据，转换为API需要的格式
     const orderType = getSupervisionOrderType()
 
-    // 构建发起人自选审批人 Map（根据新流程配置）
-    const startUserSelectAssignees: Record<string, number[]> = {}
-    const startLeaderSelectAssignees: Record<string, number[]> = {}
-
-    // 根据新流程：发起人 -> 督查办副主任 -> 督查办主任 -> 督办人
-    // 这里需要根据实际的用户ID配置审批人
-    // 暂时使用督办人作为后续流程的审批人
-    if (orderForm.supervisorIds && orderForm.supervisorIds.length > 0) {
-      // 设置督办人为后续流程的审批人
-      startUserSelectAssignees['First'] = orderForm.supervisorIds
-    }
-
     const submitData: OrderVO = {
       orderCode: orderForm.orderNumber,
       orderTitle: orderForm.title,
@@ -1228,23 +1207,22 @@ const createOrder = async () => {
       deadline: orderForm.deadline,
       leadDept: '', // 牵头单位由督办人在后续流程中选择，创建时为空
       coDept: '', // 协办单位由牵头单位选择，创建时为空
-      supervisor: orderForm.supervisorIds.length > 0 ? orderForm.supervisorIds[0] : 0, // 使用第一个督办人作为主督办人
+      supervisor: orderForm.supervisorIds.join(','), // 督办人ID（支持多选，逗号分隔）
       content: orderForm.content,
-      undertakeMatter: orderForm.tasks,
       reportFrequency: orderForm.reportFrequency ? Number(orderForm.reportFrequency) : undefined, // 汇报频次
-      isProjectSupervision: orderForm.isProjectSupervision, // 是否立项督办
-      isSupervisionClosed: orderForm.isSupervisionClosed, // 是否结束督办
-      // leader 字段在创建阶段不需要传递，由后续流程根据牵头单位自动确定
-      otherLeaders: orderForm.otherLeaderIds.join(','), // 其他校领导ID（逗号分隔）
-      summary: summaryContent, // 添加自动生成的概述信息字符串
-      startUserSelectAssignees: startUserSelectAssignees,
-      startLeaderSelectAssignees: startLeaderSelectAssignees// 发起人自选审批人
+      otherLeaders: orderForm.otherLeaderIds.join(','), // 其他校领导ID（支持多选，逗号分隔）
+      summary: summaryContent // 添加自动生成的概述信息字符串
     }
 
-    // 验证必要的ID字段（牵头单位不再在创建阶段验证）
-    if (!submitData.supervisor || orderForm.supervisorIds.length === 0) {
+    // 验证必要的ID字段
+    if (!Array.isArray(orderForm.supervisorIds) || orderForm.supervisorIds.length === 0 || !submitData.supervisor) {
       ElMessage.error('请确保已正确选择督办人')
       return
+    }
+
+    // 确保其他校领导数组初始化
+    if (!Array.isArray(orderForm.otherLeaderIds)) {
+      orderForm.otherLeaderIds = []
     }
 
     // 调用API创建督办单
@@ -1299,7 +1277,10 @@ const resetForm = async () => {
   // 重置表单验证状态
   orderFormRef.value?.resetFields()
 
+  // 重新生成督办编号
   await generateOrderNumber()
+
+  // 重置所有表单字段
   orderForm.title = ''
   orderForm.category = undefined
   orderForm.basis = undefined
