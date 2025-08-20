@@ -42,14 +42,14 @@
       <!-- 星标SVG -->
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="10,2 12,7.5 18,7.5 13,11.5 15,17 10,13.5 5,17 7,11.5 2,7.5 8,7.5" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
     </span>
-            <span class="folder-name">星标邮件</span>
+            <span class="folder-name">星标邮件</span><span class="folder-badge">{{ getStarredCount() }}</span>
           </div>
           <div class="folder-item" :class="{active: selectedFolder==='sent'}" @click="selectFolder('sent')">
     <span class="folder-icon">
       <!-- 纸飞机SVG -->
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="2,18 18,10 2,2 5,10 2,18" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
     </span>
-            <span class="folder-name">已发送</span>
+            <span class="folder-name">已发送</span><span class="folder-badge">{{ getSentCount() }}</span>
           </div>
           <div class="folder-item" :class="{active: selectedFolder==='drafts'}" @click="selectFolder('drafts')">
     <span class="folder-icon">
@@ -108,6 +108,7 @@ interface Email {
   deletedAt?: string // 新增：删除时间字段
   isDraft?: boolean // 新增：是否为草稿
   isStarred?: boolean // 新增：是否已星标
+  starredAt?: string // 新增：星标日期字段
 }
 
 // 使用 mockjs 生成 50 条以上假数据
@@ -154,6 +155,12 @@ function genEmails(folder: string, count: number): Email[] {
     if (folder === 'deleted') {
       const deletedDaysAgo = Math.floor(Math.random() * 25) + 1
       email.deletedAt = formatDate(new Date(today.getTime() - deletedDaysAgo * 86400000))
+    }
+    
+    // 为星标邮件添加星标时间（随机1-30天前星标）
+    if (email.isStarred) {
+      const starredDaysAgo = Math.floor(Math.random() * 30) + 1
+      email.starredAt = formatDate(new Date(today.getTime() - starredDaysAgo * 86400000))
     }
     
     return email
@@ -222,25 +229,34 @@ function handleDeleteEmails(emailIds: number[]) {
 
 // 处理星标切换
 function handleToggleStar(emailId: number) {
+  const today = new Date()
+  const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0')
+  
   // 在所有文件夹中查找并更新邮件的星标状态
   Object.keys(allEmails).forEach(folderKey => {
     const email = allEmails[folderKey].find(e => e.id === emailId)
     if (email) {
       email.isStarred = !email.isStarred
       
-      // 如果设置为星标，且不在星标文件夹中，则添加到星标文件夹
-      if (email.isStarred && folderKey !== 'starred') {
-        // 检查星标文件夹中是否已存在
-        const existsInStarred = allEmails.starred.some(e => e.id === emailId)
-        if (!existsInStarred) {
-          allEmails.starred.push({...email})
+      // 如果设置为星标，记录星标时间
+      if (email.isStarred) {
+        email.starredAt = todayStr
+        // 如果不在星标文件夹中，则添加到星标文件夹
+        if (folderKey !== 'starred') {
+          const existsInStarred = allEmails.starred.some(e => e.id === emailId)
+          if (!existsInStarred) {
+            allEmails.starred.push({...email})
+          }
         }
-      }
-      // 如果取消星标，则从星标文件夹中移除
-      else if (!email.isStarred && folderKey === 'starred') {
-        const starredIndex = allEmails.starred.findIndex(e => e.id === emailId)
-        if (starredIndex !== -1) {
-          allEmails.starred.splice(starredIndex, 1)
+      } else {
+        // 如果取消星标，清除星标时间
+        email.starredAt = undefined
+        // 从星标文件夹中移除
+        if (folderKey === 'starred') {
+          const starredIndex = allEmails.starred.findIndex(e => e.id === emailId)
+          if (starredIndex !== -1) {
+            allEmails.starred.splice(starredIndex, 1)
+          }
         }
       }
     }
@@ -255,6 +271,16 @@ function getDraftCount(): number {
 // 获取已删除邮件数量（30天内）
 function getDeletedCount(): number {
   return allEmails.deleted?.length || 0
+}
+
+// 获取星标邮件数量
+function getStarredCount(): number {
+  return allEmails.starred?.length || 0
+}
+
+// 获取已发送邮件数量
+function getSentCount(): number {
+  return allEmails.sent?.length || 0
 }
 
 // 定期清理30天前的已删除邮件（可选：在实际应用中应该由后端定时任务处理）

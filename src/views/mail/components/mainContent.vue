@@ -123,6 +123,7 @@ interface Email {
   deletedAt?: string
   isDraft?: boolean
   isStarred?: boolean
+  starredAt?: string // 新增：星标日期字段
 }
 
 const props = defineProps<{ 
@@ -187,21 +188,60 @@ const groupedEmails = computed(() => {
   // 先分组，再组内按时间倒序
   const groups: Record<string, any[]> = {}
   props.emails.forEach(email => {
-    const label = getDateLabel(email.date)
+    // 根据文件夹类型选择分组依据的日期
+    let dateForGrouping: string
+    if (props.isDeletedFolder && email.deletedAt) {
+      dateForGrouping = email.deletedAt
+    } else if (props.folderName === '星标邮件' && email.starredAt) {
+      dateForGrouping = email.starredAt
+    } else {
+      dateForGrouping = email.date
+    }
+    
+    const label = getDateLabel(dateForGrouping)
     if (!groups[label]) groups[label] = []
     groups[label].push(email)
   })
   // 只显示今天、昨天、一周内、一周前
   const order = ['今天','昨天','本周','上周']
-  return order.map(label => ({ label, emails: (groups[label]||[]).sort((a,b)=>b.date.localeCompare(a.date)||b.time.localeCompare(a.time)) })).filter(g=>g.emails.length)
+  return order.map(label => ({ 
+    label, 
+    emails: (groups[label]||[]).sort((a,b)=> {
+      // 根据文件夹类型选择排序依据的日期
+      if (props.isDeletedFolder) {
+        const aDate = a.deletedAt || a.date
+        const bDate = b.deletedAt || b.date
+        if (aDate !== bDate) return bDate.localeCompare(aDate)
+        return b.time.localeCompare(a.time)
+      } else if (props.folderName === '星标邮件') {
+        const aDate = a.starredAt || a.date
+        const bDate = b.starredAt || b.date
+        if (aDate !== bDate) return bDate.localeCompare(aDate)
+        return b.time.localeCompare(a.time)
+      } else {
+        return b.date.localeCompare(a.date)||b.time.localeCompare(a.time)
+      }
+    }) 
+  })).filter(g=>g.emails.length)
 })
 
 const pageSize = ref(15)
 const currentPage = ref(1)
 const totalPages = computed(() => Math.ceil(props.emails.length / pageSize.value))
 const pagedEmails = computed(() => {
-  // 按日期和时间升序排列
+  // 按日期和时间升序排列；根据文件夹类型选择排序依据
   const sorted = [...props.emails].sort((a, b) => {
+    if (props.isDeletedFolder) {
+      const aDate = a.deletedAt || a.date
+      const bDate = b.deletedAt || b.date
+      if (aDate !== bDate) return aDate.localeCompare(bDate)
+      return a.time.localeCompare(b.time)
+    } else if (props.folderName === '星标邮件') {
+      const aDate = a.starredAt || a.date
+      const bDate = b.starredAt || b.date
+      if (aDate !== bDate) return aDate.localeCompare(bDate)
+      return a.time.localeCompare(b.time)
+    }
     if (a.date !== b.date) return a.date.localeCompare(b.date)
     return a.time.localeCompare(b.time)
   })
