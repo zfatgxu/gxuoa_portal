@@ -638,7 +638,7 @@ onMounted(() => {
 
 /* 左侧菜单 */
 .mail-sidebar {
-  width: 150px;
+  width: 180px;
   border-right: 1px solid #e6e6e6;
   background-color: #fff;
   overflow-y: auto;
@@ -653,10 +653,11 @@ onMounted(() => {
 .write-btn, .inbox-btn {
   display: flex;
   align-items: center;
-  padding: 10px 15px;
+  padding: 12px 15px;
   cursor: pointer;
   font-weight: bold;
   gap: 8px;
+  font-size: 14px;
 }
 
 .write-btn {
@@ -674,11 +675,12 @@ onMounted(() => {
 .menu-item {
   display: flex;
   align-items: center;
-  padding: 10px 15px;
+  padding: 12px 15px;
   cursor: pointer;
   transition: background-color 0.2s;
   color: #606266;
   gap: 8px;
+  font-size: 14px;
 }
 
 .menu-item:hover {
@@ -692,7 +694,7 @@ onMounted(() => {
 
 .menu-item .count {
   margin-left: 5px;
-  font-size: 12px;
+  font-size: 13px;
   color: #909399;
 }
 
@@ -979,5 +981,22 @@ onMounted(() => {
 .contact-email {
   font-size: 12px;
   color: #909399;
+}
+
+.header {
+    height: 4.2em;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2em;
+    border-bottom: 1.5px solid #e3f2fd;
+}
+
+
+.header-image {
+    height: 60px;
+    display: block;
+    object-fit: contain;
 }
 </style>

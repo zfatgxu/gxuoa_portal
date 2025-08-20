@@ -1,35 +1,5 @@
 <template>
   <div class="mail-container">
-    <!-- 顶部标题栏 -->
-    <div class="header">
-      <div class="header-left header-left-icons">
-        <span class="header-icon header-icon--bl">
-          <svg width="1.5em" height="1.5em" viewBox="0 0 32 32" fill="none">
-            <rect x="4" y="8" width="24" height="16" rx="4" fill="#2196f3"/>
-            <path d="M4 8l12 10l12-10" stroke="#fff" stroke-width="2" fill="none"/>
-          </svg>
-        </span>
-        <span class="header-title">内部邮件</span>
-        <span class="header-icon header-icon--tr">
-          <svg width="1.5em" height="1.5em" viewBox="0 0 32 32" fill="none">
-            <rect x="4" y="8" width="24" height="16" rx="4" fill="#ffa726"/>
-            <path d="M4 8l12 10l12-10" stroke="#fff" stroke-width="2" fill="none"/>
-          </svg>
-        </span>
-      </div>
-      <div class="header-right">
-        <div class="header-search">
-          <span class="search-icon">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <circle cx="7" cy="7" r="6" stroke="#bdbdbd" stroke-width="1.5" fill="none"/>
-              <path d="M12 12l-2.5-2.5" stroke="#bdbdbd" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </span>
-          <input class="search-input" type="text" placeholder="搜索" />
-        </div>
-      </div>
-    </div>
-    
     <!-- 主体内容区 -->
     <div class="content-wrapper">
       <!-- 左侧边栏 -->
@@ -37,12 +7,24 @@
         <!-- 顶部按钮区域 -->
         <div class="sidebar-top">
           <button class="compose-btn active">
-            <span class="icon">✏️</span>
-            写信
+            <span class="icon icon--compose">
+              <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 14l8.5-8.5c.6-.6 1.6-.6 2.2 0l1.8 1.8c.6.6.6 1.6 0 2.2L7 18H3v-4z" fill="#f5a623"/>
+                <path d="M12.3 3.7l4 4" stroke="#f5a623" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span class="btn-text">写信</span>
           </button>
+          <div class="sidebar-divider"></div>
           <button class="inbox-btn">
-            <span class="icon">📥</span>
-            收件箱
+            <span class="icon icon--inbox">
+              <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="8" width="16" height="10" rx="2" fill="#FFB74D"/>
+                <rect x="6" y="4" width="8" height="6" rx="1" fill="#E3F2FD" stroke="#64B5F6" stroke-width="1"/>
+                <path d="M6 7l4 2 4-2" fill="none" stroke="#64B5F6" stroke-width="1"/>
+              </svg>
+            </span>
+            <span class="btn-text">收信</span>
           </button>
         </div>
 
@@ -100,9 +82,25 @@
         </div>
       </div>
       
-      <!-- 中间内容区 -->
+      <!-- 主内容区域 -->
       <div class="main-content">
-        <!-- 写信工具栏 -->
+        <div class="header">
+      <div class="header-left">
+        <img class="header-image" :src="topImage" alt="header" />
+      </div>
+      <div class="header-right">
+        <div class="header-search">
+    <span class="search-icon">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="7" cy="7" r="6" stroke="#bdbdbd" stroke-width="1.5" fill="none"/>
+        <path d="M12 12l-2.5-2.5" stroke="#bdbdbd" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </span>
+          <input class="search-input" type="text" placeholder="搜索" />
+        </div>
+      </div>
+    </div>
+        <!-- 工具栏 -->
         <div class="toolbar">
           <div class="toolbar-left">
             <div class="tool-btn primary" @click="sendMail">
@@ -408,6 +406,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
 import '@/views/mail/mail.css'
+import topImage from '@/views/mail/image/top.png'
 
 // 导入Font Awesome组件和图标
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
@@ -664,7 +663,7 @@ onMounted(() => {
 .sidebar :deep(.sidebar-top) {
   margin: 0 -8px 20px -8px;
   background: #fff;
-  border-radius: 8px;
+  border-radius: 18px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
   padding: 12px 8px 8px 8px;
   border-bottom: 2px solid #e3f2fd;
@@ -672,29 +671,29 @@ onMounted(() => {
 
 .sidebar :deep(.compose-btn), .sidebar :deep(.inbox-btn) {
   width: 100%;
-  padding: 8px 4px;
-  margin-bottom: 4px;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  background-color: #ffffff;
+  padding: 8px 6px;
+  margin: 8px 0;
+  border: none;
+  background-color: transparent;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 16px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
-  color: #333;
+  justify-content: flex-start;
+  gap: 8px;
+  color: #0b2a5a;
+  font-weight: 800;
 }
 
-.sidebar :deep(.compose-btn.active) {
-  background-color: #4285f4;
-  color: white;
-  border-color: #4285f4;
+.sidebar :deep(.sidebar-divider) {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 6px 2px;
 }
 
-.sidebar :deep(.compose-btn:hover), .sidebar :deep(.inbox-btn:hover) {
-  background-color: #f0f0f0;
-}
+.sidebar :deep(.compose-btn.active) { color: #0b2a5a; }
+
+.sidebar :deep(.compose-btn:hover), .sidebar :deep(.inbox-btn:hover) { opacity: 0.9; }
 
 .sidebar :deep(.compose-btn.active:hover) {
   background-color: #3367d6;
@@ -705,36 +704,40 @@ onMounted(() => {
   background: #fff;
   margin: 0 -8px -8px -8px;
   padding: 8px;
-  border-radius: 8px;
+  border-radius: 18px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 
 .folder-item {
   display: flex;
   align-items: center;
-  padding: 6px 4px;
+  padding: 8px 6px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 14px;
   color: #333;
-  border-radius: 2px;
-  margin-bottom: 2px;
+  border-radius: 12px;
+  margin-bottom: 3px;
 }
 
 .folder-icon {
-  margin-right: 4px;
-  font-size: 12px;
+  margin-right: 8px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
 }
 
 .folder-name {
   flex: 1;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .folder-badge {
   background-color: #e0e0e0;
   border-radius: 10px;
   padding: 0 6px;
-  font-size: 10px;
+  font-size: 11px;
+  color: #666;
+  margin-left: 4px;
 }
 
 /* 顶部标题栏 */
@@ -777,119 +780,70 @@ onMounted(() => {
 }
 
 /* 主体布局 */
-.mail-layout {
+.content-wrapper {
   display: flex;
   flex: 1;
-  overflow: hidden;
-  background-color: #fff;
-  border-radius: 4px;
-  margin: 10px;
-  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.05);
-}
-
-/* 左侧菜单 */
-.mail-sidebar {
-  width: 150px;
-  border-right: 1px solid #e6e6e6;
-  background-color: #fff;
-  overflow-y: auto;
-  flex-shrink: 0;
-}
-
-.sidebar-top {
-  padding: 15px 0;
-  border-bottom: 1px solid #e6e6e6;
-}
-
-.write-btn, .inbox-btn {
-  display: flex;
-  align-items: center;
-  padding: 10px 15px;
-  cursor: pointer;
-  font-weight: bold;
+  background-color: #f5f7f9;
+  padding: 0 8px 8px 8px;
   gap: 8px;
 }
 
-.write-btn {
-  color: #ff6b6b;
-}
-
-.inbox-btn {
-  color: #4e73df;
-}
-
-.sidebar-menu {
-  padding: 10px 0;
-}
-
-.menu-item {
-  display: flex;
-  align-items: center;
-  padding: 10px 15px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  color: #606266;
-  gap: 8px;
-}
-
-.menu-item:hover {
-  background-color: #f5f7fa;
-}
-
-.menu-item svg {
-  width: 16px;
-  height: 16px;
-}
-
-.menu-item .count {
-  margin-left: 5px;
-  font-size: 12px;
-  color: #909399;
-}
-
-/* 中间内容区 */
-.mail-content {
+/* 主内容区域 */
+.main-content {
   flex: 1;
+  background-color: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.07);
+  margin: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  min-width: 0; /* 防止内容溢出 */
 }
 
-/* 写信工具栏 */
-.mail-toolbar {
+/* 工具栏 */
+.toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 15px;
-  border-bottom: 1px solid #e6e6e6;
-  background-color: #f8f9fa;
+  padding: 12px 20px;
+  height: 66px;
+  background-color: #fff;
+  border-bottom: 2px solid #e3f2fd;
 }
 
 .toolbar-left {
   display: flex;
+  gap: 10px;
   align-items: center;
-  gap: 5px;
 }
 
 .tool-btn {
+  height: 33px;
+  padding: 0 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  background-color: #ffffff;
+  cursor: pointer;
+  font-size: 15px;
+  color: #222;
   display: flex;
   align-items: center;
-  padding: 5px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  color: #606266;
-  font-size: 14px;
+  gap: 6px;
+  box-sizing: border-box;
 }
 
 .tool-btn:hover {
-  background-color: #ecf5ff;
+  background-color: #f0f0f0;
 }
 
 .tool-btn.primary {
-  background-color: #4e73df;
+  background-color: #4285f4;
   color: white;
+  border-color: #4285f4;
+}
+
+.tool-btn.primary:hover {
+  background-color: #3367d6;
 }
 
 .tool-btn .el-icon {
@@ -899,19 +853,22 @@ onMounted(() => {
 .toolbar-right {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
+  font-size: 12px;
+  color: #666;
 }
 
 .time {
-  font-size: 14px;
-  color: #909399;
+  font-size: 12px;
+  color: #666;
   margin-right: 10px;
 }
 
 /* 邮件表单 */
 .mail-form {
   padding: 10px 15px;
-  border-bottom: 1px solid #e6e6e6;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #fff;
 }
 
 .form-row {
@@ -961,11 +918,11 @@ onMounted(() => {
 /* 编辑器工具栏 */
 .editor-toolbar {
   padding: 8px 15px;
-  border-bottom: 1px solid #e6e6e6;
+  border-bottom: 1px solid #e0e0e0;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  background-color: #f8f9fa;
+  background-color: #f5faff;
   align-items: center;
 }
 
@@ -1025,7 +982,7 @@ onMounted(() => {
 /* 发件人信息 */
 .sender-info {
   padding: 10px 15px;
-  border-top: 1px solid #e6e6e6;
+  border-top: 1px solid #e0e0e0;
   font-size: 14px;
   color: #606266;
   background-color: #f8f9fa;
@@ -1039,29 +996,33 @@ onMounted(() => {
 
 /* 联系人列表 */
 .contact-list {
-  width: 240px;
+  width: 220px;
   background-color: #fff;
-  border-left: 1px solid #e6e6e6;
+  border-left: 1px solid #e0e0e0;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  margin-left: 8px;
+  overflow: hidden;
 }
 
 .contact-header {
   padding: 12px 15px;
   font-size: 16px;
   font-weight: bold;
-  border-bottom: 1px solid #e6e6e6;
+  border-bottom: 1px solid #e0e0e0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   color: #4e73df;
-  background-color: #f8f9fa;
+  background-color: #f5faff;
 }
 
 .contact-search {
   padding: 10px;
-  border-bottom: 1px solid #e6e6e6;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 .contact-groups {
@@ -1082,6 +1043,8 @@ onMounted(() => {
   background-color: #f5f7fa;
   font-size: 14px;
   color: #606266;
+  border-radius: 4px;
+  margin: 2px 4px;
 }
 
 .group-header .el-icon {
@@ -1106,6 +1069,8 @@ onMounted(() => {
   align-items: center;
   cursor: pointer;
   transition: background-color 0.2s;
+  border-radius: 4px;
+  margin: 2px 4px;
 }
 
 .contact-item:hover {
