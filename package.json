@@ -26,7 +26,7 @@
     "lint:lint-staged": "lint-staged -c "
   },
   "dependencies": {
-    "@element-plus/icons-vue": "^2.1.0",
+    "@element-plus/icons-vue": "^2.3.2",
     "@form-create/designer": "^3.2.6",
     "@form-create/element-ui": "^3.2.11",
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
@@ -54,7 +54,7 @@
     "echarts": "^5.5.0",
     "echarts-wordcloud": "^2.1.0",
     "element-china-area-data": "^6.1.0",
-    "element-plus": "2.9.1",
+    "element-plus": "^2.10.7",
     "fast-xml-parser": "^4.3.2",
     "highlight.js": "^11.9.0",
     "jsencrypt": "^3.3.2",
