@@ -303,6 +303,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
           activeMenu: '/petition',
         }
       },
+
       {
         path: 'detail',
         component: () => import('@/views/petition/write/detail.vue'),
@@ -350,6 +351,8 @@ const remainingRouter: AppRouteRecordRaw[] = [
           activeMenu: '/bpm/manager/form'
         }
       },
+      
+// ... existing code ...
       {
         path: 'manager/definition',
         component: () => import('@/views/bpm/model/definition/index.vue'),
