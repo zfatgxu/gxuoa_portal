@@ -165,8 +165,7 @@ export default {
     socialLogin: '社交登录',
     home: '首页',
     analysis: '分析页',
-    workplace: '工作台',
-    petition: '信访工作',
+    workplace: '工作台'
   },
   analysis: {
     newUser: '新增用户',
