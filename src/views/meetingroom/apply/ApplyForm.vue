@@ -543,7 +543,7 @@ const submitForm = () => {
 
       if (res) {
         ElMessage.success('会议室申请提交成功！');
-        router.push('/meeting/MyApply');
+        router.push('/xzsp/meetingroom/applys');
       } else {
         ElMessage.error('申请提交失败，请重试');
       }
@@ -613,7 +613,7 @@ const resetForm = () => {
 };
 
 const goBack = () => {
-  router.push('/meeting/apply');
+  router.push('/xzsp/meetingroom/apply');
 };
 
 onMounted(() => {

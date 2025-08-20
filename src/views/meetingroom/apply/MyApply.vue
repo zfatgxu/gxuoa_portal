@@ -186,7 +186,7 @@ const viewDetail = (row) => {
   try {
     // 跳转到详情页面，传递ID参数
     router.push({
-      path: '/meeting/ApplyForm',
+      path: '/meetingroom/apply',
       query: { id: row.id }
     });
   } catch (error) {
