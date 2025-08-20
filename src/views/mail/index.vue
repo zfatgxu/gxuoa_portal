@@ -51,19 +51,19 @@
     </span>
             <span class="folder-name">已发送</span>
           </div>
-          <div class="folder-item">
+          <div class="folder-item" :class="{active: selectedFolder==='drafts'}" @click="selectFolder('drafts')">
     <span class="folder-icon">
       <!-- 文件夹SVG -->
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="10" rx="2" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M2 6l6-4 4 4h6" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
     </span>
-            <span class="folder-name">草稿箱</span><span class="folder-badge">4</span>
+            <span class="folder-name">草稿箱</span><span class="folder-badge">{{ getDraftCount() }}</span>
           </div>
-          <div class="folder-item">
+          <div class="folder-item" :class="{active: selectedFolder==='deleted'}" @click="selectFolder('deleted')">
     <span class="folder-icon">
       <!-- 垃圾桶SVG -->
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="5" y="7" width="10" height="9" rx="2" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M3 7h14" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M8 10v3" stroke="#ff9800" stroke-width="1.2"/><path d="M12 10v3" stroke="#ff9800" stroke-width="1.2"/></svg>
     </span>
-            <span class="folder-name">已删除</span>
+            <span class="folder-name">已删除</span><span class="folder-badge">{{ getDeletedCount() }}</span>
           </div>
           <div class="folder-item">
     <span class="folder-icon">
@@ -83,14 +83,20 @@
       </div>
 
       <!-- 主内容区域 -->
-      <MainContent :folderName="folderLabels[selectedFolder]" :emails="allEmails[selectedFolder]" />
+      <MainContent 
+        :folderName="folderLabels[selectedFolder]" 
+        :emails="allEmails[selectedFolder] || []" 
+        :isDeletedFolder="selectedFolder==='deleted'"
+        @deleteEmails="handleDeleteEmails"
+        @toggleStar="handleToggleStar"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import MainContent from './components/mainContent.vue'
-import { ref } from 'vue'
+import { ref, computed, reactive } from 'vue'
 import '@/views/mail/mail.css'
 
 interface Email {
@@ -99,6 +105,9 @@ interface Email {
   subject: string
   time: string
   date: string // 新增日期字段 yyyy-MM-dd
+  deletedAt?: string // 新增：删除时间字段
+  isDraft?: boolean // 新增：是否为草稿
+  isStarred?: boolean // 新增：是否已星标
 }
 
 // 使用 mockjs 生成 50 条以上假数据
@@ -126,31 +135,133 @@ function genEmails(folder: string, count: number): Email[] {
     else bucketIdx = 3 // 一周前
     const offset = buckets[bucketIdx].offset()
     const date = formatDate(new Date(today.getTime() + offset*86400000))
-    return {
+    
+    const email: Email = {
       id: i+1,
       sender: folder === 'sent' ? '我' : Mock.Random.cname(),
-      subject: `${folder === 'inbox' ? '收件箱' : folder === 'starred' ? '星标' : '已发送'}邮件 - ` + Mock.Random.ctitle(8, 20),
+      subject: `${folder === 'inbox' ? '收件箱' : folder === 'starred' ? '星标' : folder === 'drafts' ? '草稿' : folder === 'deleted' ? '已删除' : '已发送'}邮件 - ` + Mock.Random.ctitle(8, 20),
       time: Mock.Random.time('HH:mm'),
-      date
+      date,
+      isStarred: folder === 'starred' ? true : Math.random() < 0.2 // 星标邮件默认已星标，其他20%概率星标
     }
+    
+    // 为草稿邮件添加标记
+    if (folder === 'drafts') {
+      email.isDraft = true
+    }
+    
+    // 为已删除邮件添加删除时间（随机1-25天前删除）
+    if (folder === 'deleted') {
+      const deletedDaysAgo = Math.floor(Math.random() * 25) + 1
+      email.deletedAt = formatDate(new Date(today.getTime() - deletedDaysAgo * 86400000))
+    }
+    
+    return email
   })
 }
 
-const allEmails: Record<string, Email[]> = {
-  inbox: genEmails('inbox', 60),
-  starred: genEmails('starred', 55),
-  sent: genEmails('sent', 52)
+// 过滤30天内的已删除邮件
+function filterValidDeletedEmails(emails: Email[]): Email[] {
+  const today = new Date()
+  const thirtyDaysAgo = new Date(today.getTime() - 30 * 86400000)
+  
+  return emails.filter(email => {
+    if (!email.deletedAt) return true
+    const deletedDate = new Date(email.deletedAt)
+    return deletedDate >= thirtyDaysAgo
+  })
 }
 
+const allEmails = reactive<Record<string, Email[]>>({
+  inbox: genEmails('inbox', 60),
+  starred: genEmails('starred', 55),
+  sent: genEmails('sent', 52),
+  drafts: genEmails('drafts', 15),
+  deleted: filterValidDeletedEmails(genEmails('deleted', 25))
+})
 
 const folderLabels: Record<string, string> = {
   inbox: '收件箱',
   starred: '星标邮件',
-  sent: '已发送'
+  sent: '已发送',
+  drafts: '草稿箱',
+  deleted: '已删除'
 }
 
 const selectedFolder = ref('inbox')
 function selectFolder(folder: string) {
   selectedFolder.value = folder
 }
+
+// 处理删除邮件
+function handleDeleteEmails(emailIds: number[]) {
+  const today = new Date()
+  const todayStr = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0')
+  
+  emailIds.forEach(emailId => {
+    // 从当前文件夹中移除邮件
+    const currentEmails = allEmails[selectedFolder.value]
+    const emailIndex = currentEmails.findIndex(email => email.id === emailId)
+    
+    if (emailIndex !== -1) {
+      const email = currentEmails[emailIndex]
+      // 如果不是已删除文件夹，则移动到已删除文件夹
+      if (selectedFolder.value !== 'deleted') {
+        email.deletedAt = todayStr
+        // 从当前文件夹移除
+        currentEmails.splice(emailIndex, 1)
+        // 添加到已删除文件夹
+        allEmails.deleted.push(email)
+      } else {
+        // 如果已经在已删除文件夹，则永久删除
+        currentEmails.splice(emailIndex, 1)
+      }
+    }
+  })
+}
+
+// 处理星标切换
+function handleToggleStar(emailId: number) {
+  // 在所有文件夹中查找并更新邮件的星标状态
+  Object.keys(allEmails).forEach(folderKey => {
+    const email = allEmails[folderKey].find(e => e.id === emailId)
+    if (email) {
+      email.isStarred = !email.isStarred
+      
+      // 如果设置为星标，且不在星标文件夹中，则添加到星标文件夹
+      if (email.isStarred && folderKey !== 'starred') {
+        // 检查星标文件夹中是否已存在
+        const existsInStarred = allEmails.starred.some(e => e.id === emailId)
+        if (!existsInStarred) {
+          allEmails.starred.push({...email})
+        }
+      }
+      // 如果取消星标，则从星标文件夹中移除
+      else if (!email.isStarred && folderKey === 'starred') {
+        const starredIndex = allEmails.starred.findIndex(e => e.id === emailId)
+        if (starredIndex !== -1) {
+          allEmails.starred.splice(starredIndex, 1)
+        }
+      }
+    }
+  })
+}
+
+// 获取草稿箱邮件数量
+function getDraftCount(): number {
+  return allEmails.drafts?.length || 0
+}
+
+// 获取已删除邮件数量（30天内）
+function getDeletedCount(): number {
+  return allEmails.deleted?.length || 0
+}
+
+// 定期清理30天前的已删除邮件（可选：在实际应用中应该由后端定时任务处理）
+function cleanupOldDeletedEmails() {
+  allEmails.deleted = filterValidDeletedEmails(allEmails.deleted)
+}
+
+// 每小时检查一次（在实际应用中不需要这么频繁）
+setInterval(cleanupOldDeletedEmails, 3600000)
 </script>

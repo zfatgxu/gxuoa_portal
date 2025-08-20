@@ -30,11 +30,11 @@
             </svg>
           </span>
         </span>
-        <button class="tool-btn">
+        <button class="tool-btn" @click="deleteSelectedEmails" :disabled="selectedEmails.length === 0">
           <span class="tool-btn-icon">
             <el-icon><Delete /></el-icon>
           </span>
-          删除
+          {{ isDeletedFolder ? '彻底删除' : '删除' }}
         </button>
         <button class="tool-btn">
           <span class="tool-btn-icon">
@@ -75,13 +75,19 @@
         <div class="group-label-bar">
           <span class="group-label">{{ group.label }}({{ group.emails.length }}封)</span>
         </div>
-        <div v-for="email in group.emails" :key="email.id" class="email-item">
+        <div v-for="email in group.emails" :key="email.id" class="email-item" :class="{draft: email.isDraft, deleted: email.deletedAt}">
           <input type="checkbox" class="email-checkbox" v-model="selectedEmails" :value="email.id" />
-          <span class="email-icon">📁</span>
+          <span class="email-icon">{{ email.isDraft ? '📝' : email.deletedAt ? '🗑️' : '📁' }}</span>
           <span class="sender">{{ email.sender }}</span>
-          <span class="subject">{{ email.subject }}</span>
+          <span class="subject">
+            {{ email.subject }}
+            <span v-if="email.isDraft" class="draft-label">[草稿]</span>
+            <span v-if="email.deletedAt" class="deleted-info">(删除于: {{ email.deletedAt }})</span>
+          </span>
           <span class="time">{{ email.time }}</span>
-          <span class="star-btn">☆</span>
+          <span class="star-btn" :class="{starred: email.isStarred}" @click="toggleStar(email.id)">
+            {{ email.isStarred ? '★' : '☆' }}
+          </span>
         </div>
       </template>
     </div>
@@ -103,22 +109,40 @@
 </template>
 
 <script setup lang="ts">
-import { ref,  watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { ElIcon } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import topImage from '@/views/mail/image/top.png'
 
-const props = defineProps<{ folderName: string, emails: Array<{ id: number, sender: string, subject: string, time: string, date: string }> }>()
+interface Email {
+  id: number
+  sender: string
+  subject: string
+  time: string
+  date: string
+  deletedAt?: string
+  isDraft?: boolean
+  isStarred?: boolean
+}
+
+const props = defineProps<{ 
+  folderName: string, 
+  emails: Array<Email>,
+  isDeletedFolder: boolean
+}>()
+
+const emit = defineEmits<{
+  deleteEmails: [emailIds: number[]]
+  toggleStar: [emailId: number]
+}>()
 
 // --- 全选逻辑 ---
 const selectedEmails = ref<(string|number)[]>([])
 const allSelected = computed({
   get() {
-    // If there are emails and all of them are selected, the checkbox is checked
     return props.emails.length > 0 && selectedEmails.value.length === props.emails.length
   },
   set(value: boolean) {
-    // When the 'select all' checkbox is checked/unchecked, update the selection list
     if (value) {
       selectedEmails.value = props.emails.map(email => email.id)
     } else {
@@ -132,8 +156,21 @@ watch(() => props.emails, () => {
   selectedEmails.value = []
 })
 
+// 删除选中的邮件
+function deleteSelectedEmails() {
+  if (selectedEmails.value.length > 0) {
+    const emailIds = selectedEmails.value.map(id => Number(id))
+    emit('deleteEmails', emailIds)
+    selectedEmails.value = []
+  }
+}
+
+// 切换星标状态
+function toggleStar(emailId: number) {
+  emit('toggleStar', emailId)
+}
+
 // 日期分组辅助
-import { computed } from 'vue'
 function getDateLabel(dateStr: string) {
   const today = new Date()
   const d = new Date(dateStr)
