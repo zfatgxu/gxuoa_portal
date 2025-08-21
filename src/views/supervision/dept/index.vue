@@ -54,24 +54,40 @@
           <el-tab-pane label="协办任务" name="co" />
           <el-tab-pane label="已完成" name="done" />
         </el-tabs>
-        <!-- 搜索功能暂时注释，后期调用后端接口实现 -->
-        <!--
-        <div class="task-controls">
-          <el-input
-            v-model="taskSearch"
-            placeholder="输入搜索关键词"
-            class="task-search"
-            :prefix-icon="Search"
-            @input="handleFilterChange"
-          />
-          <el-select v-model="taskCategory" placeholder="请选择督办类型" class="task-filter" @change="handleFilterChange">
-            <el-option label="全部类型" value="" />
-            <el-option label="工作督办" value="1" />
-            <el-option label="专项督办" value="2" />
-          </el-select>
-          <el-button :icon="Bell">一键提醒</el-button>
+        <!-- 搜索和筛选功能 -->
+        <div class="flex space-x-4 items-center">
+            <span class="text-gray-700 font-medium">督办标题</span>
+            <el-input
+                v-model="searchQuery"
+                placeholder="请输入督办事项标题"
+                clearable
+                style="width: 280px;"
+                >
+                <template #prefix>
+                    <el-icon><Search /></el-icon>
+                </template>
+            </el-input>
+            <span class="text-gray-700 font-medium">优先级</span>
+            <el-select 
+                v-model="selectedPriority" 
+                placeholder="全部优先级" 
+                clearable 
+                style="width: 150px;"
+            >
+                <el-option
+                    v-for="priority in priorityOptions"
+                    :key="priority.value"
+                    :label="priority.label"
+                    :value="priority.value"
+                />
+            </el-select>
+            <el-button type="primary" @click="handleSearch">
+                查询
+            </el-button>
+            <el-button @click="handleReset">
+                重置
+            </el-button>
         </div>
-        -->
       </div>
 
       <!-- Task List -->
@@ -83,33 +99,44 @@
           shadow="hover"
         >
           <div class="task-header">
-            <h4 class="task-title" @click="viewTaskDetail(task)">{{ getTaskTitle(task) }}</h4>
+            <div class="flex items-center">
+              <span 
+                class="px-2 py-2 rounded text-xs font-medium text-white mr-3"
+                :style="{
+                  fontWeight: 'bold',
+                  backgroundColor: getTypeText(task) === '工作督办' ? 'rgb(27, 173, 255)' : 'rgb(129, 179, 55)'
+                }">
+                {{ getTypeText(task) }}
+              </span>
+              <h4 class="task-title" @click="viewTaskDetail(task)">{{ getTaskTitle(task) }}</h4>
+            </div>
             <div class="task-actions">
               <span
-                :class="[
-                  'px-2 py-1 rounded text-xs font-medium w-20 text-center',
-                  getPriorityText(task) === '高优先级' ? 'bg-red-100 text-red-800' :
-                  getPriorityText(task) === '中优先级' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-green-100 text-green-800'
-                ]"
-                style="font-weight: bold;">
+                class="px-2 py-1 rounded text-xs font-medium w-20 text-center text-white"
+                :style="{
+                  fontWeight: 'bold',
+                  backgroundColor: getPriorityText(task) === '高优先级' ? 'rgb(179, 55, 55)' :
+                                 getPriorityText(task) === '中优先级' ? 'rgb(129, 179, 55)' :
+                                 getPriorityText(task) === '一般优先' ? 'rgb(64, 149, 229)' :
+                                 'rgb(64, 149, 229)'
+                }">
                 {{ getPriorityText(task) }}
               </span>
               <span
-                :class="[
-                  'ml-2 px-2 py-1 rounded text-xs font-medium w-20 text-center',
-                  getStatusText(task) === '已超时' ? 'bg-red-100 text-red-800' :
-                  getStatusText(task) === '已结束' ? 'bg-gray-500 text-white' :
-                  getStatusText(task) === '进行中' ? 'bg-blue-100 text-blue-800' :
-                  'bg-gray-100 text-gray-800'
-                ]"
-                style="font-weight: bold;">
+                class="ml-2 px-2 py-1 rounded text-xs font-medium w-20 text-center text-white"
+                :style="{
+                  fontWeight: 'bold',
+                  backgroundColor: getStatusText(task) === '已超时' ? 'rgb(179, 55, 55)' :
+                                 getStatusText(task) === '已结束' ? 'rgb(154, 154, 154)' :
+                                 getStatusText(task) === '进行中' ? 'rgb(129, 179, 55)' :
+                                 'rgb(154, 154, 154)'
+                }">
                 {{ getStatusText(task) }}
               </span>
             </div>
           </div>
           <div class="task-description" v-if="getTaskContent(task)">
-            <p class="description-text">{{ getTaskContent(task) }}</p>
+            <p class="text-gray-600 mb-7 leading-relaxed">{{ getTaskContent(task) }}</p>
           </div>
 
           <!-- 批示显示区域 - 移到主要内容下方 -->
@@ -122,43 +149,40 @@
           </div>
 
           <div class="task-content">
-            <div class="task-details">
-              <div class="detail-row">
-                <div class="detail-item">
-                  <el-icon><OfficeBuilding /></el-icon>
-                  <span class="detail-label">下发单位：</span>
-                  <span class="detail-value">{{ getCreatorDeptName(task) }}</span>
+            <div class="flex items-center justify-between text-sm">
+              <div class="flex items-center gap-6 flex-wrap">
+                <div class="flex items-center">
+                  <span class="text-gray-500">创建时间：</span>
+                  <span class="text-gray-700">{{ formatCreateTime(task.createTime) }}</span>
                 </div>
-                <div class="detail-item">
-                  <el-icon><User /></el-icon>
-                  <span class="detail-label">协办部门：</span>
-                  <span class="detail-value">{{ getCoDeptNames(task) }}</span>
-                </div>
-                <div class="detail-item">
-                  <el-icon><User /></el-icon>
-                  <span class="detail-label">分管领导：</span>
-                  <span class="detail-value">{{ task.supervisionPageVOData?.leaderNickname || '' }}</span>
-                </div>
-                <div class="detail-item">
-                  <span class="detail-label">截止时间：</span>
+                <div class="flex items-center">
+                  <span class="text-gray-500">截止时间：</span>
                   <span :class="getDeadlineClass(task)">{{ getDeadlineText(task) }}</span>
                 </div>
-              </div>
-              <div class="detail-row">
-                <div class="detail-item">
-                  <span class="detail-label">创建时间：</span>
-                  <span class="detail-value">{{ formatCreateTime(task.createTime) }}</span>
+                <div class="flex items-center">
+                  <span v-if="activeTab !== 'done'" :class="getPreciseTimeRemainingClass(task)">
+                    {{ getPreciseTimeRemaining(task) }}
+                  </span>
                 </div>
-                <div v-if="activeTab !== 'done'" class="detail-item">
-                  <span :class="getPreciseTimeRemainingClass(task)">{{ getPreciseTimeRemaining(task) }}</span>
+                <div class="flex items-center">
+                  <span class="text-gray-500">协办部门：</span>
+                  <span class="text-gray-700">{{ getCoDeptNames(task) }}</span>
+                </div>
+                <div class="flex items-center">
+                  <span class="text-gray-500">牵头部门：</span>
+                  <span class="text-gray-700">{{ getLeadDeptName(task) }}</span>
+                </div>
+                <div class="flex items-center">
+                  <span class="text-gray-500">分管校领导：</span>
+                  <span class="text-gray-700">{{ task.supervisionPageVOData?.leaderNickname || '未设置' }}</span>
                 </div>
               </div>
             </div>
 
-            <div class="task-buttons">
-              <el-button class="w-20" @click="viewTaskDetail(task)">查看详情</el-button>
-              <el-button v-if="activeTab === 'lead' || activeTab === 'co'" class="w-20 ml-2" type="primary" @click="handleAudit(task)">办理</el-button>
-            </div>
+              <div class="flex ml-6">
+                <el-button class="w-20" @click="viewTaskDetail(task)">查看详情</el-button>
+                <el-button v-if="activeTab === 'lead' || activeTab === 'co'" class="w-20 ml-2" type="primary" @click="handleAudit(task)">办理</el-button>
+              </div>
           </div>
         </el-card>
         <div v-if="filteredTaskList.length === 0 && !loading" class="no-tasks-message">
@@ -233,9 +257,9 @@ const { push } = useRouter() // 路由
 
 // 响应式数据
 const activeTab = ref('lead') // 默认激活"牵头任务"
-// 搜索相关变量暂时注释，后期调用后端接口实现
-// const taskSearch = ref('')
-// const taskCategory = ref('')
+// 搜索和筛选相关变量
+const searchQuery = ref('')
+const selectedPriority = ref('')
 const detailDialogVisible = ref(false)
 const selectedTask = ref(null)
 const loading = ref(false)
@@ -257,6 +281,13 @@ const pagination = reactive({
   pageSize: 10,
   total: 0,
 })
+
+// 优先级选项
+const priorityOptions = [
+  { label: '一般优先', value: '一般优先' },
+  { label: '中优先级', value: '中优先级' },
+  { label: '高优先级', value: '高优先级' }
+]
 
 
 
@@ -299,6 +330,16 @@ const loadStatistics = async () => {
   }
 }
 
+// 获取优先级数值（用于API调用）
+const getPriorityValue = (priorityText) => {
+  switch (priorityText) {
+    case '一般优先': return 1
+    case '中优先级': return 2
+    case '高优先级': return 3
+    default: return null
+  }
+}
+
 // 加载任务列表
 const loadTaskList = async () => {
   loading.value = true
@@ -306,7 +347,15 @@ const loadTaskList = async () => {
     const params = {
       pageNo: pagination.pageNo,
       pageSize: pagination.pageSize
-      // 移除搜索参数，改为前端过滤
+    }
+    
+    // 添加搜索条件
+    if (searchQuery.value) {
+      params.orderTitle = searchQuery.value // 使用orderTitle字段进行标题搜索
+    }
+    
+    if (selectedPriority.value) {
+      params.priority = getPriorityValue(selectedPriority.value) // 使用priority字段进行优先级筛选
     }
 
     let result
@@ -388,6 +437,20 @@ const handleTabChange = () => {
   loadTaskList()
 }
 
+// 处理搜索
+const handleSearch = () => {
+  pagination.pageNo = 1 // 重置为第一页
+  loadTaskList()
+}
+
+// 处理重置
+const handleReset = () => {
+  searchQuery.value = ''
+  selectedPriority.value = ''
+  pagination.pageNo = 1 // 重置为第一页
+  loadTaskList()
+}
+
 // 数据处理辅助方法
 const getTaskTitle = (task) => {
   return task.supervisionPageVOData?.orderTitle || task.name || '未知任务'
@@ -406,7 +469,9 @@ const getStartUserName = (task) => {
 }
 
 const getLeadDeptName = (task) => {
-  return task.supervisionPageVOData?.leadDeptName || ''
+  const leadDeptNameMap = task.supervisionPageVOData?.leadDeptNameMap || {}
+  const names = Object.values(leadDeptNameMap)
+  return names.length > 0 ? names.join('、') : (task.supervisionPageVOData?.leadDeptName || '未设置')
 }
 
 const getCreatorDeptName = (task) => {
@@ -416,7 +481,7 @@ const getCreatorDeptName = (task) => {
 const getCoDeptNames = (task) => {
   const coDeptNameMap = task.supervisionPageVOData?.coDeptNameMap || {}
   const names = Object.values(coDeptNameMap)
-  return names.length > 0 ? names.join('、') : '无'
+  return names.length > 0 ? names.join('、') : '未设置'
 }
 
 const getDeadlineText = (task) => {
@@ -828,7 +893,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 20px;
 }
 
 .task-title {
@@ -850,7 +915,7 @@ onMounted(() => {
 }
 
 .task-description {
-  margin-bottom: 12px;
+  margin-bottom: 0;
 }
 
 .description-text {
@@ -1038,5 +1103,10 @@ onMounted(() => {
   font-weight: bold;
   color: #8c4400;
   line-height: 1.4;
+}
+
+/* Element Plus 卡片样式调整 */
+:deep(.el-card__body) {
+  padding: 24px; /* 与督办单列表页面保持一致 */
 }
 </style>

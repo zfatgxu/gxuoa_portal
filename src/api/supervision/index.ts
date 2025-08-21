@@ -27,7 +27,7 @@ export interface OrderExportReqVO {
 // 督办单工作流更新请求（只传递修改的字段）
 export interface OrderWorkflowUpdateReqVO {
   id: number // 督办单ID（必传）
-  leadDept?: number // 牵头单位ID（督办人选择时设置）
+  leadDept?: string // 牵头单位ID（逗号分隔，支持多选）
   coDept?: string // 协办单位ID（逗号分隔）
   deptDetail?: string // 牵头单位承办情况
   fileList?: AttachmentFileInfo[] // 附件列表
@@ -52,7 +52,7 @@ export interface OrderVO {
   reason?: number // 督办依据
   priority: number // 紧急程度
   deadline: string // 完成期限
-  leadDept: number | string // 牵头单位ID，创建时可为空字符串
+  leadDept: string // 牵头单位ID（逗号分隔，支持多选），创建时可为空字符串
   coDept?: string // 协办单位ID（逗号分隔）
   supervisor: string // 督办人ID（支持多选，逗号分隔），创建时必填
   content: string // 督办内容
@@ -81,7 +81,7 @@ export interface OrderRespVO {
   reason: number // 督办依据
   priority: number // 紧急程度
   deadline: number // 完成期限（时间戳）
-  leadDept: number | null // 牵头单位ID
+  leadDept: string | null // 牵头单位ID（逗号分隔，支持多选）
   coDept: string | null // 协办单位
   supervisors: Array<{
     id: number
@@ -332,14 +332,16 @@ export interface LeaderMonthTaskStatisticsVO {
 
 // 督办首页API
 export const SupervisionIndexApi = {
-  // 获取督办首页数据（支持分页和类型过滤）
-  getIndexData(params?: { pageNo?: number; pageSize?: number; type?: number }): Promise<{ list: SupervisionOrderDetailVO[]; total: number }> {
+  // 获取督办首页数据（支持分页、类型过滤和搜索）
+  getIndexData(params?: { pageNo?: number; pageSize?: number; type?: number; orderTitle?: string; priority?: number }): Promise<{ list: SupervisionOrderDetailVO[]; total: number }> {
     return request.get({
       url: '/bpm/supervision/page-with-participants',
       params: {
         pageNo: params?.pageNo || 1,
         pageSize: params?.pageSize || 10,
-        type: params?.type
+        type: params?.type,
+        orderTitle: params?.orderTitle,
+        priority: params?.priority
       }
     }).then(response => {
       // 简化响应格式处理，优先使用最常见的格式

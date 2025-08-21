@@ -1183,6 +1183,13 @@ const submitAddProgress = async () => {
     // 验证表单
     await progressFormRef.value.validate()
 
+    // 数据验证：如果deptDetail为空，则不调用API，避免重复插入空记录
+    if (!progressForm.deptDetail || progressForm.deptDetail.trim() === '') {
+      console.warn('SupervisionDetailDialog: deptDetail为空，跳过API调用，避免重复插入')
+      ElMessage.warning('工作推进情况不能为空')
+      return
+    }
+
     // 处理文件列表，只包含已成功上传的文件
     const fileList = progressForm.fileList
       .filter(file => file.url && file.url !== '') // 只包含有URL的文件
@@ -1201,6 +1208,7 @@ const submitAddProgress = async () => {
       fileList: fileList.length > 0 ? fileList : undefined
     }
 
+    console.log('SupervisionDetailDialog: 准备调用insertSupervisionOrderTaskNew', params)
     await OrderApi.insertSupervisionOrderTaskNew(params)
 
     ElMessage.success('进度更新添加成功')

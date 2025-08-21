@@ -791,7 +791,7 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
         } catch (error) {
           console.error('督办单业务逻辑处理失败:', error)
           // 根据错误类型显示不同的错误消息
-          if (error.message.includes('未选择') || error.message.includes('未填写')) {
+          if (error.message.includes('未选择') || error.message.includes('未填写') || error.message.includes('请填写') || error.message.includes('请通过')) {
             message.error(error.message)
           } else if (error.message.includes('权限')) {
             message.error('您没有执行此操作的权限')
@@ -830,13 +830,20 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
       nextAssigneesActivityNode.value = []
       message.success('审批通过成功')
     } else {
-      // 督办单专用逻辑：审批拒绝时清理待处理的附件
-      if (props.supervisionDetailRef && props.supervisionDetailRef.clearPendingAttachments) {
+      // 督办单专用逻辑：审批拒绝时清理待处理的进度更新数据
+      if (props.supervisionDetailRef) {
         try {
-          props.supervisionDetailRef.clearPendingAttachments()
-
+          // 清理待提交的进度更新数据
+          if (props.supervisionDetailRef.pendingProgressUpdate) {
+            // 通过调用取消方法来清理待提交数据
+            const cancelMethod = props.supervisionDetailRef.cancelAddProgress ||
+                                props.supervisionDetailRef.clearPendingProgressUpdate
+            if (cancelMethod) {
+              cancelMethod()
+            }
+          }
         } catch (error) {
-          console.error('清理待处理附件失败:', error)
+          console.error('清理待处理进度更新失败:', error)
         }
       }
 
@@ -1184,13 +1191,24 @@ const validateLeadDeptRequirements = async (): Promise<boolean> => {
     }
 
     // 检查工作推进情况是否已填写（牵头单位负责人和协办单位负责人都必须填写）
+    // 现在支持两种方式：1. 传统的leadDeptDetail字段 2. 新的待提交进度更新
     const leadDeptDetail = editForm?.leadDeptDetail || orderDetail.leadDeptDetail
+    const hasPendingProgressUpdate = props.supervisionDetailRef.pendingProgressUpdate
 
-    if (!leadDeptDetail || leadDeptDetail.trim() === '') {
+    console.log('牵头单位负责人验证:', {
+      isLeadDeptLeader,
+      isCoDeptLeader,
+      leadDeptDetail,
+      hasPendingProgressUpdate: !!hasPendingProgressUpdate,
+      editFormLeadDeptDetail: editForm?.leadDeptDetail,
+      orderDetailLeadDeptDetail: orderDetail.leadDeptDetail
+    })
+
+    if ((!leadDeptDetail || leadDeptDetail.trim() === '') && !hasPendingProgressUpdate) {
       if (isLeadDeptLeader) {
-        message.error('作为牵头单位负责人，您必须填写工作推进情况后才能通过审批')
+        message.error('作为牵头单位负责人，您必须通过"添加工作推进"功能填写工作推进情况后才能通过审批')
       } else if (isCoDeptLeader) {
-        message.error('作为协办单位负责人，您必须填写工作推进情况后才能通过审批')
+        message.error('作为协办单位负责人，您必须通过"添加工作推进"功能填写工作推进情况后才能通过审批')
       }
       return false
     }
@@ -1300,9 +1318,20 @@ const handleStandardSupervisionUpdate = async () => {
       throw new Error('请先选择牵头部门')
     }
   } else if (['implement_plan', 'upload_plan', 'co_dept'].includes(taskKey)) {
-    // 需要填写工作推进情况的节点
-    if (!editFormData?.leadDeptDetail || editFormData.leadDeptDetail.trim() === '') {
-      throw new Error('请填写工作推进情况')
+    // 需要填写工作推进情况的节点 - 检查是否有待提交的进度更新或已有的工作推进情况
+    const hasPendingProgressUpdate = props.supervisionDetailRef.pendingProgressUpdate
+    const hasExistingProgress = editFormData?.leadDeptDetail && editFormData.leadDeptDetail.trim() !== ''
+
+    console.log('工作推进情况验证:', {
+      taskKey,
+      hasPendingProgressUpdate: !!hasPendingProgressUpdate,
+      hasExistingProgress,
+      leadDeptDetail: editFormData?.leadDeptDetail,
+      pendingProgressUpdate: hasPendingProgressUpdate
+    })
+
+    if (!hasPendingProgressUpdate && !hasExistingProgress) {
+      throw new Error('请通过"添加工作推进"功能填写工作推进情况')
     }
   }
 
