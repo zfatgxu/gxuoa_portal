@@ -783,26 +783,21 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
       const nextAssigneesValid = validateNextAssignees()
       if (!nextAssigneesValid) return
 
-      // 督办单专用逻辑：验证牵头单位和协办单位负责人的必填项
+      // 督办单专用逻辑：统一的数据更新流程
       if (props.supervisionDetailRef) {
-        const leadDeptValidation = await validateLeadDeptRequirements()
-        if (!leadDeptValidation) return
-      }
-
-      // 督办单专用逻辑：先更新督办单数据
-      if (props.supervisionDetailRef && props.supervisionDetailRef.hasEditPermission) {
         try {
-          // 传递工作流自选审批人数据
-          const updateResult = await props.supervisionDetailRef.updateSupervisionOrder(approveReasonForm.nextAssignees)
-          if (!updateResult.success) {
-            message.error('更新督办单失败，无法继续审批')
-            return
-          }
-
-
+          // 统一调用督办单数据更新流程（权限控制已在详情界面处理）
+          await handleStandardSupervisionUpdate()
         } catch (error) {
-          console.error('督办单数据更新失败:', error)
-          message.error('更新督办单失败，无法继续审批')
+          console.error('督办单业务逻辑处理失败:', error)
+          // 根据错误类型显示不同的错误消息
+          if (error.message.includes('未选择') || error.message.includes('未填写')) {
+            message.error(error.message)
+          } else if (error.message.includes('权限')) {
+            message.error('您没有执行此操作的权限')
+          } else {
+            message.error('处理督办单业务逻辑失败，请稍后重试')
+          }
           return
         }
       }
@@ -1089,14 +1084,15 @@ const isShowButton = (btnType: OperationButtonType): boolean => {
     isShow = runningTask.value.buttonsSetting[btnType].enable
   }
 
-  // 督办系统特殊逻辑：根据节点名称控制拒绝按钮显示
-  if (btnType === OperationButtonType.REJECT) {
-    const isSupervisionAdminNode = checkIsSupervisionAdminNode()
-    if (!isSupervisionAdminNode) {
-      // 非督查办管理员节点不显示拒绝按钮
-      isShow = false
-    }
-  }
+  // 督办系统特殊逻辑：拒绝按钮现在在所有节点都显示
+  // 注释掉原来的限制逻辑
+  // if (btnType === OperationButtonType.REJECT) {
+  //   const isSupervisionAdminNode = checkIsSupervisionAdminNode()
+  //   if (!isSupervisionAdminNode) {
+  //     // 非督查办管理员节点不显示拒绝按钮
+  //     isShow = false
+  //   }
+  // }
 
   return isShow
 }
@@ -1108,7 +1104,7 @@ const getButtonDisplayName = (btnType: OperationButtonType) => {
     displayName = runningTask.value.buttonsSetting[btnType].displayName
   }
 
-  // 督办系统特殊逻辑：根据节点名称修改按钮名称
+  // 督办系统特殊逻辑：根据taskDefinitionKey修改按钮名称
   if (btnType === OperationButtonType.APPROVE) {
     const nodeType = getSupervisionNodeType()
     if (nodeType === 'first_approval') {
@@ -1187,14 +1183,14 @@ const validateLeadDeptRequirements = async (): Promise<boolean> => {
       return true
     }
 
-    // 检查承办状况是否已填写（牵头单位负责人和协办单位负责人都必须填写）
+    // 检查工作推进情况是否已填写（牵头单位负责人和协办单位负责人都必须填写）
     const leadDeptDetail = editForm?.leadDeptDetail || orderDetail.leadDeptDetail
 
     if (!leadDeptDetail || leadDeptDetail.trim() === '') {
       if (isLeadDeptLeader) {
-        message.error('作为牵头单位负责人，您必须填写承办状况后才能通过审批')
+        message.error('作为牵头单位负责人，您必须填写工作推进情况后才能通过审批')
       } else if (isCoDeptLeader) {
-        message.error('作为协办单位负责人，您必须填写承办状况后才能通过审批')
+        message.error('作为协办单位负责人，您必须填写工作推进情况后才能通过审批')
       }
       return false
     }
@@ -1240,10 +1236,11 @@ const checkIsSupervisionAdminNode = (): boolean => {
     return false
   }
 
-  const taskName = runningTask.value.name || ''
+  const taskKey = runningTask.value.taskDefinitionKey || ''
 
-  // 直接根据确定的节点名称判断
-  return taskName === '督查办管理员审核' || taskName === '督查办管理员复核'
+  // 根据 taskDefinitionKey 判断是否为督查办主任或者副主任节点
+  return taskKey === 'de_director_check' || taskKey === 'director_check' ||
+         taskKey === 'de_director_recheck' || taskKey === 'director_recheck'
 }
 
 /** 获取督办节点类型 */
@@ -1252,20 +1249,77 @@ const getSupervisionNodeType = (): string => {
     return 'other'
   }
 
-  const taskName = runningTask.value.name || ''
+  const taskKey = runningTask.value.taskDefinitionKey || ''
 
-  // 直接根据确定的节点名称判断
-  if (taskName === '督查办管理员审核') {
+  // 根据 taskDefinitionKey 判断节点类型
+  if (taskKey === 'de_director_check' || taskKey === 'director_check') {
     return 'first_approval'
   }
 
-  if (taskName === '督查办管理员复核') {
+  if (taskKey === 'de_director_recheck' || taskKey === 'director_recheck') {
     return 'reapproval'
   }
 
   // 其他节点（牵头单位、协办部门等）
   return 'other'
 }
+
+
+
+/** 标准的督办单数据更新流程 */
+const handleStandardSupervisionUpdate = async () => {
+  // 验证督办详情组件状态
+  if (!props.supervisionDetailRef) {
+    throw new Error('督办详情组件未加载')
+  }
+
+  // 验证牵头单位和协办单位负责人的必填项
+  const leadDeptValidation = await validateLeadDeptRequirements()
+  if (!leadDeptValidation) return
+
+  // 获取当前任务节点信息
+  const taskKey = runningTask.value?.taskDefinitionKey || ''
+  const orderDetail = props.supervisionDetailRef.getOrderDetailData()
+  const editFormData = props.supervisionDetailRef.getEditFormData()
+
+  if (!orderDetail?.id) {
+    throw new Error('督办单ID不存在')
+  }
+
+  // 根据节点类型进行特定验证
+  if (taskKey === 'select_leaddept') {
+    // 督办人选择牵头部门节点 - 检查编辑表单中的牵头单位或原始数据中的牵头单位
+    const leadDeptId = editFormData?.leadDept || orderDetail.leadDept
+    console.log('牵头部门验证:', {
+      taskKey,
+      editFormLeadDept: editFormData?.leadDept,
+      orderDetailLeadDept: orderDetail.leadDept,
+      finalLeadDeptId: leadDeptId
+    })
+    if (!leadDeptId) {
+      throw new Error('请先选择牵头部门')
+    }
+  } else if (['implement_plan', 'upload_plan', 'co_dept'].includes(taskKey)) {
+    // 需要填写工作推进情况的节点
+    if (!editFormData?.leadDeptDetail || editFormData.leadDeptDetail.trim() === '') {
+      throw new Error('请填写工作推进情况')
+    }
+  }
+
+  // 更新督办单数据（如果有任何编辑权限）
+  const hasAnyEditPermission = props.supervisionDetailRef.canEditLeadDept ||
+                               props.supervisionDetailRef.canEditCollaborateDepts ||
+                               props.supervisionDetailRef.canEditLeadDeptDetail
+
+  if (hasAnyEditPermission) {
+    const updateResult = await props.supervisionDetailRef.updateSupervisionOrder(approveReasonForm.nextAssignees)
+    if (!updateResult.success) {
+      throw new Error('更新督办单数据失败')
+    }
+  }
+}
+
+
 
 defineExpose({ loadTodoTask })
 </script>

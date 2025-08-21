@@ -16,7 +16,7 @@
           <el-table-column prop="name" label="姓名"/>
           <el-table-column prop="department" label="部门" />
           <el-table-column prop="title" label="职称" :formatter="(cellValue) => getDictLabel(DICT_TYPE.PROFESSIONAL_TITLE, cellValue.professionalTitle)"/>
-          <el-table-column prop="position" label="职务" :formatter="(cellValue) => getDictLabel(DICT_TYPE.LEVEL, cellValue.level)"/>
+          <el-table-column prop="position" label="职级" :formatter="(cellValue) => getDictLabel(DICT_TYPE.LEVEL, cellValue.level)"/>
         </el-table>
       </div>
 
@@ -864,6 +864,15 @@ watch(dateRange, (newVal) => {
       meeting.personalTotalDays = Math.ceil((new Date(newVal[1]).getTime() - new Date(newVal[0]).getTime()) / (1000 * 60 * 60 * 24))+1;
     });
   }
+}, { deep: true });
+
+// 监听因私请假的开始时间和结束时间变化
+watch(personalList, (newVal) => {
+  newVal.forEach(personal => {
+    if (personal.personalStartDate && personal.personalEndDate) {
+      personal.personalTotalDays = Math.ceil((new Date(personal.personalEndDate).getTime() - new Date(personal.personalStartDate).getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    }
+  });
 }, { deep: true });
 
 const selectedReasons = ref<number[]>([]);

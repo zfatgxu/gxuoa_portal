@@ -6,6 +6,8 @@
         <h1 class="form-title">{{ getPageTitle() }}</h1>
       </div>
 
+
+
       <!-- 督办单详情表单 -->
       <div class="order-form-container" v-loading="loading" element-loading-text="正在加载数据...">
         <!-- 表单主体 -->
@@ -75,11 +77,11 @@
             <div class="form-row">
               <div class="form-label">分管校领导</div>
               <div class="form-content half-width">
-                <el-input :value="orderDetail.leader || '(自动生成)'" readonly />
+                <el-input :value="getLeadLeaderDisplay()" readonly />
               </div>
               <div class="form-label">其他校领导</div>
               <div class="form-content half-width">
-                <el-input :value="getOtherLeadersDisplay(orderDetail.otherLeaders)" readonly />
+                <el-input :value="getOtherLeadersDisplay()" readonly />
               </div>
             </div>
 
@@ -87,7 +89,28 @@
             <div class="form-row">
               <div class="form-label">牵头单位</div>
               <div class="form-content half-width">
-                <el-input :value="orderDetail.leadDeptName || getDeptName(orderDetail.leadDept) || '待督办人选择'" readonly />
+                <!-- 督办人可编辑 -->
+                <el-select
+                  v-if="canEditLeadDept"
+                  v-model="editForm.leadDept"
+                  filterable
+                  placeholder="请选择牵头单位"
+                  style="width: 100%"
+                  @change="handleLeadDeptChange"
+                >
+                  <el-option
+                    v-for="dept in deptList"
+                    :key="dept.id"
+                    :label="dept.name"
+                    :value="dept.id"
+                  />
+                </el-select>
+                <!-- 只读模式 -->
+                <el-input
+                  v-else
+                  :value="orderDetail.leadDeptName || getDeptName(orderDetail.leadDept) || '待督办人选择'"
+                  readonly
+                />
               </div>
               <div class="form-label">协办单位</div>
               <div class="form-content half-width">
@@ -109,17 +132,23 @@
                   />
                 </el-select>
                 <!-- 只读模式 -->
-                <div v-else class="readonly-tags">
-                  <el-tag
-                    v-for="dept in getCollaborateDepts(orderDetail.coDept)"
-                    :key="dept"
-                    type="success"
-                    class="dept-tag"
-                  >
-                    {{ dept }}
-                  </el-tag>
-                  <span v-if="!orderDetail.coDept" class="text-gray-500">待牵头单位选择</span>
-                </div>
+                <template v-else>
+                  <el-input
+                    v-if="!orderDetail.coDept"
+                    value="待牵头单位选择"
+                    readonly
+                  />
+                  <div v-else class="readonly-tags">
+                    <el-tag
+                      v-for="dept in getCollaborateDepts(orderDetail.coDept)"
+                      :key="dept"
+                      type="success"
+                      class="dept-tag"
+                    >
+                      {{ dept }}
+                    </el-tag>
+                  </div>
+                </template>
               </div>
             </div>
 
@@ -127,26 +156,15 @@
             <div class="form-row">
               <div class="form-label">督办人</div>
               <div class="form-content half-width">
-                <el-input :value="orderDetail.supervisorName || '未分配'" readonly />
+                <el-input :value="getSupervisorNames()" readonly />
               </div>
               <div class="form-label">联系电话</div>
               <div class="form-content half-width">
-                <el-input :value="orderDetail.officePhone || getUserMobile(orderDetail.supervisor) || '未设置'" readonly />
+                <el-input :value="getSupervisorPhones()" readonly />
               </div>
             </div>
 
-            <!-- 承办事项 -->
-            <div class="form-row">
-              <div class="form-label">承办事项</div>
-              <div class="form-content full-width">
-                <el-input
-                  type="textarea"
-                  :value="orderDetail.undertakeMatter"
-                  readonly
-                  :rows="4"
-                />
-              </div>
-            </div>
+
 
             <!-- 工作推进情况 -->
             <div class="form-row">
@@ -158,12 +176,12 @@
                   v-model="editForm.leadDeptDetail"
                   type="textarea"
                   :rows="4"
-                  placeholder="请输入承办状况"
+                  placeholder="请输入工作推进情况"
                 />
                 <!-- 只读模式 -->
                 <el-input
                   v-else
-                  :value="orderDetail.leadDeptDetail || '待各单位输入'"
+                  :value="orderDetail.deptDetail || '待各单位输入'"
                   type="textarea"
                   :rows="4"
                   readonly
@@ -286,8 +304,18 @@ import { ElMessage, ElMessageBox, type UploadUserFile } from 'element-plus'
 import { WarningFilled } from '@element-plus/icons-vue'
 import { UploadFile } from '@/components/UploadFile'
 import * as FileApi from '@/api/infra/file'
+import * as ProcessInstanceApi from '@/api/bpm/processInstance'
 
 defineOptions({ name: 'SupervisionOrderDetail' })
+
+// 定义props，支持从父组件传递参数
+const props = defineProps<{
+  id?: string | number  // 可以是督办单ID或流程实例ID
+  activityNodes?: any[]
+  applyUser?: string
+  applyTime?: string
+  status?: number
+}>()
 
 const route = useRoute()
 const loading = ref(false)
@@ -382,8 +410,6 @@ const customUpload = async (options) => {
     ElMessage.error('文件上传失败，请重试')
   }
 }
-
-
 
 // 处理自定义上传失败
 const handleCustomUploadError = (error: any, file: any) => {
@@ -483,35 +509,26 @@ const orderDetail = ref<OrderRespVO>({
   priority: 1,
   deadline: 0,
   leadDept: null,
-  leadDeptName: '',
-  coDept: null,
-  supervisor: 0,
-  supervisorName: '',
-  officePhone: '',
-  leader: '',
+  coDept: '',
+  supervisors: [], // 督办人数组
+  leadLeaders: [], // 分管领导和其他校领导数组
   content: '',
-  undertakeMatter: '',
-  reportFrequency: '', // 汇报频次
-  isProjectSupervision: false, // 是否立项督办
-  isSupervisionClosed: false, // 是否结束督办
-  leader: 0, // 分管校领导ID
-  otherLeaders: '', // 其他校领导ID（逗号分隔）
+  deptDetail: null, // 工作推进情况
+  reportFrequency: undefined, // 汇报频次
+  isProjectSupervision: null, // 是否立项督办
+  isSupervisionClosed: null, // 是否结束督办
   summary: '',
   processInstanceId: '',
-  createTime: 0,
-  // 已废弃字段保留兼容性
-  significance: 1,
-  supervisionApprove: null,
-  leadDeptDetail: null,
-  supervisionReapprove: null
+  createTime: 0
 })
 
 // 编辑表单数据
 const editForm = ref({
+  leadDept: null as number | null, // 牵头单位ID
   coDept: '', // 协办单位ID字符串（逗号分隔）
   collaborateDepts: [] as string[], // 协办单位名称数组（用于显示）
   collaborateDeptIds: [] as number[], // 协办单位ID数组（用于提交）
-  leadDeptDetail: '' // 牵头单位承办情况
+  leadDeptDetail: '' // 牵头单位工作推进情况
 })
 
 
@@ -536,24 +553,12 @@ const getUserList = async () => {
 
 // 根据部门ID获取部门名称
 const getDeptName = (deptId: number | null) => {
-  if (!deptId) return '未分配'
+  if (!deptId || deptId === 0) return '待督办人选择'
   const dept = deptList.value.find(item => item.id === deptId)
-  return dept?.name || '未知部门'
+  return dept?.name || `未知部门(${deptId})`
 }
 
-// 根据用户ID获取用户姓名
-const getUserName = (userId: number | null) => {
-  if (!userId) return '未分配'
-  const user = userList.value.find(item => item.id === userId)
-  return user?.nickname || user?.username || '未知用户'
-}
 
-// 根据用户ID获取用户手机号
-const getUserMobile = (userId: number | null) => {
-  if (!userId) return ''
-  const user = userList.value.find(item => item.id === userId)
-  return user?.mobile || ''
-}
 
 // 根据流程实例ID获取督办单详情
 const getOrderDetail = async (processInstanceId: string) => {
@@ -561,35 +566,31 @@ const getOrderDetail = async (processInstanceId: string) => {
     loading.value = true
     const data = await OrderApi.getOrderByProcessInstanceId(processInstanceId)
 
-    // 处理字段映射，确保前端显示正确
-    const processedData = {
+    if (!data) {
+      throw new Error('API返回的数据为空')
+    }
+
+    if (!data.id) {
+      throw new Error('督办单数据无效：缺少ID字段')
+    }
+
+    // 直接使用新的API数据结构
+    orderDetail.value = {
       ...data,
-      // 督办人姓名映射：如果没有supervisorName，根据supervisor ID获取
-      supervisorName: data.supervisorName || getUserName(data.supervisor),
-      // 办公电话映射：优先使用后端返回的办公电话，其次使用督办人手机号
-      officePhone:  data.supervisorPhone || getUserMobile(data.supervisor) || '',
-      // 分管领导映射：leadDeptLeader -> leader
-      leader: data.leader || data.leadDeptLeader || ''
+      // 确保数组字段正确初始化
+      supervisors: data.supervisors || [],
+      leadLeaders: data.leadLeaders || [],
+      // 确保其他字段正确处理null值
+      coDept: data.coDept || '',
+      leadDept: data.leadDept || null,
+      deptDetail: data.deptDetail || null
     }
-
-    // 如果没有办公电话，尝试通过新接口获取督办人手机号
-    if (!processedData.officePhone && data.supervisor) {
-      try {
-        const phoneData = await OrderApi.getSupervisorPhone(data.supervisor)
-        if (phoneData && typeof phoneData === 'string' && phoneData.trim() !== '') {
-          processedData.officePhone = phoneData.trim()
-        }
-      } catch (error) {
-        console.error('获取督办人手机号失败:', error)
-      }
-    }
-
-    orderDetail.value = processedData
 
     // 初始化编辑表单数据
+    editForm.value.leadDept = data.leadDept || null
     editForm.value.coDept = data.coDept || ''
     editForm.value.collaborateDepts = getCollaborateDepts(data.coDept)
-    editForm.value.leadDeptDetail = data.leadDeptDetail || ''
+    editForm.value.leadDeptDetail = data.deptDetail || ''
 
     // 更新附件列表
     if (data.attachments && data.attachments.length > 0) {
@@ -601,6 +602,8 @@ const getOrderDetail = async (processInstanceId: string) => {
 
   } catch (error) {
     console.error('根据流程实例ID获取督办单详情失败:', error)
+    // 显示错误信息给用户
+    ElMessage.error('获取督办单详情失败，请稍后重试')
   } finally {
     loading.value = false
   }
@@ -658,33 +661,48 @@ const getOrderNumberLabel = () => {
 const getReportFrequencyName = (frequency: number | undefined) => {
   if (!frequency) return '未设置'
 
-  const frequencyMap = {
-    1: '每日汇报',
-    2: '每周汇报',
-    3: '每月汇报',
-    4: '阶段性汇报'
+  // 从字典中获取汇报频次选项
+  const frequencyOptions = getIntDictOptions(DICT_TYPE.REPORT_FREQUENCY)
+  const option = frequencyOptions.find(item => item.value === frequency)
+
+  if (option) {
+    // 如果字典中的label已经包含"汇报"，直接返回
+    if (option.label.includes('汇报')) {
+      return option.label
+    }
+    // 如果不包含"汇报"，则拼接
+    return `汇报${option.label}`
   }
 
-  return frequencyMap[frequency] || '未知频次'
+  return '未知频次'
+}
+
+// 获取分管校领导显示文本
+const getLeadLeaderDisplay = () => {
+  if (!orderDetail.value.leadLeaders || !Array.isArray(orderDetail.value.leadLeaders)) {
+    return '待牵头单位确定后自动生成'
+  }
+
+  const leadLeaders = orderDetail.value.leadLeaders.filter(leader => leader.type === '分管领导')
+  if (leadLeaders.length === 0) {
+    return '待牵头单位确定后自动生成'
+  }
+
+  return leadLeaders.map(leader => leader.name).join('、')
 }
 
 // 获取其他校领导显示文本
-const getOtherLeadersDisplay = (otherLeaders: string | undefined) => {
-  if (!otherLeaders) return '无'
+const getOtherLeadersDisplay = () => {
+  if (!orderDetail.value.leadLeaders || !Array.isArray(orderDetail.value.leadLeaders)) {
+    return '无'
+  }
 
-  // 如果是逗号分隔的ID，需要转换为姓名
-  const leaderIds = otherLeaders.split(',').filter(id => id.trim())
-  if (leaderIds.length === 0) return '无'
+  const otherLeaders = orderDetail.value.leadLeaders.filter(leader => leader.type === '其他分管领导')
+  if (otherLeaders.length === 0) {
+    return '无'
+  }
 
-  const leaderNames = leaderIds.map(id => {
-    const leaderId = parseInt(id.trim())
-    if (isNaN(leaderId)) return id.trim()
-
-    const user = userList.value.find(u => u.id === leaderId)
-    return user?.nickname || user?.username || `未知用户(${leaderId})`
-  })
-
-  return leaderNames.join('、')
+  return otherLeaders.map(leader => leader.name).join('、')
 }
 
 // 获取督办分类名称
@@ -717,7 +735,7 @@ const getSignificanceName = (significance: number) => {
 
 // 获取协办单位列表（根据ID获取部门名称）
 const getCollaborateDepts = (coDept: string | null) => {
-  if (!coDept) return []
+  if (!coDept || coDept.trim() === '') return []
 
   // 将逗号分隔的ID字符串转换为部门名称数组
   const deptIds = coDept.split(',').filter(id => id.trim())
@@ -730,122 +748,180 @@ const getCollaborateDepts = (coDept: string | null) => {
   })
 }
 
-// 获取督察办审批文本
-const getSupervisionApprovalText = (approve: number | null) => {
-  if (approve === null || approve === undefined) return '待审批'
-  if (approve === 1) return '同意'
-  if (approve === 2) return '不同意'
-  return '未知状态'
+// 获取督办人列表
+const getSupervisorNames = () => {
+  if (!orderDetail.value.supervisors || !Array.isArray(orderDetail.value.supervisors)) {
+    return '未分配'
+  }
+
+  if (orderDetail.value.supervisors.length === 0) {
+    return '未分配'
+  }
+
+  const supervisorNames = orderDetail.value.supervisors.map(s => s.name).filter(name => name)
+  return supervisorNames.length > 0 ? supervisorNames.join('、') : '未分配'
 }
 
-// 获取督察办复核文本
-const getSupervisionReapprovalText = (reapprove: number | null) => {
-  if (reapprove === null || reapprove === undefined) return '待复核'
-  if (reapprove === 1) return '同意结办'
-  if (reapprove === 2) return '不同意结办'
-  return '未知状态'
+// 获取督办人联系电话
+const getSupervisorPhones = () => {
+  if (!orderDetail.value.supervisors || !Array.isArray(orderDetail.value.supervisors)) {
+    return '未设置'
+  }
+
+  if (orderDetail.value.supervisors.length === 0) {
+    return '未设置'
+  }
+
+  // 如果只有一个督办人，显示其电话
+  if (orderDetail.value.supervisors.length === 1) {
+    return orderDetail.value.supervisors[0].phone || '未设置'
+  }
+
+  // 如果有多个督办人，显示所有电话（用、分隔）
+  const phones = orderDetail.value.supervisors
+    .map(s => s.phone)
+    .filter(phone => phone)
+
+  return phones.length > 0 ? phones.join('、') : '未设置'
 }
 
-// 部门详情缓存
-const deptDetailsCache = ref<Map<number, any>>(new Map())
+
 
 // 权限状态
-const canEditCollaborateDepts = ref(false)
-const canEditLeadDeptDetail = ref(false)
+const canEditLeadDept = ref(false)           // 牵头单位编辑权限
+const canEditCollaborateDepts = ref(false)   // 协办单位编辑权限
+const canEditLeadDeptDetail = ref(false)     // 工作推进情况编辑权限
 
-// 获取部门详情（带缓存）
-const getDeptDetail = async (deptId: number) => {
-  if (deptDetailsCache.value.has(deptId)) {
-    return deptDetailsCache.value.get(deptId)
-  }
+// 完整的活动节点数据（从审批详情API获取）
+const fullActivityNodes = ref<any[]>([])
 
+// 获取完整的审批详情（包含完整的活动节点信息）
+const getFullApprovalDetail = async (processInstanceId: string) => {
   try {
-    const deptDetail = await getDept(deptId)
-    deptDetailsCache.value.set(deptId, deptDetail)
-    return deptDetail
+    const data = await ProcessInstanceApi.getApprovalDetail({
+      processInstanceId: processInstanceId
+    })
+
+    if (data && data.activityNodes) {
+      fullActivityNodes.value = data.activityNodes
+    }
   } catch (error) {
-    console.error(`获取部门详情失败 (ID: ${deptId}):`, error)
-    return null
+    console.error('获取完整审批详情失败:', error)
   }
 }
 
-// 检查协办单位编辑权限
-const checkCollaborateDeptsPermission = async () => {
-  // 牵头单位负责人可以编辑协办单位
-  const currentUser = userStore.getUser
-  const currentUserId = currentUser?.id
-  const leadDeptId = orderDetail.value.leadDept
-
-  if (!currentUserId || !leadDeptId) {
-    canEditCollaborateDepts.value = false
-    return
+// 获取当前工作流节点（可能有多个并行节点）
+const getCurrentWorkflowNodes = () => {
+  if (fullActivityNodes.value && fullActivityNodes.value.length > 0) {
+    const runningNodes = fullActivityNodes.value.filter(node => node.status === 1)
+    return runningNodes.map(node => node.id || node.taskDefinitionKey || node.activityId).filter(id => id)
   }
-
-  // 通过接口获取牵头单位部门详情
-  const leadDeptDetail = await getDeptDetail(leadDeptId)
-  if (!leadDeptDetail) {
-    canEditCollaborateDepts.value = false
-    return
-  }
-
-  const hasPermission = leadDeptDetail.leaderUserId === currentUserId
-
-  canEditCollaborateDepts.value = hasPermission
+  return []
 }
 
-// 检查承办状况编辑权限
-const checkLeadDeptDetailPermission = async () => {
-  // 牵头单位负责人和协办单位负责人都可以编辑承办情况
-  const currentUser = userStore.getUser
-  const currentUserId = currentUser?.id
-  const leadDeptId = orderDetail.value.leadDept
+// 节点权限配置映射表
+const NODE_PERMISSIONS = {
+  'select_leaddept': {
+    leadDept: true,           //  督办人可编辑牵头单位
+    collaborateDepts: false,  // 
+    leadDeptDetail: false,    // 
+    attachments: true         //如有编辑权限可上传附件
+  },
+  'implement_plan': {
+    leadDept: false,          // 
+    collaborateDepts: true,   // 牵头单位负责人可编辑协办单位
+    leadDeptDetail: true,     //牵头/协办负责人可编辑工作推进情况
+    attachments: true         // 如有编辑权限可上传附件
+  },
+  'upload_plan': {
+    leadDept: false,          // 
+    collaborateDepts: false,  // 
+    leadDeptDetail: true,     //  牵头/协办负责人可编辑工作推进情况
+    attachments: true         //  如有编辑权限可上传附件
+  },
+  'co_dept': {
+    leadDept: false,
+    collaborateDepts: false,
+    leadDeptDetail: true,     // 协办负责人可编辑工作推进情况
+    attachments: true
+  }
+}
 
-  if (!currentUserId) {
-    canEditLeadDeptDetail.value = false
-    return
+// 检查当前用户的所有编辑权限
+const checkCurrentUserPermissions = () => {
+  const currentUserId = userStore.getUser?.id
+  if (!currentUserId || !fullActivityNodes.value.length) {
+    return { leadDept: false, collaborateDepts: false, leadDeptDetail: false, attachments: false }
   }
 
-  // 检查是否是牵头单位负责人
-  if (leadDeptId) {
-    const leadDeptDetail = await getDeptDetail(leadDeptId)
-    if (leadDeptDetail && leadDeptDetail.leaderUserId === currentUserId) {
-      canEditLeadDeptDetail.value = true
-      return
+  const permissions = {
+    leadDept: false,
+    collaborateDepts: false,
+    leadDeptDetail: false,
+    attachments: false
+  }
+
+  // 遍历所有运行中的活动节点
+  fullActivityNodes.value.forEach(node => {
+    if (node.status !== 1) return // 只处理运行中的节点
+
+    const nodeId = node.id || node.taskDefinitionKey || node.activityId
+    let hasAccess = false
+
+    // 检查节点的tasks中是否有当前用户
+    if (node.tasks && node.tasks.length > 0) {
+      hasAccess = node.tasks.some(task =>
+        (task.assigneeUser && task.assigneeUser.id === currentUserId) ||
+        (task.ownerUser && task.ownerUser.id === currentUserId)
+      )
     }
-  }
 
-  // 检查是否是协办单位负责人
-  if (orderDetail.value.coDept) {
-    const coDeptIds = orderDetail.value.coDept.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))
-
-    for (const coDeptId of coDeptIds) {
-      const coDeptDetail = await getDeptDetail(coDeptId)
-      if (coDeptDetail && coDeptDetail.leaderUserId === currentUserId) {
-        canEditLeadDeptDetail.value = true
-        return
-      }
+    // 检查candidateUsers
+    if (!hasAccess && node.candidateUsers && node.candidateUsers.length > 0) {
+      hasAccess = node.candidateUsers.some(user => user.id === currentUserId)
     }
-  }
-  canEditLeadDeptDetail.value = false
+
+    if (!hasAccess) return
+
+    // 根据节点ID获取权限配置
+    const nodePermissions = NODE_PERMISSIONS[nodeId]
+    if (nodePermissions) {
+      Object.keys(nodePermissions).forEach(key => {
+        if (nodePermissions[key]) {
+          permissions[key] = true
+        }
+      })
+    }
+  })
+
+  return permissions
+}
+
+// 统一权限检查（替换原有的三个权限检查方法）
+const checkAllPermissions = async () => {
+  const permissions = checkCurrentUserPermissions()
+
+  // 更新权限状态
+  canEditLeadDept.value = permissions.leadDept
+  canEditCollaborateDepts.value = permissions.collaborateDepts
+  canEditLeadDeptDetail.value = permissions.leadDeptDetail
+
+  // 附件权限基于是否有任何编辑权限
+  const hasAnyEditPermission = permissions.leadDept ||
+                               permissions.collaborateDepts ||
+                               permissions.leadDeptDetail
+  // 这里可以根据实际需求调整附件权限逻辑
 }
 
 const hasEditPermission = computed(() => {
-  return canEditCollaborateDepts.value || canEditLeadDeptDetail.value
+  return canEditLeadDept.value || canEditCollaborateDepts.value || canEditLeadDeptDetail.value
 })
-
-// 权限检查函数
-const checkAllPermissions = async () => {
-  await Promise.all([
-    checkCollaborateDeptsPermission(),
-    checkLeadDeptDetailPermission()
-  ])
-}
 
 // 监听督办单数据变化，重新检查权限
 watch(
-  () => [orderDetail.value.leadDept, orderDetail.value.coDept],
+  () => [orderDetail.value.supervisors, orderDetail.value.leadDept, orderDetail.value.coDept],
   async () => {
-    if (orderDetail.value.id && orderDetail.value.leadDept) {
+    if (orderDetail.value.id) {
       await checkAllPermissions()
     }
   },
@@ -896,21 +972,17 @@ const getSupervisionWorkflowUpdateData = async (startLeaderSelectAssignees?: Rec
     const { coDeptString, coDeptArray } = ensureDataConsistency(coDeptSource)
     updateData.coDept = coDeptString
 
-    // 设置工作流自选审批人 - 传递协办部门的负责人ID而不是部门ID
-    if (coDeptArray.length > 0) {
-      // 使用await等待异步获取部门负责人ID
-      const leaderIds = await getDeptLeaderIds(coDeptArray)
-      if (leaderIds.length > 0) {
-        updateData.startLeaderSelectAssignees = {
-          "Third": [...leaderIds] // 使用部门负责人ID数组
-        }
-      } else {
-        console.warn('协办部门没有找到对应的负责人，跳过设置 startLeaderSelectAssignees')
-      }
-    }
+    // 工作流审批人配置由后端自动设置，前端不需要处理
   }
 
-  // 处理承办情况
+  // 处理牵头单位（督办人可编辑）
+  if (canEditLeadDept.value && editForm.value.leadDept) {
+    updateData.leadDept = Number(editForm.value.leadDept)
+  } else if (orderDetail.value.leadDept) {
+    updateData.leadDept = Number(orderDetail.value.leadDept)
+  }
+
+  // 处理工作推进情况
   if (canEditLeadDeptDetail.value && editForm.value.leadDeptDetail) {
     updateData.deptDetail = editForm.value.leadDeptDetail
   }
@@ -952,9 +1024,9 @@ const updateSupervisionOrder = async (startLeaderSelectAssignees?: Record<string
     const updateData = await getSupervisionWorkflowUpdateData(startLeaderSelectAssignees)
 
     // 只有当有实际修改的字段时才调用接口
-    const hasChanges = (updateData.coDept !== undefined) ||
+    const hasChanges = (updateData.leadDept !== undefined) ||
+                      (updateData.coDept !== undefined) ||
                       (updateData.deptDetail !== undefined) ||
-                      (updateData.startLeaderSelectAssignees !== undefined) ||
                       (updateData.fileLIst !== undefined) ||
                       (pendingAttachments.value.length > 0) // 有待处理附件时也需要更新
 
@@ -962,11 +1034,14 @@ const updateSupervisionOrder = async (startLeaderSelectAssignees?: Record<string
       await OrderApi.updateOrderInWorkflow(updateData)
 
       // 更新本地数据
+      if (updateData.leadDept !== undefined) {
+        orderDetail.value.leadDept = updateData.leadDept
+      }
       if (canEditCollaborateDepts.value && updateData.coDept !== undefined) {
         orderDetail.value.coDept = editForm.value.coDept
       }
       if (canEditLeadDeptDetail.value && updateData.deptDetail !== undefined) {
-        orderDetail.value.leadDeptDetail = editForm.value.leadDeptDetail
+        orderDetail.value.deptDetail = editForm.value.leadDeptDetail
       }
     }
 
@@ -993,6 +1068,15 @@ const updateSupervisionOrder = async (startLeaderSelectAssignees?: Record<string
   }
 }
 
+// 处理牵头单位变化
+const handleLeadDeptChange = (deptId: number) => {
+  editForm.value.leadDept = deptId
+  // 牵头单位变化时，清空协办单位选择（因为协办单位的选择权限可能会变化）
+  editForm.value.collaborateDepts = []
+  editForm.value.collaborateDeptIds = []
+  editForm.value.coDept = ''
+}
+
 // 处理协办单位变化
 const handleCollaborateDeptsChange = (deptNames: string[]) => {
   editForm.value.collaborateDeptIds = []
@@ -1005,28 +1089,7 @@ const handleCollaborateDeptsChange = (deptNames: string[]) => {
   editForm.value.coDept = editForm.value.collaborateDeptIds.join(',')
 }
 
-// 获取部门负责人ID的辅助函数
-const getDeptLeaderIds = async (deptIds: number[]): Promise<number[]> => {
-  const leaderIds: number[] = []
 
-  // 使用Promise.all并行获取所有部门详细信息
-  await Promise.all(deptIds.map(async (deptId) => {
-    try {
-      // 使用getDept API获取完整的部门信息
-      const deptInfo = await getDept(deptId)
-
-      if (deptInfo && deptInfo.leaderUserId) {
-        leaderIds.push(deptInfo.leaderUserId)
-      } else {
-        console.warn(`部门 ID:${deptId} 没有设置负责人`)
-      }
-    } catch (error) {
-      console.error(`获取部门ID:${deptId}的详细信息失败:`, error)
-    }
-  }))
-
-  return leaderIds
-}
 
 // 确保协办单位数据格式一致性的辅助函数
 const ensureDataConsistency = (coDeptString: string): { coDeptString: string, coDeptArray: number[] } => {
@@ -1103,12 +1166,16 @@ onMounted(async () => {
     getUserList()
   ])
 
-  // 获取流程实例ID，支持多种传参方式
-  const processInstanceId = route.query.processInstanceId as string ||
+  // 获取流程实例ID，优先使用props传递的参数，然后使用路由参数
+  const processInstanceId = props.id?.toString() ||
+                           route.query.processInstanceId as string ||
                            route.params.id as string ||
                            route.query.id as string
 
   if (processInstanceId) {
+    // 获取完整的审批详情（包含完整的活动节点信息）
+    await getFullApprovalDetail(processInstanceId)
+
     // 直接使用流程实例ID获取督办单详情（包含附件信息）
     await getOrderDetail(processInstanceId)
 
@@ -1119,46 +1186,7 @@ onMounted(async () => {
   }
 })
 
-// 检查当前用户是否为牵头单位负责人
-const checkIsLeadDeptLeader = async (): Promise<boolean> => {
-  const currentUser = userStore.getUser
-  const currentUserId = currentUser?.id
-  const leadDeptId = orderDetail.value.leadDept
 
-  if (!currentUserId || !leadDeptId) {
-    return false
-  }
-
-  // 通过接口获取牵头单位部门详情
-  const leadDeptDetail = await getDeptDetail(leadDeptId)
-  if (!leadDeptDetail) {
-    return false
-  }
-
-  return leadDeptDetail.leaderUserId === currentUserId
-}
-
-// 检查当前用户是否为协办单位负责人
-const checkIsCoDeptLeader = async (): Promise<boolean> => {
-  const currentUser = userStore.getUser
-  const currentUserId = currentUser?.id
-
-  if (!currentUserId || !orderDetail.value.coDept) {
-    return false
-  }
-
-  // 检查是否是协办单位负责人
-  const coDeptIds = orderDetail.value.coDept.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))
-
-  for (const coDeptId of coDeptIds) {
-    const coDeptDetail = await getDeptDetail(coDeptId)
-    if (coDeptDetail && coDeptDetail.leaderUserId === currentUserId) {
-      return true
-    }
-  }
-
-  return false
-}
 
 // 获取督办单详情数据（用于外部调用）
 const getOrderDetailData = () => {
@@ -1176,10 +1204,9 @@ defineExpose({
   clearPendingAttachments,
   hasEditPermission: computed(() => hasEditPermission.value),
   pendingAttachmentsCount: computed(() => pendingAttachments.value.length),
-  checkIsLeadDeptLeader,
-  checkIsCoDeptLeader,
   getOrderDetailData,
   getEditFormData,
+  canEditLeadDept: computed(() => canEditLeadDept.value),
   canEditCollaborateDepts: computed(() => canEditCollaborateDepts.value),
   canEditLeadDeptDetail: computed(() => canEditLeadDeptDetail.value)
 })

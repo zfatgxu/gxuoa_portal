@@ -30,11 +30,11 @@
             </svg>
           </span>
         </span>
-        <button class="tool-btn">
+        <button class="tool-btn" @click="deleteSelectedEmails" :disabled="selectedEmails.length === 0">
           <span class="tool-btn-icon">
             <el-icon><Delete /></el-icon>
           </span>
-          删除
+          {{ isDeletedFolder ? '彻底删除' : '删除' }}
         </button>
         <button class="tool-btn">
           <span class="tool-btn-icon">
@@ -75,13 +75,19 @@
         <div class="group-label-bar">
           <span class="group-label">{{ group.label }}({{ group.emails.length }}封)</span>
         </div>
-        <div v-for="email in group.emails" :key="email.id" class="email-item">
+        <div v-for="email in group.emails" :key="email.id" class="email-item" :class="{draft: email.isDraft, deleted: email.deletedAt}">
           <input type="checkbox" class="email-checkbox" v-model="selectedEmails" :value="email.id" />
-          <span class="email-icon">📁</span>
+          <span class="email-icon">{{ email.isDraft ? '📝' : email.deletedAt ? '🗑️' : '📁' }}</span>
           <span class="sender">{{ email.sender }}</span>
-          <span class="subject">{{ email.subject }}</span>
+          <span class="subject">
+            {{ email.subject }}
+            <span v-if="email.isDraft" class="draft-label">[草稿]</span>
+            <span v-if="email.deletedAt" class="deleted-info">(删除于: {{ email.deletedAt }})</span>
+          </span>
           <span class="time">{{ email.time }}</span>
-          <span class="star-btn">☆</span>
+          <span class="star-btn" :class="{starred: email.isStarred}" @click="toggleStar(email.id)">
+            {{ email.isStarred ? '★' : '☆' }}
+          </span>
         </div>
       </template>
     </div>
@@ -103,22 +109,41 @@
 </template>
 
 <script setup lang="ts">
-import { ref,  watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { ElIcon } from 'element-plus'
 import { Delete } from '@element-plus/icons-vue'
 import topImage from '@/views/mail/image/top.png'
 
-const props = defineProps<{ folderName: string, emails: Array<{ id: number, sender: string, subject: string, time: string, date: string }> }>()
+interface Email {
+  id: number
+  sender: string
+  subject: string
+  time: string
+  date: string
+  deletedAt?: string
+  isDraft?: boolean
+  isStarred?: boolean
+  starredAt?: string // 新增：星标日期字段
+}
+
+const props = defineProps<{ 
+  folderName: string, 
+  emails: Array<Email>,
+  isDeletedFolder: boolean
+}>()
+
+const emit = defineEmits<{
+  deleteEmails: [emailIds: number[]]
+  toggleStar: [emailId: number]
+}>()
 
 // --- 全选逻辑 ---
 const selectedEmails = ref<(string|number)[]>([])
 const allSelected = computed({
   get() {
-    // If there are emails and all of them are selected, the checkbox is checked
     return props.emails.length > 0 && selectedEmails.value.length === props.emails.length
   },
   set(value: boolean) {
-    // When the 'select all' checkbox is checked/unchecked, update the selection list
     if (value) {
       selectedEmails.value = props.emails.map(email => email.id)
     } else {
@@ -132,8 +157,21 @@ watch(() => props.emails, () => {
   selectedEmails.value = []
 })
 
+// 删除选中的邮件
+function deleteSelectedEmails() {
+  if (selectedEmails.value.length > 0) {
+    const emailIds = selectedEmails.value.map(id => Number(id))
+    emit('deleteEmails', emailIds)
+    selectedEmails.value = []
+  }
+}
+
+// 切换星标状态
+function toggleStar(emailId: number) {
+  emit('toggleStar', emailId)
+}
+
 // 日期分组辅助
-import { computed } from 'vue'
 function getDateLabel(dateStr: string) {
   const today = new Date()
   const d = new Date(dateStr)
@@ -150,21 +188,60 @@ const groupedEmails = computed(() => {
   // 先分组，再组内按时间倒序
   const groups: Record<string, any[]> = {}
   props.emails.forEach(email => {
-    const label = getDateLabel(email.date)
+    // 根据文件夹类型选择分组依据的日期
+    let dateForGrouping: string
+    if (props.isDeletedFolder && email.deletedAt) {
+      dateForGrouping = email.deletedAt
+    } else if (props.folderName === '星标邮件' && email.starredAt) {
+      dateForGrouping = email.starredAt
+    } else {
+      dateForGrouping = email.date
+    }
+    
+    const label = getDateLabel(dateForGrouping)
     if (!groups[label]) groups[label] = []
     groups[label].push(email)
   })
   // 只显示今天、昨天、一周内、一周前
   const order = ['今天','昨天','本周','上周']
-  return order.map(label => ({ label, emails: (groups[label]||[]).sort((a,b)=>b.date.localeCompare(a.date)||b.time.localeCompare(a.time)) })).filter(g=>g.emails.length)
+  return order.map(label => ({ 
+    label, 
+    emails: (groups[label]||[]).sort((a,b)=> {
+      // 根据文件夹类型选择排序依据的日期
+      if (props.isDeletedFolder) {
+        const aDate = a.deletedAt || a.date
+        const bDate = b.deletedAt || b.date
+        if (aDate !== bDate) return bDate.localeCompare(aDate)
+        return b.time.localeCompare(a.time)
+      } else if (props.folderName === '星标邮件') {
+        const aDate = a.starredAt || a.date
+        const bDate = b.starredAt || b.date
+        if (aDate !== bDate) return bDate.localeCompare(aDate)
+        return b.time.localeCompare(a.time)
+      } else {
+        return b.date.localeCompare(a.date)||b.time.localeCompare(a.time)
+      }
+    }) 
+  })).filter(g=>g.emails.length)
 })
 
 const pageSize = ref(15)
 const currentPage = ref(1)
 const totalPages = computed(() => Math.ceil(props.emails.length / pageSize.value))
 const pagedEmails = computed(() => {
-  // 按日期和时间升序排列
+  // 按日期和时间升序排列；根据文件夹类型选择排序依据
   const sorted = [...props.emails].sort((a, b) => {
+    if (props.isDeletedFolder) {
+      const aDate = a.deletedAt || a.date
+      const bDate = b.deletedAt || b.date
+      if (aDate !== bDate) return aDate.localeCompare(bDate)
+      return a.time.localeCompare(b.time)
+    } else if (props.folderName === '星标邮件') {
+      const aDate = a.starredAt || a.date
+      const bDate = b.starredAt || b.date
+      if (aDate !== bDate) return aDate.localeCompare(bDate)
+      return a.time.localeCompare(b.time)
+    }
     if (a.date !== b.date) return a.date.localeCompare(b.date)
     return a.time.localeCompare(b.time)
   })

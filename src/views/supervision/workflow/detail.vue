@@ -64,7 +64,7 @@
                           v-if="processDefinition?.formCustomViewPath?.includes('supervision')"
                           :is="BusinessFormComponent"
                           ref="supervisionDetailRef"
-                          :id="processInstance.businessKey"
+                          :id="processInstance.id"
                           :activity-nodes="activityNodes"
                           :apply-user="applyUser"
                           :apply-time="applyTime"
@@ -350,25 +350,17 @@ $button-height: 51px;
 $process-header-height: 194px;
 
 .processInstance-wrap-main {
-  height: calc(
+  height: auto;
+  min-height: calc(
     100vh - var(--top-tool-height) - var(--tags-view-height) - var(--app-footer-height) - 35px
   );
-  max-height: calc(
-    100vh - var(--top-tool-height) - var(--tags-view-height) - var(--app-footer-height) - 35px
-  );
-  overflow: auto;
+  overflow: visible;
 
   .form-scroll-area {
     display: flex;
-    height: calc(
-      100vh - var(--top-tool-height) - var(--tags-view-height) - var(--app-footer-height) - 35px -
-        $process-header-height - 40px
-    );
-    max-height: calc(
-      100vh - var(--top-tool-height) - var(--tags-view-height) - var(--app-footer-height) - 35px -
-        $process-header-height - 40px
-    );
-    overflow: auto;
+    height: auto;
+    min-height: 400px;
+    overflow: visible;
     flex-direction: column;
 
     :deep(.box-card) {

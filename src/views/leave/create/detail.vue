@@ -16,7 +16,7 @@
           <el-table-column prop="name" label="姓名" />
           <el-table-column prop="department" label="部门" />
           <el-table-column prop="title" label="职称" :formatter="(cellValue) => getDictLabel(DICT_TYPE.PROFESSIONAL_TITLE, cellValue.professionalTitle)"/>
-          <el-table-column prop="position" label="职务" :formatter="(cellValue) => getDictLabel(DICT_TYPE.LEVEL, cellValue.level)"/>
+          <el-table-column prop="position" label="职级" :formatter="(cellValue) => getDictLabel(DICT_TYPE.LEVEL, cellValue.level)"/>
         </el-table>
       </div>
 
@@ -712,6 +712,7 @@ const fetchUserProfile = async () => {
         trainingList.value = [];
         businessList.value = [];
         academicMeetings.value = [];
+        personalList.value = [];
   res2.forEach(item => {
     // 根据类型设置选中的事由
     if (!selectedReasons.value.includes(item.type)) {
@@ -800,7 +801,7 @@ const fetchUserProfile = async () => {
           if (res.destination.includes('|||')) {
             const multiDestinations = res.destination.split('|||');
             destinations.value = multiDestinations.map(dest => {
-              const trimmedDest = dest.trim();
+            const trimmedDest = dest.trim();
               
               // 检查是否是国内地址
               if (trimmedDest.startsWith('国内 /')) {

@@ -23,6 +23,11 @@ export const sealApi = {
     return await request.get({ url: `/seal/seal/get?id=` + id })
   },
 
+  // 查询拥有印章的单位
+  getsealDept: async () => {
+    return await request.get({ url: `/seal/seal/get-sealdept`})
+  },
+
   // 新增印章
   createseal: async (data: sealVO) => {
     return await request.post({ url: `/seal/seal/create`, data })

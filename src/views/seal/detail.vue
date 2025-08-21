@@ -1127,16 +1127,15 @@ const updateSealApplication = async () => {
 
     // 处理附件数据：合并已有附件和新上传的附件，统一字段结构
     const existingAttachments = (detail.value.attachments || []).map(file => ({
-      attachmentId: file.attachmentId,
-      attachmentName: file.attachmentName,
-      attachmentSize: file.attachmentSize,
-      attachmentUrl: file.attachmentUrl
+      name: file.attachmentName,
+      size: file.attachmentSize,
+      url: file.attachmentUrl
     }))
 
     const newAttachments = uploadedFiles.map(file => ({
-      attachmentName: file.name,
-      attachmentSize: file.size,
-      attachmentUrl: file.url
+      name: file.name,
+      size: file.size,
+      url: file.url
       // 新上传的文件没有attachmentId，后端会自动生成
     }))
 
