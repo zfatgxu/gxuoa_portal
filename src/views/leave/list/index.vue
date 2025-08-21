@@ -152,8 +152,12 @@
   <ContentWrap>
     <el-table v-loading="loading" :data="list" :stripe="true" :show-overflow-tooltip="true">
       <!-- <el-table-column label="主键，自增" align="center" prop="id" /> -->
-      <el-table-column label="名称" align="center" prop="nickName" />
-      <el-table-column label="来文单位" align="center" prop="deptName" />
+      <el-table-column label="前往地点" align="center" prop="destination">
+        <template #default="scope">
+          <el-link type="primary" @click="seekDetail(scope.row)">{{ scope.row.destination }}</el-link>
+        </template>
+      </el-table-column>
+      <el-table-column label="发起时间" align="center" prop="createTime" :formatter="dateFormatter2" />
       <el-table-column
         label="开始时间"
         align="center"
@@ -190,7 +194,7 @@
       <el-table-column label="操作" align="center">
         <template #default="scope">
           <!-- 状态为待会签(1)时显示编辑和删除按钮 -->
-          <template v-if="scope.row.status === 1">
+          <template v-if="scope.row.status === 1 || scope.row.status === 2">
             <el-button
               link
               type="primary"
@@ -334,6 +338,16 @@ const handleDetail = (row: any) => {
       id: row.processInstanceId
     }
   })
+}
+
+/** 根据地点查看详情 */
+const seekDetail=(row:any)=>{
+  router.push({
+    path: '/bpm/process-instance/detail',
+    query: {
+    id: row.processInstanceId
+    }
+})
 }
 
 /** 判断是否完成 */

@@ -612,7 +612,7 @@
                 </div>
               </el-popover>
               <el-button v-if="Number(personnel.level) >= 27 && Number(personnel.level) != 100 && userTask.id==='host_sign'" type="primary" link @click="openApprovalUserSelect(userTask.id)" >
-                <Icon icon="ep:plus" />选择代工人
+                <Icon icon="ep:plus" />选择签办人
               </el-button>
               <el-button v-if="userTask.id==='leader_sign' && Number(personnel.level) < 27" type="primary" link @click="openApprovalUserSelect(userTask.id)" :disabled="isReadOnly">
                 <Icon icon="ep:plus" />选择领导
@@ -1139,14 +1139,7 @@ const handleSubmit = async () => {
 
     if (Number(personnel.value.level) >= 27 && Number(personnel.value.level) !== 100) {
       if (startUserSelectAssignees.value['host_sign'].length === 0) {
-        ElMessage.warning('请选择代工人')
-        return
-      }
-    }
-
-    if (Number(personnel.value.level) < 27) {
-      if (startUserSelectAssignees.value['leader_sign'].length === 0) {
-        ElMessage.warning('请选择领导审核')
+        ElMessage.warning('请选择签办人')
         return
       }
     }

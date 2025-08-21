@@ -489,7 +489,7 @@
           <el-descriptions-item v-if="Number(personnel.level) >= 27" label="请假期间主持工作负责人会签" label-class-name="approval-label">
             <div>{{ hostApproval }}</div>
           </el-descriptions-item>
-          <el-descriptions-item label="领导意见" label-class-name="approval-label">
+          <el-descriptions-item label="单位负责人意见" label-class-name="approval-label">
             <div>{{ leaderApproval }}</div>
           </el-descriptions-item>
 
