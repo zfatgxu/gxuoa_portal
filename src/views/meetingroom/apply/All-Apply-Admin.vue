@@ -300,7 +300,7 @@ onMounted(() => {
 
 // 表格样式
 const headerCellStyle = {
-  backgroundColor: '#0d3a8c',
+  backgroundColor: '#4a90e2',
   color: 'white',
   fontWeight: 'bold',
   fontSize: '14px',
@@ -320,6 +320,7 @@ const cellStyle = {
   padding: 20px;
   background-color: #f5f7fa;
   min-height: 100vh;
+  font-family: "Microsoft YaHei", sans-serif;
 }
 
 .header {
@@ -339,11 +340,23 @@ const cellStyle = {
   margin-right: 20px;
   font-size: 24px;
   letter-spacing: 4px;
+  color: #4a90e2;
+  font-weight: bold;
 }
 
 .room-filter, .status-filter {
   width: 200px;
   margin-left: 20px;
+}
+
+/* 选择器样式统一 */
+:deep(.el-select .el-input__wrapper) {
+  border-color: #4a90e2;
+}
+
+:deep(.el-select:hover .el-input__wrapper) {
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 1px #4a90e2;
 }
 
 .action-buttons {
@@ -363,10 +376,21 @@ const cellStyle = {
   z-index: 10;
 }
 
+/* 分页器样式统一 */
+:deep(.el-pagination .el-pager li.is-active) {
+  background-color: #4a90e2;
+  color: white;
+}
+
+:deep(.el-pagination .btn-prev:hover),
+:deep(.el-pagination .btn-next:hover) {
+  color: #4a90e2;
+}
+
 /* 表格样式 */
 :deep(.el-table) {
   --el-table-border-color: #dcdfe6;
-  --el-table-header-bg-color: #0d3a8c;
+  --el-table-header-bg-color: #4a90e2;
   --el-table-header-text-color: white;
   --el-table-row-hover-bg-color: #f0f7ff;
 }
@@ -382,5 +406,21 @@ const cellStyle = {
 :deep(.el-button--small) {
   padding: 5px 10px;
   font-size: 12px;
+}
+
+/* 按钮样式统一 */
+:deep(.el-button--primary) {
+  background-color: #4a90e2;
+  border-color: #4a90e2;
+}
+
+:deep(.el-button--primary:hover) {
+  background-color: #357abd;
+  border-color: #357abd;
+}
+
+:deep(.el-button--primary:active) {
+  background-color: #2e6da4;
+  border-color: #2e6da4;
 }
 </style>

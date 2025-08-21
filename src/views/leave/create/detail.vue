@@ -16,7 +16,7 @@
           <el-table-column prop="name" label="姓名" />
           <el-table-column prop="department" label="部门" />
           <el-table-column prop="title" label="职称" :formatter="(cellValue) => getDictLabel(DICT_TYPE.PROFESSIONAL_TITLE, cellValue.professionalTitle)"/>
-          <el-table-column prop="position" label="职务" :formatter="(cellValue) => getDictLabel(DICT_TYPE.LEVEL, cellValue.level)"/>
+          <el-table-column prop="position" label="职级" :formatter="(cellValue) => getDictLabel(DICT_TYPE.LEVEL, cellValue.level)"/>
         </el-table>
       </div>
 
@@ -411,25 +411,14 @@
           </el-descriptions-item>
 
           <!-- 前往地点 -->
-          <el-descriptions-item label="前往地点(必填)" label-class-name="approval-label">
-            <div v-for="(loc, index) in destinations" :key="index" style="margin-bottom: 15px;">
-              <div class="detail-item">
-                <span class="detail-label">地点类型</span>
-                <el-tag>{{ loc.locationType === 'domestic' ? '国内' : '国外' }}</el-tag>
-              </div>
-              
-              <!-- 国内地址显示 -->
-              <div v-if="loc.locationType === 'domestic'" class="detail-item">
-                <span class="detail-label">目的地</span>
+          <el-descriptions-item label="前往地点(必填)">
+            <div v-for="(loc, index) in destinations" :key="index">
+              <div v-if="loc.locationType === 'domestic'" class="flex items-center">
                 <span>{{ loc.destination.join(' / ') }}</span>
               </div>
-              
-              <!-- 国外地址显示 -->
-              <div v-if="loc.locationType === 'foreign'" class="detail-item">
-                <span class="detail-label">详细地址</span>
+              <div v-if="loc.locationType === 'foreign'" class="flex items-center">
                 <span>{{ loc.foreignAddress }}</span>
               </div>
-              
               <div v-if="index < destinations.length - 1" class="item-divider"></div>
             </div>
           </el-descriptions-item>
@@ -470,7 +459,7 @@
           <el-descriptions-item v-if="Number(personnel.level) >= 27" label="请假期间主持工作负责人会签" label-class-name="approval-label">
             <div>{{ hostApproval }}</div>
           </el-descriptions-item>
-          <el-descriptions-item label="领导意见" label-class-name="approval-label">
+          <el-descriptions-item label="单位负责人意见" label-class-name="approval-label">
             <div>{{ leaderApproval }}</div>
           </el-descriptions-item>
 
@@ -712,6 +701,7 @@ const fetchUserProfile = async () => {
         trainingList.value = [];
         businessList.value = [];
         academicMeetings.value = [];
+        personalList.value = [];
   res2.forEach(item => {
     // 根据类型设置选中的事由
     if (!selectedReasons.value.includes(item.type)) {
@@ -800,7 +790,7 @@ const fetchUserProfile = async () => {
           if (res.destination.includes('|||')) {
             const multiDestinations = res.destination.split('|||');
             destinations.value = multiDestinations.map(dest => {
-              const trimmedDest = dest.trim();
+            const trimmedDest = dest.trim();
               
               // 检查是否是国内地址
               if (trimmedDest.startsWith('国内 /')) {

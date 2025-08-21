@@ -16,7 +16,7 @@
             <el-table-column prop="name" label="姓名" />
             <el-table-column prop="department" label="部门" />
             <el-table-column prop="title" label="职称" :formatter="(cellValue) => getDictLabel(DICT_TYPE.PROFESSIONAL_TITLE, cellValue.professionalTitle)"/>
-            <el-table-column prop="position" label="职务" :formatter="(cellValue) => getDictLabel(DICT_TYPE.LEVEL, cellValue.level)"/>
+            <el-table-column prop="position" label="职级" :formatter="(cellValue) => getDictLabel(DICT_TYPE.LEVEL, cellValue.level)"/>
           </el-table>
         </div>
   
@@ -470,7 +470,7 @@
             <el-descriptions-item v-if="Number(personnel.level) >= 27" label="请假期间主持工作负责人会签" label-class-name="approval-label">
               <div>{{ hostApproval }}</div>
             </el-descriptions-item>
-            <el-descriptions-item label="领导意见" label-class-name="approval-label">
+            <el-descriptions-item label="单位负责人意见" label-class-name="approval-label">
               <div>{{ leaderApproval }}</div>
             </el-descriptions-item>
 
@@ -713,6 +713,7 @@
           trainingList.value = [];
           businessList.value = [];
           academicMeetings.value = [];
+          personalList.value = [];
     res2.forEach(item => {
       // 根据类型设置选中的事由
       if (!selectedReasons.value.includes(item.type)) {

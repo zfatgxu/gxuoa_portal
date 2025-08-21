@@ -16,7 +16,7 @@
           <el-table-column prop="name" label="姓名"/>
           <el-table-column prop="department" label="部门" />
           <el-table-column prop="title" label="职称" :formatter="(cellValue) => getDictLabel(DICT_TYPE.PROFESSIONAL_TITLE, cellValue.professionalTitle)"/>
-          <el-table-column prop="position" label="职务" :formatter="(cellValue) => getDictLabel(DICT_TYPE.LEVEL, cellValue.level)"/>
+          <el-table-column prop="position" label="职级" :formatter="(cellValue) => getDictLabel(DICT_TYPE.LEVEL, cellValue.level)"/>
         </el-table>
       </div>
 
@@ -612,7 +612,7 @@
                 </div>
               </el-popover>
               <el-button v-if="Number(personnel.level) >= 27 && Number(personnel.level) != 100 && userTask.id==='host_sign'" type="primary" link @click="openApprovalUserSelect(userTask.id)" >
-                <Icon icon="ep:plus" />选择代工人
+                <Icon icon="ep:plus" />选择签办人
               </el-button>
               <el-button v-if="userTask.id==='leader_sign' && Number(personnel.level) < 27" type="primary" link @click="openApprovalUserSelect(userTask.id)" :disabled="isReadOnly">
                 <Icon icon="ep:plus" />选择领导
@@ -864,6 +864,15 @@ watch(dateRange, (newVal) => {
       meeting.personalTotalDays = Math.ceil((new Date(newVal[1]).getTime() - new Date(newVal[0]).getTime()) / (1000 * 60 * 60 * 24))+1;
     });
   }
+}, { deep: true });
+
+// 监听因私请假的开始时间和结束时间变化
+watch(personalList, (newVal) => {
+  newVal.forEach(personal => {
+    if (personal.personalStartDate && personal.personalEndDate) {
+      personal.personalTotalDays = Math.ceil((new Date(personal.personalEndDate).getTime() - new Date(personal.personalStartDate).getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    }
+  });
 }, { deep: true });
 
 const selectedReasons = ref<number[]>([]);
@@ -1130,14 +1139,7 @@ const handleSubmit = async () => {
 
     if (Number(personnel.value.level) >= 27 && Number(personnel.value.level) !== 100) {
       if (startUserSelectAssignees.value['host_sign'].length === 0) {
-        ElMessage.warning('请选择代工人')
-        return
-      }
-    }
-
-    if (Number(personnel.value.level) < 27) {
-      if (startUserSelectAssignees.value['leader_sign'].length === 0) {
-        ElMessage.warning('请选择领导审核')
+        ElMessage.warning('请选择签办人')
         return
       }
     }

@@ -75,7 +75,7 @@
 
 <script setup lang="ts">
 import { dateFormatter2 } from '@/utils/formatTime'
-import { RegisterVO, RegisterApi } from '@/api/leave/create/createForm'
+import { RegisterApi } from '@/api/leave/create/createForm'
 import { useRouter } from 'vue-router'
 import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
 /** 请假登记 列表 */
@@ -83,7 +83,7 @@ defineOptions({ name: 'Register' })
 
 const router = useRouter()
 const loading = ref(true) // 列表的加载中
-const list = ref<RegisterVO[]>([]) // 列表的数据
+const list = ref<any[]>([]) // 列表的数据
 const total = ref(0) // 列表的总页数
 const queryParams = reactive({
   pageNo: 1,

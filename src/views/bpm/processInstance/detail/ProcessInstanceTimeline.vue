@@ -68,7 +68,7 @@
             class="bg-gray-100 h-35px rounded-3xl flex items-center pr-8px dark:color-gray-600 position-relative"
           >
             <el-avatar class="!m-5px" :size="28" v-if="user.avatar" :src="user.avatar" />
-            <el-avatar class="!m-5px" :size="28" v-else>
+            <el-avatar class="!m-5px !bg-blue-500" :size="28" v-else>
               {{ user.nickname.substring(0, 1) }}
             </el-avatar>
             {{ user.nickname }}
@@ -92,7 +92,7 @@
                     v-if="task.assigneeUser?.avatar"
                     :src="task.assigneeUser?.avatar"
                   />
-                  <el-avatar class="!m-5px" :size="28" v-else>
+                  <el-avatar class="!m-5px !bg-blue-500" :size="28" v-else>
                     {{ task.assigneeUser?.nickname.substring(0, 1) }}
                   </el-avatar>
                   {{ task.assigneeUser?.nickname }}
@@ -104,7 +104,7 @@
                     v-if="task.ownerUser?.avatar"
                     :src="task.ownerUser?.avatar"
                   />
-                  <el-avatar class="!m-5px" :size="28" v-else>
+                  <el-avatar class="!m-5px !bg-blue-500" :size="28" v-else>
                     {{ task.ownerUser?.nickname.substring(0, 1) }}
                   </el-avatar>
                   {{ task.ownerUser?.nickname }}
@@ -150,7 +150,7 @@
             class="bg-gray-100 h-35px rounded-3xl flex items-center pr-8px dark:color-gray-600 position-relative"
           >
             <el-avatar class="!m-5px" :size="28" v-if="user.avatar" :src="user.avatar" />
-            <el-avatar class="!m-5px" :size="28" v-else>
+            <el-avatar class="!m-5px !bg-blue-500" :size="28" v-else>
               {{ user.nickname.substring(0, 1) }}
             </el-avatar>
             {{ user.nickname }}

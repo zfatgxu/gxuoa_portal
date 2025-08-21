@@ -1,6 +1,6 @@
 <template>
     <div
-      class="h-50px bottom-10 text-14px flex items-center color-#32373c dark:color-#fff font-bold btn-container"
+      class="h-50px bottom-10 text-14px flex items-center ml-430px color-#32373c dark:color-#fff font-bold btn-container"
     >
       <!-- 【通过】按钮 -->
       <el-popover

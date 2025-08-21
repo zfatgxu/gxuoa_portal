@@ -12,17 +12,18 @@
         </div>
       </div>
     </header>
+
     <div class="filter-container">
       <div class="room-selector">
         <!-- 部门选择 -->
         <el-select
           v-model="selectedDept"
           placeholder="选择部门"
-          size="small"
+          size="default"
           clearable
           filterable
           @change="handleDeptChange"
-          style="margin-right: 10px; width: 120px;"
+          style="margin-right: 10px; width: 220px;"
         >
           <el-option
             v-for="dept in deptOptions"
@@ -36,12 +37,12 @@
         <el-select
           v-model="selectedRoom"
           placeholder="选择会议室"
-          size="small"
+          size="default"
           clearable
           filterable
           @change="handleRoomChange"
           :disabled="!selectedDept"
-          style="width: 150px;"
+          style="width: 260px;"
         >
           <el-option
             v-for="room in roomOptions"
@@ -50,7 +51,7 @@
             :value="room.id"
           />
         </el-select><!-- 细节筛选按钮 -->
-        <el-button type="primary" style="margin-left: 10px" size="small" @click="dialogVisible = true">
+        <el-button type="primary" style="margin-left: 10px" size="default" @click="dialogVisible = true">
           细节筛选
         </el-button>
         <!-- 弹窗 -->
@@ -68,10 +69,10 @@
                 v-model="alterDate"
                 type="date"
                 placeholder="选择日期"
-                size="small"
+                size="default"
                 format="YYYY-MM-DD"
                 value-format="YYYY-MM-DD"
-                style="margin-right: 10px; width: 150px;"
+                style="margin-right: 10px; width: 200px;"
                 class="black-text-picker"
               />
 
@@ -79,30 +80,30 @@
                 v-model="beginTime"
                 :disabled="!alterDate"
                 placeholder="开始时间"
-                size="small"
+                size="default"
                 start="00:00"
                 end="23:30"
                 step="00:30"
-                style="margin-right: 10px; width: 120px;"
+                style="margin-right: 10px; width: 160px;"
               />
 
               <el-time-select
                 v-model="lastTime"
                 :disabled="!beginTime"
                 placeholder="结束时间"
-                size="small"
+                size="default"
                 :start="beginTime"
                 end="23:30"
                 step="00:30"
-                style="margin-right: 10px; width: 120px;"
+                style="margin-right: 10px; width: 160px;"
               />
               <el-select
                 v-model="department"
                 placeholder="选择部门"
-                size="small"
+                size="default"
                 clearable
                 filterable
-                style="width: 120px; margin-right: 10px;"
+                style="width: 200px; margin-right: 10px;"
               >
                 <el-option
                   v-for="dept in deptOptions"
@@ -111,19 +112,56 @@
                   :value="dept.id"
                 />
               </el-select>
-              <el-input
+              <el-select
                 v-model="roomCapacity"
-                placeholder="人数"
-                style="width: 80px; margin-right: 10px; height: 28px;"
-                class="custom-input"
-                type="number"
-                @input="onRoomCapacityInput"
-              />
+                placeholder="选择会议室类型"
+                size="default"
+                clearable
+                style="width: 280px; margin-right: 10px;"
+              >
+                <el-option
+                  label="小型会议室：2-8人"
+                  value="small"
+                >
+                  <div style="display: flex; flex-direction: column; align-items: flex-start; width: 100%;">
+                    <span style="font-weight: bold; margin-bottom: 4px;">小型会议室：2-8人</span>
+                    <span style="font-size: 12px; color: #666; line-height: 1.4;">日常沟通会议室，配备（会议桌，白板，或小型投影/迷你显示屏/无线投屏器/便捷麦克风/充电插座）</span>
+                  </div>
+                </el-option>
+                <el-option
+                  label="中型会议室：8-20人"
+                  value="medium"
+                >
+                  <div style="display: flex; flex-direction: column; align-items: flex-start; width: 100%;">
+                    <span style="font-weight: bold; margin-bottom: 4px;">中型会议室：8-20人</span>
+                    <span style="font-size: 12px; color: #666; line-height: 1.4;">配备（会议桌，白板，智能显示屏，小型音响，麦克风，会议记录仪，空调）</span>
+                  </div>
+                </el-option>
+                <el-option
+                  label="大型会议室：20-50人"
+                  value="large"
+                >
+                  <div style="display: flex; flex-direction: column; align-items: flex-start; width: 100%;">
+                    <span style="font-weight: bold; margin-bottom: 4px;">大型会议室：20-50人</span>
+                    <span style="font-size: 12px; color: #666; line-height: 1.4;">阶梯式/排式座椅，大型白板，讲台(带麦克风支架），投影+幕布，麦克风，音响</span>
+                  </div>
+                </el-option>
+                <el-option
+                  label="超大型会议室：50以上"
+                  value="extra-large"
+                >
+                  <div style="display: flex; flex-direction: column; align-items: flex-start; width: 100%;">
+                    <span style="font-weight: bold; margin-bottom: 4px;">超大型会议室：50以上</span>
+                    <span style="font-size: 12px; color: #666; line-height: 1.4;">麦克风，高清摄像机</span>
+                  </div>
+                </el-option>
+              </el-select>
 
               <el-input
                 v-model="roomLocation"
                 placeholder="请输入位置关键字"
-                style="width: 400px; margin-right: 10px; height: 28px;"
+                size="default"
+                style="width: 500px; margin-right: 10px; height: 36px;"
                 maxlength="20"
                 show-word-limit
                 class="custom-input"
@@ -133,10 +171,10 @@
 
             <!-- 右侧按钮区域 -->
             <div style="flex: 1; display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-start;">
-              <el-button @click="handleReset" style="margin-bottom: 10px; width: 80px;">
+              <el-button @click="handleReset" style="margin-bottom: 10px; width: 110px;">
                 清空
               </el-button>
-              <el-button type="primary" @click="handleFilter" style="width: 80px;">
+              <el-button type="primary" @click="handleFilter" style="width: 110px;">
                 搜索
               </el-button>
               <DialogSearch
@@ -149,6 +187,7 @@
 
       </div>
     </div>
+
     <!-- 主要内容区 -->
     <div class="main-content">
       <!-- 左侧会议室信息 -->
@@ -308,6 +347,78 @@
         </el-dialog>
       </div> <!-- calendar-panel的闭合标签 -->
     </div>
+
+    <!-- 新增：可预约会议室弹窗 -->
+    <el-dialog
+      v-model="availableRoomsDialogVisible"
+      title="可预约会议室"
+      width="80%"
+      center
+      :close-on-click-modal="false"
+    >
+      <div class="available-rooms-container">
+        <div class="date-info">
+          <el-tag type="primary" size="large">
+            选择日期：{{ selectedDateForSearch }}
+          </el-tag>
+        </div>
+
+        <div class="rooms-table-container">
+          <el-table
+            :data="availableRoomsList"
+            style="width: 100%"
+            :header-cell-style="{ background: '#f5f7fa', color: '#606266' }"
+            stripe
+          >
+            <el-table-column prop="location" label="位置" width="120" />
+            <el-table-column prop="name" label="会议室名称" width="150" />
+            <el-table-column prop="capacity" label="容量" width="80">
+              <template #default="scope">
+                {{ scope.row.capacity }}人
+              </template>
+            </el-table-column>
+            <el-table-column prop="equipment" label="设备" min-width="200" show-overflow-tooltip />
+            <el-table-column label="可预约时间段" min-width="300">
+              <template #default="scope">
+                <div class="time-slots-display">
+                  <el-tag
+                    v-for="slot in scope.row.availableTimeSlots.filter(slot => slot.Alt === 1)"
+                    :key="slot.id"
+                    type="success"
+                    size="small"
+                    style="margin: 2px;"
+                  >
+                    {{ slot.startTime }} - {{ slot.endTime }}
+                  </el-tag>
+                </div>
+              </template>
+            </el-table-column>
+            <el-table-column label="操作" width="120" fixed="right">
+              <template #default="scope">
+                <el-button
+                  type="primary"
+                  size="small"
+                  @click="selectRoomForBooking(scope.row)"
+                  :disabled="!hasAvailableTimeSlots(scope.row)"
+                >
+                  选择会议室
+                </el-button>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+
+        <div v-if="availableRoomsList.length === 0" class="no-available-rooms">
+          <el-empty description="该日期没有可预约的会议室" />
+        </div>
+      </div>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="availableRoomsDialogVisible = false">关闭</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -328,11 +439,7 @@ const alterDate = ref(null)
 const beginTime = ref(null)
 const lastTime = ref(null)
 
-function onRoomCapacityInput(value) {
-  // 只允许数字（非负整数）
-  const digitsOnly = value.replace(/\D/g, '')
-  roomCapacity.value = digitsOnly
-}
+
 
 
 watchEffect(() => {
@@ -370,7 +477,7 @@ function handleReset() {
   alterDate.value = null
   beginTime.value = null
   lastTime.value = null
-  roomCapacity.value = ''
+  roomCapacity.value = null
   roomLocation.value = ''
   department.value = null
 }
@@ -385,11 +492,20 @@ async function handleFilter() {
     return
   }
 
+  // 获取会议室类型对应的人数范围
+  let capacityFilter = null
+  if (roomCapacity.value) {
+    const capacityRange = getCapacityRange(roomCapacity.value)
+    if (capacityRange) {
+      capacityFilter = capacityRange
+    }
+  }
+
   let req = {
     alterDate: '',
     startTime: '',
     endTime: '',
-    capacity: roomCapacity.value,
+    capacity: '', // 不发送容量参数给后端，在前端进行筛选
     location: roomLocation.value,
     deptId: department.value,
     pageNo: 1,
@@ -413,7 +529,17 @@ async function handleFilter() {
   // 发起请求
   try {
     const res = await RoomTimeApi.getRoomSearchPage(req)
-    meetingRoomList.value = res
+    
+    // 如果选择了会议室类型，进一步过滤结果
+    if (capacityFilter && res && Array.isArray(res)) {
+      meetingRoomList.value = res.filter(room => {
+        const roomCapacity = parseInt(room.capacity) || 0
+        return roomCapacity >= capacityFilter.min && roomCapacity <= capacityFilter.max
+      })
+    } else {
+      meetingRoomList.value = res
+    }
+    
     console.log('查询结果:', meetingRoomList.value)
     dialogListVisible.value = true
   } catch (error) {
@@ -443,7 +569,7 @@ const loadMeetings = async () => {
 
 const router = useRouter()
 const goToMyApply = () => {
-  router.push('/meeting/MyApply')
+  router.push('/meetingroom/MyApply')
 }
 
 //查询参数
@@ -455,7 +581,7 @@ const queryParams = reactive({
 const queryRoomTimeParams = reactive({
   pageNo: 1,
   pageSize: 100,
-  meetingRoomId: 20
+  meetingRoomId: null
 })
 
 // 当前选中的日期
@@ -530,9 +656,9 @@ const getRoomInfoByDeptId = async (deptId) => {
   try {
     loading.value = true
     const params = {
-        pageNo: 1,
-        pageSize: 100,
-        deptId: deptId
+      pageNo: 1,
+      pageSize: 100,
+      deptId: deptId
     }
     const res = await RoomInfoApi.getRoomInfoPage(params)
     if (res.list) {
@@ -577,7 +703,7 @@ const handleDeptChange = (deptId) => {
 
   // 获取该部门的会议室列表
   if (flag.value === 1){
-      roomOptions.value = timeSlotRoomInfo.value
+    roomOptions.value = timeSlotRoomInfo.value
       .filter(item => item.status !== 0 && item.deptId === deptId)
       .map(item => ({
         id: item.id,
@@ -645,13 +771,26 @@ const roomCapacity = ref()
 const roomLocation = ref()
 const department = ref()
 
+// 会议室类型到人数范围的映射
+const roomTypeCapacityMap = {
+  'small': { min: 2, max: 8 },
+  'medium': { min: 8, max: 20 },
+  'large': { min: 20, max: 50 },
+  'extra-large': { min: 50, max: 999 }
+}
+
+// 获取会议室类型对应的人数范围
+const getCapacityRange = (roomType) => {
+  return roomTypeCapacityMap[roomType] || null
+}
+
 // 检查日期是否为今天
 const isToday = (data) => {
   const today = new Date()
   const cellDate = new Date(data.day)
   return today.getDate() === cellDate.getDate() &&
-         today.getMonth() === cellDate.getMonth() &&
-         today.getFullYear() === cellDate.getFullYear()
+    today.getMonth() === cellDate.getMonth() &&
+    today.getFullYear() === cellDate.getFullYear()
 }
 
 // 检查日期是否有会议预定
@@ -677,20 +816,64 @@ const handleDateClick = (data) => {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const dayNum = String(date.getDate()).padStart(2, '0')
-  selectedDateFormatted.value = `${year}-${month}-${dayNum}`
-  loadAndFilter(data.day)
-  // 打开时段选择对话框
-  timeSlotDialogVisible.value = true
+  const formattedDate = `${year}-${month}-${dayNum}`
+
+  // 如果已经选择了会议室，直接显示该会议室的时间段
+  if (selectedRoom.value) {
+    console.log('已选择会议室，直接加载时间段:', { selectedRoom: selectedRoom.value, date: formattedDate })
+
+    // 设置当前日期为选择的日期
+    selectedDate.value = new Date(formattedDate)
+    selectedDateFormatted.value = formattedDate
+
+    // 直接加载该会议室在选定日期的可用时间段并打开对话框
+    loadAndFilter(formattedDate)
+  } else {
+    // 未选择会议室时，显示可用会议室弹窗（保持原有功能）
+    console.log('未选择会议室，显示可用会议室弹窗:', formattedDate)
+
+    // 设置选中的日期用于搜索
+    selectedDateForSearch.value = formattedDate
+
+    // 搜索可用会议室并显示弹窗
+    searchAvailableRooms()
+  }
 }
 
 const loadAndFilter = async (selectedDate) => {
   try {
+    console.log('开始加载时间段数据...', { selectedDate, selectedRoom: selectedRoom.value })
+
+    // 检查是否已选择会议室
+    if (!selectedRoom.value) {
+      console.error('未选择会议室，无法加载时间段')
+      return
+    }
+
     await getBookedRoomTimeDetail(selectedDate)   // 第一步：获取已预订时间
+    console.log('已预订时间加载完成:', bookedTime.value)
+
     await getOccupiedRoomTimeDetail(selectedDate) // 第二步：获取已占用时间
+    console.log('已占用时间加载完成:', occupiedTime.value)
+
     await getRoomTimeDetail()                     // 第三步：获取所有可用时间段
+    console.log('时间段加载完成:', availableTimeSlots.value)
+
     await filterAvailablefilter(selectedDate)    // 第四步：根据前三步数据过滤
+    console.log('时间段过滤完成:', availableTimeSlots.value)
+
+    // 确保有可用时间段后再打开对话框
+    const availableSlots = availableTimeSlots.value.filter(slot => slot.Alt === 1)
+    if (availableSlots.length > 0) {
+      console.log('找到可用时间段，准备打开对话框')
+      timeSlotDialogVisible.value = true
+    } else {
+      console.log('没有可用时间段')
+      // 不显示提示，静默处理
+    }
   } catch (error) {
-    ElMessage.error('加载时间段失败')
+    console.error('加载时间段失败:', error)
+    // 不显示错误提示，静默处理
   }
 }
 
@@ -727,11 +910,7 @@ const GoToApplyForm = () => {
   router.push('/meetingroom/apply')
 }
 
-// 初始化数据
-onMounted(() => {
-  getDeptList() // 获取部门列表
-  loadMeetings()
-})
+// 初始化数据已在下方重新定义
 
 // 判断是否为过去日期
 const isPastDate = (data) => {
@@ -748,16 +927,34 @@ const occupiedTime = ref([]) // 存储占用记录数据
 const getRoomTimeDetail = async () => {
   try {
     loading.value = true
+    console.log('getRoomTimeDetail - 当前selectedRoom:', selectedRoom.value)
+
+    if (!selectedRoom.value) {
+      console.error('selectedRoom为空，无法获取时间段')
+      ElMessage.error('未选择会议室，无法获取时间段')
+      return
+    }
+
     queryRoomTimeParams.meetingRoomId = selectedRoom.value
+    console.log('getRoomTimeDetail - 设置meetingRoomId:', queryRoomTimeParams.meetingRoomId)
+
     const res = await RoomTimeApi.getRoomTimePage(queryRoomTimeParams)
+    console.log('getRoomTimeDetail - API响应:', res)
+
     if (res && res.list) {
       res.list.forEach(item => {
         item.Alt = 1
       })
       availableTimeSlots.value = res.list
+      console.log('getRoomTimeDetail - 设置availableTimeSlots:', availableTimeSlots.value)
+    } else {
+      console.warn('getRoomTimeDetail - 没有获取到时间段数据')
+      availableTimeSlots.value = []
     }
   } catch (error) {
-    ElMessage.error('加载时间段失败')
+    console.error('getRoomTimeDetail - 加载时间段失败:', error)
+    // 静默处理，不显示错误提示
+    availableTimeSlots.value = []
   } finally {
     loading.value = false
   }
@@ -767,6 +964,14 @@ const bookedTime = ref([])
 
 const getBookedRoomTimeDetail = async (selectedDate) => {
   try {
+    console.log('getBookedRoomTimeDetail - 开始获取预订记录:', { selectedDate, selectedRoom: selectedRoom.value })
+
+    if (!selectedRoom.value) {
+      console.error('getBookedRoomTimeDetail - selectedRoom为空')
+      bookedTime.value = []
+      return
+    }
+
     const startOfDay = dayjs(selectedDate).startOf('day').format('YYYY-MM-DD HH:mm:ss')
     const endOfDay = dayjs(selectedDate).endOf('day').format('YYYY-MM-DD HH:mm:ss')
 
@@ -775,30 +980,43 @@ const getBookedRoomTimeDetail = async (selectedDate) => {
       startTime: startOfDay,
       endTime: endOfDay
     }
+
+    console.log('getBookedRoomTimeDetail - 请求参数:', paramBookedroom)
+
     const res = await RoomApplyApi.getRoomApplyAll(paramBookedroom)
-    bookedTime.value = res
-    // 如果 API 返回的是 { code, data, msg } 结构
+    console.log('getBookedRoomTimeDetail - API响应:', res)
+
+    bookedTime.value = res || []
+    console.log('getBookedRoomTimeDetail - 设置bookedTime:', bookedTime.value)
 
   } catch (error) {
-    ElMessage.error('获取预订记录失败')
+    console.error('getBookedRoomTimeDetail - 获取预订记录失败:', error)
+    // 静默处理，不显示错误提示
+    bookedTime.value = []
   }
 }
 
 // 获取指定日期的占用记录
 const getOccupiedRoomTimeDetail = async (selectedDate) => {
   try {
+    console.log('getOccupiedRoomTimeDetail - 开始获取占用记录:', { selectedDate, selectedRoom: selectedRoom.value })
+
     if (!selectedRoom.value) {
+      console.log('getOccupiedRoomTimeDetail - selectedRoom为空，设置空数组')
       occupiedTime.value = []
       return
     }
 
     let res
     const selectedDateStr = dayjs(selectedDate).format('YYYY-MM-DD')
+    console.log('getOccupiedRoomTimeDetail - 格式化日期:', selectedDateStr)
 
     try {
       res = await getOccupationsByMeetingRoom(selectedRoom.value)
+      console.log('getOccupiedRoomTimeDetail - 占用记录API响应:', res)
     } catch (apiError) {
       if (apiError.response?.status === 403) {
+        console.log('getOccupiedRoomTimeDetail - API 403错误，设置空数组')
         occupiedTime.value = []
         return
       }
@@ -892,7 +1110,8 @@ const getOccupiedRoomTimeDetail = async (selectedDate) => {
 
 
   } catch (error) {
-    ElMessage.error('获取占用记录失败，可能影响时间段显示准确性')
+    console.error('getOccupiedRoomTimeDetail - 获取占用记录失败:', error)
+    // 静默处理，不显示错误提示
     occupiedTime.value = []
   }
 }
@@ -1010,6 +1229,236 @@ const filterAvailablefilter = async (selectedDate) => {
 }
 
 const meetingRoomList = ref()
+
+// 新增：可预约会议室弹窗相关状态
+const availableRoomsDialogVisible = ref(false)
+const selectedDateForSearch = ref(null)
+const availableRoomsList = ref([])
+
+// 搜索可预约会议室
+const searchAvailableRooms = async () => {
+  if (!selectedDateForSearch.value) {
+    ElMessage.warning('请选择日期')
+    return
+  }
+
+  try {
+    loading.value = true
+
+    // 获取会议室类型对应的人数范围
+    let capacityFilter = null
+    if (roomCapacity.value) {
+      const capacityRange = getCapacityRange(roomCapacity.value)
+      if (capacityRange) {
+        capacityFilter = capacityRange
+      }
+    }
+
+    // 获取所有会议室信息 - 修复pageSize参数
+    const allRoomsRes = await RoomInfoApi.getRoomInfoPage({
+      pageNo: 1,
+      pageSize: 100, // 修复：从1000改为100
+      deptId: department.value || undefined,
+      capacity: undefined, // 不发送容量参数给后端，在前端进行筛选
+      location: roomLocation.value || undefined,
+    })
+
+    if (!allRoomsRes || !allRoomsRes.list) {
+      availableRoomsList.value = []
+      ElMessage.warning('没有找到符合条件的会议室')
+      return
+    }
+
+    // 过滤出启用的会议室
+    let enabledRooms = allRoomsRes.list.filter(room => room.status === 1)
+    
+    // 如果选择了会议室类型，进一步过滤
+    if (capacityFilter) {
+      enabledRooms = enabledRooms.filter(room => {
+        const roomCapacity = parseInt(room.capacity) || 0
+        return roomCapacity >= capacityFilter.min && roomCapacity <= capacityFilter.max
+      })
+    }
+
+    // 为每个会议室获取时间段信息
+    const roomsWithTimeSlots = []
+
+    for (const room of enabledRooms) {
+      try {
+        // 获取会议室的时间段
+        const timeSlotsRes = await RoomTimeApi.getRoomTimePage({
+          pageNo: 1,
+          pageSize: 100,
+          meetingRoomId: room.id
+        })
+
+        if (timeSlotsRes && timeSlotsRes.list) {
+          // 获取该日期的预订和占用信息
+          const startOfDay = dayjs(selectedDateForSearch.value).startOf('day').format('YYYY-MM-DD HH:mm:ss')
+          const endOfDay = dayjs(selectedDateForSearch.value).endOf('day').format('YYYY-MM-DD HH:mm:ss')
+
+          // 获取预订记录
+          const bookedRes = await RoomApplyApi.getRoomApplyAll({
+            meetingRoomId: room.id,
+            startTime: startOfDay,
+            endTime: endOfDay
+          })
+
+          // 获取占用记录
+          let occupiedRes = []
+          try {
+            occupiedRes = await getOccupationsByMeetingRoom(room.id)
+          } catch (error) {
+            // 如果获取占用记录失败，使用空数组
+            occupiedRes = []
+          }
+
+          // 处理时间段可用性
+          const processedTimeSlots = timeSlotsRes.list.map(slot => {
+            const slotStart = getFullTimestamp(selectedDateForSearch.value, slot.startTime)
+            const slotEnd = getFullTimestamp(selectedDateForSearch.value, slot.endTime)
+
+            let isAvailable = true
+            let conflictReason = ''
+
+            // 检查预订冲突
+            if (bookedRes && Array.isArray(bookedRes)) {
+              for (const booking of bookedRes) {
+                if (isTimeSlotConflict(slotStart, slotEnd, Number(booking.startTime), Number(booking.endTime))) {
+                  isAvailable = false
+                  conflictReason = '该时段已被预定'
+                  break
+                }
+              }
+            }
+
+            // 检查占用冲突
+            if (isAvailable && occupiedRes && Array.isArray(occupiedRes)) {
+              for (const occupation of occupiedRes) {
+                if (occupation.status === 1) {
+                  let occupationStart, occupationEnd
+                  if (typeof occupation.startTime === 'number') {
+                    occupationStart = occupation.startTime
+                    occupationEnd = occupation.endTime
+                  } else {
+                    occupationStart = new Date(occupation.startTime).getTime()
+                    occupationEnd = new Date(occupation.endTime).getTime()
+                  }
+
+                  if (isTimeSlotConflict(slotStart, slotEnd, occupationStart, occupationEnd)) {
+                    isAvailable = false
+                    conflictReason = `该时段已被占用（${occupation.occupationReason || '管理员占用'}）`
+                    break
+                  }
+                }
+              }
+            }
+
+            return {
+              ...slot,
+              Alt: isAvailable ? 1 : 0,
+              conflictReason
+            }
+          })
+
+          // 只添加有可用时间段的会议室
+          const availableTimeSlots = processedTimeSlots.filter(slot => slot.Alt === 1)
+          if (availableTimeSlots.length > 0) {
+            roomsWithTimeSlots.push({
+              ...room,
+              availableTimeSlots: processedTimeSlots
+            })
+          }
+        }
+      } catch (error) {
+        console.error(`获取会议室 ${room.name} 时间段失败:`, error)
+        // 如果获取时间段失败，不添加该会议室
+      }
+    }
+
+    availableRoomsList.value = roomsWithTimeSlots
+    availableRoomsDialogVisible.value = true
+
+    if (roomsWithTimeSlots.length === 0) {
+      ElMessage.warning('该日期没有可预约的会议室')
+    }
+
+  } catch (error) {
+    ElMessage.error('获取可预约会议室失败')
+    console.error(error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 选择会议室进行预约
+const selectRoomForBooking = async (room) => {
+  try {
+    console.log('开始选择会议室:', room)
+
+    // 设置选中的会议室
+    selectedRoom.value = room.id
+
+    // 设置部门
+    if (room.deptId) {
+      selectedDept.value = room.deptId
+    }
+
+    // 更新会议室选项
+    roomOptions.value = [room]
+
+    ElMessage({
+      message: `已选择会议室: ${room.name}`,
+      type: 'success'
+    })
+
+    // 关闭弹窗
+    availableRoomsDialogVisible.value = false
+
+    // 设置当前日期为选择的日期
+    selectedDate.value = new Date(selectedDateForSearch.value)
+
+    // 设置日期格式化显示
+    selectedDateFormatted.value = selectedDateForSearch.value
+
+    console.log('准备加载时间段数据...', {
+      selectedRoom: selectedRoom.value,
+      selectedDate: selectedDateForSearch.value
+    })
+
+    // 加载该会议室在选定日期的可用时间段
+    await loadAndFilter(selectedDateForSearch.value)
+
+    console.log('时间段加载完成，对话框状态:', timeSlotDialogVisible.value)
+
+  } catch (error) {
+    console.error('选择会议室失败:', error)
+    ElMessage.error('选择会议室失败: ' + error.message)
+  }
+}
+
+// 判断会议室是否有可用时间段
+const hasAvailableTimeSlots = (room) => {
+  return room.availableTimeSlots && room.availableTimeSlots.some(slot => slot.Alt === 1)
+}
+
+// 修复：确保在组件挂载时初始化部门选择
+const initializeDepartmentSelection = () => {
+  // 如果当前有选中的部门，获取对应的会议室列表
+  if (selectedDept.value) {
+    handleDeptChange(selectedDept.value)
+  }
+}
+
+// 修复：在组件挂载后初始化部门选择
+onMounted(() => {
+  getDeptList() // 获取部门列表
+  loadMeetings()
+  // 延迟初始化部门选择，确保部门列表已加载
+  setTimeout(() => {
+    initializeDepartmentSelection()
+  }, 100)
+})
 </script>
 
 <style scoped>
@@ -1026,6 +1475,38 @@ const meetingRoomList = ref()
 
 .empty-meeting-tip {
   height: 150px;
+}
+
+/* 可预约会议室弹窗样式 */
+.available-rooms-container {
+  padding: 20px 0;
+}
+
+.date-info {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.rooms-table-container {
+  margin-bottom: 20px;
+}
+
+.time-slots-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.no-available-rooms {
+  text-align: center;
+  padding: 40px 0;
+}
+
+/* 表格中的时间段标签样式 */
+:deep(.el-tag--success) {
+  background-color: #f0f9ff;
+  border-color: #67c23a;
+  color: #67c23a;
 }
 
 .calendar-cell.disabled-date {
@@ -1810,5 +2291,27 @@ const meetingRoomList = ref()
 }
 .room-title {
   color: #000;
+}
+
+/* 会议室类型选择框样式优化 */
+:deep(.el-select-dropdown__item) {
+  padding: 12px 16px;
+  line-height: 1.4;
+  min-height: 60px;
+}
+
+:deep(.el-select-dropdown__item .el-option__content) {
+  width: 100%;
+}
+
+/* 确保选择框选项内容正确显示 */
+:deep(.el-select-dropdown__item div) {
+  width: 100%;
+  padding: 4px 0;
+}
+
+/* 选择框下拉菜单宽度调整 */
+:deep(.el-select-dropdown) {
+  min-width: 320px !important;
 }
 </style>

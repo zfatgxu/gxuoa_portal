@@ -230,38 +230,7 @@
             </td>
           </tr>
           </tbody>
-          <tbody>
-          <tr>
-            <td class="label-cell" style="width: 120px; padding: 8px;">使用单位意见</td>
-            <td class="content-cell" colspan="3">
-              <el-form-item prop="departmentOpinion" class="no-margin" :validate-status="undefined">
-                <el-input
-                  v-model="formData.departmentOpinion"
-                  type="textarea"
-                  :rows="4"
-                  placeholder="请输入使用单位意见(申请人不用填写)"
-                  readonly
-                />
-              </el-form-item>
-              <div class="signature-line">
-                <span>负责人签字：</span>
-                <el-input v-model="formData.departmentHead" class="!w-150px" placeholder="请输入负责人姓名" readonly/>
-                <span class="time-right"> 日期：</span>
-                <el-date-picker
-                  v-model="formData.departmentApprovalDate"
-                  value-format="YYYY-MM-DD HH:mm:ss"
-                  type="datetime"
-                  placeholder="选择部门审批时间"
-                  class="!w-220px"
-                  :clearable="true"
-                  :editable="false"
-                  :disabled-date="(time) => time > new Date()"
-                  readonly
-                />
-              </div>
-            </td>
-          </tr>
-          </tbody>
+
           <tbody>
           <tr>
             <td class="label-cell" style="width: 120px; padding: 8px;">管理单位意见</td>
@@ -322,6 +291,14 @@
                   :rows="4"
                   placeholder="请输入备注内容" />
               </el-form-item>
+            </td>
+          </tr>
+          </tbody>
+
+          <tbody>
+          <tr>
+            <td class="label-cell" style="width: 120px; padding: 8px;">附件</td>
+            <td class="content-cell" colspan="3">
               <el-upload
                 class="upload-demo"
                 :http-request="customUpload"
@@ -333,14 +310,10 @@
                 :limit="3"
                 :on-exceed="handleExceed"
                 show-file-list
-                style="margin-top: 15px;"
                 :on-start="() => uploading.value = true"
               >
-
                 <el-button type="primary">上传附件</el-button>
               </el-upload>
-
-
             </td>
           </tr>
           </tbody>
@@ -349,7 +322,6 @@
 
         <div class="form-actions" v-if="!uploading">
           <el-button type="primary" @click="submitForm(id)" :loading="loading">提交</el-button>
-          <el-button @click="resetForm">重置</el-button>
           <el-button @click="goBack">返回</el-button>
         </div>
       </el-form>
@@ -571,7 +543,7 @@ const submitForm = () => {
 
       if (res) {
         ElMessage.success('会议室申请提交成功！');
-        router.push('/meeting/MyApply');
+        router.push('/xzsp/meetingroom/applys');
       } else {
         ElMessage.error('申请提交失败，请重试');
       }
@@ -641,7 +613,7 @@ const resetForm = () => {
 };
 
 const goBack = () => {
-  router.push('/meeting/apply');
+  router.push('/xzsp/meetingroom/apply');
 };
 
 onMounted(() => {

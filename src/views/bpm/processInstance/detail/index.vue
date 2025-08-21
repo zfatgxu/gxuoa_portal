@@ -28,7 +28,7 @@
               v-if="processInstance?.startUser?.avatar"
               :src="processInstance?.startUser?.avatar"
             />
-            <el-avatar :size="28" v-else-if="processInstance?.startUser?.nickname">
+            <el-avatar :size="28" v-else-if="processInstance?.startUser?.nickname" class="!bg-blue-500">
               {{ processInstance?.startUser?.nickname.substring(0, 1) }}
             </el-avatar>
             {{ processInstance?.startUser?.nickname }}
@@ -68,6 +68,20 @@
                           :status="processInstance.status"
                         />
                       </div>
+                    </div>
+                    
+                    <!-- 操作栏按钮 -->
+                    <div class="operation-buttons-container">
+                      <ProcessInstanceOperationButton
+                        ref="operationButtonRef"
+                        :process-instance="processInstance"
+                        :process-definition="processDefinition"
+                        :userOptions="userOptions"
+                        :normal-form="detailForm"
+                        :normal-form-api="fApi"
+                        :writable-fields="writableFields"
+                        @success="refresh"
+                      />
                     </div>
                   </el-col>
                   <el-col :span="7">
@@ -117,17 +131,6 @@
         </el-tabs>
 
         <div class="b-t-solid border-t-1px border-[var(--el-border-color)]">
-          <!-- 操作栏按钮 -->
-          <ProcessInstanceOperationButton
-            ref="operationButtonRef"
-            :process-instance="processInstance"
-            :process-definition="processDefinition"
-            :userOptions="userOptions"
-            :normal-form="detailForm"
-            :normal-form-api="fApi"
-            :writable-fields="writableFields"
-            @success="refresh"
-          />
         </div>
       </el-scrollbar>
     </div>
@@ -342,37 +345,29 @@ $button-height: 51px;
 $process-header-height: 194px;
 
 .processInstance-wrap-main {
-  height: calc(
+  height: auto;
+  min-height: calc(
     100vh - var(--top-tool-height) - var(--tags-view-height) - var(--app-footer-height) - 35px
   );
-  max-height: calc(
-    100vh - var(--top-tool-height) - var(--tags-view-height) - var(--app-footer-height) - 35px
-  );
-  overflow: auto;
+  overflow: visible;
 
   .form-scroll-area {
-    display: flex;
-    height: calc(
-      100vh - var(--top-tool-height) - var(--tags-view-height) - var(--app-footer-height) - 35px -
-        $process-header-height - 40px
-    );
-    max-height: calc(
-      100vh - var(--top-tool-height) - var(--tags-view-height) - var(--app-footer-height) - 35px -
-        $process-header-height - 40px
-    );
-    overflow: auto;
-    flex-direction: column;
-
-    :deep(.box-card) {
-      height: 100%;
-      flex: 1;
-
-      .el-card__body {
+      display: flex;
+      height: auto;
+      min-height: 400px;
+      overflow: visible;
+      flex-direction: column;
+  
+      :deep(.box-card) {
         height: 100%;
-        padding: 0;
+        flex: 1;
+  
+        .el-card__body {
+          height: 100%;
+          padding: 0;
+        }
       }
     }
-  }
 }
 
 .form-box {
