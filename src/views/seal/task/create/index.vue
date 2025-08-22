@@ -88,10 +88,10 @@
               </el-select>
             </div>
             <div class="seal-controls">
+              <!-- 移除 :max="99"，允许数量无上限 -->
               <el-input-number
                 v-model="seal.quantity"
                 :min="1"
-                :max="99"
                 size="small"
                 class="quantity-input"
               />
@@ -134,9 +134,10 @@
             <div class="connected-field-content">
               <el-input
                 v-model="form.contactPhone"
-                placeholder=""
+                placeholder="请输入7位或11位电话号码"
                 class="connected-field-input"
                 clearable
+                @input="validatePhone"
               />
             </div>
           </div>
@@ -204,18 +205,18 @@
             <div class="file-item" v-for="(file, index) in uploadedFiles" :key="index">
               <div class="file-info">
                 <el-icon class="file-icon" :class="file.type === 'excel' ? 'excel-icon' : (file.type === 'pdf' ? 'pdf-icon' : 'document-icon')">
-                  <document />
+                  <Document />
                 </el-icon>
                 <span class="file-name">{{ file.name }}</span>
                 <span class="file-size">{{ file.size }}</span>
               </div>
               <div class="file-status">
                 <el-tag v-if="file.status === 'success'" type="success" size="small">
-                  <el-icon><check /></el-icon>
+                  <el-icon><Check /></el-icon>
                   上传成功
                 </el-tag>
                 <el-tag v-else type="danger" size="small">
-                  <el-icon><close /></el-icon>
+                  <el-icon><Close /></el-icon>
                   上传失败
                 </el-tag>
                 <el-button type="primary" link size="small" @click="viewFile(file)">
@@ -297,7 +298,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { getSimpleUserList } from '@/api/system/user'
 import { KKFileView } from '@/components/KKFileView'
 import { ElMessage } from 'element-plus'
@@ -325,7 +326,7 @@ const editId = computed(() => route.query.id as string | undefined)
 const isEditMode = computed(() => !!editId.value)
 const isReadOnly = ref(false) // 只读模式（可用于查看详情）
 
-// 表单数据
+// 表单数据 - 只保留一个form声明，合并所有字段
 const form = reactive({
   title: '',
   materialName: '',
@@ -364,6 +365,169 @@ const checkUnitHasSeals = async (unitName: string) => {
   } catch (error) {
     console.error(`检查单位 ${unitName} 印章失败:`, error)
     return false // 出错时默认认为没有印章
+  }
+}
+
+// 实时校验电话 - 确保只能输入数字并检查长度
+const validatePhone = (val: string) => {
+  // 检查是否包含非数字字符
+  const hasNonNumeric = /[^\d]/.test(val);
+  const cleanedPhone = val.replace(/[^\d]/g, '');
+
+  // 如果有非数字字符，显示错误提示
+  if (hasNonNumeric) {
+    ElMessage.warning('电话号码只能包含数字，请移除非数字字符');
+  }
+  // 检查长度是否符合要求
+  else if (cleanedPhone.length > 0 && cleanedPhone.length !== 7 && cleanedPhone.length !== 11) {
+    ElMessage.warning('请输入7位或11位的电话号码');
+  }
+
+  // 始终保存清洗后的值（只保留数字）
+  form.contactPhone = cleanedPhone;
+};
+
+// 提交表单
+const submitForm = async () => {
+  // 验证必填字段
+  if (!selectedUnit.value) {
+    ElMessage.error('请选择一个单位申请印章')
+    return
+  }
+  if (!form.materialName) {
+    ElMessage.error('请填写材料名称')
+    return
+  }
+
+  if (!form.contactPhone) {
+    ElMessage.error('请填写联系电话')
+    return
+  }
+
+  // 验证电话号码是否包含非数字字符（最终检查）
+  if (/[^\d]/.test(form.contactPhone)) {
+    ElMessage.error('电话号码只能包含数字，请移除非数字字符')
+    return
+  }
+
+  // 验证电话号码长度
+  if (form.contactPhone.length !== 7 && form.contactPhone.length !== 11) {
+    ElMessage.error('请输入7位或11位的电话号码')
+    return
+  }
+
+  // 验证是否添加了印章类型
+  if (customSealTypes.value.length === 0) {
+    ElMessage.error('请至少添加一种印章类型')
+    return
+  }
+
+  // 验证印章类型是否选择
+  const noTypeSeal = customSealTypes.value.find(seal => !seal.id)
+  if (noTypeSeal) {
+    ElMessage.error('请选择印章类型')
+    return
+  }
+
+  // 校验印章数量
+  const zeroQuantitySeal = customSealTypes.value.find(seal => !seal.quantity || seal.quantity === 0)
+  if (zeroQuantitySeal) {
+    const sealName = sealTypeOptions.value.find(option => option.id === zeroQuantitySeal.id)?.name || '印章'
+    ElMessage.error(`${sealName}数量不能为0，请输入有效数量`)
+    return
+  }
+
+  // 校验指定审批人
+  if (startUserSelectTasks.value?.length > 0) {
+    // 校验三个独立的签字人是否都已填写
+    if (!managerSigner.value || managerSigner.value.trim() === '') {
+      ElMessage.error('请输入经办人签字');
+      return;
+    }
+    if (!approverSigner.value || approverSigner.value.trim() === '') {
+      ElMessage.error('请输入审批人签字');
+      return;
+    }
+    // 编辑模式下单位负责人签字不需要验证（已禁用显示文本）
+    if (!isEditMode.value && !unitLeaderSigner.value) {
+      ElMessage.error('请选择单位负责人签字');
+      return;
+    }
+
+    // 编辑模式下不需要重新分配任务
+    if (!isEditMode.value) {
+      // 简化后的任务映射
+      startUserSelectTasks.value.forEach(task => {
+        if (task.name === '单位负责人') {
+          // 只需要指定单位负责人
+          startUserSelectAssignees.value[task.id] = [unitLeaderSigner.value];
+        }
+        // 用印审核人节点不需要前端指定，后端根据部门自动分配
+      });
+    }
+  }
+
+  // 验证材料类型
+  if (!form.selectedMaterialTypes || form.selectedMaterialTypes.length === 0) {
+    ElMessage.error('请至少选择一种材料类型')
+    return
+  }
+
+  // 处理文件数据，只保留名称、大小和URL
+  const simplifiedFiles = uploadedFiles.value.map(file => ({
+    name: file.name,
+    size: file.size,
+    url: file.url
+  }))
+
+  // 构建符合后端要求的数据结构
+  const submitData = {
+    applyTitle: selectedUnit.value.name+'印章申请单',//表单标题
+    materialName: form.materialName,//材料名称
+    phone: form.contactPhone,//联系电话
+    materialType: form.selectedMaterialTypes,//材料类型
+    attention: form.notes,//注意事项
+    attachments: simplifiedFiles,//附件json，文件名，文件大小，文件路径
+    id: '',
+    // 印章类型表数据
+    sealTypes: [...defaultSealTypes.value, ...customSealTypes.value],
+
+    // 申请印章所在的单位ID（后端根据此ID自动分配用印审核人）
+    applyDept: selectedUnit.value.id,
+
+    // 签字人信息
+    startUserSelectAssignees: {
+      handler: getSignerInfo(managerSigner.value),
+      reviewer: getSignerInfo(approverSigner.value),
+      unitHead: {
+        id: isEditMode.value ? [] : [unitLeaderSigner.value],
+        name: isEditMode.value ? unitLeaderName.value : (sameDeptUsersList.value.find(user => user.id === unitLeaderSigner.value)?.nickname || ""),
+        signed: false
+      },
+      signers:''
+    }
+  }
+
+  // 提交数据到后端（参考请假模块实现）
+  console.log('提交数据:', submitData)
+  console.log('上传文件:', uploadedFiles)
+  try {
+    if (editId.value) {
+      // 编辑模式：调用更新接口
+      submitData.id = editId.value
+      // 编辑模式下签字人信息格式修改
+      submitData.signers = [managerSigner.value, approverSigner.value, unitLeaderName.value].join('，')
+      await SealApi.updateSealApplication(submitData)
+      ElMessage.success('修改成功')
+    } else {
+      // 创建模式：调用创建接口
+      await SealApi.submitSealApplication(submitData)
+      ElMessage.success('申请提交成功')
+    }
+    //跳转到印章申请列表
+    router.push('/seal/seal_apply')
+  } catch (error) {
+    ElMessage.error(editId.value ? '修改失败' : '申请提交失败')
   }
 }
 
@@ -563,147 +727,6 @@ const getSignerInfo = (userName: string) => {
   }
 }
 
-
-
-// 提交表单
-const submitForm = async () => {
-  // 验证必填字段
-  if (!selectedUnit.value) {
-    ElMessage.error('请选择一个单位申请印章')
-    return
-  }
-  if (!form.materialName) {
-    ElMessage.error('请填写材料名称')
-    return
-  }
-
-  if (!form.contactPhone) {
-    ElMessage.error('请填写联系电话')
-    return
-  }
-
-  // 验证联系电话格式
-  const phoneRegex = /^1[3-9]\d{9}$/
-  if (!phoneRegex.test(form.contactPhone)) {
-    ElMessage.error('请输入正确的手机号码格式')
-    return
-  }
-
-  // 验证是否添加了印章类型
-  if (customSealTypes.value.length === 0) {
-    ElMessage.error('请至少添加一种印章类型')
-    return
-  }
-
-  // 验证印章类型是否选择
-  const noTypeSeal = customSealTypes.value.find(seal => !seal.id)
-  if (noTypeSeal) {
-    ElMessage.error('请选择印章类型')
-    return
-  }
-
-  // 校验印章数量
-  const zeroQuantitySeal = customSealTypes.value.find(seal => !seal.quantity || seal.quantity === 0)
-  if (zeroQuantitySeal) {
-    const sealName = sealTypeOptions.value.find(option => option.id === zeroQuantitySeal.id)?.name || '印章'
-    ElMessage.error(`${sealName}数量不能为0，请输入有效数量`)
-    return
-  }
-
-  // 校验指定审批人
-  if (startUserSelectTasks.value?.length > 0) {
-    // 校验三个独立的签字人是否都已填写
-    if (!managerSigner.value || managerSigner.value.trim() === '') {
-      ElMessage.error('请输入经办人签字');
-      return;
-    }
-    if (!approverSigner.value || approverSigner.value.trim() === '') {
-      ElMessage.error('请输入审批人签字');
-      return;
-    }
-    // 编辑模式下单位负责人签字不需要验证（已禁用显示文本）
-    if (!isEditMode.value && !unitLeaderSigner.value) {
-      ElMessage.error('请选择单位负责人签字');
-      return;
-    }
-    
-    // 编辑模式下不需要重新分配任务
-    if (!isEditMode.value) {
-      // 简化后的任务映射
-      startUserSelectTasks.value.forEach(task => {
-        if (task.name === '单位负责人') {
-          // 只需要指定单位负责人
-          startUserSelectAssignees.value[task.id] = [unitLeaderSigner.value];
-        }
-        // 用印审核人节点不需要前端指定，后端根据部门自动分配
-      });
-    }
-  }
-
-  // 验证材料类型
-  if (!form.selectedMaterialTypes || form.selectedMaterialTypes.length === 0) {
-    ElMessage.error('请至少选择一种材料类型')
-    return
-  }
-
-  // 处理文件数据，只保留名称、大小和URL
-  const simplifiedFiles = uploadedFiles.value.map(file => ({
-    name: file.name,
-    size: file.size,
-    url: file.url
-  }))
-
-  // 构建符合后端要求的数据结构
-  const submitData = {
-    applyTitle: selectedUnit.value.name+'印章申请单',//表单标题
-    materialName: form.materialName,//材料名称
-    phone: form.contactPhone,//联系电话
-    materialType: form.selectedMaterialTypes,//材料类型
-    attention: form.notes,//注意事项
-    attachments: simplifiedFiles,//附件json，文件名，文件大小，文件路径
-    id: '',
-    // 印章类型表数据
-    sealTypes: [...defaultSealTypes.value, ...customSealTypes.value],
-
-    // 申请印章所在的单位ID（后端根据此ID自动分配用印审核人）
-    applyDept: selectedUnit.value.id,
-
-    // 签字人信息
-    startUserSelectAssignees: {
-      handler: getSignerInfo(managerSigner.value),
-      reviewer: getSignerInfo(approverSigner.value),
-      unitHead: {
-        id: isEditMode.value ? [] : [unitLeaderSigner.value],
-        name: isEditMode.value ? unitLeaderName.value : (sameDeptUsersList.value.find(user => user.id === unitLeaderSigner.value)?.nickname || ""),
-        signed: false
-      },
-    signers:''
-    }
-  }
-
-  // 提交数据到后端（参考请假模块实现）
-  console.log('提交数据:', submitData)
-  console.log('上传文件:', uploadedFiles)
-  try {
-    if (editId.value) {
-      // 编辑模式：调用更新接口
-      submitData.id = editId.value
-      // 编辑模式下签字人信息格式修改
-      submitData.signers = [managerSigner.value, approverSigner.value, unitLeaderName.value].join('，')
-      await SealApi.updateSealApplication(submitData)
-      ElMessage.success('修改成功')
-    } else {
-      // 创建模式：调用创建接口
-      await SealApi.submitSealApplication(submitData)
-      ElMessage.success('申请提交成功')
-    }
-    //跳转到印章申请列表
-    router.push('/seal/seal_apply')
-  } catch (error) {
-    ElMessage.error(editId.value ? '修改失败' : '申请提交失败')
-  }
-}
-
 const bpmnXml = ref('')
 //审核人和单位负责人列表
 const auditUserList = ref<Array<any>>([])
@@ -806,8 +829,6 @@ const loadEditData = async () => {
   }
 }
 
-
-
 onMounted(async () => {
   // 编辑模式下跳过不必要的数据加载，提升性能
   if (editId.value) {
@@ -839,21 +860,21 @@ onMounted(async () => {
       try {
         startUserSelectTasks.value = await parseStartUserSelectTasks(bpmnXml.value)
         console.log('解析到的可指定审批人任务:', startUserSelectTasks.value)
-        
+
         // 找到经办人签字任务（用于合并的签字选择框）
         managerTask.value = startUserSelectTasks.value.find(task => task.name === '经办人签字')
         console.log('经办人签字任务:', managerTask.value)
-        
+
         // 加载所有用户列表
         try {
           // 加载经办人用户列表
           userList.value = await UserApi.getSimpleUserList()
           console.log('加载经办人用户列表成功:', userList.value.length)
-          
+
           // 加载审核人用户列表
           auditUserList.value = await UserApi.getSimpleUserList()
           console.log('加载审核人用户列表成功:', auditUserList.value.length)
-          
+
           // 使用系统中所有用户作为可选用户列表
           // 获取所有用户，不做任何筛选
           const allUsers = await UserApi.getSimpleUserList({pageSize: 1000}) // 设置较大的pageSize确保获取全部用户
@@ -891,15 +912,15 @@ onMounted(async () => {
           startUserSelectTasks.value.forEach((task) => {
             startUserSelectAssignees.value[task.id] = [];
           });
-          
+
           // 设置三个独立签字人的校验规则
           if (startUserSelectTasks.value && startUserSelectTasks.value.length > 0) {
             // 为每个任务设置校验规则
             startUserSelectTasks.value.forEach((task) => {
               startUserSelectAssigneesFormRules.value[task.id] = [
-                { 
-                  required: true, 
-                  message: '请选择审批人', 
+                {
+                  required: true,
+                  message: '请选择审批人',
                   trigger: 'change'
                 }
               ];

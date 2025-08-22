@@ -31,8 +31,18 @@
   <ContentWrap>
     <el-table v-loading="loading" :data="list">
       <el-table-column align="center" label="盖章编码" prop="applyData.sealNumber" min-width="140" />
-      <el-table-column align="center" label="当前进度" prop="name" min-width="120" />
-      <el-table-column align="center" label="材料名称" prop="applyData.materialName" min-width="200" show-overflow-tooltip />
+      <!-- 材料名称改为超链接形式 -->
+      <el-table-column align="center" label="材料名称" min-width="200" show-overflow-tooltip>
+        <template #default="scope">
+          <el-link
+            type="primary"
+            underline
+            @click="handleMaterialClick(scope.row)"
+          >
+            {{ scope.row.applyData.materialName }}
+          </el-link>
+        </template>
+      </el-table-column>
       <el-table-column align="center" label="经办人" min-width="100">
         <template #default="scope">
           {{ scope.row.applyData.signers ? scope.row.applyData.signers.replace(/,/g, '，').split('，')[0] : '' }}
@@ -52,7 +62,7 @@
         min-width="100"
       />
       <el-table-column align="center" label="联系电话" prop="applyData.phone" min-width="130" />
-      <el-table-column align="center" label="单位" min-width="150" show-overflow-tooltip>
+      <el-table-column align="center" label="用印单位" min-width="150" show-overflow-tooltip>
         <template #default="scope">
           {{ scope.row.applyData.applyTitle ? scope.row.applyData.applyTitle.split('印章申请单')[0] : '' }}
         </template>
@@ -83,6 +93,8 @@
 import { dateFormatter } from '@/utils/formatTime'
 import * as TaskApi from '@/api/bpm/task'
 import * as SealApi from "@/api/seal";
+import { useRouter } from 'vue-router'
+import { onMounted, ref, reactive } from 'vue'
 
 defineOptions({ name: 'SealTodoTask' })
 
@@ -136,6 +148,18 @@ const handlePagination = () => {
 
 /** 处理审批按钮 */
 const handleAudit = (row: any) => {
+  push({
+    name: 'SealDetail',
+    query: {
+      id: row.processInstance.id,
+      taskId: row.id
+    }
+  })
+}
+
+/** 处理材料名称点击（超链接） */
+const handleMaterialClick = (row: any) => {
+  // 点击材料名称与点击办理按钮效果相同，跳转到详情页
   push({
     name: 'SealDetail',
     query: {
