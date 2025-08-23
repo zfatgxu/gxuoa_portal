@@ -528,10 +528,12 @@
           <el-descriptions-item v-if="Number(personnel.level) >= 27" label="请假期间主持工作负责人会签" label-class-name="approval-label">
             <div></div>
           </el-descriptions-item>
-          <el-descriptions-item label="领导意见" label-class-name="approval-label">
+          <el-descriptions-item v-if="Number(personnel.level) >= 27" label="校领导意见" label-class-name="approval-label">
             <div></div>
           </el-descriptions-item>
-
+          <el-descriptions-item v-if="Number(personnel.level) < 27" label="单位负责人意见" label-class-name="approval-label">
+            <div></div>
+          </el-descriptions-item>
         </el-descriptions>
       </div>
 
@@ -611,7 +613,7 @@
                   </div>
                 </div>
               </el-popover>
-              <el-button v-if="Number(personnel.level) >= 27 && Number(personnel.level) != 100 && userTask.id==='host_sign'" type="primary" link @click="openApprovalUserSelect(userTask.id)" >
+              <el-button v-if="Number(personnel.level) >= 27 && Number(personnel.level) != 100 && userTask.id==='host_sign'" type="primary" link @click="openApprovalUserSelect(userTask.id)" :disabled="isReadOnly">
                 <Icon icon="ep:plus" />选择签办人
               </el-button>
               <el-button v-if="userTask.id==='leader_sign' && Number(personnel.level) < 27" type="primary" link @click="openApprovalUserSelect(userTask.id)" :disabled="isReadOnly">
@@ -1445,7 +1447,7 @@ const fetchUserProfile = async () => {
                 personalParity: item.birthCount?.toString(),
                 personalDystocia: item.difficultBirth,
                 personalMultiple: item.multipleBirth,
-                detail: item.detail,
+                personalReason: item.detail,
                 visitRoute: item.visitRoute,
                 relationship: item.relationship,
                 visitedPersonName: item.visitedPersonName,

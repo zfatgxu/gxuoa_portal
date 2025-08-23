@@ -62,11 +62,7 @@
         min-width="100"
       />
       <el-table-column align="center" label="联系电话" prop="applyData.phone" min-width="130" />
-      <el-table-column align="center" label="用印单位" min-width="150" show-overflow-tooltip>
-        <template #default="scope">
-          {{ scope.row.applyData.applyTitle ? scope.row.applyData.applyTitle.split('印章申请单')[0] : '' }}
-        </template>
-      </el-table-column>
+      <el-table-column align="center" label="用印单位" min-width="150" show-overflow-tooltip prop="processInstance.startUser.deptName"/>
       <el-table-column align="center" label="操作" fixed="right" width="80">
         <template #default="scope">
           <el-button link type="primary" @click="handleAudit(scope.row)">办理</el-button>

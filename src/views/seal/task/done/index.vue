@@ -55,43 +55,53 @@
   <!-- 列表 -->
   <ContentWrap>
     <el-table v-loading="loading" :data="list">
-      <el-table-column align="center" label="盖章编码" prop="sealNumber" />
+      <el-table-column align="center" label="盖章编码" prop="applyData.sealNumber" />
       <!-- 材料名称超链接（与提供代码保持一致的跳转逻辑） -->
       <el-table-column align="center" label="材料名称">
         <template #default="scope">
           <el-link type="primary" underline @click="handleMaterialClick(scope.row)">
-            {{ scope.row.materialName }}
+            {{ scope.row.applyData.materialName }}
           </el-link>
         </template>
       </el-table-column>
       <el-table-column align="center" label="经办人">
         <template #default="scope">
-          {{ getFirstSigner(scope.row.signers) }}
+          {{ getFirstSigner(scope.row.applyData.signers) }}
         </template>
       </el-table-column>
-      <el-table-column align="center" label="审批状态" prop="status">
+      <!-- <el-table-column align="center" label="审批状态" prop="applyData.status">
         <template #default="scope">
-            <span :class="getApprovalStatusClass(scope.row.status)">
-              {{ getApprovalStatusText(scope.row.status) }}
+            <span :class="getApprovalStatusClass(scope.row.applyData.status)">
+              {{ getApprovalStatusText(scope.row.applyData.status) }}
             </span>
         </template>
-      </el-table-column>
+      </el-table-column> -->
       <el-table-column align="center" label="用印状态" min-width="120">
         <template #default="scope">
+          <div style="display: flex; align-items: center; justify-content: center;">
             <span
-              :class="scope.row.sealState === 1 ? 'seal-status-used' : 'seal-status-pending'">
-              {{ scope.row.sealState === 1 ? '已用印' : '待用印' }}
+              :class="scope.row.applyData.sealState === 1 ? 'seal-status-used' : 'seal-status-pending'">
+              {{ scope.row.applyData.sealState === 1 ? '已用印' : '待用印' }}
             </span>
+            <el-checkbox
+              :model-value="scope.row.applyData.sealState === 1"
+              :disabled="scope.row.applyData.sealState == 1 || !canOperateSealState(scope.row) || !isSealNumberApproved(scope.row)"
+              @change="(val) => handleSealStateChange(scope.row, val)"
+              @click="(event) => handleCheckboxClick(scope.row, event)"
+              style="margin-left: 6px;"
+            />
+          </div>
         </template>
       </el-table-column>
 
       <el-table-column align="center" label="材料类型" >
         <template #default="scope">
-          {{ getDictLabel(DICT_TYPE.SEAL_APPLY_MATERIAL_TYPES, scope.row.materialType) }}
+          {{ getDictLabel(DICT_TYPE.SEAL_APPLY_MATERIAL_TYPES, scope.row.applyData.materialType) }}
         </template>
       </el-table-column>
 
-      <el-table-column align="center" label="联系方式" prop="phone" />
+      <el-table-column align="center" label="联系方式" prop="applyData.phone" />
+      <el-table-column align="center" label="用印单位" min-width="150" show-overflow-tooltip prop="processInstance.startUser.deptName"/>
       <el-table-column align="center" label="操作" width="160">
         <template #default="scope">
           <el-button size="mini" @click="viewDetail(scope.row)">详情</el-button>
@@ -130,8 +140,8 @@ import { getSimpleDeptList } from '@/api/system/dept'
 import * as SealApi from '@/api/seal'
 import { useUserStore } from '@/store/modules/user'
 import { getDictLabel, getDictOptions } from '@/utils/dict'
-import { ElMessage } from 'element-plus'
-
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { getUser } from '@/api/system/user'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -149,22 +159,6 @@ const queryParams = ref({
 const dialogVisible = ref(false)
 const selectedUnit = ref('')
 const unitList = ref([])
-
-const fetchUnitList = async () => {
-  const res = await getSimpleDeptList()
-  // 兼容返回结构
-  unitList.value = Array.isArray(res) ? res : (res.data || [])
-}
-
-const sealLabel = (val: string) => {
-  const map = {
-    seal1: '中共广西大学委员会',
-    seal2: '广西大学（红印）',
-    seal3: '广西大学（黑印）',
-    seal4: '广西大学校长办公室（红印）'
-  }
-  return map[val] || val
-}
 
 // 查询、重置、发起、详情等方法
 const handleQuery = () => {
@@ -205,7 +199,7 @@ const handleUnitConfirm = () => {
 const getSealApplicationPage = async (data: any) => {
   loading.value = true
   try {
-    const res = await SealApi.getSealApplicationPage(data)
+    const res = await SealApi.getSealDonePage(data)
     list.value = res.list || []
     total.value = res.total || 0
   } catch (error) {
@@ -251,7 +245,7 @@ const handleEdit = (row: any) => {
 const handleMaterialClick = (row: any) => {
   router.push({
     name: 'SealDetail',
-    query: { id: row.processInstanceId }
+    query: { id: row.applyData.processInstanceId }
   })
 }
 
@@ -298,10 +292,17 @@ const getApprovalStatusText = (status: number) => {
   }
 }
 
-// 处理用印状态变更
-const handleSealStateChange = (row: any, checked: boolean) => {
-  if (row.status !== 2) {
-    ElMessage.warning('只有审核通过的申请才能更改用印状态')
+/** 处理用印状态变更 */
+const handleSealStateChange = async (row: any, checked: boolean) => {
+  // 检查盖章编码状态
+  if (!isSealNumberApproved(row)) {
+    ElMessage.warning('只有审核通过的申请（盖章编码A开头）才能操作用印状态')
+    return
+  }
+
+  // 检查权限
+  if (!canOperateSealState(row)) {
+    ElMessage.warning('您没有权限操作此申请的用印状态，只有部门用印审核人才能操作')
     return
   }
 
@@ -322,12 +323,12 @@ const handleSealStateChange = (row: any, checked: boolean) => {
       try {
         // 调用API更新用印状态，传递申请表单id和sealState
         await SealApi.updateSealState({
-          id: row.id,
+          id: row.applyData.id,
           sealState: newSealState
         })
 
         // 更新成功后更新本地数据
-        row.sealState = newSealState
+        row.applyData.sealState = newSealState
         ElMessage.success(`用印状态已更新为"${stateText}"`)
       } catch (error) {
         ElMessage.error('更新用印状态失败，请重试')
@@ -335,6 +336,51 @@ const handleSealStateChange = (row: any, checked: boolean) => {
       }
     })
     .catch(() => {})
+}
+
+/** 检查盖章编码是否为审核通过状态（A开头） */
+const isSealNumberApproved = (row: any) => {
+  const sealNumber = row.applyData.sealNumber
+  if (!sealNumber || typeof sealNumber !== 'string') {
+    return false
+  }
+  // A开头表示审核通过，B开头表示审核中或已拒绝
+  return sealNumber.startsWith('A')
+}
+
+/** 检查当前用户是否有权限操作用印状态 */
+const canOperateSealState = (row: any) => {
+  // 获取当前登录用户ID
+  const currentUserId = userStore.getUser.id
+
+  // 检查是否有部门审核人列表
+  if (!row.applyData.deptAuditors || !Array.isArray(row.applyData.deptAuditors)) {
+    return false
+  }
+
+  // 检查当前用户是否在部门审核人列表中
+  return row.applyData.deptAuditors.some((auditor: any) => auditor.auditor === currentUserId)
+}
+
+/** 处理复选框点击事件（包括禁用状态的点击） */
+const handleCheckboxClick = (row: any, event: Event) => {
+  // 如果复选框是禁用状态，显示相应的提示信息
+  const isDisabled = row.applyData.sealState == 1 || !canOperateSealState(row) || !isSealNumberApproved(row)
+
+  if (isDisabled) {
+    // 阻止默认行为
+    event.preventDefault()
+    event.stopPropagation()
+
+    // 根据不同的禁用原因显示不同的提示
+    if (row.applyData.sealState == 1) {
+      ElMessage.info('该申请已经是"已用印"状态，无需再次操作')
+    } else if (!isSealNumberApproved(row)) {
+      ElMessage.warning('只有审核通过的申请（盖章编码A开头）才能操作用印状态')
+    } else if (!canOperateSealState(row)) {
+      ElMessage.warning('您没有权限操作此申请的用印状态，只有部门用印审核人才能操作')
+    }
+  }
 }
 
 onMounted(() => {
