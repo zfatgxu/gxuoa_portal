@@ -81,7 +81,9 @@ export const cancelProcessInstanceByAdmin = async (id: number, reason: string) =
 }
 
 export const getProcessInstance = async (id: string) => {
-  return await request.get({ url: '/bpm/process-instance/get?id=' + id })
+  // 确保ID是字符串类型
+  const stringId = String(id)
+  return await request.get({ url: '/bpm/process-instance/get?id=' + stringId })
 }
 
 export const getProcessInstanceCopyPage = async (params: any) => {
@@ -90,7 +92,26 @@ export const getProcessInstanceCopyPage = async (params: any) => {
 
 // 获取审批详情
 export const getApprovalDetail = async (params: any) => {
-  return await request.get({ url: '/bpm/process-instance/get-approval-detail', params })
+  // 确保参数名称正确，并转换为字符串类型
+  const requestParams = { ...params }
+  
+  // 如果传递的是id，转换为processInstanceId并确保是字符串类型
+  if (params.id && !params.processInstanceId) {
+    requestParams.processInstanceId = String(params.id)
+    delete requestParams.id
+  }
+  
+  // 确保processInstanceId是字符串类型
+  if (requestParams.processInstanceId) {
+    requestParams.processInstanceId = String(requestParams.processInstanceId)
+  }
+  
+  // 确保其他ID参数也是字符串类型
+  if (requestParams.processDefinitionId) {
+    requestParams.processDefinitionId = String(requestParams.processDefinitionId)
+  }
+  
+  return await request.get({ url: '/bpm/process-instance/get-approval-detail', params: requestParams })
 }
 
 // 获取下一个执行的流程节点
@@ -105,5 +126,7 @@ export const getFormFieldsPermission = async (params: any) => {
 
 // 获取流程实例的 BPMN 模型视图
 export const getProcessInstanceBpmnModelView = async (id: string) => {
-  return await request.get({ url: '/bpm/process-instance/get-bpmn-model-view?id=' + id })
+  // 确保ID是字符串类型
+  const stringId = String(id)
+  return await request.get({ url: '/bpm/process-instance/get-bpmn-model-view?id=' + stringId })
 }
