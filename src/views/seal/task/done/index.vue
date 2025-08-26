@@ -16,12 +16,14 @@
         </el-select>
       </el-form-item>
       <el-form-item label="用印状态">
-        <el-select v-model="queryParams.status" clearable placeholder="请选择用印状态" style="width: 200px">
+        <el-select v-model="queryParams.sealState" clearable placeholder="请选择用印状态" style="width: 200px">
           <el-option
-            v-for="dict in getDictOptions(DICT_TYPE.SEAL_APPLY_STATE)"
-            :key="dict.value"
-            :label="dict.label"
-            :value="dict.value"
+            label="已用印"
+            value=1
+          />
+          <el-option
+            label="待用印"
+            value=2
           />
         </el-select>
       </el-form-item>
@@ -142,7 +144,7 @@ const total = ref(0) // 总条数
 const queryParams = ref({
   materialName: '',
   materialType: '',
-  status: '',
+  sealState: '',
   pageNo: 1,
   pageSize: 10
 })
@@ -159,7 +161,7 @@ const resetQuery = () => {
   queryParams.value = {
     materialName: '',
     materialType: '',
-    status: '',
+    sealState: '',
     pageNo: 1,
     pageSize: queryParams.value.pageSize
   }
