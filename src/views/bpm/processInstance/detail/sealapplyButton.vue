@@ -800,7 +800,7 @@
         // 审批通过数据
         const data = {
           id: runningTask.value.id,
-          reason: approveReasonForm.reason,
+          reason: approveReasonForm.reason || '同意', // 如果没有填写意见，默认为"同意"
           variables, // 审批通过, 把修改的字段值赋于流程实例变量
           nextAssignees: approveReasonForm.nextAssignees // 下个自选节点选择的审批人信息
         } as any
@@ -824,7 +824,7 @@
         // 审批不通过数据
         const data = {
           id: runningTask.value.id,
-          reason: rejectReasonForm.reason
+          reason: rejectReasonForm.reason || '拒绝' // 如果没有填写意见，默认为"拒绝"
         }
         await TaskApi.rejectTask(data)
         popOverVisible.value.reject = false

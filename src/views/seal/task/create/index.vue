@@ -576,7 +576,7 @@ const sealTypeOptions = ref([])
 const getSealTypeOptions = async () => {
   try {
     // 从数据库获取印章类型选项
-    const res = await sealApi.getsealPage({ orgId: selectedUnit.value.id })
+    const res = await sealApi.getsealPage({ orgId: selectedUnit.value.id,isAPP: true })
 
     sealTypeOptions.value = res.list.map(item => {
       return {
