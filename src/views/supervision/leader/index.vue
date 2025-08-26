@@ -51,7 +51,7 @@
       <div class="task-header-controls">
         <el-tabs v-model="activeTab" class="inline-tabs" @tab-change="handleTabChange">
           <el-tab-pane label="全部事项" name="all-items" />
-          <el-tab-pane label="需要关注" name="attention-items" />
+          <el-tab-pane label="已关注" name="attention-items" />
         </el-tabs>
         <!-- 搜索和筛选功能 -->
         <div class="flex space-x-4 items-center">
@@ -94,8 +94,9 @@
         <el-card
           v-for="task in filteredTaskList"
           :key="task.id"
-          class="task-item"
+          class="task-item clickable-card"
           shadow="hover"
+          @click="navigateToWorkflowDetail(task)"
         >
           <div class="task-header">
             <div class="flex items-center">
@@ -107,7 +108,22 @@
                 }">
                 {{ getTypeText(task) }}
               </span>
-              <h4 class="task-title" @click="viewTaskDetail(task)">{{ getTaskTitle(task) }}</h4>
+              <h4 class="task-title" @click.stop="viewTaskDetail(task)">{{ getTaskTitle(task) }}</h4>
+              <!-- 关注按钮 - 只在全部事项标签页显示 -->
+              <el-button
+                v-if="activeTab === 'all-items'"
+                :loading="followLoading[task.processInstanceId]"
+                size="small"
+                class="follow-btn ml-3"
+                :style="{
+                  backgroundColor: isFollowed(task) ? 'rgb(190, 190, 190)' : 'rgb(89, 179, 253)',
+                  borderColor: isFollowed(task) ? 'rgb(190, 190, 190)' : 'rgb(89, 179, 253)',
+                  color: 'white'
+                }"
+                @click.stop="toggleFollow(task)"
+              >
+                {{ isFollowed(task) ? '已关注' : '关注' }}
+              </el-button>
             </div>
             <div class="task-actions">
               <span
@@ -176,14 +192,13 @@
                 </div>
                 <div class="flex items-center">
                   <span class="text-gray-500">分管校领导：</span>
-                  <span class="text-gray-700">{{ task.supervisionPageVOData?.leaderNickname || '未设置' }}</span>
+                  <span class="text-gray-700">{{ getLeadLeadersText(task.supervisionPageVOData?.leadLeaders) || getLeadLeadersText(task.leadLeaders) || '未设置' }}</span>
                 </div>
               </div>
             </div>
 
               <div class="flex ml-6">
-                <el-button class="w-20" @click="viewTaskDetail(task)">查看详情</el-button>
-                <el-button v-if="getStatusText(task) !== '已结束'" class="w-20 ml-2" type="primary" @click="addInstruction(task)">新增批示</el-button>
+                <el-button v-if="getStatusText(task) !== '已结束'" class="w-20 ml-2" type="primary" @click.stop="addInstruction(task)">新增批示</el-button>
               </div>
           </div>
         </el-card>
@@ -273,9 +288,48 @@ import {
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import SupervisionDetailDialog from '../components/SupervisionDetailDialog.vue'
-import { SupervisionTaskApi, LeaderRemarkApi, SupervisionIndexApi } from '@/api/supervision/index'
+import { SupervisionTaskApi, LeaderRemarkApi, SupervisionIndexApi, SupervisionFollowApi } from '@/api/supervision/index'
 import { dateFormatter } from '@/utils/formatTime'
 import { useUserStore } from '@/store/modules/user'
+import { useRouter } from 'vue-router'
+
+// 从leadLeaders数组中提取分管校领导（督办领导和牵头领导）
+const getLeadLeadersText = (leadLeaders) => {
+  if (!leadLeaders || leadLeaders.length === 0) return '未设置'
+  
+  // 筛选督办领导和牵头领导
+  const targetLeaders = leadLeaders.filter(leader => 
+    leader.type === '督办领导' || leader.type === '牵头领导'
+  )
+  
+  if (targetLeaders.length === 0) return '未设置'
+  
+  // 返回领导姓名，用顿号分隔
+  return targetLeaders.map(leader => leader.name).join('、')
+}
+
+// 根据supervisionStatus获取状态文本
+const getSupervisionStatusText = (supervisionStatus) => {
+  if (supervisionStatus === null || supervisionStatus === undefined) return '进行中'
+  switch (supervisionStatus) {
+    case 1: return '进行中'
+    case 2: return '已超时'
+    case 3: return '已结束'
+    default: return '进行中'
+  }
+}
+
+// 根据新的supervisionStatus字段计算显示状态
+const calculateDisplayStatusNew = (supervisionStatus) => {
+  const statusText = getSupervisionStatusText(supervisionStatus)
+  
+  return {
+    daysRemaining: null,
+    isOverdue: statusText === '已超时',
+    overdueDays: null,
+    status: statusText
+  }
+}
 
 // 格式化日期，只显示年月日
 const formatDateOnly = (timestamp) => {
@@ -289,6 +343,7 @@ const formatDateOnly = (timestamp) => {
 
 // 获取用户store
 const userStore = useUserStore()
+const { push } = useRouter()
 
 // 根据批示的leaderId判断显示标签
 const getRemarkLabel = (remark) => {
@@ -316,6 +371,10 @@ const instructionDialogVisible = ref(false)
 const historyDialogVisible = ref(false)
 const selectedTask = ref(null)
 const loading = ref(false)
+
+// 关注相关状态
+const followedTasks = ref(new Set()) // 存储已关注的任务processInstanceId
+const followLoading = ref({}) // 存储每个任务的关注操作loading状态
 
 const instructionForm = reactive({
   content: ''
@@ -437,7 +496,34 @@ const loadTaskList = async () => {
     if (activeTab.value === 'all-items') {
       result = await SupervisionTaskApi.getAllTasksPage(params)
     } else if (activeTab.value === 'attention-items') {
-      result = await SupervisionTaskApi.getAttentionTasksPage(params)
+      // 已关注标签页使用关注列表接口
+      result = await SupervisionFollowApi.getMyFollowList({
+        pageNo: params.pageNo,
+        pageSize: params.pageSize
+      })
+      // 转换数据格式以匹配现有的任务数据结构
+      if (result && result.list) {
+        result.list = result.list.map(followItem => ({
+          processInstanceId: followItem.processInstanceId,
+          createTime: followItem.createTime,
+          taskType: 'todo', // 默认为待办状态
+          supervisionPageVOData: {
+            id: followItem.id,
+            orderTitle: followItem.orderTitle,
+            orderCode: followItem.orderCode,
+            content: followItem.content,
+            type: followItem.type,
+            priority: followItem.priority,
+            deadline: followItem.deadline,
+            leadLeaders: followItem.leadLeaders, // 添加leadLeaders字段
+            supervisionStatus: followItem.supervisionStatus, // 添加supervisionStatus字段
+            // 其他字段可能需要根据实际API返回数据调整
+          },
+          leadLeaders: followItem.leadLeaders, // 在顶层也添加leadLeaders字段
+          supervisionStatus: followItem.supervisionStatus, // 在顶层也添加supervisionStatus字段
+          leaderRemarks: [] // 初始化为空数组
+        }))
+      }
     }
 
     console.log('API响应结果:', result) // 添加调试日志
@@ -463,6 +549,18 @@ const loadTaskList = async () => {
 
     taskList.value = tasks
     pagination.total = result.total || 0
+    
+    // 如果是全部事项标签页，需要更新关注状态
+    if (activeTab.value === 'all-items') {
+      await updateFollowStatus(tasks)
+    } else if (activeTab.value === 'attention-items') {
+      // 已关注标签页中的所有任务都是已关注状态
+      tasks.forEach(task => {
+        if (task.processInstanceId) {
+          followedTasks.value.add(task.processInstanceId)
+        }
+      })
+    }
   } catch (error) {
     console.error('加载任务列表失败', error)
     ElMessage.error('加载任务列表失败')
@@ -554,76 +652,49 @@ const getDeadlineText = (task) => {
   return formatDateOnly(deadline)
 }
 
-// 根据任务状态获取截止时间的样式类
+// 根据任务状态获取截止时间的样式类 - 基于supervisionStatus
 const getDeadlineClass = (task) => {
-  const status = getStatusText(task)
-  if (status === '已超时') {
+  const supervisionStatus = task.supervisionPageVOData?.supervisionStatus || task.supervisionStatus
+  const statusText = getSupervisionStatusText(supervisionStatus)
+  
+  if (statusText === '已超时') {
     return 'deadline-date-overdue' // 红色
-  } else if (status === '已结束') {
+  } else if (statusText === '已结束') {
     return 'deadline-date-finished' // 黑色
-  } else if (status === '进行中' || status === '需要关注') {
+  } else if (statusText === '进行中') {
     return 'deadline-date-processing' // 橙色
   }
   return 'deadline-date' // 默认颜色
 }
 
-// 计算精确的剩余时间文本
+// 计算精确的剩余时间文本 - 基于supervisionStatus显示
 const getPreciseTimeRemaining = (task) => {
-  // 从任务的supervisionPageVOData中获取deadline
-  const deadline = task.supervisionPageVOData?.deadline
-  if (!deadline) return null
-
-  const now = new Date()
-  const deadlineDate = new Date(deadline)
-  const timeDiff = deadlineDate.getTime() - now.getTime()
-
-  // 计算绝对时间差
-  const absDiff = Math.abs(timeDiff)
-  const totalMinutes = Math.floor(absDiff / (60 * 1000))
-  const totalHours = Math.floor(absDiff / (60 * 60 * 1000))
-  const totalDays = Math.floor(absDiff / (24 * 60 * 60 * 1000))
-
-  if (timeDiff < 0) {
-    // 已超时 - 优先显示更小的时间单位
-    if (totalDays >= 1) {
-      return `超时${totalDays}天`
-    } else if (totalHours >= 1) {
-      return `超时${totalHours}小时`
-    } else if (totalMinutes >= 1) {
-      return `超时${totalMinutes}分钟`
-    } else {
-      return `刚刚超时`
-    }
-  } else {
-    // 还有剩余时间 - 优先显示更小的时间单位
-    if (totalDays >= 1) {
-      return `剩余${totalDays}天`
-    } else if (totalHours >= 1) {
-      return `剩余${totalHours}小时`
-    } else if (totalMinutes >= 1) {
-      return `剩余${totalMinutes}分钟`
-    } else {
-      return `即将到期`
-    }
+  // 根据supervisionStatus显示状态信息
+  const supervisionStatus = task.supervisionPageVOData?.supervisionStatus || task.supervisionStatus
+  const statusText = getSupervisionStatusText(supervisionStatus)
+  
+  if (statusText === '已超时') {
+    return '已超时'
+  } else if (statusText === '进行中') {
+    return '进行中'
+  } else if (statusText === '已结束') {
+    return '已结束'
   }
+  
+  return null
 }
 
-// 获取剩余时间的样式类
+// 获取剩余时间的样式类 - 基于supervisionStatus
 const getPreciseTimeRemainingClass = (task) => {
-  const deadline = task.supervisionPageVOData?.deadline
-  if (!deadline) return 'remaining-days'
-
-  const now = new Date()
-  const deadlineDate = new Date(deadline)
-  const timeDiff = deadlineDate.getTime() - now.getTime()
-  const totalHours = Math.abs(Math.floor(timeDiff / (60 * 60 * 1000)))
-
-  if (timeDiff < 0) {
+  const supervisionStatus = task.supervisionPageVOData?.supervisionStatus || task.supervisionStatus
+  const statusText = getSupervisionStatusText(supervisionStatus)
+  
+  if (statusText === '已超时') {
     return 'remaining-days overdue' // 超期显示红色
-  } else if (totalHours <= 24) {
-    return 'remaining-days urgent' // 24小时内显示橙色
-  } else {
+  } else if (statusText === '进行中') {
     return 'remaining-days' // 正常显示绿色
+  } else {
+    return 'remaining-days' // 默认绿色
   }
 }
 
@@ -661,36 +732,24 @@ const getStatusType = (task) => {
   return types[status] || 'info'
 }
 
-// 获取任务状态文本
+// 获取任务状态文本 - 使用新的supervisionStatus字段
 const getStatusText = (task) => {
-  // 需要关注标签页中的任务都显示"需要关注"
-  if (activeTab.value === 'attention-items') {
-    return '需要关注'
+  // 优先使用supervisionStatus字段
+  const supervisionStatus = task.supervisionPageVOData?.supervisionStatus || task.supervisionStatus
+  if (supervisionStatus !== null && supervisionStatus !== undefined) {
+    return getSupervisionStatusText(supervisionStatus)
   }
 
-  // 全部事项标签页中根据taskType判断状态
+  // 兼容旧的taskType逻辑
   const taskType = task.taskType
-
   if (taskType === 'done') {
     return '已结束'
   }
-
   if (taskType === 'todo') {
-    // 检查是否超时（精确到分钟）
-    const deadline = task.supervisionPageVOData?.deadline
-    if (deadline) {
-      const deadlineDate = new Date(deadline)
-      const now = new Date()
-
-      // 使用精确时间比较（精确到分钟）
-      if (now > deadlineDate) {
-        return '已超时'
-      }
-    }
     return '进行中'
   }
 
-  // 默认情况（兼容旧数据）
+  // 默认情况
   return '进行中'
 }
 
@@ -715,7 +774,7 @@ const viewTaskDetail = async (task) => {
       leadDepartment: supervisionData.leadDeptName || '',
       assistDepartments: coDeptNames,
       collaborators: coDeptNames,
-      supervisor: supervisionData.leaderNickname || '',
+      supervisor: getLeadLeadersText(supervisionData.leadLeaders) || getLeadLeadersText(task.leadLeaders) || '',
       priority: getPriorityText(task),
       status: getStatusText(task), // 添加状态信息
       deadline: supervisionData.deadline ? dateFormatter(null, null, supervisionData.deadline) : '无',
@@ -788,7 +847,70 @@ const handleScroll = (event) => {
   console.log('Content scrolled:', event.target.scrollTop)
 }
 
+// 整卡点击跳转到督办工作流详情页（携带可选 taskId）
+const navigateToWorkflowDetail = (task) => {
+  const processInstanceId = task.processInstance?.id || task.processInstanceId
+  if (!processInstanceId) return
+  const query = task.id ? { taskId: task.id } : {}
+  push({
+    name: 'SupervisionWorkflowDetail',
+    params: { id: processInstanceId },
+    query
+  })
+}
+
 // 注意：统计数据现在通过API获取，不再需要基于任务列表计算的辅助方法
+
+// 关注相关功能函数
+
+// 判断任务是否已关注
+const isFollowed = (task) => {
+  return followedTasks.value.has(task.processInstanceId)
+}
+
+// 切换关注状态
+const toggleFollow = async (task) => {
+  if (!task.processInstanceId) {
+    ElMessage.error('任务信息不完整，无法操作')
+    return
+  }
+
+  const processInstanceId = task.processInstanceId
+  const currentFollowStatus = isFollowed(task)
+  const newFollowStatus = !currentFollowStatus
+
+  // 设置loading状态
+  followLoading.value[processInstanceId] = true
+
+  try {
+    await SupervisionFollowApi.toggleFollow({
+      processInstanceId,
+      followStatus: newFollowStatus
+    })
+
+    // 更新本地状态
+    if (newFollowStatus) {
+      followedTasks.value.add(processInstanceId)
+      ElMessage.success('已关注')
+    } else {
+      followedTasks.value.delete(processInstanceId)
+      ElMessage.success('已取消关注')
+    }
+  } catch (error) {
+    console.error('关注操作失败', error)
+    ElMessage.error('操作失败：' + (error.message || error))
+  } finally {
+    // 清除loading状态
+    followLoading.value[processInstanceId] = false
+  }
+}
+
+// 更新任务列表的关注状态（用于全部事项标签页）
+const updateFollowStatus = async (tasks) => {
+  // 这里可以根据需要实现批量查询关注状态的逻辑
+  // 暂时简化处理，只保留已有的关注状态
+  // 如果后端提供批量查询关注状态的接口，可以在这里调用
+}
 
 // 初始化
 onMounted(() => {
@@ -964,6 +1086,10 @@ onMounted(() => {
 
 .task-item:hover {
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.clickable-card {
+  cursor: pointer;
 }
 
 .task-header {
@@ -1281,5 +1407,18 @@ onMounted(() => {
 :deep(.el-timeline-item__timestamp) {
   font-size: 12px;
   color: #909399;
+}
+
+/* 关注按钮样式 */
+.follow-btn {
+  min-width: 60px;
+  height: 28px;
+  font-size: 12px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.follow-btn:hover {
+  opacity: 0.8;
 }
 </style>

@@ -133,7 +133,7 @@ export const OrderApi = {
   },
 
   // 获取督办分类列表
-  getSupervisionDetailTypes: async (type: number): Promise<string[] | SupervisionTypeRespVO[]> => {
+  getSupervisionDetailTypes: async (type: number): Promise<SupervisionTypeRespVO[]> => {
     return await request.get({ url: `/bpm/supervision/getListSupervisiondatailType/${type}` })
   },
 
@@ -312,6 +312,19 @@ export interface SupervisionStatisticsVO {
   monthCompleted: number // 本月完成
   specialSupervision: number // 专项督办总数
   workSupervision: number // 工作督办总数
+  // 新增字段
+  ongoingCount: number // 进行中数量
+  overtimeCount: number // 已超时数量
+  completedCount: number // 已结束数量
+  monthlyData: MonthlyDataItem[] // 月度数据
+}
+
+// 月度数据项接口
+export interface MonthlyDataItem {
+  categoryType: 'type' | 'category' // 分类类型：type=督办类型，category=督办分类
+  month: number // 月份
+  count: number // 数量
+  categoryName: string // 分类名称
 }
 
 // 部门月度任务统计数据响应接口
@@ -333,7 +346,24 @@ export interface LeaderMonthTaskStatisticsVO {
 // 督办首页API
 export const SupervisionIndexApi = {
   // 获取督办首页数据（支持分页、类型过滤和搜索）
-  getIndexData(params?: { pageNo?: number; pageSize?: number; type?: number; orderTitle?: string; priority?: number }): Promise<{ list: SupervisionOrderDetailVO[]; total: number }> {
+  getIndexData(params?: {
+    pageNo?: number;
+    pageSize?: number;
+    type?: number | number[]; // 督办类型（单个或数组）
+    orderTitle?: string;
+    priority?: number | number[]; // 优先级（单个或数组）
+    supervisionStatus?: number;
+    supervisionStatusList?: number[];
+    // 高级筛选参数
+    startTime?: string;
+    endTime?: string;
+    supervisionTypes?: number[]; // 督办分类
+    remarkStatus?: number[]; // 批示状态
+    schoolLeaders?: string; // 校领导ID，逗号分隔
+    supervisors?: string; // 督办人ID，逗号分隔
+    leadDept?: string; // 牵头单位ID，逗号分隔
+    coDept?: string; // 协办单位ID，逗号分隔
+  }): Promise<{ list: SupervisionOrderDetailVO[]; total: number }> {
     return request.get({
       url: '/bpm/supervision/page-with-participants',
       params: {
@@ -341,7 +371,18 @@ export const SupervisionIndexApi = {
         pageSize: params?.pageSize || 10,
         type: params?.type,
         orderTitle: params?.orderTitle,
-        priority: params?.priority
+        priority: params?.priority,
+        supervisionStatus: params?.supervisionStatus,
+        supervisionStatusList: params?.supervisionStatusList,
+        // 高级筛选参数
+        startTime: params?.startTime,
+        endTime: params?.endTime,
+        supervisionTypes: params?.supervisionTypes,
+        remarkStatus: params?.remarkStatus,
+        schoolLeaders: params?.schoolLeaders,
+        supervisors: params?.supervisors,
+        leadDept: params?.leadDept,
+        coDept: params?.coDept
       }
     }).then(response => {
       // 简化响应格式处理，优先使用最常见的格式
@@ -405,6 +446,27 @@ export const LeaderRemarkApi = {
     return await request.get({
       url: `/bpm/supervision/getLeaderRemark/${processInstanceId}`
     })
+  }
+}
+
+// ========== 关注相关接口 ==========
+
+// 关注督办单请求参数
+export interface SupervisionOrderFollowReqVO {
+  processInstanceId: string // 流程实例ID
+  followStatus: boolean // 关注状态：true=关注，false=取消关注
+}
+
+// 关注相关API
+export const SupervisionFollowApi = {
+  // 关注/取消关注督办单
+  toggleFollow: async (data: SupervisionOrderFollowReqVO) => {
+    return await request.post({ url: '/supervision/follow/toggle', data })
+  },
+
+  // 获取我的关注列表
+  getMyFollowList: async (params: PageParam) => {
+    return await request.get({ url: '/supervision/follow/my-follows', params })
   }
 }
 
