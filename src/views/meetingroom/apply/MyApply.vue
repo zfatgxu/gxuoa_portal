@@ -7,12 +7,13 @@
         <el-select v-model="queryParams.status" placeholder="全部" clearable @change="handleStatusChange" style="width: 120px;">
           <el-option label="全部" :value="null" />
           <el-option label="待审核" :value="0" />
-          <el-option label="已通过" :value="1" />
-          <el-option label="已拒绝" :value="2" />
+          <el-option label="已通过" :value="2" />
+          <el-option label="已拒绝" :value="3" />
+          <el-option label="已取消" :value="4" />
         </el-select>
       </div>
     </div>
-    
+
     <!-- 表格展示 -->
     <el-table v-loading="loading" :data="tableData" style="width: 100%" stripe border>
       <el-table-column header-class-name="head-color" prop="serialNumber" label="序号" width="60" align="center" />
@@ -32,9 +33,9 @@
       <el-table-column header-class-name="head-color" label="操作" width="180" align="center" fixed="right">
         <template #default="{row}">
           <el-button type="primary" size="small" @click="viewDetail(row)">查看</el-button>
-          <el-button 
-            type="danger" 
-            size="small" 
+          <el-button
+            type="danger"
+            size="small"
             @click="deleteApply(row)"
             :disabled="row.status === 1 || row.status === 2"
           >删除</el-button>
@@ -64,6 +65,12 @@ import { RoomApplyApi } from '@/api/meetingroom/roomapply';
 import { formatDate } from '@/utils/formatTime';
 import { useRouter } from 'vue-router';
 
+// const props = defineProps({
+//   id: propTypes.number.def(undefined)
+// })
+// const { query } = useRoute() // 查询参数
+// const queryId = query.id
+
 // 初始化路由
 const router = useRouter();
 
@@ -91,7 +98,7 @@ const getApplyList = async () => {
   try {
     loading.value = true;
     const res = await RoomApplyApi.getRoomApplyPage(queryParams);
-    
+
     if (res && res.list) {
       tableData.value = res.list.map((item, index) => {
         return {
@@ -118,7 +125,8 @@ const getApplyList = async () => {
           precautions: item.precautions,
           departmentOpinion: item.departmentOpinion,
           departmentHead: item.departmentHead,
-          adminOpinion: item.adminOpinion
+          adminOpinion: item.adminOpinion,
+          processInstanceId: item.processInstanceId
         };
       });
       total.value = res.total || 0;
@@ -138,9 +146,9 @@ const getApplyList = async () => {
 const getStatusText = (status) => {
   switch (status) {
     case 0: return '待审核';
-    case 1: return '已通过';
-    case 2: return '已拒绝';
-    case -1: return '草稿';
+    case 2: return '已通过';
+    case 3: return '已拒绝';
+    case 4: return '已取消';
     default: return '未知';
   }
 };
@@ -149,9 +157,9 @@ const getStatusText = (status) => {
 const getStatusType = (status) => {
   switch (status) {
     case 0: return 'warning';   // 待审核 - 黄色警告
-    case 1: return 'success';   // 已通过 - 绿色成功
-    case 2: return 'danger';    // 已拒绝 - 红色危险
-    case -1: return 'info';     // 草稿 - 灰色信息
+    case 2: return 'success';   // 已通过 - 绿色成功
+    case 3: return 'danger';    // 已拒绝 - 红色危险
+    case 4: return 'info';     // 草稿 - 灰色信息
     default: return 'info';     // 默认 - 灰色信息
   }
 };
@@ -181,13 +189,14 @@ const handleStatusChange = (status) => {
   getApplyList();
 };
 
+
 // 查看详情
 const viewDetail = (row) => {
   try {
     // 跳转到详情页面，传递ID参数
     router.push({
-      path: '/meetingroom/apply',
-      query: { id: row.id }
+      path: '/bpm/process-instance/detail',
+      query: { id: row.processInstanceId }
     });
   } catch (error) {
     console.error('跳转失败:', error);
@@ -198,9 +207,9 @@ const viewDetail = (row) => {
 // 根据开始和结束时间判断时间段
 const getTimeSlot = (startTime, endTime) => {
   if (!startTime || !endTime) return 'morning';
-  
+
   const startHour = parseInt(startTime.split(' ')[1].split(':')[0], 10);
-  
+
   if (startHour >= 0 && startHour < 12) {
     return 'morning';
   } else if (startHour >= 12 && startHour < 18) {
@@ -218,7 +227,7 @@ const deleteApply = async (row) => {
       cancelButtonText: '取消',
       type: 'warning'
     });
-    
+
     const res = await RoomApplyApi.deleteRoomApply(row.id);
     if (res) {
       ElMessage.success('删除成功');
