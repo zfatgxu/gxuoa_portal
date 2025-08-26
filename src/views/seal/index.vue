@@ -56,12 +56,14 @@
   <ContentWrap>
     <el-table v-loading="loading" :data="list">
       <el-table-column align="center" label="盖章编码" prop="sealNumber" />
-      <!-- 材料名称超链接（与详情按钮跳转一致） -->
-      <el-table-column align="center" label="材料名称">
+      <!-- 材料名称超链接（新增13字截断逻辑） -->
+      <el-table-column align="center" label="材料名称" width="230">
         <template #default="scope">
-          <el-link type="primary" underline @click="handleMaterialClick(scope.row)">
-            {{ scope.row.materialName }}
-          </el-link>
+          <div class="material-name-container">
+            <el-link type="primary" underline @click="handleMaterialClick(scope.row)">
+              {{ formatMaterialName(scope.row.materialName) }}
+            </el-link>
+          </div>
         </template>
       </el-table-column>
       <el-table-column align="center" label="经办人">
@@ -130,7 +132,7 @@ import { getSimpleDeptList } from '@/api/system/dept'
 import * as SealApi from '@/api/seal'
 import { useUserStore } from '@/store/modules/user'
 import { getDictLabel, getDictOptions } from '@/utils/dict'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 
 
 const router = useRouter()
@@ -337,12 +339,42 @@ const handleSealStateChange = (row: any, checked: boolean) => {
     .catch(() => {})
 }
 
+/** 新增：材料名称13字截断处理（参考示例逻辑） */
+const formatMaterialName = (name: string) => {
+  // 空值/非字符串安全处理，避免报错
+  if (!name || typeof name !== 'string') return ''
+  const maxLength = 13 // 限制最大显示13个字
+  // 超过长度则截取前13字 + 省略号，否则显示原文本
+  return name.length > maxLength ? `${name.slice(0, maxLength)}...` : name
+}
+
 onMounted(() => {
   getSealApplicationPage(queryParams.value)
 })
 </script>
 
 <style scoped>
+/* 新增：材料名称截断相关样式（参考示例逻辑） */
+.el-table {
+  table-layout: fixed !important; /* 固定表格布局，确保列宽生效 */
+}
+.material-name-container {
+  width: 100% !important;
+  white-space: nowrap !important; /* 禁止文本换行 */
+  overflow: hidden !important; /* 隐藏溢出内容 */
+  text-overflow: ellipsis !important; /* 溢出显示省略号 */
+  display: block !important;
+  box-sizing: border-box !important;
+}
+/* 强制超链接继承容器截断样式，避免行内元素干扰 */
+.material-name-container .el-link {
+  display: inline-block !important;
+  width: 100% !important;
+  white-space: inherit !important;
+  overflow: inherit !important;
+  text-overflow: inherit !important;
+}
+
 .seal-status-used {
   color: #f39c12;
   font-weight: bold;

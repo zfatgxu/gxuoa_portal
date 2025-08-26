@@ -88,12 +88,13 @@
               </el-select>
             </div>
             <div class="seal-controls">
-              <!-- 移除 :max="99"，允许数量无上限 -->
+              <!-- 调整宽度，确保数字完整显示 -->
               <el-input-number
                 v-model="seal.quantity"
                 :min="1"
                 size="small"
                 class="quantity-input"
+                style="width: 100px;"
               />
               <span class="unit">个</span>
               <el-button type="danger" link @click="removeCustomSeal(index)" size="large">
@@ -137,7 +138,8 @@
                 placeholder="请输入7位或11位电话号码"
                 class="connected-field-input"
                 clearable
-                @input="validatePhone"
+                @input="cleanPhone"
+                @blur="validatePhoneLength"
               />
             </div>
           </div>
@@ -368,23 +370,17 @@ const checkUnitHasSeals = async (unitName: string) => {
   }
 }
 
-// 实时校验电话 - 确保只能输入数字并检查长度
-const validatePhone = (val: string) => {
-  // 检查是否包含非数字字符
-  const hasNonNumeric = /[^\d]/.test(val);
-  const cleanedPhone = val.replace(/[^\d]/g, '');
+// 清洗电话号码中的非数字字符
+const cleanPhone = (val: string) => {
+  form.contactPhone = val.replace(/[^\d]/g, '');
+};
 
-  // 如果有非数字字符，显示错误提示
-  if (hasNonNumeric) {
-    ElMessage.warning('电话号码只能包含数字，请移除非数字字符');
-  }
-  // 检查长度是否符合要求
-  else if (cleanedPhone.length > 0 && cleanedPhone.length !== 7 && cleanedPhone.length !== 11) {
+// 验证电话号码长度（失去焦点时触发）
+const validatePhoneLength = () => {
+  const phone = form.contactPhone;
+  if (phone && phone.length > 0 && phone.length !== 7 && phone.length !== 11) {
     ElMessage.warning('请输入7位或11位的电话号码');
   }
-
-  // 始终保存清洗后的值（只保留数字）
-  form.contactPhone = cleanedPhone;
 };
 
 // 提交表单
@@ -404,14 +400,8 @@ const submitForm = async () => {
     return
   }
 
-  // 验证电话号码是否包含非数字字符（最终检查）
-  if (/[^\d]/.test(form.contactPhone)) {
-    ElMessage.error('电话号码只能包含数字，请移除非数字字符')
-    return
-  }
-
   // 验证电话号码长度
-  if (form.contactPhone.length !== 7 && form.contactPhone.length !== 11) {
+  if (form.contactPhone.length > 0 && form.contactPhone.length !== 7 && form.contactPhone.length !== 11) {
     ElMessage.error('请输入7位或11位的电话号码')
     return
   }
@@ -576,7 +566,7 @@ const sealTypeOptions = ref([])
 const getSealTypeOptions = async () => {
   try {
     // 从数据库获取印章类型选项
-    const res = await sealApi.getsealPage({ orgId: selectedUnit.value.id })
+    const res = await sealApi.getsealPage({ orgId: selectedUnit.value.id,isAPP: true })
 
     sealTypeOptions.value = res.list.map(item => {
       return {
@@ -1222,7 +1212,7 @@ const handleExceed = () => {
   align-items: center;
 }
 
-.add-seal-button {
+.add-seal-section {
   margin-top: 10px;
   display: flex;
   justify-content: flex-start;

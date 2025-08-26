@@ -63,7 +63,6 @@
                 <el-input-number
                   v-model="seal.quantity"
                   :min="1"
-                  :max="99"
                   size="small"
                   class="quantity-input"
                 />
@@ -132,6 +131,7 @@
                 v-model="detail.phone"
                 placeholder="请输入联系电话"
                 class="phone-input"
+                @blur="validatePhone(detail.phone)"
               />
               <span v-else>{{ detail.phone }}</span>
             </div>
@@ -403,7 +403,6 @@ const props = defineProps({
 
 //父组件传入的ID和activityNodes
 const id = props.id
-const applyId = props.applyId
 const activityNodes = props.activityNodes
 const applyUser = props.applyUser
 const applyTime = props.applyTime
@@ -432,23 +431,10 @@ const getSealTypeOptions = async () => {
       return
     }
 
-    // 第一步：通过单位ID获取准确的单位名称
-    let orgName = detail.value.applyDeptName // 先使用现有的名称作为默认值
-
-    try {
-      const deptInfo = await getDept(detail.value.applyDept)
-
-      if (deptInfo && deptInfo.name) {
-        orgName = deptInfo.name
-      }
-    } catch (deptError) {
-      console.error('获取单位信息失败，使用现有名称:', deptError)
-    }
-
-    // 第二步：使用准确的单位名称获取印章类型
+    // 获取印章类型
     const params = {
-      pageSize: 100,
-      orgName: orgName // 使用从系统接口获取的准确单位名称
+      orgId: detail.value.applyDept,
+      isAPP: true
     }
 
     const res = await sealApi.getsealPage(params)
@@ -551,7 +537,7 @@ const formatFileSize = (bytes) => {
 
 // 获取文
 const getFileType = (fileName) => {
-  const ext = fileName.split('.').pop().toLowerCase()
+  const ext = fileName.split('.').pop()?.toLowerCase()
   if (['xls', 'xlsx'].includes(ext)) return 'excel'
   if (ext === 'pdf') return 'pdf'
   return 'document'
@@ -857,7 +843,8 @@ const detail = ref({
   signers: '',
   phone: '',
   createTime: '',
-  unitNoticeContent: '' // 注意事项内容
+  unitNoticeContent: '' ,// 注意事项内容
+  applyDept: '',
 })
 
 const fetchDetail = async () => {
@@ -982,6 +969,18 @@ const getUnitLeaderOpinion = () => {
     time: ''
   }
 }
+
+// 手机号验证
+const validatePhone = (phoneValue) => {
+  if (!phoneValue) return;
+  
+  const phoneRegex = /^1[3-9]\d{9}$/;
+  if (!phoneRegex.test(phoneValue)) {
+    ElMessage.warning('请输入正确的11位手机号码');
+    return '';
+  }
+  return phoneValue;
+};
 
 // 获取用印审核意见（只显示最新的一次审核结果）
 const getSealAuditOpinions = () => {
@@ -1123,6 +1122,14 @@ const updateSealApplication = async () => {
         ElMessage.error(`第${i + 1}个印章类型的数量不能小于1`)
         return false
       }
+    }
+
+    // 验证是否选择了两个相同的印章
+    const sealIds = detail.value.sealTypes.map(seal => seal.id)
+    const uniqueSealIds = new Set(sealIds)
+    if (sealIds.length !== uniqueSealIds.size) {
+      ElMessage.warning('不能选择两个相同的印章')
+      return false
     }
 
     // 处理附件数据：合并已有附件和新上传的附件，统一字段结构
@@ -1312,7 +1319,7 @@ defineExpose({
 }
 
 .quantity-input {
-  width: 80px;
+  width: 100px!important;  
 }
 
 .unit {

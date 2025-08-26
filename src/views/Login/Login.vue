@@ -74,7 +74,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted } from 'vue'
 import { LoginForm, MobileForm, ForgetPasswordForm, QrCodeForm, RegisterForm } from './components'
 import { LoginStateEnum, useLoginState } from './components/useLogin'
 
@@ -93,23 +93,10 @@ const activeTab = ref('account')
 // 轮播图相关变量
 const carouselImages = [bg1, bg2, bg3, bg4, bg5, bg6]
 const currentImageIndex = ref(0)
-let carouselInterval: number | null = null
-
-// 初始化轮播图
-const startCarousel = () => {
-  carouselInterval = window.setInterval(() => {
-    currentImageIndex.value = (currentImageIndex.value + 1) % carouselImages.length
-  }, 5000)
-}
 
 onMounted(() => {
-  startCarousel()
-})
-
-onBeforeUnmount(() => {
-  if (carouselInterval) {
-    clearInterval(carouselInterval)
-  }
+  // 只在刷新时随机选择一张图片，不自动轮播
+  currentImageIndex.value = Math.floor(Math.random() * carouselImages.length)
 })
 
 // 处理标签页切换
@@ -245,7 +232,7 @@ const handleTabClick = (tab) => {
   background-size: cover;
   opacity: 0.4;
   mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 90%);
-  -webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 90%);
+  /*-webkit-mask-image: radial-gradient(circle at center, rgba(0,0,0,1) 10%, rgba(0,0,0,0) 90%);有错，但是注释掉不影响*/
   z-index: -1;
 }
 

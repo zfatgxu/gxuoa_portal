@@ -15,13 +15,15 @@
           />
         </el-select>
       </el-form-item>
-      <el-form-item label="审批状态">
-        <el-select v-model="queryParams.status" clearable placeholder="请选择审批状态" style="width: 200px">
+      <el-form-item label="用印状态">
+        <el-select v-model="queryParams.sealState" clearable placeholder="请选择用印状态" style="width: 200px">
           <el-option
-            v-for="dict in getDictOptions(DICT_TYPE.SEAL_APPLY_STATE)"
-            :key="dict.value"
-            :label="dict.label"
-            :value="dict.value"
+            label="已用印"
+            value=1
+          />
+          <el-option
+            label="待用印"
+            value=2
           />
         </el-select>
       </el-form-item>
@@ -30,10 +32,6 @@
         <el-button @click="resetQuery">重置</el-button>
       </el-form-item>
       <el-form-item>
-        <el-button plain type="primary" @click="handleCreate">
-          <Icon class="mr-5px" icon="ep:plus" />
-          发起印章申请
-        </el-button>
         <!-- 选择单位弹窗 -->
         <el-dialog v-model="dialogVisible" title="请选择申请单位" width="400px">
           <el-form>
@@ -56,12 +54,14 @@
   <ContentWrap>
     <el-table v-loading="loading" :data="list">
       <el-table-column align="center" label="盖章编码" prop="applyData.sealNumber" />
-      <!-- 材料名称超链接（与提供代码保持一致的跳转逻辑） -->
-      <el-table-column align="center" label="材料名称">
+      <!-- 材料名称超链接（已添加13字截断逻辑） -->
+      <el-table-column align="center" label="材料名称" width="230">
         <template #default="scope">
-          <el-link type="primary" underline @click="handleMaterialClick(scope.row)">
-            {{ scope.row.applyData.materialName }}
-          </el-link>
+          <div class="material-name-container">
+            <el-link type="primary" underline @click="handleMaterialClick(scope.row)">
+              {{ formatMaterialName(scope.row.applyData.materialName) }}
+            </el-link>
+          </div>
         </template>
       </el-table-column>
       <el-table-column align="center" label="经办人">
@@ -69,13 +69,6 @@
           {{ getFirstSigner(scope.row.applyData.signers) }}
         </template>
       </el-table-column>
-      <!-- <el-table-column align="center" label="审批状态" prop="applyData.status">
-        <template #default="scope">
-            <span :class="getApprovalStatusClass(scope.row.applyData.status)">
-              {{ getApprovalStatusText(scope.row.applyData.status) }}
-            </span>
-        </template>
-      </el-table-column> -->
       <el-table-column align="center" label="用印状态" min-width="120">
         <template #default="scope">
           <div style="display: flex; align-items: center; justify-content: center;">
@@ -94,14 +87,14 @@
         </template>
       </el-table-column>
 
-      <el-table-column align="center" label="材料类型" >
+      <el-table-column align="center" label="材料类型">
         <template #default="scope">
           {{ getDictLabel(DICT_TYPE.SEAL_APPLY_MATERIAL_TYPES, scope.row.applyData.materialType) }}
         </template>
       </el-table-column>
 
       <el-table-column align="center" label="联系方式" prop="applyData.phone" />
-      <el-table-column align="center" label="用印单位" min-width="150" show-overflow-tooltip prop="processInstance.startUser.deptName"/>
+      <el-table-column align="center" label="用印单位" min-width="90" show-overflow-tooltip prop="processInstance.startUser.deptName"/>
       <el-table-column align="center" label="操作" width="160">
         <template #default="scope">
           <el-button size="mini" @click="viewDetail(scope.row)">详情</el-button>
@@ -151,7 +144,7 @@ const total = ref(0) // 总条数
 const queryParams = ref({
   materialName: '',
   materialType: '',
-  status: '',
+  sealState: '',
   pageNo: 1,
   pageSize: 10
 })
@@ -168,7 +161,7 @@ const resetQuery = () => {
   queryParams.value = {
     materialName: '',
     materialType: '',
-    status: '',
+    sealState: '',
     pageNo: 1,
     pageSize: queryParams.value.pageSize
   }
@@ -254,6 +247,13 @@ const getFirstSigner = (signers: string) => {
   if (!signers) return ''
   const signerArray = signers.split('，')
   return signerArray[0] || ''
+}
+
+/** 新增：材料名称截断处理（超过13字显示省略号） */
+const formatMaterialName = (name: string) => {
+  if (!name || typeof name !== 'string') return '' // 空值/非字符串安全处理
+  const maxLength = 13
+  return name.length > maxLength ? `${name.slice(0, maxLength)}...` : name
 }
 
 // 获取审批状态样式类
@@ -453,5 +453,29 @@ onMounted(() => {
   border-radius: 3px;
   font-size: 12px;
   display: inline-block;
+}
+
+/* 表格固定布局：确保材料名称列宽生效 */
+.el-table {
+  table-layout: fixed !important;
+}
+
+/* 材料名称容器：确保截断视觉效果 */
+.material-name-container {
+  width: 100% !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: block !important;
+  box-sizing: border-box !important;
+}
+
+/* 强制el-link继承容器样式：避免行内元素干扰截断 */
+.material-name-container .el-link {
+  display: inline-block !important;
+  width: 100% !important;
+  white-space: inherit !important;
+  overflow: inherit !important;
+  text-overflow: inherit !important;
 }
 </style>
