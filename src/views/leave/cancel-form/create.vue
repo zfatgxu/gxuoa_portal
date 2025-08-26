@@ -816,6 +816,7 @@ const fetchUserProfile = async () => {
         researchList.value = [];
         trainingList.value = [];
         businessList.value = [];
+        personalList.value = [];
         academicMeetings.value = [];
   res2.forEach(item => {
     // 根据类型设置选中的事由
