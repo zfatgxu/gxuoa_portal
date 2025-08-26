@@ -100,23 +100,33 @@
   <!-- 列表 -->
   <ContentWrap>
     <el-table v-loading="loading" :data="list">
-      <el-table-column align="center" label="流程" prop="processInstance.name" />
-      <el-table-column
-        align="center"
-        label="发起人"
-        prop="processInstance.startUser.nickname"
-      />
+      <!-- <el-table-column align="center" label="流程" prop="processInstance.name" /> -->
+      <el-table-column align="center" label="发起人" width="400px">
+        <template #default="scope">
+          <el-link type="primary" @click="seekDetail(scope.row)">{{ getName(scope.row) }}</el-link>
+        </template>
+      </el-table-column>
       <el-table-column
         :formatter="dateFormatter"
         align="center"
         label="发起时间"
         prop="createTime"
       />
-      <el-table-column align="center" label="当前任务" prop="name" />
+      <!-- <el-table-column align="center" label="当前任务" prop="name" /> -->
+      <el-table-column label="前往地点" align="center" prop="destination">
+        <template #default="scope">
+            <template v-if="scope.row.destination && scope.row.destination.includes('|||')">
+              <span v-html="formatDestinationsWithBreaks(scope.row.destination)"></span>
+            </template>
+            <template v-else>
+              {{ formatDestination(scope.row.destination) }}
+            </template>
+        </template>
+      </el-table-column>
       <el-table-column
         align="center"
         label="请假原因"
-        prop="reasons"
+        prop="reasonsType"
         :show-overflow-tooltip="true"
       />
       <el-table-column align="center" label="操作" fixed="right">
@@ -172,17 +182,8 @@ const getList = async () => {
   }
 }
 
-/** 搜索按钮操作 */
-const handleQuery = () => {
-  queryParams.pageNo = 1
-  console.log(queryParams)
-  getList()
-}
-
-/** 重置按钮操作 */
-const resetQuery = () => {
-  queryFormRef.value.resetFields()
-  handleQuery()
+const getName = (row: any) => {
+  return row.processInstance.startUser.nickname + '请假请示登记报告'+'('+row.time+')'
 }
 
 /** 处理审批按钮 */
@@ -195,6 +196,35 @@ const handleAudit = (row: any) => {
     }
   })
 }
+
+const seekDetail = (row: any) => {
+  push({
+    name: 'BpmProcessInstanceDetail',
+    query: {
+      id: row.processInstance.id,
+      taskId: row.id
+    }
+  })
+}
+
+/** 格式化单个地址，去掉国内国外前缀 */
+const formatDestination = (destination: string): string => {
+  if (!destination) return '';
+  return destination
+    .replace(/^国内\s*\/\s*/g, '')
+    .replace(/^国外\s*\/\s*/g, '');
+};
+
+/** 格式化多个地址，处理|||分隔符 */
+const formatDestinations = (destination: string): string[] => {
+  if (!destination) return [];
+  return destination.split('|||').map(addr => formatDestination(addr.trim()));
+};
+
+const formatDestinationsWithBreaks = (destination: string): string => {
+  if (!destination) return '';
+  return formatDestinations(destination).map(addr => `<span>${addr}</span><br>`).join('');
+};
 
 /** 初始化 **/
 onMounted(async () => {

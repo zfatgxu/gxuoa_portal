@@ -154,7 +154,14 @@
       <!-- <el-table-column label="主键，自增" align="center" prop="id" /> -->
       <el-table-column label="前往地点" align="center" prop="destination">
         <template #default="scope">
-          <el-link type="primary" @click="seekDetail(scope.row)">{{ scope.row.destination }}</el-link>
+          <el-link type="primary" @click="seekDetail(scope.row)">
+            <template v-if="scope.row.destination && scope.row.destination.includes('|||')">
+              <span v-html="formatDestinationsWithBreaks(scope.row.destination)"></span>
+            </template>
+            <template v-else>
+              {{ formatDestination(scope.row.destination) }}
+            </template>
+          </el-link>
         </template>
       </el-table-column>
       <el-table-column label="发起时间" align="center" prop="createTime" :formatter="dateFormatter2" />
@@ -301,6 +308,25 @@ const getStatusLabel = (status) => {
   return dict ? dict.label : '未知状态'
 }
 
+/** 格式化单个地址，去掉国内国外前缀 */
+const formatDestination = (destination: string): string => {
+  if (!destination) return '';
+  return destination
+    .replace(/^国内\s*\/\s*/g, '')
+    .replace(/^国外\s*\/\s*/g, '');
+};
+
+/** 格式化多个地址，处理|||分隔符 */
+const formatDestinations = (destination: string): string[] => {
+  if (!destination) return [];
+  return destination.split('|||').map(addr => formatDestination(addr.trim()));
+};
+
+const formatDestinationsWithBreaks = (destination: string): string => {
+  if (!destination) return '';
+  return formatDestinations(destination).map(addr => `<span>${addr}</span><br>`).join('');
+};
+
 /** 查询列表 */
 const getList = async () => {
   loading.value = true
@@ -387,3 +413,14 @@ onMounted(() => {
   getList()
 })
 </script>
+
+
+<style scoped>
+.address-item {
+  width: 100%;
+  margin-left: 5px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+</style>

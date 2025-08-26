@@ -323,12 +323,10 @@
                 v-for="(slot, index) in availableTimeSlots"
                 :key="slot.id"
                 :label="slot.id"
-                :disabled="slot.Alt === 0"
                 style="margin-bottom: 10px;"
               >
-        <span :style="{ color: slot.Alt === 0 ? '#aaa' : '#333' }">
+        <span>
           时段 {{ index + 1 }}：{{ slot.startTime }} - {{ slot.endTime }}
-          <span v-if="slot.Alt === 0">（{{ slot.conflictReason || '该时段已被预定' }}）</span>
         </span>
               </el-radio>
             </el-radio-group>
@@ -382,7 +380,7 @@
               <template #default="scope">
                 <div class="time-slots-display">
                   <el-tag
-                    v-for="slot in scope.row.availableTimeSlots.filter(slot => slot.Alt === 1)"
+                    v-for="slot in scope.row.availableTimeSlots"
                     :key="slot.id"
                     type="success"
                     size="small"
@@ -399,7 +397,6 @@
                   type="primary"
                   size="small"
                   @click="selectRoomForBooking(scope.row)"
-                  :disabled="!hasAvailableTimeSlots(scope.row)"
                 >
                   选择会议室
                 </el-button>
@@ -442,6 +439,8 @@ const lastTime = ref(null)
 
 
 
+// 防抖：避免连续选择日期/时间时频繁触发接口
+let timeSlotDebounceTimer = null
 watchEffect(() => {
   if (alterDate.value && beginTime.value && lastTime.value) {
     const [startHour, startMin] = beginTime.value.split(':').map(Number)
@@ -455,7 +454,10 @@ watchEffect(() => {
       ElMessage.warning('请选择合法时间段（结束时间必须晚于开始时间）')
       return
     }
-    timeSlotRoomId()
+    if (timeSlotDebounceTimer) clearTimeout(timeSlotDebounceTimer)
+    timeSlotDebounceTimer = setTimeout(() => {
+      timeSlotRoomId()
+    }, 300)
   }
 })
 const timeSlotRoomInfo = ref([])
@@ -842,37 +844,27 @@ const handleDateClick = (data) => {
 
 const loadAndFilter = async (selectedDate) => {
   try {
-    console.log('开始加载时间段数据...', { selectedDate, selectedRoom: selectedRoom.value })
-
     // 检查是否已选择会议室
     if (!selectedRoom.value) {
-      console.error('未选择会议室，无法加载时间段')
       return
     }
 
-    await getBookedRoomTimeDetail(selectedDate)   // 第一步：获取已预订时间
-    console.log('已预订时间加载完成:', bookedTime.value)
+    // 并行获取 预订/占用/可用 时段，减少总等待时间
+    await Promise.all([
+      getBookedRoomTimeDetail(selectedDate),
+      getRoomTimeDetail()
+    ])
 
-    await getOccupiedRoomTimeDetail(selectedDate) // 第二步：获取已占用时间
-    console.log('已占用时间加载完成:', occupiedTime.value)
-
-    await getRoomTimeDetail()                     // 第三步：获取所有可用时间段
-    console.log('时间段加载完成:', availableTimeSlots.value)
-
-    await filterAvailablefilter(selectedDate)    // 第四步：根据前三步数据过滤
-    console.log('时间段过滤完成:', availableTimeSlots.value)
+    await filterAvailablefilter(selectedDate)
 
     // 确保有可用时间段后再打开对话框
-    const availableSlots = availableTimeSlots.value.filter(slot => slot.Alt === 1)
+    const availableSlots = availableTimeSlots.value
     if (availableSlots.length > 0) {
-      console.log('找到可用时间段，准备打开对话框')
       timeSlotDialogVisible.value = true
     } else {
-      console.log('没有可用时间段')
       // 不显示提示，静默处理
     }
   } catch (error) {
-    console.error('加载时间段失败:', error)
     // 不显示错误提示，静默处理
   }
 }
@@ -1254,14 +1246,8 @@ const searchAvailableRooms = async () => {
       }
     }
 
-    // 获取所有会议室信息 - 修复pageSize参数
-    const allRoomsRes = await RoomInfoApi.getRoomInfoPage({
-      pageNo: 1,
-      pageSize: 100, // 修复：从1000改为100
-      deptId: department.value || undefined,
-      capacity: undefined, // 不发送容量参数给后端，在前端进行筛选
-      location: roomLocation.value || undefined,
-    })
+    // 根据日期获取会议室信息（替换原分页接口）
+    const allRoomsRes = await RoomInfoApi.getRoomInfoByDate(selectedDateForSearch.value)
 
     if (!allRoomsRes || !allRoomsRes.list) {
       availableRoomsList.value = []
@@ -1280,101 +1266,10 @@ const searchAvailableRooms = async () => {
       })
     }
 
-    // 为每个会议室获取时间段信息
-    const roomsWithTimeSlots = []
-
-    for (const room of enabledRooms) {
-      try {
-        // 获取会议室的时间段
-        const timeSlotsRes = await RoomTimeApi.getRoomTimePage({
-          pageNo: 1,
-          pageSize: 100,
-          meetingRoomId: room.id
-        })
-
-        if (timeSlotsRes && timeSlotsRes.list) {
-          // 获取该日期的预订和占用信息
-          const startOfDay = dayjs(selectedDateForSearch.value).startOf('day').format('YYYY-MM-DD HH:mm:ss')
-          const endOfDay = dayjs(selectedDateForSearch.value).endOf('day').format('YYYY-MM-DD HH:mm:ss')
-
-          // 获取预订记录
-          const bookedRes = await RoomApplyApi.getRoomApplyAll({
-            meetingRoomId: room.id,
-            startTime: startOfDay,
-            endTime: endOfDay
-          })
-
-          // 获取占用记录
-          let occupiedRes = []
-          try {
-            occupiedRes = await getOccupationsByMeetingRoom(room.id)
-          } catch (error) {
-            // 如果获取占用记录失败，使用空数组
-            occupiedRes = []
-          }
-
-          // 处理时间段可用性
-          const processedTimeSlots = timeSlotsRes.list.map(slot => {
-            const slotStart = getFullTimestamp(selectedDateForSearch.value, slot.startTime)
-            const slotEnd = getFullTimestamp(selectedDateForSearch.value, slot.endTime)
-
-            let isAvailable = true
-            let conflictReason = ''
-
-            // 检查预订冲突
-            if (bookedRes && Array.isArray(bookedRes)) {
-              for (const booking of bookedRes) {
-                if (isTimeSlotConflict(slotStart, slotEnd, Number(booking.startTime), Number(booking.endTime))) {
-                  isAvailable = false
-                  conflictReason = '该时段已被预定'
-                  break
-                }
-              }
-            }
-
-            // 检查占用冲突
-            if (isAvailable && occupiedRes && Array.isArray(occupiedRes)) {
-              for (const occupation of occupiedRes) {
-                if (occupation.status === 1) {
-                  let occupationStart, occupationEnd
-                  if (typeof occupation.startTime === 'number') {
-                    occupationStart = occupation.startTime
-                    occupationEnd = occupation.endTime
-                  } else {
-                    occupationStart = new Date(occupation.startTime).getTime()
-                    occupationEnd = new Date(occupation.endTime).getTime()
-                  }
-
-                  if (isTimeSlotConflict(slotStart, slotEnd, occupationStart, occupationEnd)) {
-                    isAvailable = false
-                    conflictReason = `该时段已被占用（${occupation.occupationReason || '管理员占用'}）`
-                    break
-                  }
-                }
-              }
-            }
-
-            return {
-              ...slot,
-              Alt: isAvailable ? 1 : 0,
-              conflictReason
-            }
-          })
-
-          // 只添加有可用时间段的会议室
-          const availableTimeSlots = processedTimeSlots.filter(slot => slot.Alt === 1)
-          if (availableTimeSlots.length > 0) {
-            roomsWithTimeSlots.push({
-              ...room,
-              availableTimeSlots: processedTimeSlots
-            })
-          }
-        }
-      } catch (error) {
-        console.error(`获取会议室 ${room.name} 时间段失败:`, error)
-        // 如果获取时间段失败，不添加该会议室
-      }
-    }
+    // 直接使用按日期接口返回的可用时段数据（假设后端已聚合好 availableTimeSlots）
+    const roomsWithTimeSlots = enabledRooms
+      .filter(r => Array.isArray(r.availableTimeSlots))
+      .map(r => ({ ...r }))
 
     availableRoomsList.value = roomsWithTimeSlots
     availableRoomsDialogVisible.value = true
@@ -1437,10 +1332,8 @@ const selectRoomForBooking = async (room) => {
   }
 }
 
-// 判断会议室是否有可用时间段
-const hasAvailableTimeSlots = (room) => {
-  return room.availableTimeSlots && room.availableTimeSlots.some(slot => slot.Alt === 1)
-}
+// 保留占位，所有会议室均可选择（不再基于 Alt 限制）
+const hasAvailableTimeSlots = () => true
 
 // 修复：确保在组件挂载时初始化部门选择
 const initializeDepartmentSelection = () => {

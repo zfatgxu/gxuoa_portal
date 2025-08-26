@@ -28,7 +28,7 @@
                 v-if="processInstance?.startUser?.avatar"
                 :src="processInstance?.startUser?.avatar"
               />
-              <el-avatar :size="28" v-else-if="processInstance?.startUser?.nickname">
+              <el-avatar :size="28" v-else-if="processInstance?.startUser?.nickname" class="!bg-blue-500">
                 {{ processInstance?.startUser?.nickname.substring(0, 1) }}
               </el-avatar>
               {{ processInstance?.startUser?.nickname }}

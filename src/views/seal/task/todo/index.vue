@@ -11,7 +11,7 @@
           @keyup.enter="handleQuery"
         />
       </el-form-item>
-      <el-form-item label="材料名称">
+      <el-form-item label="材料名称" min-width="230">
         <el-input
           v-model="queryParams.materialName"
           placeholder="请输入材料名称"
@@ -31,8 +31,20 @@
   <ContentWrap>
     <el-table v-loading="loading" :data="list">
       <el-table-column align="center" label="盖章编码" prop="applyData.sealNumber" min-width="140" />
-      <el-table-column align="center" label="当前进度" prop="name" min-width="120" />
-      <el-table-column align="center" label="材料名称" prop="applyData.materialName" min-width="200" show-overflow-tooltip />
+      <!-- 材料名称超链接（新增13字截断逻辑，对齐参考代码） -->
+      <el-table-column align="center" label="材料名称" width="230" show-overflow-tooltip>
+        <template #default="scope">
+          <div class="material-name-container">
+            <el-link
+              type="primary"
+              underline
+              @click="handleMaterialClick(scope.row)"
+            >
+              {{ formatMaterialName(scope.row.applyData.materialName) }}
+            </el-link>
+          </div>
+        </template>
+      </el-table-column>
       <el-table-column align="center" label="经办人" min-width="100">
         <template #default="scope">
           {{ scope.row.applyData.signers ? scope.row.applyData.signers.replace(/,/g, '，').split('，')[0] : '' }}
@@ -52,11 +64,7 @@
         min-width="100"
       />
       <el-table-column align="center" label="联系电话" prop="applyData.phone" min-width="130" />
-      <el-table-column align="center" label="单位" min-width="150" show-overflow-tooltip>
-        <template #default="scope">
-          {{ scope.row.applyData.applyTitle ? scope.row.applyData.applyTitle.split('印章申请单')[0] : '' }}
-        </template>
-      </el-table-column>
+      <el-table-column align="center" label="用印单位" min-width="90" show-overflow-tooltip prop="processInstance.startUser.deptName"/>
       <el-table-column align="center" label="操作" fixed="right" width="80">
         <template #default="scope">
           <el-button link type="primary" @click="handleAudit(scope.row)">办理</el-button>
@@ -83,6 +91,8 @@
 import { dateFormatter } from '@/utils/formatTime'
 import * as TaskApi from '@/api/bpm/task'
 import * as SealApi from "@/api/seal";
+import { useRouter } from 'vue-router'
+import { onMounted, ref, reactive } from 'vue'
 
 defineOptions({ name: 'SealTodoTask' })
 
@@ -107,7 +117,7 @@ const getList = async () => {
   loading.value = true
   try {
     //const data = await TaskApi.getTaskTodoPage(queryParams)
-    const  data = await  SealApi.getSealTodoPage(queryParams)
+    const data = await SealApi.getSealTodoPage(queryParams)
     list.value = data.list
     total.value = data.total
   } finally {
@@ -145,8 +155,55 @@ const handleAudit = (row: any) => {
   })
 }
 
+/** 处理材料名称点击（超链接） */
+const handleMaterialClick = (row: any) => {
+  // 点击材料名称与点击办理按钮效果相同，跳转到详情页
+  push({
+    name: 'SealDetail',
+    query: {
+      id: row.processInstance.id,
+      taskId: row.id
+    }
+  })
+}
+
+/** 新增：材料名称13字截断处理（完全对齐参考代码逻辑） */
+const formatMaterialName = (name: string) => {
+  if (!name || typeof name !== 'string') return '' // 空值/非字符串安全处理，避免报错
+  const maxLength = 13 // 限制最大显示13个字
+  // 超过长度截取前13字+省略号，否则显示原文本
+  return name.length > maxLength ? `${name.slice(0, maxLength)}...` : name
+}
+
 /** 初始化 **/
 onMounted(async () => {
   await getList()
 })
 </script>
+
+<style scoped>
+/* 替换原有样式，采用参考代码的截断样式逻辑，确保生效 */
+/* 表格固定布局：避免列宽自适应破坏截断效果 */
+.el-table {
+  table-layout: fixed !important;
+}
+
+/* 材料名称容器：核心截断样式 */
+.material-name-container {
+  width: 100% !important;
+  white-space: nowrap !important; /* 禁止文本换行 */
+  overflow: hidden !important; /* 隐藏溢出内容 */
+  text-overflow: ellipsis !important; /* 溢出显示省略号 */
+  display: block !important;
+  box-sizing: border-box !important;
+}
+
+/* 强制el-link继承容器样式：避免行内元素干扰截断逻辑 */
+.material-name-container .el-link {
+  display: inline-block !important;
+  width: 100% !important;
+  white-space: inherit !important;
+  overflow: inherit !important;
+  text-overflow: inherit !important;
+}
+</style>

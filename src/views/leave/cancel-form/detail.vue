@@ -412,26 +412,15 @@
   
             <!-- 前往地点 -->
             <el-descriptions-item label="前往地点(必填)" label-class-name="approval-label">
-              <div v-for="(loc, index) in destinations" :key="index" style="margin-bottom: 15px;">
-                <div class="detail-item">
-                  <span class="detail-label">地点类型</span>
-                  <el-tag>{{ loc.locationType === 'domestic' ? '国内' : '国外' }}</el-tag>
-                </div>
-                
-                <!-- 国内地址显示 -->
-                <div v-if="loc.locationType === 'domestic'" class="detail-item">
-                  <span class="detail-label">目的地</span>
-                  <span>{{ loc.destination.join(' / ') }}</span>
-                </div>
-                
-                <!-- 国外地址显示 -->
-                <div v-if="loc.locationType === 'foreign'" class="detail-item">
-                  <span class="detail-label">详细地址</span>
-                  <span>{{ loc.foreignAddress }}</span>
-                </div>
-                
-                <div v-if="index < destinations.length - 1" class="item-divider"></div>
+              <div v-for="(loc, index) in destinations" :key="index">
+              <div v-if="loc.locationType === 'domestic'" class="flex items-center">
+                <span>{{ loc.destination.join(' / ') }}</span>
               </div>
+              <div v-if="loc.locationType === 'foreign'" class="flex items-center">
+                <span>{{ loc.foreignAddress }}</span>
+              </div>
+              <div v-if="index < destinations.length - 1" class="item-divider"></div>
+            </div>
             </el-descriptions-item>
   
             <!-- 请假期间主持工作负责人安排 -->
@@ -470,7 +459,10 @@
             <el-descriptions-item v-if="Number(personnel.level) >= 27" label="请假期间主持工作负责人会签" label-class-name="approval-label">
               <div>{{ hostApproval }}</div>
             </el-descriptions-item>
-            <el-descriptions-item label="单位负责人意见" label-class-name="approval-label">
+            <el-descriptions-item v-if="Number(personnel.level) >= 27" label="校领导意见" label-class-name="approval-label">
+              <div>{{ leaderApproval }}</div>
+            </el-descriptions-item>
+            <el-descriptions-item v-if="Number(personnel.level) < 27" label="单位负责人意见" label-class-name="approval-label">
               <div>{{ leaderApproval }}</div>
             </el-descriptions-item>
 
