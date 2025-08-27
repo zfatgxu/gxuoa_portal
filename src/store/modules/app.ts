@@ -97,19 +97,19 @@ export const useAppStore = defineStore('app', {
       isDark: false, 
       currentSize: wsCache.get('default') || 'default', 
       theme: {
-        elColorPrimary: '#36a3f7',
+        elColorPrimary: '#0061B1',
         leftMenuBorderColor: '#fff',
         leftMenuBgColor: '#fff',
         leftMenuBgLightColor: '#fff',
-        leftMenuBgActiveColor: '#2498F7',
-        leftMenuCollapseBgActiveColor: '#2498F7',
+        leftMenuBgActiveColor: '#0061B1',
+        leftMenuCollapseBgActiveColor: '#0061B1',
         leftMenuTextColor: '#00000',
         leftMenuTextActiveColor: '#fff',
         logoTitleTextColor: '#fff',
         logoBorderColor: 'inherit',
-        topHeaderBgColor: '#2498F7',
+        topHeaderBgColor: '#0061B1',
         topHeaderTextColor: '#fff',
-        topHeaderHoverColor: '#2498F7',
+        topHeaderHoverColor: '#0061B1',
         topToolBorderColor: '#dcdfe6'
       }
     }
