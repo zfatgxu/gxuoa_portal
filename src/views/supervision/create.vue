@@ -52,7 +52,7 @@
               </div>
             </div>
 
-            <!-- 督办分类和督办依据 -->
+            <!-- 督办分类和紧急程度 -->
             <div class="form-row">
               <div class="form-label required">督办分类</div>
               <div class="form-content half-width">
@@ -98,53 +98,6 @@
                   </el-button>
                 </div>
               </div>
-              <div class="form-label">督办依据</div>
-              <div class="form-content half-width">
-                <div class="custom-select-container">
-                  <el-select
-                    v-model="orderForm.basis"
-                    placeholder="请选择督办依据"
-                    filterable
-                    allow-create
-                    default-first-option
-                    @change="handleBasisChange"
-                    class="basis-select"
-                  >
-                    <el-option
-                      v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_REASON)"
-                      :key="dict.value"
-                      :label="dict.label"
-                      :value="dict.value"
-                    >
-                      <div class="dict-option-content">
-                        <span>{{ dict.label }}</span>
-                        <el-button
-                          type="text"
-                          size="small"
-                          class="delete-dict-btn"
-                          @click.stop="deleteBasisDictItem(dict)"
-                        >
-                          删除
-                        </el-button>
-                      </div>
-                    </el-option>
-                  </el-select>
-                  <el-button
-                    v-if="showAddBasisToDictButton"
-                    type="text"
-                    size="small"
-                    class="add-to-dict-btn"
-                    :loading="addingBasisToDict"
-                    @click="addBasisToDict"
-                  >
-                    添加为常用选项
-                  </el-button>
-                </div>
-              </div>
-            </div>
-
-            <!-- 紧急程度和完成期限 -->
-            <div class="form-row">
               <div class="form-label required">紧急程度</div>
               <div class="form-content half-width">
                 <el-select v-model="orderForm.urgencyLevel" placeholder="请选择紧急程度" class="form-select">
@@ -156,30 +109,36 @@
                   />
                 </el-select>
               </div>
+            </div>
+
+            <!-- 完成期限和汇报频次 -->
+            <div class="form-row">
               <div class="form-label required">完成期限</div>
               <div class="form-content half-width">
-                <div class="deadline-container">
-                  <el-date-picker
-                    v-model="orderForm.deadline"
-                    type="datetime"
-                    placeholder="请选择完成期限"
-                    format="YYYY-MM-DD HH:mm"
-                    value-format="YYYY-MM-DD HH:mm:ss"
-                    :disabled-date="disabledDate"
-                    :disabled-hours="disabledHours"
-                    :disabled-minutes="disabledMinutes"
-                    :default-time="defaultTime"
-                    class="deadline-picker"
+                <el-date-picker
+                  class="form-select"
+                  style="width: 100%"
+                  v-model="orderForm.deadline"
+                  type="datetime"
+                  placeholder="请选择完成期限"
+                  format="YYYY-MM-DD HH:mm"
+                  value-format="YYYY-MM-DD HH:mm:ss"
+                  :disabled-date="disabledDate"
+                  :disabled-hours="disabledHours"
+                  :disabled-minutes="disabledMinutes"
+                  :default-time="defaultTime"
+                />
+              </div>
+              <div class="form-label">汇报频次</div>
+              <div class="form-content half-width">
+                <el-select v-model="orderForm.reportFrequency" placeholder="请选择汇报频次" class="form-select">
+                  <el-option
+                    v-for="dict in getIntDictOptions(DICT_TYPE.REPORT_FREQUENCY)"
+                    :key="dict.value"
+                    :label="dict.label"
+                    :value="dict.value"
                   />
-                  <el-select v-model="orderForm.reportFrequency" placeholder="汇报频次" class="report-frequency-select">
-                    <el-option
-                      v-for="dict in getIntDictOptions(DICT_TYPE.REPORT_FREQUENCY)"
-                      :key="dict.value"
-                      :label="dict.label"
-                      :value="dict.value"
-                    />
-                  </el-select>
-                </div>
+                </el-select>
               </div>
             </div>
 
@@ -328,7 +287,7 @@ import { OrderApi, type OrderVO, type SupervisionTypeSaveReqVO, type Supervision
 import { DICT_TYPE, getIntDictOptions, getStrDictOptions } from '@/utils/dict'
 import { useDictStoreWithOut } from '@/store/modules/dict'
 import { Icon } from '@/components/Icon'
-import { createDictData, deleteDictData, getDictDataByType } from '@/api/system/dict/dict.data'
+// import { createDictData, deleteDictData, getDictDataByType } from '@/api/system/dict/dict.data'
 
 defineOptions({ name: 'SupervisionOrderCreate' })
 
@@ -465,10 +424,10 @@ const searchUsers = (query: string) => {
   userSearchKeyword.value = query
 }
 
-// 督办依据相关
-const showAddBasisToDictButton = ref(false)
-const addingBasisToDict = ref(false)
-const customBasisValue = ref('')
+// 督办依据相关（已移除UI，逻辑注释保留参考）
+// const showAddBasisToDictButton = ref(false)
+// const addingBasisToDict = ref(false)
+// const customBasisValue = ref('')
 
 // 督办分类相关
 const showAddCategoryToDictButton = ref(false)
@@ -480,7 +439,7 @@ const orderForm = reactive({
   orderNumber: '', // 督办编号
   title: '', // 督办标题
   category: undefined, // 督办分类（字符串类型）
-  basis: undefined, // 督办依据（数字类型）
+  // basis: undefined, // 督办依据（数字类型）
   urgencyLevel: undefined, // 紧急程度（数字类型）
   reportFrequency: undefined, // 汇报频次 (对应数据库 report_frequency) 1=每日 2=每周 3=每月 4=阶段性
   deadline: '', // 完成期限
@@ -525,9 +484,9 @@ const rules = {
   category: [
     { required: true, message: '请选择督办分类', trigger: 'change' }
   ],
-  basis: [
-    { required: false, message: '请选择督办依据', trigger: 'change' }
-  ],
+  // basis: [
+  //   { required: false, message: '请选择督办依据', trigger: 'change' }
+  // ],
   urgencyLevel: [
     { required: true, message: '请选择紧急程度', trigger: 'change' }
   ],
@@ -807,10 +766,10 @@ const getCategoryLabel = (value: string | number): string => {
   return ''
 }
 
-const getReasonLabel = (value: number): string => {
-  const dict = getIntDictOptions(DICT_TYPE.SUPERVISION_REASON).find(d => d.value === value)
-  return dict?.label || ''
-}
+// const getReasonLabel = (value: number): string => {
+//   const dict = getIntDictOptions(DICT_TYPE.SUPERVISION_REASON).find(d => d.value === value)
+//   return dict?.label || ''
+// }
 
 const getPriorityLabel = (value: number): string => {
   const dict = getIntDictOptions(DICT_TYPE.SUPERVISION_PRIORITY_TYPE).find(d => d.value === value)
@@ -869,128 +828,29 @@ const disabledMinutes = (hour: number) => {
   return []
 }
 
-// 处理督办依据变化
-const handleBasisChange = (value: any) => {
-  // 检查是否是自定义输入的内容（字符串且不在现有字典中）
-  if (typeof value === 'string') {
-    const existingOptions = getIntDictOptions(DICT_TYPE.SUPERVISION_REASON)
-    const isExisting = existingOptions.some(option => option.label === value || option.value === value)
+// // 处理督办依据变化（已弃用）
+// const handleBasisChange = (value: any) => {
+//   if (typeof value === 'string') {
+//     const existingOptions = getIntDictOptions(DICT_TYPE.SUPERVISION_REASON)
+//     const isExisting = existingOptions.some(option => option.label === value || option.value === value)
+//     if (!isExisting && value.trim() !== '') {
+//       customBasisValue.value = value
+//       showAddBasisToDictButton.value = true
+//     } else {
+//       showAddBasisToDictButton.value = false
+//       customBasisValue.value = ''
+//     }
+//   } else {
+//     showAddBasisToDictButton.value = false
+//     customBasisValue.value = ''
+//   }
+// }
 
-    if (!isExisting && value.trim() !== '') {
-      // 这是自定义输入的内容
-      customBasisValue.value = value
-      showAddBasisToDictButton.value = true
-    } else {
-      showAddBasisToDictButton.value = false
-      customBasisValue.value = ''
-    }
-  } else {
-    // 这是从字典选择的数值
-    showAddBasisToDictButton.value = false
-    customBasisValue.value = ''
-  }
-}
+// // 添加督办依据到数据字典（已弃用）
+// const addBasisToDict = async () => { /* no-op */ }
 
-// 添加督办依据到数据字典
-const addBasisToDict = async () => {
-  if (!customBasisValue.value.trim()) {
-    ElMessage.warning('请输入有效的督办依据内容')
-    return
-  }
-
-  try {
-    addingBasisToDict.value = true
-
-    // 获取现有字典数据的最大值，用于生成新的value和sort
-    const existingOptions = getIntDictOptions(DICT_TYPE.SUPERVISION_REASON)
-    const maxValue = existingOptions.length > 0
-      ? Math.max(...existingOptions.map(item => item.value))
-      : 0
-
-    // 获取现有字典数据的最大排序值，用于生成新的sort
-    const maxSort = existingOptions.length > 0
-      ? Math.max(...existingOptions.map(item => item.sort || 0))
-      : 0
-
-    // 构造字典数据
-    const dictData = {
-      label: customBasisValue.value.trim(),
-      value: (maxValue + 1).toString(), // 新的值
-      dictType: DICT_TYPE.SUPERVISION_REASON,
-      sort: maxSort + 1, // 动态计算排序值，确保新添加的项排在最后
-      status: 0, // 启用状态
-      colorType: 'default',
-      cssClass: '',
-      remark: '用户自定义添加'
-    }
-
-    // 调用真实的API添加到数据字典
-    await createDictData(dictData)
-
-    ElMessage.success('督办依据已添加为常用选项，下次可直接选择')
-
-    // 刷新字典缓存，让新添加的选项立即可用
-    await dictStore.resetDict()
-
-    // 隐藏添加按钮
-    showAddBasisToDictButton.value = false
-
-    // 将自定义值设置为新添加的值（数字类型）
-    orderForm.basis = maxValue + 1
-
-    // 清空自定义值
-    customBasisValue.value = ''
-
-  } catch (error) {
-    console.error('添加督办依据到字典失败:', error)
-    ElMessage.error('添加督办依据到字典失败，请重试')
-  } finally {
-    addingBasisToDict.value = false
-  }
-}
-
-// 删除督办依据字典项
-const deleteBasisDictItem = async (dict: any) => {
-  ElMessageBox.confirm(
-    `确定要删除督办依据"${dict.label}"吗？删除后将无法恢复。`,
-    '确认删除',
-    {
-      confirmButtonText: '确定删除',
-      cancelButtonText: '取消',
-      type: 'warning',
-    }
-  ).then(async () => {
-    try {
-      // 通过字典类型获取完整的字典数据列表，找到对应的ID
-      const fullDictList = await getDictDataByType(DICT_TYPE.SUPERVISION_REASON)
-      const targetDict = fullDictList.find((item: any) => item.value === dict.value.toString())
-
-      if (!targetDict || !targetDict.id) {
-        ElMessage.error('无法找到要删除的字典项')
-        return
-      }
-
-      // 调用真实的删除数据字典API
-      await deleteDictData(targetDict.id)
-
-      ElMessage.success(`督办依据"${dict.label}"已删除`)
-
-      // 刷新字典缓存，让删除的变化立即生效
-      await dictStore.resetDict()
-
-      // 如果当前选中的就是被删除的项，清空选择
-      if (orderForm.basis === dict.value) {
-        orderForm.basis = undefined
-      }
-
-    } catch (error) {
-      console.error('删除督办依据失败:', error)
-      ElMessage.error('删除督办依据失败，请重试')
-    }
-  }).catch(() => {
-    // 用户取消，不做任何操作
-  })
-}
+// // 删除督办依据字典项（已弃用）
+// const deleteBasisDictItem = async (dict: any) => { /* no-op */ }
 
 // 处理督办分类变化
 const handleCategoryChange = (value: any) => {
@@ -1202,7 +1062,7 @@ const createOrder = async () => {
       type: orderType === 'special' ? 2 : 1, // 督办类型：1=工作督办, 2=专项督办
       detailType: orderForm.category, // 督办具体分类（字符串）
       orderType: orderType === 'special' ? 2 : 1, // 1=工作督办, 2=专项督办
-      reason: orderForm.basis, // 直接使用数字值
+      // reason: orderForm.basis, // 已移除“督办依据”，不再提交
       priority: orderForm.urgencyLevel,
       deadline: orderForm.deadline,
       leadDept: '', // 牵头单位由督办人在后续流程中选择，创建时为空
@@ -1283,7 +1143,7 @@ const resetForm = async () => {
   // 重置所有表单字段
   orderForm.title = ''
   orderForm.category = undefined
-  orderForm.basis = undefined
+  // orderForm.basis = undefined
   orderForm.urgencyLevel = undefined
   orderForm.reportFrequency = undefined
   orderForm.deadline = ''
@@ -1547,21 +1407,21 @@ onMounted(async () => {
   min-width: 200px;
 }
 
-/* 完成期限容器样式 */
-.deadline-container {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  width: 100%;
-}
+/* 完成期限容器样式（已停用） */
+/* .deadline-container { */
+/*   display: flex; */
+/*   align-items: center; */
+/*   gap: 7px; */
+/*   width: 100%; */
+/* } */
 
-.deadline-picker {
-  width: 100px;  /* 直接设置固定宽度 */
-}
+/* .deadline-picker { */
+/*   width: 100px;   直接设置固定宽度 */
+/* } */
 
-.report-frequency-select {
-  width: 130px;  /* 调整宽度以完整显示汇报频次选项 */
-}
+/* .report-frequency-select { */
+/*   width: 130px;   调整宽度以完整显示汇报频次选项 */
+/* } */
 
 /* 统一表单控件样式 */
 .form-select {

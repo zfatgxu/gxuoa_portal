@@ -7,7 +7,7 @@ import { humpToUnderline, setCssVar } from '@/utils'
 import { getCssColorVariable, hexToRGB, mix } from '@/utils/color'
 import { ElMessage } from 'element-plus'
 import { defineStore } from 'pinia'
-import { store } from '../index'
+import { store } from '@/store'
 
 const { wsCache } = useCache()
 
@@ -97,19 +97,19 @@ export const useAppStore = defineStore('app', {
       isDark: false, 
       currentSize: wsCache.get('default') || 'default', 
       theme: {
-        elColorPrimary: '#36a3f7',
+        elColorPrimary: '#0061B1',
         leftMenuBorderColor: '#fff',
         leftMenuBgColor: '#fff',
         leftMenuBgLightColor: '#fff',
-        leftMenuBgActiveColor: '#2498F7',
-        leftMenuCollapseBgActiveColor: '#2498F7',
+        leftMenuBgActiveColor: '#0061B1',
+        leftMenuCollapseBgActiveColor: '#0061B1',
         leftMenuTextColor: '#00000',
         leftMenuTextActiveColor: '#fff',
         logoTitleTextColor: '#fff',
         logoBorderColor: 'inherit',
-        topHeaderBgColor: '#2498F7',
+        topHeaderBgColor: '#0061B1',
         topHeaderTextColor: '#fff',
-        topHeaderHoverColor: '#2498F7',
+        topHeaderHoverColor: '#0061B1',
         topToolBorderColor: '#dcdfe6'
       }
     }
@@ -361,7 +361,8 @@ export const useAppStore = defineStore('app', {
         wsCache.set('fileCardLimit', settings.file.limit)
       }
     },
-    setTodoCard(setting: CardSetting) {
+    /*未使用的函数，存在警告，注释掉了*/
+    /*setTodoCard(setting: CardSetting) {
       this.cardSettings.todo = setting
       wsCache.set('todoCardVisible', setting.visible)
       wsCache.set('todoCardLimit', setting.limit)
@@ -390,7 +391,7 @@ export const useAppStore = defineStore('app', {
       if (!this.cardSettings.todo) this.cardSettings.todo = { visible, limit: 5 }
       else this.cardSettings.todo.visible = visible
       wsCache.set('todoCardVisible', visible)
-    },
+    },*/
     setNoticeCardVisible(visible: boolean) {
       if (!this.cardSettings.notice) this.cardSettings.notice = { visible, limit: 5 }
       else this.cardSettings.notice.visible = visible
