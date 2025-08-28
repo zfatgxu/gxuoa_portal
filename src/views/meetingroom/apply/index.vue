@@ -326,7 +326,7 @@
                 style="margin-bottom: 10px;"
               >
         <span>
-          时段 {{ index + 1 }}：{{ slot.startTime }} - {{ slot.endTime }}
+          时段 {{ index + 1 }}：{{ formatTime(slot.startTime) }} - {{ formatTime(slot.endTime) }}
         </span>
               </el-radio>
             </el-radio-group>
@@ -386,7 +386,7 @@
                     size="small"
                     style="margin: 2px;"
                   >
-                    {{ slot.startTime }} - {{ slot.endTime }}
+                    {{ formatTime(slot.startTime) }} - {{ formatTime(slot.endTime) }}
                   </el-tag>
                 </div>
               </template>
@@ -435,6 +435,30 @@ const meetingsList = ref([])
 const alterDate = ref(null)
 const beginTime = ref(null)
 const lastTime = ref(null)
+// 显示用：将时间戳或 "HH:mm:ss" 统一格式化为 "HH:mm"
+function formatTime(val) {
+  if (val == null) return ''
+  if (typeof val === 'number') {
+    const ms = String(val).length <= 10 ? val * 1000 : val
+    const d = new Date(ms)
+    if (isNaN(d.getTime())) return ''
+    const hh = String(d.getHours()).padStart(2, '0')
+    const mm = String(d.getMinutes()).padStart(2, '0')
+    return `${hh}:${mm}`
+  }
+  const s = String(val).trim()
+  if (/^\d{10,13}$/.test(s)) {
+    const n = Number(s)
+    const ms = s.length <= 10 ? n * 1000 : n
+    const d = new Date(ms)
+    if (isNaN(d.getTime())) return ''
+    const hh = String(d.getHours()).padStart(2, '0')
+    const mm = String(d.getMinutes()).padStart(2, '0')
+    return `${hh}:${mm}`
+  }
+  if (/^\d{2}:\d{2}(:\d{2})?$/.test(s)) return s.slice(0, 5)
+  return ''
+}
 
 
 
