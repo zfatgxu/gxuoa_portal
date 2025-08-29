@@ -78,7 +78,7 @@ const entryList = ref([
   {
     name: '请假审批',
     icon: new URL('@/assets/imgs/quickEntry/leave.png', import.meta.url).href,
-    path: '/leave/list/index',
+    path: '/leave/list/todo',
     bgColor: '#9c88ff',
     badge: '1'
   },
@@ -106,7 +106,7 @@ const entryList = ref([
   {
     name: '印章管理',
     icon: new URL('@/assets/imgs/quickEntry/feedback.png', import.meta.url).href,
-    path: '/seal/seal_apply',
+    path: '/seal/seal_todo',
     bgColor: '#70a1ff',
     badge: '1'
   },
