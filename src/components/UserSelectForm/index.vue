@@ -5,10 +5,11 @@
         <ContentWrap class="h-1/1">
           <el-tree
             ref="treeRef"
+            :key="treeRenderKey"
             :data="deptTree"
             :expand-on-click-node="false"
             :props="defaultProps"
-            default-expand-all
+            :default-expanded-keys="[]"
             highlight-current
             node-key="id"
             @node-click="handleNodeClick"
@@ -50,6 +51,7 @@ const emit = defineEmits<{
 const { t } = useI18n() // 国际
 const message = useMessage() // 消息弹窗
 const treeRef = ref() // 添加树组件的引用
+const treeRenderKey = ref(0)
 const deptTree = ref<Tree[]>([]) // 部门树形结构化
 const deptList = ref<any[]>([]) // 保存扁平化的部门列表数据
 const userList = ref<UserApi.UserVO[]>([]) // 所有用户列表
@@ -111,6 +113,14 @@ const open = async (id: any, deptId?: number| number[], selectedList?: any[], cu
   }
   selectedUserIdList.value = selectedList?.map((item: any) => item.id) || []
   dialogVisible.value = true
+  await nextTick()
+  // 打开时强制全部折叠
+  if (treeRef.value && typeof treeRef.value.collapseAll === 'function') {
+    try { treeRef.value.collapseAll() } catch (e) {}
+  } else {
+    treeRenderKey.value += 1
+    await nextTick()
+  }
 }
 
 /** 获取指定部门及其所有子部门的ID列表 */
@@ -168,6 +178,8 @@ const resetForm = () => {
   userList.value = []
   filteredUserList.value = []
   selectedUserIdList.value = []
+  // 确保下次打开时为折叠初始态
+  treeRenderKey.value += 1
 }
 
 /** 处理部门被点击 */

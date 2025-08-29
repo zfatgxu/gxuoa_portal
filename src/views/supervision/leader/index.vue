@@ -48,56 +48,114 @@
 
     <!-- Task Management Section -->
     <div class="task-section">
-      <div class="task-header-controls">
-        <el-tabs v-model="activeTab" class="inline-tabs" @tab-change="handleTabChange">
-          <el-tab-pane label="全部事项" name="all-items" />
-          <el-tab-pane label="已关注" name="attention-items" />
-        </el-tabs>
-        <!-- 搜索和筛选功能 -->
-        <div class="flex space-x-4 items-center">
-            <span class="text-gray-700 font-medium">督办标题</span>
-            <el-input
+      <!-- Tabs and Filters -->
+      <div class="bg-white rounded-lg shadow-sm">
+        <div>
+          <div class="flex items-center justify-between px-6 pt-6 pb-0">
+            <div class="flex items-center -ml-3">
+              <el-tabs v-model="activeTab" class="tabs-custom" @tab-change="handleTabChange">
+                <el-tab-pane label="全部事项" name="all-items" />
+                <el-tab-pane label="已关注" name="attention-items" />
+              </el-tabs>
+            </div>
+            <!-- 搜索和筛选功能（与首页保持同一行，右侧对齐） -->
+            <div class="flex space-x-4 items-center">
+              <span class="text-gray-700 font-medium">督办事项</span>
+              <el-input
                 v-model="searchQuery"
-                placeholder="请输入督办事项标题"
+                placeholder="请输入督办事项"
+                style="width: 200px;"
+              />
+              <span class="text-gray-700 font-medium">优先级</span>
+              <el-select
+                v-model="selectedPriority"
+                placeholder="全部优先级"
                 clearable
-                style="width: 280px;"
-                >
-                <template #prefix>
-                    <el-icon><Search /></el-icon>
-                </template>
-            </el-input>
-            <span class="text-gray-700 font-medium">优先级</span>
-            <el-select 
-                v-model="selectedPriority" 
-                placeholder="全部优先级" 
-                clearable 
                 style="width: 150px;"
-            >
+              >
                 <el-option
-                    v-for="priority in priorityOptions"
-                    :key="priority.value"
-                    :label="priority.label"
-                    :value="priority.value"
+                  v-for="priority in priorityOptions"
+                  :key="priority.value"
+                  :label="priority.label"
+                  :value="priority.value"
                 />
-            </el-select>
-            <el-button type="primary" @click="handleSearch">
-                查询
-            </el-button>
-            <el-button @click="handleReset">
-                重置
-            </el-button>
-        </div>
-      </div>
+              </el-select>
+              <span class="text-gray-700 font-medium">督办状态</span>
+              <el-select
+                v-model="selectedSupervisionStatus"
+                placeholder="全部状态"
+                clearable
+                style="width: 150px;"
+              >
+                <el-option
+                  v-for="opt in supervisionStatusOptions"
+                  :key="opt.value"
+                  :label="opt.label"
+                  :value="opt.value"
+                />
+              </el-select>
+              <el-button type="primary" @click="handleSearch">查询</el-button>
+              <el-button @click="handleReset">重置</el-button>
+              <el-button type="primary" plain @click="openSeniorFilter">
+                <el-icon class="mr-1"><Filter /></el-icon>
+                高级筛选
+              </el-button>
+            </div>
+          </div>
+          <!-- 状态筛选按钮组（移入白底容器） -->
+          <div class="px-6 pt-4 pb-2 border-b border-gray-200">
+            <div class="flex items-center">
+              <div class="flex space-x-4">
+                <button
+                  @click="toggleStatusFilter('pendingReview')"
+                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-white border-0 outline-none hover:shadow-md cursor-pointer"
+                  :style="{
+                    backgroundColor: statusFilters.pendingReview ? '#39A8F9' : '#9A9A9A'
+                  }"
+                >
+                  待审核
+                </button>
+                <button
+                  @click="toggleStatusFilter('inProgress')"
+                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-white border-0 outline-none hover:shadow-md cursor-pointer"
+                  :style="{
+                    backgroundColor: statusFilters.inProgress ? '#39A8F9' : '#9A9A9A'
+                  }"
+                >
+                  进行中
+                </button>
+                <button
+                  @click="toggleStatusFilter('overdue')"
+                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-white border-0 outline-none hover:shadow-md cursor-pointer"
+                  :style="{
+                    backgroundColor: statusFilters.overdue ? '#39A8F9' : '#9A9A9A'
+                  }"
+                >
+                  已超时
+                </button>
+                <button
+                  @click="toggleStatusFilter('completed')"
+                  class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-white border-0 outline-none hover:shadow-md cursor-pointer"
+                  :style="{
+                    backgroundColor: statusFilters.completed ? '#39A8F9' : '#9A9A9A'
+                  }"
+                >
+                  已结束
+                </button>
+              </div>
+            </div>
+          </div>
 
-      <!-- Task List -->
-      <div class="task-list">
-        <el-card
-          v-for="task in filteredTaskList"
-          :key="task.id"
-          class="task-item clickable-card"
-          shadow="hover"
-          @click="navigateToWorkflowDetail(task)"
-        >
+          <!-- 列表区（与首页一致的内边距） -->
+          <div class="p-6">
+            <div class="task-list">
+              <el-card
+                v-for="task in filteredTaskList"
+                :key="task.id"
+                class="task-item clickable-card"
+                shadow="hover"
+                @click="navigateToWorkflowDetail(task)"
+              >
           <div class="task-header">
             <div class="flex items-center">
               <span 
@@ -152,18 +210,33 @@
             </div>
           </div>
 
-          <div class="task-description" v-if="getTaskContent(task)">
-            <p class="text-gray-600 mb-7 leading-relaxed">{{ getTaskContent(task) }}</p>
-          </div>
+          <!-- 描述 + 批示 同行展示 -->
+          <div
+            class="task-desc-row"
+            v-if="getDisplayText(task) || (task.leaderRemarks && task.leaderRemarks.length > 0)"
+          >
+            <el-tooltip 
+              class="desc-box"
+              :content="getDisplayText(task)" 
+              :disabled="getDisplayText(task).length <= 45"
+              placement="bottom"
+              effect="dark"
+            >
+              <span class="text-gray-600 leading-relaxed desc-text inline-block">{{ getTruncatedText(task) }}</span>
+            </el-tooltip>
 
-          <!-- 批示显示区域 - 移到主要内容下方 -->
-          <div v-if="task.leaderRemarks && task.leaderRemarks.length > 0" class="task-remarks">
-            <el-icon><Document /></el-icon>
-            <span v-for="(remark, index) in task.leaderRemarks" :key="`${remark.leaderId}-${index}`" class="remark-item">
-              <span v-if="index > 0">；</span>
-              <span class="remark-label">{{ getRemarkLabel(remark) }}：</span>
-              <span class="remark-text">{{ remark.remark }}</span>
-            </span>
+            <div v-if="task.leaderRemarks && task.leaderRemarks.length > 0" class="task-remarks inline-remarks">
+              <el-icon class="remark-icon"><Document /></el-icon>
+              <span
+                v-for="(remark, index) in task.leaderRemarks"
+                :key="`${remark.leaderId}-${index}`"
+                class="remark-item"
+              >
+                <span v-if="index > 0">；</span>
+                <span class="remark-label">{{ getRemarkLabel(remark) }}：</span>
+                <span class="remark-text">{{ remark.remark }}</span>
+              </span>
+            </div>
           </div>
 
           <div class="task-content">
@@ -201,19 +274,22 @@
                 <el-button v-if="getStatusText(task) !== '已结束'" class="w-20 ml-2" type="primary" @click.stop="addInstruction(task)">新增批示</el-button>
               </div>
           </div>
-        </el-card>
-        <div v-if="filteredTaskList.length === 0 && !loading" class="no-tasks-message">
-          {{ taskList.length === 0 ? '暂无相关任务。' : '没有符合条件的任务。' }}
+              </el-card>
+              <div v-if="filteredTaskList.length === 0 && !loading" class="no-tasks-message">
+                {{ taskList.length === 0 ? '暂无相关任务。' : '没有符合条件的任务。' }}
+              </div>
+              <el-pagination
+                v-if="pagination.total > 0"
+                background
+                layout="prev, pager, next"
+                :total="pagination.total"
+                :page-size="pagination.pageSize"
+                :current-page="pagination.pageNo"
+                @current-change="handlePageChange"
+              />
+            </div>
+          </div>
         </div>
-        <el-pagination
-          v-if="pagination.total > 0"
-          background
-          layout="prev, pager, next"
-          :total="pagination.total"
-          :page-size="pagination.pageSize"
-          :current-page="pagination.pageNo"
-          @current-change="handlePageChange"
-        />
       </div>
     </div>
 
@@ -277,6 +353,14 @@
         <el-button @click="historyDialogVisible = false">关闭</el-button>
       </template>
     </el-dialog>
+
+    <!-- 高级筛选弹窗 -->
+    <SeniorFilter
+      v-model="seniorFilterVisible"
+      :result-count="seniorFilterResultCount"
+      @apply="handleSeniorFilterApply"
+      @clear="handleSeniorFilterClear"
+    />
   </div>
 </template>
 
@@ -284,10 +368,11 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import {
   Search, DataAnalysis, Document, Clock, CircleCheck, Warning,
-  OfficeBuilding, User
+  OfficeBuilding, User, Filter
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import SupervisionDetailDialog from '../components/SupervisionDetailDialog.vue'
+import SeniorFilter from '../components/seniorFilter.vue'
 import { SupervisionTaskApi, LeaderRemarkApi, SupervisionIndexApi, SupervisionFollowApi } from '@/api/supervision/index'
 import { dateFormatter } from '@/utils/formatTime'
 import { useUserStore } from '@/store/modules/user'
@@ -315,6 +400,7 @@ const getSupervisionStatusText = (supervisionStatus) => {
     case 1: return '进行中'
     case 2: return '已超时'
     case 3: return '已结束'
+    case 4: return '待审核'
     default: return '进行中'
   }
 }
@@ -364,6 +450,7 @@ const activeTab = ref('all-items') // 默认激活"分管事项"
 // 搜索和筛选相关变量
 const searchQuery = ref('')
 const selectedPriority = ref('')
+const selectedSupervisionStatus = ref('')
 const selectedDepartment = ref('')
 const selectedStatus = ref('')
 const detailDialogVisible = ref(false)
@@ -393,6 +480,28 @@ const priorityOptions = [
   { label: '中优先级', value: '中优先级' },
   { label: '高优先级', value: '高优先级' }
 ]
+
+// 督办状态下拉选项（含待审核=4）
+const supervisionStatusOptions = [
+  { label: '待审核', value: 4 },
+  { label: '进行中', value: 1 },
+  { label: '已超时', value: 2 },
+  { label: '已结束', value: 3 }
+]
+
+// 状态按钮组
+const statusFilters = ref({
+  pendingReview: true,
+  inProgress: true,
+  overdue: true,
+  completed: true
+})
+
+// 高级筛选
+const seniorFilterVisible = ref(false)
+const seniorFilterParams = reactive({})
+const seniorFilterActive = ref(false)
+const seniorFilterResultCount = ref(0)
 
 // 模拟当前用户的部门，用于“协办任务”过滤
 
@@ -471,6 +580,51 @@ const getPriorityValue = (priorityText) => {
   }
 }
 
+// 状态按钮切换
+const toggleStatusFilter = (status) => {
+  statusFilters.value[status] = !statusFilters.value[status]
+  selectedSupervisionStatus.value = ''
+  pagination.pageNo = 1
+  loadTaskList()
+}
+
+// 高级筛选相关方法
+const openSeniorFilter = () => {
+  seniorFilterVisible.value = true
+}
+
+const handleSeniorFilterApply = (payload) => {
+  Object.assign(seniorFilterParams, payload || {})
+  seniorFilterActive.value = true
+  seniorFilterVisible.value = false
+  
+  // 清空简单筛选
+  searchQuery.value = ''
+  selectedPriority.value = ''
+  selectedSupervisionStatus.value = ''
+  statusFilters.value = {
+    pendingReview: true,
+    inProgress: true,
+    overdue: true,
+    completed: true
+  }
+  
+  pagination.pageNo = 1
+  loadTaskList()
+}
+
+const handleSeniorFilterClear = () => {
+  Object.keys(seniorFilterParams).forEach(key => {
+    delete seniorFilterParams[key]
+  })
+  seniorFilterActive.value = false
+  seniorFilterResultCount.value = 0
+  seniorFilterVisible.value = false
+  
+  pagination.pageNo = 1
+  loadTaskList()
+}
+
 // 加载任务列表
 const loadTaskList = async () => {
   loading.value = true
@@ -481,13 +635,36 @@ const loadTaskList = async () => {
       category: '督查督办'
     }
     
-    // 添加搜索条件
-    if (searchQuery.value) {
-      params.orderTitle = searchQuery.value // 使用orderTitle字段进行标题搜索
-    }
-    
-    if (selectedPriority.value) {
-      params.priority = getPriorityValue(selectedPriority.value) // 使用priority字段进行优先级筛选
+    // 高级筛选优先，使用高级筛选参数
+    if (seniorFilterActive.value) {
+      Object.assign(params, seniorFilterParams)
+    } else {
+      // 简单筛选
+      if (searchQuery.value) {
+        params.orderTitle = searchQuery.value
+      }
+      
+      if (selectedPriority.value) {
+        params.priority = getPriorityValue(selectedPriority.value)
+      }
+      
+      // 督办状态筛选：下拉优先，否则按按钮组合
+      if (selectedSupervisionStatus.value) {
+        params.supervisionStatusList = [selectedSupervisionStatus.value]
+      } else {
+        const activeStatuses = []
+        if (statusFilters.value.pendingReview) activeStatuses.push(4)
+        if (statusFilters.value.inProgress) activeStatuses.push(1)
+        if (statusFilters.value.overdue) activeStatuses.push(2)
+        if (statusFilters.value.completed) activeStatuses.push(3)
+        
+        if (activeStatuses.length === 0) {
+          params.supervisionStatusList = [-1] // 全关传-1
+        } else if (activeStatuses.length < 4) {
+          params.supervisionStatusList = activeStatuses
+        }
+        // 全开不传supervisionStatusList
+      }
     }
 
     console.log('API请求参数:', params) // 添加调试日志
@@ -496,11 +673,8 @@ const loadTaskList = async () => {
     if (activeTab.value === 'all-items') {
       result = await SupervisionTaskApi.getAllTasksPage(params)
     } else if (activeTab.value === 'attention-items') {
-      // 已关注标签页使用关注列表接口
-      result = await SupervisionFollowApi.getMyFollowList({
-        pageNo: params.pageNo,
-        pageSize: params.pageSize
-      })
+      // 已关注标签页使用关注列表接口，传入筛选参数
+      result = await SupervisionFollowApi.getMyFollowList(params)
       // 转换数据格式以匹配现有的任务数据结构
       if (result && result.list) {
         result.list = result.list.map(followItem => ({
@@ -512,6 +686,7 @@ const loadTaskList = async () => {
             orderTitle: followItem.orderTitle,
             orderCode: followItem.orderCode,
             content: followItem.content,
+            summary: followItem.summary, // 添加summary字段
             type: followItem.type,
             priority: followItem.priority,
             deadline: followItem.deadline,
@@ -612,7 +787,21 @@ const handleSearch = () => {
 const handleReset = () => {
   searchQuery.value = ''
   selectedPriority.value = ''
-  pagination.pageNo = 1 // 重置为第一页
+  selectedSupervisionStatus.value = ''
+  statusFilters.value = {
+    pendingReview: true,
+    inProgress: true,
+    overdue: true,
+    completed: true
+  }
+  
+  // 清空高级筛选
+  if (seniorFilterActive.value) {
+    handleSeniorFilterClear()
+    return
+  }
+  
+  pagination.pageNo = 1
   loadTaskList()
 }
 
@@ -623,6 +812,19 @@ const getTaskTitle = (task) => {
 
 const getTaskContent = (task) => {
   return task.supervisionPageVOData?.content || ''
+}
+
+// 描述显示：summary 优先，回退 content，再回退到"未设置"
+const getDisplayText = (task) => {
+  const summary = task.supervisionPageVOData?.summary
+  const content = task.supervisionPageVOData?.content
+  return summary || content || '未设置'
+}
+
+// 截断到 45 个字符，超长加省略号
+const getTruncatedText = (task) => {
+  const text = getDisplayText(task)
+  return text.length > 45 ? text.substring(0, 45) + '...' : text
 }
 
 const getCreatorDeptName = (task) => {
@@ -674,14 +876,39 @@ const getPreciseTimeRemaining = (task) => {
   const statusText = getSupervisionStatusText(supervisionStatus)
   
   if (statusText === '已超时') {
-    return '已超时'
+    // 继续计算具体超时时长
   } else if (statusText === '进行中') {
-    return '进行中'
+    // 继续计算具体剩余时长
   } else if (statusText === '已结束') {
-    return '已结束'
+    return null
   }
-  
-  return null
+
+  // 统一按截止时间戳计算精确剩余/超时文案
+  const deadlineTimestamp = task.deadlineTimestamp || task.supervisionPageVOData?.deadline
+  if (!deadlineTimestamp || typeof deadlineTimestamp !== 'number') {
+    return null
+  }
+
+  const now = new Date()
+  const deadlineDate = new Date(deadlineTimestamp)
+  const timeDiff = deadlineDate.getTime() - now.getTime()
+  const absDiff = Math.abs(timeDiff)
+
+  const totalMinutes = Math.floor(absDiff / (60 * 1000))
+  const totalHours = Math.floor(absDiff / (60 * 60 * 1000))
+  const totalDays = Math.floor(absDiff / (24 * 60 * 60 * 1000))
+
+  if (timeDiff < 0) {
+    if (totalDays >= 1) return `超时${totalDays}天`
+    if (totalHours >= 1) return `超时${totalHours}小时`
+    if (totalMinutes >= 1) return `超时${totalMinutes}分钟`
+    return '刚刚超时'
+  } else {
+    if (totalDays >= 1) return `剩余${totalDays}天`
+    if (totalHours >= 1) return `剩余${totalHours}小时`
+    if (totalMinutes >= 1) return `剩余${totalMinutes}分钟`
+    return '即将到期'
+  }
 }
 
 // 获取剩余时间的样式类 - 基于supervisionStatus
@@ -1021,10 +1248,10 @@ onMounted(() => {
 }
 
 .task-section {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: transparent; /* 外层不需要背景，避免双层白底 */
+  border-radius: 0;
+  padding: 0; /* 移除内边距，避免与内层 .bg-white 容器叠加导致上方留白 */
+  box-shadow: none; /* 阴影交由内层白卡处理 */
 }
 
 .task-header-controls {
@@ -1040,11 +1267,27 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
+/* 与首页保持一致的 tabs 样式 */
+.tabs-custom {
+  padding: 0 16px;
+}
+.tabs-custom :deep(.el-tabs__item) {
+  font-weight: bold;
+  font-size: 24px;
+  padding: 0 8px;
+}
+.tabs-custom :deep(.el-tabs__header) {
+  margin: 0;
+}
+.tabs-custom :deep(.el-tabs__nav-wrap::after) {
+  display: none;
+}
+
 /* 标签页文字样式 */
 .inline-tabs :deep(.el-tabs__item) {
   font-size: 20px;        /* 调整文字大小 */
   font-weight: 500;       /* 调整文字粗细：normal(400), 500, 600, bold(700) */
-  color: black;         /* 未激活状态文字颜色 */
+  color: #303133;         /* 非激活状态文字颜色 */
 }
 
 /* 激活状态的标签页文字样式 */
@@ -1324,6 +1567,22 @@ onMounted(() => {
   padding: 20px;
 }
 
+/* 与首页一致的 tabs 样式，统一标签字体与间距 */
+.tabs-custom {
+  padding: 0 16px;
+}
+.tabs-custom :deep(.el-tabs__item) {
+  font-weight: bold;
+  font-size: 24px;
+  padding: 0 8px;
+}
+.tabs-custom :deep(.el-tabs__header) {
+  margin: 0;
+}
+.tabs-custom :deep(.el-tabs__nav-wrap::after) {
+  display: none;
+}
+
 :deep(.el-tabs__header) {
   margin-bottom: 0; /* 确保标签页头部没有额外底部间距 */
 }
@@ -1356,24 +1615,47 @@ onMounted(() => {
   font-weight: 500;
 }
 
-/* 批示显示样式 - 横向布局，蓝色主题 */
-.task-remarks {
-  margin: 8px 0;
-  padding: 6px 10px;
-  background-color: #f0f9ff;
-  border-radius: 4px;
-  border-left: 3px solid #409eff;
+/* 描述与批示同行布局：使用flexbox确保同行显示 */
+.task-desc-row {
   display: flex;
-  align-items: center;
-  width: fit-content;
-  max-width: 70%;
+  align-items: flex-start;
+  gap: 36px;
+  margin-bottom: 16px;
+  min-height: 24px;
 }
 
-.task-remarks .el-icon {
-  margin-right: 6px;
-  font-size: 14px;
-  color: #409eff;
+.desc-text {
+  color: #606266;
+  line-height: 1.5;
+  margin: 0;
+  word-break: break-word;
+}
+
+.task-remarks.inline-remarks {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex-shrink: 0;
+}
+
+/* 描述容器：限制描述区域宽度，避免把批示推到最右边 */
+.desc-box {
+  flex: 0 1 70%;
+  max-width: 70%;
+  display: inline-flex; /* 让内部 span 的 inline-block 生效并与 remarks 同行 */
+}
+
+.desc-right-spacer {
+  /* 移除不需要的占位区域 */
+  display: none;
+}
+
+/* 响应式：窄屏改为上下布局 */
+@media (max-width: 1024px) {
+  .task-desc-row {
+    flex-direction: column;
+    gap: 12px;
+  }
 }
 
 .remark-item {
@@ -1381,17 +1663,23 @@ onMounted(() => {
 }
 
 .remark-label {
-  font-size: 13px;
+  font-size: inherit; /* 与描述行一致 */
   font-weight: bold;
-  color: #409eff;
+  color: rgb(229, 146, 50); /* 统一为(229,146,50) */
   margin-right: 4px;
 }
 
 .remark-text {
-  font-size: 13px;
+  font-size: inherit; /* 与描述行一致 */
   font-weight: bold;
-  color: #409eff;
+  color: rgb(229, 146, 50); /* 统一为(229,146,50) */
   line-height: 1.4;
+}
+
+.remark-icon {
+  font-size: 14px;
+  color: rgb(229, 146, 50); /* 与批示文字同色 */
+  flex-shrink: 0;
 }
 
 :deep(.el-button--small) {

@@ -3,7 +3,27 @@
     <div class="supervision-order-create">
       <!-- 页面标题 - 移到表格外面 -->
       <div class="page-header-outside">
-        <h1 class="form-title">{{ pageTitle }}</h1>
+        <template v-if="!selectedType">
+          <el-select
+            v-model="selectedType"
+            placeholder="请选择督办类型"
+            size="large"
+            style="width: 220px"
+          >
+            <el-option
+              v-for="opt in supervisionTypeDict"
+              :key="opt.value"
+              :label="opt.label"
+              :value="opt.value"
+            />
+          </el-select>
+        </template>
+        <template v-else>
+          <div class="title-with-action">
+            <h1 class="form-title">{{ pageTitle }}</h1>
+            <el-button type="text" class="change-type-btn" @click="selectedType = undefined">更改类型</el-button>
+          </div>
+        </template>
       </div>
 
       <!-- 督办单表单 -->
@@ -21,11 +41,13 @@
         >
           <!-- 表格式布局 -->
           <div class="form-table">
-            <!-- 督办编号行 -->
+            <!-- 顶部行：仅右侧督办编号（保持原位置不变） -->
             <div class="form-row">
-              <div class="form-content full-width order-number-content">
-                <span class="order-number-label">{{ orderNumberLabel }}：</span>
-                <span class="order-number-display">{{ orderForm.orderNumber || '正在生成...' }}</span>
+              <div class="form-content full-width order-number-content" style="display:flex; align-items:center; justify-content:flex-end; gap:12px;">
+                <div>
+                  <span class="order-number-label">{{ orderNumberLabel }}：</span>
+                  <span class="order-number-display">{{ orderForm.orderNumber || '请先选择督办类型' }}</span>
+                </div>
               </div>
             </div>
 
@@ -276,7 +298,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 import { useRouter, useRoute } from 'vue-router'
@@ -318,9 +340,12 @@ const getSupervisionOrderType = () => {
 }
 
 // 页面标题
+const selectedType = ref<number | undefined>(undefined) // 1=工作督办, 2=专项督查，初始未选择
+const supervisionTypeDict = getIntDictOptions(DICT_TYPE.SUPERVISION_TYPE)
+
 const pageTitle = computed(() => {
-  const orderType = getSupervisionOrderType()
-  return orderType === 'special' ? '广西大学专项督办单' : '广西大学工作督办单'
+  if (!selectedType.value) return ''
+  return selectedType.value === 2 ? '广西大学专项督查单' : '广西大学工作督办单'
 })
 
 // 督办编号标签
@@ -329,15 +354,14 @@ const orderNumberLabel = computed(() => {
   return orderType === 'special' ? '督查编号' : '督办编号'
 })
 
-// 督办分类选项
+// 督办分类选项（“督办分类”下拉使用）
 const supervisionTypeOptions = ref<any[]>([])
 
 // 获取督办分类列表
 const loadSupervisionTypes = async () => {
   try {
-    const orderType = getSupervisionOrderType()
-    // 工作督办是1，专项督办是2
-    const typeValue = orderType === 'special' ? 2 : 1
+    // 根据右上角选择的督办类型加载对应的“督办分类”
+    const typeValue = selectedType.value // 1=工作督办, 2=专项督查
     const result = await OrderApi.getSupervisionDetailTypes(typeValue)
 
     // 处理返回的数据格式
@@ -364,8 +388,7 @@ const loadSupervisionTypes = async () => {
     console.error('获取督办分类列表失败:', error)
     ElMessage.error('获取督办分类列表失败')
     // 如果API调用失败，回退到使用数据字典
-    const orderType = getSupervisionOrderType()
-    if (orderType === 'special') {
+    if (selectedType.value === 2) {
       supervisionTypeOptions.value = getIntDictOptions(DICT_TYPE.SPECIAL_SUPERVISION_TYPE)
     } else {
       supervisionTypeOptions.value = getIntDictOptions(DICT_TYPE.WORK_SUPERVISION_TYPE)
@@ -557,9 +580,13 @@ const rules = {
 // 方法
 const generateOrderNumber = async () => {
   try {
-    const orderType = getSupervisionOrderType()
-    // 工作督办是1，专项督办是2
-    const typeValue = orderType === 'special' ? 2 : 1
+    if (!selectedType.value) {
+      console.warn('督办类型未选择，无法生成编号')
+      return
+    }
+    
+    // 使用选择的督办类型：1=工作督办, 2=专项督查
+    const typeValue = selectedType.value
     const orderCode = await OrderApi.generateSupervisionOrderCode(typeValue)
     orderForm.orderNumber = orderCode
   } catch (error) {
@@ -597,7 +624,12 @@ const loadUserList = async () => {
 const initData = async () => {
   dataLoading.value = true
   try {
-    await Promise.all([loadDeptList(), loadUserList(), loadSupervisionTypes()])
+    // 先加载静态数据
+    await Promise.all([loadDeptList(), loadUserList()])
+    // 选择类型后再加载分类
+    if (selectedType.value) {
+      await loadSupervisionTypes()
+    }
   } catch (error) {
     console.error('初始化数据失败:', error)
   } finally {
@@ -605,6 +637,24 @@ const initData = async () => {
   }
 }
 
+// 监听督办类型选择变化：重载"督办分类"下拉并清空已选，同时生成编号
+watch(selectedType, async () => {
+  // 未选择时不加载分类，清空编号
+  if (!selectedType.value) {
+    orderForm.category = undefined
+    orderForm.orderNumber = ''
+    return
+  }
+  
+  // 清空分类选择
+  orderForm.category = undefined
+  
+  // 生成督办编号
+  await generateOrderNumber()
+  
+  // 加载督办分类
+  await loadSupervisionTypes()
+})
 
 // 搜索功能通过 remote-method 实现精确过滤
 // 用户在下拉框中输入时，会调用 searchDepts 或 searchUsers 方法
@@ -773,6 +823,15 @@ const getCategoryLabel = (value: string | number): string => {
 
 const getPriorityLabel = (value: number): string => {
   const dict = getIntDictOptions(DICT_TYPE.SUPERVISION_PRIORITY_TYPE).find(d => d.value === value)
+  return dict?.label || ''
+}
+
+
+// 获取汇报频次标签
+const getReportFrequencyLabel = (value: number | string | undefined): string => {
+  if (value === undefined || value === null) return ''
+  const num = typeof value === 'string' ? Number(value) : value
+  const dict = getIntDictOptions(DICT_TYPE.REPORT_FREQUENCY).find(d => d.value === num)
   return dict?.label || ''
 }
 
@@ -957,49 +1016,8 @@ const deleteCategoryDictItem = async (dict: any) => {
   })
 }
 
-// 自动生成概述内容
-const generateAutoSummary = () => {
-  const summaryItems: string[] = []
-
-  // 添加标题
-  if (orderForm.title) {
-    summaryItems.push(`督办事项：${orderForm.title}`)
-  }
-
-  // 添加分类
-  if (orderForm.category) {
-    summaryItems.push(`督办分类：${getCategoryLabel(orderForm.category)}`)
-  }
-
-  // 添加紧急程度
-  if (orderForm.urgencyLevel) {
-    summaryItems.push(`紧急程度：${getPriorityLabel(orderForm.urgencyLevel)}`)
-  }
-
-  // 牵头单位由督办人在后续流程中选择，创建阶段不包含在概述中
-
-  // 添加督办人
-  if (Array.isArray(orderForm.supervisorIds) && orderForm.supervisorIds.length > 0) {
-    const supervisorNames = orderForm.supervisorIds.map(id => {
-      const user = userList.value.find(u => u.id === id)
-      return user ? (user.nickname || user.username) : '未知用户'
-    }).filter(name => name !== '未知用户')
-
-    if (supervisorNames.length > 0) {
-      summaryItems.push(`督办人：${supervisorNames.join('、')}`)
-    }
-  }
-
-  // 添加时间
-  if (orderForm.deadline) {
-    summaryItems.push(`要求完成时间：${orderForm.deadline}`)
-  }
-
-  return summaryItems.join('\n')
-}
-
-// 验证必填字段的方法
-const validateRequiredFields = () => {
+// 自定义必填项校验
+const validateRequiredFields = (): string[] => {
   const missingFields: string[] = []
 
   if (!orderForm.orderNumber) {
@@ -1028,6 +1046,60 @@ const validateRequiredFields = () => {
   return missingFields
 }
 
+
+
+
+// 自动生成概述内容（模板B：单句）
+const generateAutoSummary = () => {
+  const parts: string[] = []
+
+  // 督办事项
+  const title = orderForm.title?.trim()
+  if (title) parts.push(`针对‘${title}’`)
+
+  // 督办分类
+  if (orderForm.category) {
+    const categoryLabel = getCategoryLabel(orderForm.category as any)
+    if (categoryLabel) parts.push(`属${categoryLabel}`)
+  }
+
+  // 紧急程度
+  if (orderForm.urgencyLevel) {
+    const priorityLabel = getPriorityLabel(orderForm.urgencyLevel as any)
+    if (priorityLabel) parts.push(`紧急度为${priorityLabel}`)
+  }
+
+  // 督办人（多个以、分隔）
+  let supervisorsText = ''
+  if (Array.isArray(orderForm.supervisorIds) && orderForm.supervisorIds.length > 0) {
+    const names = orderForm.supervisorIds
+      .map((id: number) => {
+        const user = (userList?.value || []).find((u: any) => u.id === id)
+        return user ? (user.nickname || user.username) : ''
+      })
+      .filter((name: string) => !!name)
+    if (names.length > 0) supervisorsText = names.join('、')
+  }
+  if (supervisorsText) parts.push(`由${supervisorsText}督办`)
+
+  // 完成期限（YYYY-MM-DD HH:mm）
+  if (orderForm.deadline) {
+    const deadlineText = typeof orderForm.deadline === 'string' && orderForm.deadline.length >= 16
+      ? orderForm.deadline.slice(0, 16)
+      : orderForm.deadline
+    parts.push(`请于${deadlineText}前完成`)
+  }
+
+  // 汇报频次（可选）
+  const freqLabel = getReportFrequencyLabel(orderForm.reportFrequency as any)
+  const sentence = [
+    parts.join('，'),
+    freqLabel ? `并按周期内汇报${freqLabel}报送进展` : ''
+  ].filter(Boolean).join('，')
+
+  return sentence ? `${sentence}。` : ''
+}
+
 const createOrder = async () => {
   try {
     // 首先进行自定义验证
@@ -1054,14 +1126,15 @@ const createOrder = async () => {
     const summaryContent = generateAutoSummary()
 
     // 准备提交数据，转换为API需要的格式
-    const orderType = getSupervisionOrderType()
+    // 使用用户在页面上选择的督办类型，而不是URL参数
+    const supervisionType = selectedType.value // 1=工作督办, 2=专项督查
 
     const submitData: OrderVO = {
       orderCode: orderForm.orderNumber,
       orderTitle: orderForm.title,
-      type: orderType === 'special' ? 2 : 1, // 督办类型：1=工作督办, 2=专项督办
+      type: supervisionType, // 督办类型：1=工作督办, 2=专项督查
       detailType: orderForm.category, // 督办具体分类（字符串）
-      orderType: orderType === 'special' ? 2 : 1, // 1=工作督办, 2=专项督办
+      orderType: supervisionType, // 1=工作督办, 2=专项督查
       // reason: orderForm.basis, // 已移除“督办依据”，不再提交
       priority: orderForm.urgencyLevel,
       deadline: orderForm.deadline,
@@ -1181,19 +1254,15 @@ const handleCancel = async () => {
   }
 }
 
-// 初始化督办类型
+// 初始化督办类型（仅在已选择时加载分类）
 const initSupervisionType = () => {
-  const orderType = getSupervisionOrderType()
-  // 可以根据需要设置默认的分类值
-  // 这里暂时不设置默认值，让用户自己选择
-
-  // 确保已加载对应类型的督办分类列表
+  // 这里不再根据路由强制设定类型，交由用户选择
+  if (!selectedType.value) return
   loadSupervisionTypes()
 }
 
 // 初始化
 onMounted(async () => {
-  await generateOrderNumber()
   await initData()
   initSupervisionType()
 })
@@ -1223,6 +1292,8 @@ onMounted(async () => {
   padding: 20px 0 10px 0;
   margin-bottom: 20px;
   text-align: center;
+  display: flex;
+  justify-content: center;
 }
 
 .form-title {
@@ -1236,12 +1307,33 @@ onMounted(async () => {
   text-shadow: 0 1px 2px rgba(211, 47, 47, 0.1);
 }
 
+/* 标题与更改按钮同一行显示，整体仍居中 */
+.title-with-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.change-type-btn {
+  padding: 0 6px;
+  height: auto;
+  line-height: 1;
+  font-size: 14px;
+  color: #409eff;
+}
+
+.change-type-btn:hover {
+  color: #66b1ff;
+}
+
 /* 督办编号在表格内显示 */
 .order-number-content {
   display: flex;
   justify-content: flex-end;
   align-items: center;
   padding-right: 20px;
+  /* 为了与常规表单行的 label(120px) + 边框(1px) + 内容内边距(16px) 对齐 */
+  padding-left: 137px;
   gap: 5px;
 }
 
@@ -1605,6 +1697,11 @@ onMounted(async () => {
 
   .form-actions {
     padding: 20px;
+  }
+
+  /* 移动端不需要额外的左侧对齐内边距 */
+  .order-number-content {
+    padding-left: 16px;
   }
 }
 

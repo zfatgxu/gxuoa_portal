@@ -171,17 +171,26 @@
 
     <!-- Tabs and Filters -->
     <div class="bg-white rounded-lg shadow-sm">
-    <div class="border-b border-gray-200">
+    <div>
         <div class="flex items-center justify-between px-6 pt-6 pb-0">
-        <div class="flex space-x-2 -ml-3">
-            <el-tabs v-model="activeTab" class="tabs-custom">
+        <div class="flex items-center -ml-3">
+          <el-tabs v-model="activeTab" class="tabs-custom">
             <el-tab-pane 
-                v-for="tab in tabs" 
-                :key="tab.key" 
-                :label="tab.label" 
-                :name="tab.key"
+              v-for="tab in tabs" 
+              :key="tab.key" 
+              :label="tab.label" 
+              :name="tab.key"
             />
-            </el-tabs>
+          </el-tabs>
+          <div class="flex items-center ml-4">
+            <el-button
+              class="rounded-md"
+              :style="{ backgroundColor: 'rgb(64,149,229)', borderColor: 'rgb(64,149,229)', color: '#fff', height: '30px', padding: '0 14px', fontSize: '13px', fontWeight: '600' }"
+              @click="goToCreate"
+            >
+              新建督办
+            </el-button>
+          </div>
         </div>
         <!-- 搜索和筛选功能 -->
         <div class="flex space-x-4 items-center">
@@ -226,7 +235,7 @@
                 重置
             </el-button>
             <el-button type="primary" plain @click="openSeniorFilter">
-                <Icon icon="lucide:filter" class="mr-1" />
+                <el-icon class="mr-1"><Filter /></el-icon>
                 高级筛选
             </el-button>
         </div>
@@ -237,6 +246,15 @@
       <div class="px-6 pt-4 pb-2 border-b border-gray-200">
         <div class="flex items-center">
           <div class="flex space-x-4">
+            <button
+              @click="toggleStatusFilter('pendingReview')"
+              class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-white border-0 outline-none hover:shadow-md cursor-pointer"
+              :style="{
+                backgroundColor: statusFilters.pendingReview ? '#39A8F9' : '#9A9A9A'
+              }"
+            >
+              待审核
+            </button>
             <button
               @click="toggleStatusFilter('inProgress')"
               class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-white border-0 outline-none hover:shadow-md cursor-pointer"
@@ -328,6 +346,7 @@
                     backgroundColor: task.status === '已超时' ? 'rgb(179, 55, 55)' :
                                    task.status === '已结束' ? 'rgb(154, 154, 154)' :
                                    task.status === '进行中' ? 'rgb(129, 179, 55)' :
+                                   task.status === '待审核' ? 'rgb(99, 102, 241)' :
                                    'rgb(154, 154, 154)'
                   }">
                   {{ task.status }}
@@ -335,7 +354,16 @@
                 </div>  
               </div>
               
-              <p class="text-gray-600 mb-7 leading-relaxed">{{ task.description }}</p>
+              <p class="text-gray-600 mb-7 leading-relaxed">
+                <el-tooltip 
+                  :content="getDisplayText(task)" 
+                  placement="bottom" 
+                  :disabled="getDisplayText(task).length <= 45"
+                  effect="dark"
+                >
+                  <span class="inline-block">{{ getTruncatedText(task) }}</span>
+                </el-tooltip>
+              </p>
               
               <div class="flex items-center justify-between text-sm">
                 <div class="flex items-center gap-6 flex-wrap">
@@ -368,9 +396,9 @@
                   </div>
                 </div>
                 <div class="flex ml-6">
-                  <el-button v-if="activeTab === 'todo'" class="w-20" type="primary" @click.stop="handleAudit(task)">
+                  <!-- <el-button v-if="activeTab === 'todo' && task.taskId" class="w-20" type="primary" @click.stop="handleAudit(task)">
                     办理
-                  </el-button>
+                  </el-button> -->
                 </div>
               </div>
             </div>
@@ -408,19 +436,24 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Icon } from '@/components/Icon'
+import { Filter } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { SupervisionIndexApi, SupervisionTaskApi } from '@/api/supervision/index'
 import { formatDate } from '@/utils/formatTime'
 import SeniorFilter from './components/seniorFilter.vue'
 
 const { push } = useRouter()
+// 新建督办跳转：固定路径
+const goToCreate = () => {
+  push({ path: '/supervision/create' })
+}
 
 // 定义任务数据类型
 interface TaskData {
   id: number
   title: string
   description: string
+  summary?: string // 添加概述字段
   leadDepartment: string
   assistDepartments: string[]
   createdDate: string
@@ -481,15 +514,16 @@ const seniorFilterResultCount = ref(0)
 const seniorFilterRef = ref()
 // 状态筛选按钮状态
 const statusFilters = ref({
-  inProgress: true,  // 进行中 - 默认开启
-  overdue: true,     // 已超时 - 默认开启
-  completed: true    // 已结束 - 默认开启
+  pendingReview: true, // 待审核 - 默认开启
+  inProgress: true,    // 进行中 - 默认开启
+  overdue: true,       // 已超时 - 默认开启
+  completed: true      // 已结束 - 默认开启
 })
 // 详情弹框已移除
 
 // Static data
 const tabs = [
-  { key: 'todo', label: '待办列表' },
+  { key: 'todo', label: '最近更新' },
   { key: 'work', label: '工作督办' },
   { key: 'special', label: '专项督查' }
 ]
@@ -503,6 +537,7 @@ const priorityOptions = [
 
 // 督办状态选项
 const supervisionStatusOptions = [
+  { label: '待审核', value: 4 },
   { label: '进行中', value: 1 },
   { label: '已超时', value: 2 },
   { label: '已结束', value: 3 }
@@ -574,6 +609,7 @@ const getSupervisionStatusText = (supervisionStatus: number | null | undefined):
     case 1: return '进行中'
     case 2: return '已超时'
     case 3: return '已结束'
+    case 4: return '待审核'
     default: return '进行中'
   }
 }
@@ -587,6 +623,8 @@ const getDeadlineColorClass = (task: TaskData) => {
     return 'text-gray-900' // 黑色
   } else if (status === '进行中') {
     return 'text-orange-500' // 橙色
+  } else if (status === '待审核') {
+    return 'text-indigo-600' // 蓝紫色
   }
   return 'text-gray-700' // 默认颜色
 }
@@ -749,12 +787,13 @@ const fetchData = async () => {
       } else {
         // 使用按钮筛选（多状态支持）
         const activeStatuses = []
-        if (statusFilters.value.inProgress) activeStatuses.push(1) // 进行中
-        if (statusFilters.value.overdue) activeStatuses.push(2)    // 已超时
-        if (statusFilters.value.completed) activeStatuses.push(3)  // 已结束
+        if (statusFilters.value.pendingReview) activeStatuses.push(4) // 待审核
+        if (statusFilters.value.inProgress) activeStatuses.push(1)    // 进行中
+        if (statusFilters.value.overdue) activeStatuses.push(2)       // 已超时
+        if (statusFilters.value.completed) activeStatuses.push(3)     // 已结束
 
         // 传递筛选参数：全部开启时不传参数，部分开启时传对应状态，全部关闭时传特殊值
-        if (activeStatuses.length === 3) {
+        if (activeStatuses.length === 4) {
           // 全部开启，不传参数（显示所有数据）
         } else if (activeStatuses.length === 0) {
           // 全部关闭，传递特殊值表示不显示任何数据
@@ -770,8 +809,8 @@ const fetchData = async () => {
 
     // 构建类型参数
     if (activeTab.value === 'todo') {
-      // 待办列表标签页 - 使用督办待办任务接口
-      supervisionPromise = SupervisionTaskApi.getTodoPage(searchParams)
+      // 最近更新标签页 - 使用合并的全部任务接口
+      supervisionPromise = SupervisionTaskApi.getMergedAllTasksPage(searchParams)
     } else {
       // 工作督办和专项督查 - 只有在没有使用高级筛选时才添加类型参数
       if (Object.keys(seniorFilterParams.value).length === 0) {
@@ -889,6 +928,7 @@ const fetchData = async () => {
             id: supervisionData.id || task.id,
             title: supervisionData.orderTitle || '',
             description: supervisionData.content || '',
+            summary: supervisionData.summary || '', // 添加概述字段映射
             leadDepartment: parseLeadDepts(supervisionData.leadDeptNameMap),
             assistDepartments: parseCoDepts(supervisionData.coDeptNameMap),
             createdDate: formatOrderDate(task.createTime),
@@ -935,6 +975,7 @@ const fetchData = async () => {
             id: order.id,
             title: order.orderTitle || '',
             description: order.content || '',
+            summary: order.summary || '', // 添加概述字段映射
             leadDepartment: parseLeadDepts(order.leadDeptNameMap),
             assistDepartments: parseCoDepts(order.coDeptNameMap),
             createdDate: formatOrderDate(order.createTime),
@@ -1107,17 +1148,19 @@ const handleSeniorFilterApply = (filters) => {
   selectedSupervisionStatus.value = ''
   // 重置状态筛选按钮为全部开启
   statusFilters.value = {
+    pendingReview: true,
     inProgress: true,
     overdue: true,
     completed: true
   }
-  // 重新获取数据
+  // 应用高级筛选时，重置简单筛选新获取数据
   fetchData()
 }
 
 const handleSeniorFilterClear = () => {
   seniorFilterParams.value = {}
   seniorFilterResultCount.value = 0
+  // 应用高级筛选时，重置简单筛选新获取数据
   // 重新获取数据
   fetchData()
 }
@@ -1131,6 +1174,7 @@ const handleSearch = () => {
   // 如果下拉框有选择，重置状态筛选按钮为全部开启
   if (selectedSupervisionStatus.value !== '') {
     statusFilters.value = {
+      pendingReview: true,
       inProgress: true,
       overdue: true,
       completed: true
@@ -1151,6 +1195,7 @@ const handleReset = () => {
 
   // 重置状态筛选按钮为全部开启
   statusFilters.value = {
+    pendingReview: true,
     inProgress: true,
     overdue: true,
     completed: true
@@ -1171,7 +1216,7 @@ const handleReset = () => {
 }
 
 // 切换状态筛选按钮
-const toggleStatusFilter = (status: 'inProgress' | 'overdue' | 'completed') => {
+const toggleStatusFilter = (status: 'pendingReview' | 'inProgress' | 'overdue' | 'completed') => {
   statusFilters.value[status] = !statusFilters.value[status]
   
   // 清空下拉框选择，避免冲突
@@ -1190,6 +1235,17 @@ const handleCategoryClick = (taskType: string | number) => {
   } else if (taskType === 'special' || taskType === 2) {
     activeTab.value = 'special'
   }
+}
+
+// 获取显示文本（用于判断长度）
+const getDisplayText = (task: TaskData): string => {
+  return task.summary || task.description || '未设置'
+}
+
+// 获取截断后的文本（超过45字符显示省略号）
+const getTruncatedText = (task: TaskData): string => {
+  const text = getDisplayText(task)
+  return text.length > 45 ? text.substring(0, 45) + '...' : text
 }
 
 </script>
@@ -1221,8 +1277,7 @@ gap: 1rem;
   margin: 0;
 }
 .tabs-custom :deep(.el-tabs__nav-wrap::after) {
-  height: 1px;
-  background-color: var(--el-border-color-light);
+  display: none;
 }
 /* Custom scrollbar for better UX */
 ::-webkit-scrollbar {
@@ -1256,5 +1311,14 @@ background: #a8a8a8;
 .remaining-days.urgent {
   color: #e6a23c; /* 橙色 - 今日到期 */
   font-weight: 600;
+}
+
+/* 文本截断样式 */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>

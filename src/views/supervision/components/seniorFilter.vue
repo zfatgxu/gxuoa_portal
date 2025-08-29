@@ -20,18 +20,29 @@
           <span>时间范围</span>
         </div>
         <div class="section-content">
-          <div class="time-range-row">
-            <span class="time-label">选择时间：</span>
-            <el-date-picker
-              v-model="filters.timeRange"
-              type="datetimerange"
-              range-separator="至"
-              start-placeholder="开始时间"
-              end-placeholder="结束时间"
-              format="YYYY-MM-DD HH:mm"
-              value-format="YYYY-MM-DD HH:mm:ss"
-              class="time-picker"
-            />
+          <div class="time-range-row" style="display: flex; align-items: center; gap: 24px;">
+            <div style="display:flex; align-items:center;">
+              <span class="time-label">创建时间：</span>
+              <el-date-picker
+                v-model="filters.createTime"
+                type="datetime"
+                placeholder="请选择创建时间"
+                format="YYYY-MM-DD HH:mm"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                class="time-picker"
+              />
+            </div>
+            <div style="display:flex; align-items:center; margin-left: auto;">
+              <span class="time-label">截止时间：</span>
+              <el-date-picker
+                v-model="filters.deadlineTime"
+                type="datetime"
+                placeholder="请选择截止时间"
+                format="YYYY-MM-DD HH:mm"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                class="time-picker"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -137,7 +148,22 @@
                 placeholder="请选择校领导"
                 readonly
                 class="selector-input"
-              />
+              >
+                <template #suffix>
+                  <el-icon
+                    v-if="filters.schoolLeadersDisplay"
+                    class="el-input__icon el-input__clear"
+                    role="button"
+                    tabindex="0"
+                    title="清空"
+                    @click="clearSchoolLeaders"
+                    @keydown.enter.prevent="clearSchoolLeaders"
+                    @keydown.space.prevent="clearSchoolLeaders"
+                  >
+                    <CircleCloseFilled />
+                  </el-icon>
+                </template>
+              </el-input>
               <el-button type="primary" plain @click="openSchoolLeaderSelector">
                 点击选择校领导
               </el-button>
@@ -153,7 +179,22 @@
                 placeholder="请选择督办人"
                 readonly
                 class="selector-input"
-              />
+              >
+                <template #suffix>
+                  <el-icon
+                    v-if="filters.supervisorsDisplay"
+                    class="el-input__icon el-input__clear"
+                    role="button"
+                    tabindex="0"
+                    title="清空"
+                    @click="clearSupervisors"
+                    @keydown.enter.prevent="clearSupervisors"
+                    @keydown.space.prevent="clearSupervisors"
+                  >
+                    <CircleCloseFilled />
+                  </el-icon>
+                </template>
+              </el-input>
               <el-button type="primary" plain @click="openSupervisorSelector">
                 点击选择督办人
               </el-button>
@@ -169,7 +210,22 @@
                 placeholder="请选择牵头单位"
                 readonly
                 class="selector-input"
-              />
+              >
+                <template #suffix>
+                  <el-icon
+                    v-if="filters.leadDeptDisplay"
+                    class="el-input__icon el-input__clear"
+                    role="button"
+                    tabindex="0"
+                    title="清空"
+                    @click="clearLeadDept"
+                    @keydown.enter.prevent="clearLeadDept"
+                    @keydown.space.prevent="clearLeadDept"
+                  >
+                    <CircleCloseFilled />
+                  </el-icon>
+                </template>
+              </el-input>
               <el-button type="primary" plain @click="openLeadDeptSelector">
                 点击选择牵头单位
               </el-button>
@@ -185,7 +241,22 @@
                 placeholder="请选择协办单位"
                 readonly
                 class="selector-input"
-              />
+              >
+                <template #suffix>
+                  <el-icon
+                    v-if="filters.collaborateDeptsDisplay"
+                    class="el-input__icon el-input__clear"
+                    role="button"
+                    tabindex="0"
+                    title="清空"
+                    @click="clearCollaborateDepts"
+                    @keydown.enter.prevent="clearCollaborateDepts"
+                    @keydown.space.prevent="clearCollaborateDepts"
+                  >
+                    <CircleCloseFilled />
+                  </el-icon>
+                </template>
+              </el-input>
               <el-button type="primary" plain @click="openCollaborateDeptSelector">
                 点击选择协办单位
               </el-button>
@@ -213,85 +284,29 @@
     </template>
   </el-dialog>
 
-  <!-- 人员选择器弹窗 -->
-  <el-dialog
-    v-model="userSelectorVisible"
-    :title="userSelectorTitle"
-    width="600px"
-    class="user-selector-dialog"
-  >
-    <div class="user-selector-content">
-      <el-input
-        v-model="userSearchKeyword"
-        placeholder="搜索用户"
-        prefix-icon="Search"
-        class="search-input"
-      />
-      <div class="user-list">
-        <el-checkbox-group v-model="selectedUserIds">
-          <div
-            v-for="user in filteredUsers"
-            :key="user.id"
-            class="user-item"
-          >
-            <el-checkbox :label="user.id">
-              {{ user.nickname || user.username }}
-            </el-checkbox>
-          </div>
-        </el-checkbox-group>
-      </div>
-    </div>
-    <template #footer>
-      <el-button @click="cancelUserSelection">取消</el-button>
-      <el-button type="primary" @click="confirmUserSelection">确定</el-button>
-    </template>
-  </el-dialog>
+  <!-- 复用通用选择组件 -->
+  <UserSelectForm ref="userSelectFormRef" @confirm="onUserSelectConfirm" />
+  <DeptSelectForm
+    ref="deptSelectFormRef"
+    @confirm="onDeptSelectConfirm"
+    :multiple="true"
+    :check-strictly="false"
+  />
 
-  <!-- 部门选择器弹窗 -->
-  <el-dialog
-    v-model="deptSelectorVisible"
-    :title="deptSelectorTitle"
-    width="600px"
-    class="dept-selector-dialog"
-  >
-    <div class="dept-selector-content">
-      <el-input
-        v-model="deptSearchKeyword"
-        placeholder="搜索部门"
-        prefix-icon="Search"
-        class="search-input"
-      />
-      <div class="dept-list">
-        <el-checkbox-group v-model="selectedDeptIds">
-          <div
-            v-for="dept in filteredDepts"
-            :key="dept.id"
-            class="dept-item"
-          >
-            <el-checkbox :label="dept.id">
-              {{ dept.name }}
-            </el-checkbox>
-          </div>
-        </el-checkbox-group>
-      </div>
-    </div>
-    <template #footer>
-      <el-button @click="cancelDeptSelection">取消</el-button>
-      <el-button type="primary" @click="confirmDeptSelection">确定</el-button>
-    </template>
-  </el-dialog>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Icon } from '@/components/Icon'
-import { Filter, SuccessFilled } from '@element-plus/icons-vue'
+import { Filter, SuccessFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import { CalendarRange, ChartColumn, FileText, TriangleAlert, Notebook, CircleCheck, Users, ChartSpline, Building, User } from 'lucide-vue-next'
 import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
 import * as UserApi from '@/api/system/user'
 import * as DeptApi from '@/api/system/dept'
 import { OrderApi, SupervisionTypeRespVO } from '@/api/supervision'
+import UserSelectForm from '@/components/UserSelectForm/index.vue'
+import DeptSelectForm from '@/components/DeptSelectForm/index.vue'
 
 defineOptions({ name: 'SupervisionSeniorFilter' })
 
@@ -324,7 +339,8 @@ const applyLoading = ref(false)
 
 // 筛选条件
 const filters = reactive({
-  timeRange: null as [string, string] | null,
+  createTime: null as string | null,
+  deadlineTime: null as string | null,
   supervisionTypes: [] as number[],
   supervisionCategories: [] as number[],
   instructionStatuses: [] as number[],
@@ -369,6 +385,7 @@ const urgencyLevels = ref([
 
 // 处理状态选项
 const processingStatuses = ref([
+  { value: 4, label: '待审核' },
   { value: 1, label: '进行中' },
   { value: 3, label: '已结束' },
   { value: 2, label: '已超时' }
@@ -398,7 +415,8 @@ const availableCategories = computed(() => {
 const totalFilterCount = computed(() => {
   let count = 0
   
-  if (filters.timeRange && filters.timeRange.length === 2) count++
+  if (filters.createTime) count++
+  if (filters.deadlineTime) count++
   if (filters.supervisionTypes.length > 0) count++
   if (filters.supervisionCategories.length > 0) count++
   if (filters.instructionStatuses.length > 0) count++
@@ -412,33 +430,15 @@ const totalFilterCount = computed(() => {
   return count
 })
 
-// 人员选择器相关
-const userSelectorVisible = ref(false)
-const userSelectorTitle = ref('')
+// 人员选择器相关（改为复用通用组件 UserSelectForm）
+const userSelectFormRef = ref()
 const userSelectorType = ref('')
 const selectedUserIds = ref<number[]>([])
-const userSearchKeyword = ref('')
 
-const filteredUsers = computed(() => {
-  if (!userSearchKeyword.value) return userList.value
-  return userList.value.filter(user => 
-    (user.nickname || user.username || '').toLowerCase().includes(userSearchKeyword.value.toLowerCase())
-  )
-})
-
-// 部门选择器相关
-const deptSelectorVisible = ref(false)
-const deptSelectorTitle = ref('')
+// 部门选择器相关（改为复用通用组件 DeptSelectForm）
+const deptSelectFormRef = ref()
 const deptSelectorType = ref('')
 const selectedDeptIds = ref<number[]>([])
-const deptSearchKeyword = ref('')
-
-const filteredDepts = computed(() => {
-  if (!deptSearchKeyword.value) return deptList.value
-  return deptList.value.filter(dept => 
-    dept.name.toLowerCase().includes(deptSearchKeyword.value.toLowerCase())
-  )
-})
 
 // 关闭弹窗处理
 const handleClose = (done: () => void) => {
@@ -509,87 +509,97 @@ const handleSupervisionTypeChange = () => {
   )
 }
 
-// 打开校领导选择器
+// 打开校领导选择器（复用 UserSelectForm）
 const openSchoolLeaderSelector = () => {
-  userSelectorTitle.value = '选择校领导'
   userSelectorType.value = 'schoolLeaders'
   selectedUserIds.value = [...filters.schoolLeaders]
-  userSearchKeyword.value = ''
-  userSelectorVisible.value = true
+  const selectedList = userList.value.filter(u => selectedUserIds.value.includes(u.id))
+  // open(id, deptId?, selectedList?, currentUserId?) - 此处无需限制部门
+  userSelectFormRef.value?.open(null, undefined, selectedList)
 }
 
-// 打开督办人选择器
+// 打开督办人选择器（复用 UserSelectForm）
 const openSupervisorSelector = () => {
-  userSelectorTitle.value = '选择督办人'
   userSelectorType.value = 'supervisors'
   selectedUserIds.value = [...filters.supervisors]
-  userSearchKeyword.value = ''
-  userSelectorVisible.value = true
+  const selectedList = userList.value.filter(u => selectedUserIds.value.includes(u.id))
+  userSelectFormRef.value?.open(null, undefined, selectedList)
 }
 
-// 打开牵头单位选择器
+// 打开牵头单位选择器（复用 DeptSelectForm）
 const openLeadDeptSelector = () => {
-  deptSelectorTitle.value = '选择牵头单位'
   deptSelectorType.value = 'leadDept'
   selectedDeptIds.value = [...filters.leadDept]
-  deptSearchKeyword.value = ''
-  deptSelectorVisible.value = true
+  const selectedList = deptList.value.filter(d => selectedDeptIds.value.includes(d.id))
+  deptSelectFormRef.value?.open(selectedList)
 }
 
-// 打开协办单位选择器
+// 打开协办单位选择器（复用 DeptSelectForm）
 const openCollaborateDeptSelector = () => {
-  deptSelectorTitle.value = '选择协办单位'
   deptSelectorType.value = 'collaborateDepts'
   selectedDeptIds.value = [...filters.collaborateDepts]
-  deptSearchKeyword.value = ''
-  deptSelectorVisible.value = true
+  const selectedList = deptList.value.filter(d => selectedDeptIds.value.includes(d.id))
+  deptSelectFormRef.value?.open(selectedList)
 }
 
-// 确认用户选择
-const confirmUserSelection = () => {
-  const selectedUsers = userList.value.filter(user => selectedUserIds.value.includes(user.id))
-  const displayText = selectedUsers.map(user => user.nickname || user.username).join('、')
-  
+// 通用人员选择组件回调
+const onUserSelectConfirm = (_id: any, selectedUsers: any[]) => {
+  const ids = selectedUsers.map((u: any) => u.id)
+  const displayText = selectedUsers.map((u: any) => u.nickname || u.username).join('，')
   if (userSelectorType.value === 'schoolLeaders') {
-    filters.schoolLeaders = [...selectedUserIds.value]
+    filters.schoolLeaders = ids
     filters.schoolLeadersDisplay = displayText
   } else if (userSelectorType.value === 'supervisors') {
-    filters.supervisors = [...selectedUserIds.value]
+    filters.supervisors = ids
     filters.supervisorsDisplay = displayText
   }
-  
-  userSelectorVisible.value = false
 }
 
-// 取消用户选择
-const cancelUserSelection = () => {
-  userSelectorVisible.value = false
-}
-
-// 确认部门选择
-const confirmDeptSelection = () => {
-  const selectedDepts = deptList.value.filter(dept => selectedDeptIds.value.includes(dept.id))
-  const displayText = selectedDepts.map(dept => dept.name).join('、')
-  
+// 通用部门选择组件回调
+const onDeptSelectConfirm = (selectedDepts: any[]) => {
+  const ids = selectedDepts.map((d: any) => d.id)
+  const displayText = selectedDepts.map((d: any) => d.name).join('，')
   if (deptSelectorType.value === 'leadDept') {
-    filters.leadDept = [...selectedDeptIds.value]
+    filters.leadDept = ids
     filters.leadDeptDisplay = displayText
   } else if (deptSelectorType.value === 'collaborateDepts') {
-    filters.collaborateDepts = [...selectedDeptIds.value]
+    filters.collaborateDepts = ids
     filters.collaborateDeptsDisplay = displayText
   }
-  
-  deptSelectorVisible.value = false
 }
 
-// 取消部门选择
-const cancelDeptSelection = () => {
-  deptSelectorVisible.value = false
+// 清空：校领导
+const clearSchoolLeaders = () => {
+  filters.schoolLeaders = []
+  filters.schoolLeadersDisplay = ''
+  selectedUserIds.value = []
+}
+
+// 清空：督办人
+const clearSupervisors = () => {
+  filters.supervisors = []
+  filters.supervisorsDisplay = ''
+  selectedUserIds.value = []
+}
+
+// 清空：牵头单位
+const clearLeadDept = () => {
+  filters.leadDept = []
+  filters.leadDeptDisplay = ''
+  selectedDeptIds.value = []
+}
+
+// 清空：协办单位
+const clearCollaborateDepts = () => {
+  filters.collaborateDepts = []
+  filters.collaborateDeptsDisplay = ''
+  selectedDeptIds.value = []
 }
 
 // 清空所有筛选条件
 const clearAllFilters = () => {
-  filters.timeRange = null
+  filters.createTime = null
+  filters.deadlineTime = null
   filters.supervisionTypes = []
   filters.supervisionCategories = []
   filters.instructionStatuses = []
@@ -614,10 +624,12 @@ const applyFilters = () => {
   // 构建筛选参数
   const filterParams: any = {}
   
-  // 时间范围
-  if (filters.timeRange && filters.timeRange.length === 2) {
-    filterParams.startTime = filters.timeRange[0]
-    filterParams.endTime = filters.timeRange[1]
+  // 创建时间与截止时间（单点，可各自独立）
+  if (filters.createTime) {
+    filterParams.startTime = filters.createTime
+  }
+  if (filters.deadlineTime) {
+    filterParams.endTime = filters.deadlineTime
   }
   
   // 督办类型（1=工作督办，2=专项督查）
@@ -682,6 +694,7 @@ onMounted(async () => {
     loadSupervisionCategories()
   ])
 })
+
 
 // 暴露方法给父组件调用
 defineExpose({
@@ -841,6 +854,36 @@ defineExpose({
         border-color: #9ca3af;
       }
     }
+  }
+}
+
+.clear-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  color: #909399;
+  border-radius: 9999px;
+  transition: color 0.15s ease, background-color 0.15s ease, transform 0.05s ease;
+
+  &:hover {
+    color: #409eff; /* Element Plus primary */
+    background-color: rgba(64, 158, 255, 0.12);
+  }
+
+  &:active {
+    color: #337ecc;
+    background-color: rgba(64, 158, 255, 0.18);
+    transform: scale(0.92);
+  }
+
+  &:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
   }
 }
 

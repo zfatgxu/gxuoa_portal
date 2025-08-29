@@ -131,62 +131,62 @@
     </el-popover>
 
     <!-- 【抄送】按钮 -->
-    <!-- <el-popover
-      :visible="popOverVisible.copy"
-      placement="top-start"
-      :width="420"
-      trigger="click"
-      v-if="runningTask && isHandleTaskStatus() && isShowButton(OperationButtonType.COPY)"
-    >
-      <template #reference>
-        <div @click="openPopover('copy')" class="hover-bg-gray-100 rounded-xl p-6px">
-          <Icon :size="14" icon="svg-icon:send" />&nbsp;
-          {{ getButtonDisplayName(OperationButtonType.COPY) }}
-        </div>
-      </template>
-      <div class="flex flex-col flex-1 pt-20px px-20px" v-loading="formLoading">
-        <el-form
-          label-position="top"
-          class="mb-auto"
-          ref="copyFormRef"
-          :model="copyForm"
-          :rules="copyFormRule"
-          label-width="100px"
-        >
-          <el-form-item label="抄送人" prop="copyUserIds">
-            <el-select
-              v-model="copyForm.copyUserIds"
-              clearable
-              style="width: 100%"
-              multiple
-              placeholder="请选择抄送人"
-            >
-              <el-option
-                v-for="item in userOptions"
-                :key="item.id"
-                :label="item.nickname"
-                :value="item.id"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="抄送意见" prop="copyReason">
-            <el-input
-              v-model="copyForm.copyReason"
-              clearable
-              placeholder="请输入抄送意见"
-              type="textarea"
-              :rows="3"
-            />
-          </el-form-item>
-          <el-form-item>
-            <el-button :disabled="formLoading" type="primary" @click="handleCopy">
-              {{ getButtonDisplayName(OperationButtonType.COPY) }}
-            </el-button>
-            <el-button @click="closePopover('copy', copyFormRef)"> 取消 </el-button>
-          </el-form-item>
-        </el-form>
-      </div>
-    </el-popover> -->
+<!--      <el-popover-->
+<!--      :visible="popOverVisible.copy"-->
+<!--      placement="top-start"-->
+<!--      :width="420"-->
+<!--      trigger="click"-->
+<!--      v-if="runningTask && isHandleTaskStatus() && isShowButton(OperationButtonType.COPY)"-->
+<!--    >-->
+<!--      <template #reference>-->
+<!--        <div @click="openPopover('copy')" class="hover-bg-gray-100 rounded-xl p-6px">-->
+<!--          <Icon :size="14" icon="svg-icon:send" />&nbsp;-->
+<!--          {{ getButtonDisplayName(OperationButtonType.COPY) }}-->
+<!--        </div>-->
+<!--      </template>-->
+<!--      <div class="flex flex-col flex-1 pt-20px px-20px" v-loading="formLoading">-->
+<!--        <el-form-->
+<!--          label-position="top"-->
+<!--          class="mb-auto"-->
+<!--          ref="copyFormRef"-->
+<!--          :model="copyForm"-->
+<!--          :rules="copyFormRule"-->
+<!--          label-width="100px"-->
+<!--        >-->
+<!--          <el-form-item label="抄送人" prop="copyUserIds">-->
+<!--            <el-select-->
+<!--              v-model="copyForm.copyUserIds"-->
+<!--              clearable-->
+<!--              style="width: 100%"-->
+<!--              multiple-->
+<!--              placeholder="请选择抄送人"-->
+<!--            >-->
+<!--              <el-option-->
+<!--                v-for="item in userOptions"-->
+<!--                :key="item.id"-->
+<!--                :label="item.nickname"-->
+<!--                :value="item.id"-->
+<!--              />-->
+<!--            </el-select>-->
+<!--          </el-form-item>-->
+<!--          <el-form-item label="抄送意见" prop="copyReason">-->
+<!--            <el-input-->
+<!--              v-model="copyForm.copyReason"-->
+<!--              clearable-->
+<!--              placeholder="请输入抄送意见"-->
+<!--              type="textarea"-->
+<!--              :rows="3"-->
+<!--            />-->
+<!--          </el-form-item>-->
+<!--          <el-form-item>-->
+<!--            <el-button :disabled="formLoading" type="primary" @click="handleCopy">-->
+<!--              {{ getButtonDisplayName(OperationButtonType.COPY) }}-->
+<!--            </el-button>-->
+<!--            <el-button @click="closePopover('copy', copyFormRef)"> 取消 </el-button>-->
+<!--          </el-form-item>-->
+<!--        </el-form>-->
+<!--      </div>-->
+<!--    </el-popover>-->
 
     <!-- 【转办】按钮 -->
 <!--    <el-popover-->

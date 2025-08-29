@@ -255,9 +255,14 @@ export const SupervisionTaskApi = {
     return await request.get({ url: `/bpm/supervision/attention-tasks-page`, params })
   },
 
-  // 获取督办待审核任务列表（督查督办首页）
+  // 获取督办待办任务列表（督查督办首页）
   getTodoPage: async (params: any) => {
     return await request.get({ url: `/bpm/supervision/todo-page`, params })
+  },
+
+  // 获取合并的全部任务（待办+已办）按最新进展时间排序
+  getMergedAllTasksPage: async (params: any) => {
+    return await request.get({ url: `/bpm/supervision/merged-all-tasks-page`, params })
   }
 }
 

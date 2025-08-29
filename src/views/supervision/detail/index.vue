@@ -46,30 +46,27 @@
               </div>
             </div>
 
-            <!-- 督办分类和督办依据 -->
+            <!-- 督办分类和紧急程度 -->
             <div class="form-row">
               <div class="form-label">督办分类</div>
               <div class="form-content half-width">
                 <el-input :value="orderDetail.detailType || getTypeName(orderDetail.type)" readonly />
               </div>
-              <div class="form-label">督办依据</div>
-              <div class="form-content half-width">
-                <el-input :value="getReasonName(orderDetail.reason)" readonly />
-              </div>
-            </div>
-
-            <!-- 紧急程度和完成期限 -->
-            <div class="form-row">
               <div class="form-label">紧急程度</div>
               <div class="form-content half-width">
                 <el-input :value="getPriorityName(orderDetail.priority)" readonly />
               </div>
+            </div>
+
+            <!-- 完成期限和汇报频次 -->
+            <div class="form-row">
               <div class="form-label">完成期限</div>
               <div class="form-content half-width">
-                <div class="deadline-container">
-                  <el-input :value="formatDate(orderDetail.deadline)" readonly class="deadline-display" />
-                  <el-input :value="getReportFrequencyName(orderDetail.reportFrequency)" readonly class="report-frequency-display" />
-                </div>
+                <el-input :value="formatDate(orderDetail.deadline)" readonly />
+              </div>
+              <div class="form-label">汇报频次</div>
+              <div class="form-content half-width">
+                <el-input :value="getReportFrequencyName(orderDetail.reportFrequency)" readonly />
               </div>
             </div>
 
@@ -218,8 +215,11 @@
                           <Icon icon="ep:clock" class="time-icon" />
                           {{ progressRecords[0].time }}
                         </div>
-                        <div class="latest-progress-description" v-if="progressRecords[0].description && progressRecords[0].description !== '暂无详细信息'">
+                        <div class="latest-progress-description" v-if="progressRecords[0].description">
                           {{ progressRecords[0].description }}
+                        </div>
+                        <div class="latest-progress-description" v-if="progressRecords[0].remark">
+                          <strong>领导批示：</strong>{{ progressRecords[0].remark }}
                         </div>
                         <div v-if="progressRecords[0].attachments && progressRecords[0].attachments.length > 0" class="latest-progress-attachments">
                           <div class="attachments-list">
@@ -261,6 +261,14 @@
                         时间倒序
                       </el-button>
                       <el-button
+                        v-if="isCurrentUserLeader && !isSupervisionEnded"
+                        type="success"
+                        size="small"
+                        @click="showAddRemarkDialog"
+                      >
+                        新增批示
+                      </el-button>
+                      <el-button
                         v-if="hasMoreRecords"
                         type="info"
                         size="small"
@@ -292,8 +300,11 @@
                           <Icon icon="ep:clock" class="time-icon" />
                           {{ record.time }}
                         </div>
-                        <div class="progress-record-description" v-if="record.description && record.description !== '暂无详细信息'">
+                        <div class="progress-record-description" v-if="record.description">
                           {{ record.description }}
+                        </div>
+                        <div class="progress-record-description" v-if="record.remark">
+                          <strong>领导批示：</strong>{{ record.remark }}
                         </div>
                         <div v-if="record.attachments && record.attachments.length > 0" class="progress-record-attachments">
                           <div class="attachments-list">
@@ -438,6 +449,45 @@
       </template>
     </el-dialog>
 
+    <!-- 添加批示弹窗 -->
+    <el-dialog
+      v-model="addRemarkDialogVisible"
+      title="新增批示"
+      width="600px"
+      class="add-progress-dialog"
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+      destroy-on-close
+    >
+      <div class="progress-dialog-content">
+        <el-form :model="remarkForm" :rules="remarkRules" ref="remarkFormRef" label-width="140px" class="progress-form">
+          <el-form-item label="批示内容" prop="remark" class="form-item-custom">
+            <el-input
+              v-model="remarkForm.remark"
+              type="textarea"
+              :rows="6"
+              placeholder="请输入批示内容..."
+              maxlength="500"
+              show-word-limit
+              class="textarea-custom"
+            />
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <template #footer>
+        <div class="dialog-footer-custom">
+          <el-button @click="cancelAddRemark" class="cancel-btn">
+            <Icon icon="ep:close" class="btn-icon" />
+            取消
+          </el-button>
+          <el-button type="primary" @click="submitAddRemark" class="submit-btn">
+            <Icon icon="ep:check" class="btn-icon" />
+            确定
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
 
   </ContentWrap>
 </template>
@@ -445,7 +495,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch, reactive } from 'vue'
 import { useRoute } from 'vue-router'
-import { OrderApi, type OrderRespVO, type OrderSaveReqVO, type OrderWorkflowUpdateReqVO, type AttachmentFileInfo, type AttachmentRespVO } from '@/api/supervision'
+import { OrderApi, LeaderRemarkApi, type OrderRespVO, type OrderSaveReqVO, type OrderWorkflowUpdateReqVO, type AttachmentFileInfo, type AttachmentRespVO } from '@/api/supervision'
 import { getSimpleDeptList, getDept, type DeptVO } from '@/api/system/dept'
 import { getSimpleUserList, type UserVO } from '@/api/system/user'
 import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
@@ -488,6 +538,7 @@ const hasMoreRecords = ref(false)                // 是否有更多记录
 const isExpanded = ref(true)                     // 当前是否为展开状态
 const isToggling = ref(false)                    // 是否正在切换状态（防止频繁点击）
 const addProgressDialogVisible = ref(false)     // 添加进度弹窗状态
+const addRemarkDialogVisible = ref(false)       // 添加批示弹窗状态
 const progressSortOrder = ref<'asc' | 'desc'>('desc') // 进度记录排序方式，默认倒序（最新在前）
 const pendingProgressUpdate = ref<any>(null)    // 待提交的进度更新数据
 const isEditingPendingProgress = ref(false)     // 是否正在编辑待提交的进度
@@ -504,6 +555,11 @@ const progressForm = reactive({
     raw?: File
     uid?: string | number
   }>
+})
+
+// 批示表单数据
+const remarkForm = reactive({
+  remark: ''
 })
 
 // 进度更新表单验证规则
@@ -533,11 +589,28 @@ const progressRules = {
   ]
 }
 
-// 判断督办是否已结束
+// 批示表单验证规则
+const remarkRules = {
+  remark: [
+    { required: true, message: '请输入批示内容', trigger: 'blur' }
+  ]
+}
+
+// 判断督办是否已结束（基于后端字段 isSupervisionClosed）
 const isSupervisionEnded = computed(() => {
-  // 这里可以根据实际的督办状态字段来判断
-  // 暂时返回false，后续可以根据实际业务逻辑调整
-  return false
+  const closed = orderDetail.value?.isSupervisionClosed
+  // 后端该字段定义为 boolean | null，这里进行显式布尔化
+  return !!closed
+})
+
+// 判断当前用户是否为领导（有批示权限）
+const isCurrentUserLeader = computed(() => {
+  const currentUserId = userStore.getUser?.id
+  if (!currentUserId || !orderDetail.value.leadLeaders || !Array.isArray(orderDetail.value.leadLeaders)) {
+    return false
+  }
+  
+  return orderDetail.value.leadLeaders.some(leader => leader.id === currentUserId)
 })
 
 // 计算显示的进度记录（除了最新的，并按排序方式显示）
@@ -1248,7 +1321,8 @@ const getProgressRecords = async (processInstanceId: string, showAll: boolean = 
           return {
             title: record.creatorDeptName || '未知部门',
             handler: record.creatorNickName || '',
-            description: record.deptDetail || '暂无详细信息',
+            description: record.deptDetail || '', // 不再默认显示'暂无详细信息'
+            remark: record.remark || '', // 保留批示字段
             expectedTime: record.planTime ? formatTimestamp(record.planTime) : '',
             time: record.createTime ? formatTimestamp(record.createTime) : (record.planTime ? formatTimestamp(record.planTime) : ''),
             attachments: record.fileList && Array.isArray(record.fileList) ? record.fileList : [],
@@ -1358,6 +1432,53 @@ const showAddProgressDialog = () => {
   progressForm.fileList = []
 }
 
+// 显示添加批示弹窗
+const showAddRemarkDialog = () => {
+  addRemarkDialogVisible.value = true
+  // 重置表单
+  remarkForm.remark = ''
+}
+
+// 取消添加批示
+const cancelAddRemark = () => {
+  addRemarkDialogVisible.value = false
+  remarkForm.remark = ''
+}
+
+// 提交批示
+const submitAddRemark = async () => {
+  if (!remarkFormRef.value) return
+
+  try {
+    await remarkFormRef.value.validate()
+
+    const processInstanceId = props.id?.toString() ||
+                             route.query.processInstanceId as string ||
+                             route.params.id as string ||
+                             route.query.id as string
+
+    // 调用批示创建接口
+    const remarkData = {
+      processInstanceId: processInstanceId || '',
+      remark: remarkForm.remark
+    }
+    // 实际调用后端批示创建接口
+    await LeaderRemarkApi.insertLeaderRemark(remarkData)
+    
+    ElMessage.success('批示添加成功')
+    addRemarkDialogVisible.value = false
+    remarkForm.remark = ''
+
+    // 刷新进度记录列表
+    if (processInstanceId) {
+      await getProgressRecords(processInstanceId, isExpanded.value)
+    }
+  } catch (error) {
+    console.error('添加批示失败:', error)
+    ElMessage.error('添加批示失败')
+  }
+}
+
 // 切换进度记录显示状态（折叠/展开）
 const toggleProgressRecords = async () => {
   if (isToggling.value) return // 防止频繁点击
@@ -1407,6 +1528,7 @@ const downloadProgressFile = (file: any) => {
 // 进度更新弹窗相关方法
 const progressFormRef = ref()
 const progressUploadRef = ref()
+const remarkFormRef = ref()
 
 // 取消添加进度更新
 const cancelAddProgress = () => {
@@ -1541,9 +1663,41 @@ const beforeProgressUpload = (file: File) => {
   return true
 }
 
+// 检查是否有文件正在上传
+const checkUploadStatus = () => {
+  const uploadingFiles = progressForm.fileList.filter(file => 
+    file.status === 'uploading' || 
+    (file.raw && !file.url) // 文件存在但还没有URL，说明还在上传
+  )
+  
+  const failedFiles = progressForm.fileList.filter(file => 
+    file.status === 'fail'
+  )
+  
+  return {
+    hasUploading: uploadingFiles.length > 0,
+    hasFailed: failedFiles.length > 0,
+    uploadingCount: uploadingFiles.length,
+    failedCount: failedFiles.length
+  }
+}
+
 // 提交添加进度更新（立即显示在界面上，并暂存数据等待工作流审批通过时一并提交）
 const submitAddProgress = async () => {
   if (!progressFormRef.value) return
+
+  // 检查文件上传状态
+  const uploadStatus = checkUploadStatus()
+  
+  if (uploadStatus.hasUploading) {
+    ElMessage.warning(`还有 ${uploadStatus.uploadingCount} 个文件正在上传中，请等待上传完成后再提交`)
+    return
+  }
+  
+  if (uploadStatus.hasFailed) {
+    ElMessage.error(`有 ${uploadStatus.failedCount} 个文件上传失败，请先移除失败的文件或重新上传`)
+    return
+  }
 
   try {
     await progressFormRef.value.validate()

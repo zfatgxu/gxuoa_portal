@@ -725,9 +725,9 @@ const getPriorityType = (priority: string) => {
 const getStatusType = (status: number) => {
   switch (status) {
     case 1: return '' // 进行中 - 使用自定义颜色
-    case 2: return '' // 已超时 - 使用自定义颜色
-    case 3: return '' // 已结束 - 使用自定义颜色
-    default: return 'info'
+    case 2: return 'danger' // 已超时
+    case 3: return 'success' // 已结束
+    default: return ''
   }
 }
 
@@ -746,24 +746,28 @@ const getStatusStyle = (status: number) => {
   switch (status) {
     case 1: // 进行中
       return {
-        backgroundColor: 'rgb(187,237,132)',
-        color: '#000',
+        backgroundColor: 'rgb(129, 179, 55)',
+        color: 'white',
         border: 'none'
       }
     case 2: // 已超时
       return {
-        backgroundColor: 'rgb(247,159,159)',
-        color: '#000',
+        backgroundColor: 'rgb(179, 55, 55)',
+        color: 'white',
         border: 'none'
       }
     case 3: // 已结束
       return {
-        backgroundColor: 'rgb(206,206,206)',
-        color: '#000',
+        backgroundColor: 'rgb(154, 154, 154)',
+        color: 'white',
         border: 'none'
       }
     default:
-      return {}
+      return {
+        backgroundColor: 'rgb(129, 179, 55)',
+        color: 'white',
+        border: 'none'
+      }
   }
 }
 
