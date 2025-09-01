@@ -123,12 +123,13 @@
               <div
                 v-if="
                   task.reason &&
+                  formatApprovalReason(task.reason) &&
                   [NodeType.USER_TASK_NODE, NodeType.END_EVENT_NODE].includes(activity.nodeType)
                 "
                 class="text-#a5a5a5 text-13px mt-1 w-full bg-#f8f8fa p2 rounded-md"
               >
                 <!-- TODO lesan：这里如果是办理，需要是办理意见 -->
-                审批意见：{{ task.reason }}
+                审批意见：{{ formatApprovalReason(task.reason) }}
               </div>
               <div
                 v-if="task.signPicUrl && activity.nodeType === NodeType.USER_TASK_NODE"
@@ -300,6 +301,41 @@ const getApprovalNodeTime = (node: ProcessInstanceApi.ApprovalNodeInfo) => {
   if (node.startTime) {
     return `${formatDate(node.startTime)}`
   }
+}
+
+// 格式化审批意见显示
+const formatApprovalReason = (reason: string) => {
+  if (!reason) return ''
+  
+  // 如果是"再次提交"类型的意见，不显示
+  if (reason.includes('再次提交')) {
+    return ''
+  }
+  
+  // 检查是否包含审批人名字和时间的格式（包含换行符和右对齐空格）
+  const lines = reason.split('\n')
+  if (lines.length >= 2) {
+    const firstLine = lines[0].trim()
+    // 如果第一行只是"同意"，返回"同意"
+    if (firstLine === '同意') {
+      return '同意'
+    }
+    // 如果第一行只是"不同意"，返回"不同意"
+    if (firstLine === '不同意') {
+      return '不同意'
+    }
+    // 如果第一行是"同意，xxx"格式，返回完整内容
+    if (firstLine.startsWith('同意，')) {
+      return firstLine
+    }
+    // 如果第一行是"不同意，xxx"格式，返回完整内容
+    if (firstLine.startsWith('不同意，')) {
+      return firstLine
+    }
+  }
+  
+  // 其他情况直接返回原内容
+  return reason
 }
 
 // 选择自定义审批人

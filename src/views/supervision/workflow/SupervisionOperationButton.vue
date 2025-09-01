@@ -804,9 +804,31 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
 
       const variables = getUpdatedProcessInstanceVariables()
       // 审批通过数据
+      // 获取当前用户信息
+      const userStore = useUserStoreWithOut()
+      const currentUser = userStore.getUser
+      const currentTime = new Date().toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      })
+      
+      // 构建审批意见
+      let finalReason = ''
+      if (approveReasonForm.reason && approveReasonForm.reason.trim()) {
+        // 有填写意见的情况：同意，意见内容，审批人名字和时间在下一行右侧
+        finalReason = `同意，${approveReasonForm.reason.trim()}\n                                                    ${currentUser.nickname} ${currentTime}`
+      } else {
+        // 没有填写意见的情况：同意，审批人名字和时间在下一行右侧
+        finalReason = `同意\n                                                    ${currentUser.nickname} ${currentTime}`
+      }
+      
       const data = {
         id: runningTask.value.id,
-        reason: approveReasonForm.reason,
+        reason: finalReason,
         variables, // 审批通过, 把修改的字段值赋于流程实例变量
         nextAssignees: approveReasonForm.nextAssignees // 下个自选节点选择的审批人信息
       } as any
@@ -862,7 +884,7 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
       // 审批不通过数据
       const data = {
         id: runningTask.value.id,
-        reason: rejectReasonForm.reason
+        reason: rejectReasonForm.reason || '拒绝' // 如果没有填写意见，默认为"拒绝"
       }
       await TaskApi.rejectTask(data)
       popOverVisible.value.reject = false

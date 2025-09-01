@@ -145,15 +145,6 @@
         <div class="approval-opinion-content">
           <div v-if="getUnitLeaderOpinions().length > 0">
             <div v-for="(opinion, index) in getUnitLeaderOpinions()" :key="index" class="opinion-box">
-              <div class="opinion-header">
-                <span class="approver-name">{{ opinion.approver }}</span>
-                <span v-if="shouldShowUnitLeaderStatusTag(opinion.status)" class="approval-status" :class="getStatusClass(opinion.status)">
-                  {{ opinion.statusText }}
-                </span>
-                <span class="approval-time" v-if="opinion.time">
-                  {{ opinion.time }}
-                </span>
-              </div>
               <div class="opinion-content">
                 {{ opinion.content }}
               </div>
@@ -172,15 +163,6 @@
         <div class="approval-opinion-content">
           <div v-if="getSealAuditOpinions().length > 0">
             <div v-for="(opinion, index) in getSealAuditOpinions()" :key="index" class="opinion-box">
-              <div class="opinion-header">
-                <span class="approver-name">{{ opinion.approver }}</span>
-                <span v-if="shouldShowSealAuditStatusTag(opinion.status)" class="approval-status" :class="getStatusClass(opinion.status)">
-                  {{ opinion.statusText }}
-                </span>
-                <span class="approval-time" v-if="opinion.time">
-                  {{ opinion.time }}
-                </span>
-              </div>
               <div class="opinion-content">
                 {{ opinion.content }}
               </div>
@@ -1053,14 +1035,14 @@ const shouldShowStatusTag = (status) => {
   return status === 2  // 只显示已同意(2)的标签
 }
 
-// 判断是否显示单位负责人状态标签（显示已同意、处理中和已驳回）
+// 判断是否显示单位负责人状态标签（隐藏所有状态标签）
 const shouldShowUnitLeaderStatusTag = (status) => {
-  return status === 2 || status === 1 || status === 5  // 显示已同意(2)、处理中(1)和已驳回(5)的标签
+  return false  // 隐藏所有状态标签
 }
 
-// 判断是否显示用印审核状态标签（显示已同意和已驳回）
+// 判断是否显示用印审核状态标签（隐藏所有状态标签）
 const shouldShowSealAuditStatusTag = (status) => {
-  return status === 2 || status === 5  // 显示已同意(2)和已驳回(5)的标签
+  return false  // 隐藏所有状态标签
 }
 
 // 获取审批状态对应的样式类
@@ -1609,16 +1591,18 @@ defineExpose({
 /* 审批意见样式 */
 .approval-opinion-content {
   flex: 1;
-  padding: 15px;
+  padding: 20px;
   background: #f8f9fa;
+  min-height: 80px;
 }
 
 .opinion-box {
   background: white;
   border: 1px solid #e4e7ed;
-  border-radius: 6px;
-  padding: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 20px 24px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  min-height: 60px;
 }
 
 .opinion-header {
@@ -1675,10 +1659,11 @@ defineExpose({
 
 .opinion-content {
   color: #333;
-  line-height: 1.6;
-  font-size: 14px;
+  line-height: 1.8;
+  font-size: 15px;
   white-space: pre-wrap;
   word-wrap: break-word;
+  padding: 8px 0;
 }
 
 .no-opinion {
