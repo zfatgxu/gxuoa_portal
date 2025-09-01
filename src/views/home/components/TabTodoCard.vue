@@ -192,15 +192,17 @@ const getTagType = (type: string) => {
     '签报': 'orange',
     '请示': 'red',
     '公文': 'blue',
-    '会议': 'purple',
+    '会议': 'blue',
     '任务': 'orange',
-    '通知': 'green',
+    '通知': 'blue',
     '审批': 'blue',
     '传阅': 'purple',
     '批示': 'red',
     '阅读': 'green',
     '汇报': 'orange',
-    '办理': 'blue'
+    '办理': 'blue',
+    '报表': 'blue',
+    '宣传': 'blue'
   }
   
   return typeMap[type] || 'blue'
@@ -525,7 +527,7 @@ onMounted(() => {
 }
 
 .tab-item.active {
-  color: #409EFF;
+  color: #0061B1;
   font-weight: bold;
 }
 
@@ -536,7 +538,7 @@ onMounted(() => {
   left: 20px;
   right: 20px;
   height: 2px;
-  background-color: #409EFF;
+  background-color: #0061B1;
 }
 
 .tab-more {
@@ -550,7 +552,7 @@ onMounted(() => {
 }
 
 .tab-more:hover {
-  color: #409EFF;
+  color: #0061B1;
 }
 
 .card-body {
@@ -615,7 +617,7 @@ onMounted(() => {
 }
 
 .todo-title:hover {
-  color: #409EFF;
+  color: #0061B1;
   text-decoration: underline;
 }
 
@@ -625,13 +627,13 @@ onMounted(() => {
   border-radius: 4px;
   font-size: 14px;
   color: white;
-  background-color: #409EFF;
+  background-color: #0061B1;
   text-align: center;
   margin-right: 10px;
 }
 
 .todo-type.blue {
-  background-color: #409EFF;
+  background-color: #0061B1;
 }
 
 .todo-type.green {
@@ -694,7 +696,7 @@ onMounted(() => {
 }
 
 .action-icon:hover i {
-  color: #409EFF;
+  color: #0061B1;
 }
 
 .todo-tag {
@@ -702,12 +704,12 @@ onMounted(() => {
   border-radius: 4px;
   font-size: 12px;
   color: white;
-  background-color: #409EFF;
+  background-color: #0061B1;
   margin-right: 30px;
 }
 
 .todo-tag.blue {
-  background-color: #409EFF;
+  background-color: #0061B1;
 }
 
 .todo-tag.green {
