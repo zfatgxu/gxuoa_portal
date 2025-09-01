@@ -201,6 +201,7 @@
                   backgroundColor: getStatusText(task) === '已超时' ? 'rgb(179, 55, 55)' :
                                  getStatusText(task) === '已结束' ? 'rgb(154, 154, 154)' :
                                  getStatusText(task) === '进行中' ? 'rgb(129, 179, 55)' :
+                                 getStatusText(task) === '待审核' ? 'rgb(99, 102, 241)' :
                                  'rgb(154, 154, 154)'
                 }">
                 {{ getStatusText(task) }}
@@ -224,15 +225,14 @@
 
             <div v-if="task.leaderRemarks && task.leaderRemarks.length > 0" class="task-remarks inline-remarks">
               <el-icon class="remark-icon"><Document /></el-icon>
-              <span
-                v-for="(remark, index) in task.leaderRemarks"
-                :key="`${remark.leaderId}-${index}`"
-                class="remark-item"
-              >
-                <span v-if="index > 0">；</span>
-                <span class="remark-label">{{ getRemarkLabel(remark) }}：</span>
-                <span class="remark-text">{{ remark.remark }}</span>
-              </span>
+              <el-tooltip placement="bottom" effect="dark">
+                <template #content>
+                  <div style="max-width: 900px; white-space: pre-wrap;">{{ getAllRemarksText(task) }}</div>
+                </template>
+                <span class="remark-item">
+                  <span class="remark-text">{{ getFirstRemarkDisplay(task) }}</span>
+                </span>
+              </el-tooltip>
             </div>
           </div>
 
@@ -323,6 +323,7 @@ import { SupervisionTaskApi, SupervisionIndexApi } from '@/api/supervision/index
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
 import { useRouter } from 'vue-router'
+import { dateFormatter } from '@/utils/formatTime'
 
 // 从leadLeaders数组中提取分管校领导（督办领导和牵头领导）
 const getLeadLeadersText = (leadLeaders) => {
@@ -400,6 +401,54 @@ const getRemarkLabel = (remark) => {
 
   // 否则显示领导姓名
   return `${remark.leaderNickName}批示`
+}
+
+// 批示行内显示的最大长度
+const MAX_REMARK_INLINE_LEN = 45
+
+// 从 supervisionPageVOData.remarks 规范化批示列表
+const normalizeRemarks = (task) => {
+  const remarks = task?.supervisionPageVOData?.remarks
+  return Array.isArray(remarks) ? remarks : []
+}
+
+// 按 leaderId 去重，保留每位领导最新一条批示
+const getUniqueLatestRemarks = (task) => {
+  const remarks = normalizeRemarks(task)
+  const seen = new Set()
+  const result = []
+  for (const r of remarks) {
+    const id = r?.leaderId
+    if (id == null) continue
+    if (!seen.has(id)) {
+      seen.add(id)
+      result.push(r) // 保留首次出现 = 最新
+    }
+  }
+  return result
+}
+
+// 获取首条批示的行内展示文本（包含标签，截断并加省略号）
+const getFirstRemarkDisplay = (task) => {
+  const remarks = getUniqueLatestRemarks(task)
+  if (!remarks.length) return ''
+  const first = remarks[0]
+  const label = getRemarkLabel(first)
+  const text = first?.remark || ''
+  const content = `${label}：${text}`
+  let display = content.length > MAX_REMARK_INLINE_LEN ? content.slice(0, MAX_REMARK_INLINE_LEN) + '…' : content
+  // 若有多条批示，即使未超长也追加省略号提示还有更多
+  if (remarks.length > 1 && !display.endsWith('…')) {
+    display += '…'
+  }
+  return display
+}
+
+// 获取全部批示用于 Tooltip 展示（多行）
+const getAllRemarksText = (task) => {
+  const remarks = getUniqueLatestRemarks(task)
+  if (!remarks.length) return ''
+  return remarks.map((r) => `${getRemarkLabel(r)}：${r?.remark || ''}`).join('; ')
 }
 
 const { push } = useRouter() // 路由
@@ -533,7 +582,9 @@ const loadTaskList = async () => {
       }
       
       if (selectedPriority.value) {
-        params.priority = selectedPriority.value
+        // 优先级转换为数组格式
+        const priorityValue = getPriorityValue(selectedPriority.value)
+        params.priority = [priorityValue]
       }
       
       // 督办状态筛选：下拉优先，否则按按钮组合
@@ -573,19 +624,10 @@ const loadTaskList = async () => {
 
     const tasks = result.list || []
 
-    // 为每个任务获取批示信息
+    // 绑定批示信息：从 supervisionPageVOData.remarks 读取，移除逐条接口请求
     for (const task of tasks) {
-      if (task.processInstanceId) {
-        try {
-          const remarks = await LeaderRemarkApi.getLeaderRemark(task.processInstanceId)
-          task.leaderRemarks = remarks || []
-        } catch (error) {
-          console.error('获取批示信息失败', error)
-          task.leaderRemarks = []
-        }
-      } else {
-        task.leaderRemarks = []
-      }
+      const remarks = task?.supervisionPageVOData?.remarks
+      task.leaderRemarks = Array.isArray(remarks) ? remarks : []
     }
 
     taskList.value = tasks
@@ -653,6 +695,16 @@ const handleSearch = () => {
   // 清空高级筛选参数
   seniorFilterParams.value = {}
   seniorFilterResultCount.value = 0
+  
+  // 如果下拉框有选择，重置状态筛选按钮为全部开启
+  if (selectedSupervisionStatus.value !== '') {
+    statusFilters.value = {
+      pendingReview: true,
+      inProgress: true,
+      overdue: true,
+      completed: true
+    }
+  }
 
   pagination.pageNo = 1 // 重置为第一页
   loadTaskList()
@@ -663,6 +715,8 @@ const handleReset = () => {
   searchQuery.value = ''
   selectedPriority.value = ''
   selectedSupervisionStatus.value = ''
+  
+  // 重置状态筛选按钮为全部开启
   statusFilters.value = {
     pendingReview: true,
     inProgress: true,
@@ -670,14 +724,17 @@ const handleReset = () => {
     completed: true
   }
   
-  // 清空高级筛选
-  if (seniorFilterActive.value) {
-    handleSeniorFilterClear()
-    return
+  // 清空高级筛选参数
+  seniorFilterParams.value = {}
+  seniorFilterResultCount.value = 0
+  
+  // 重置高级筛选组件内部状态
+  if (seniorFilterRef.value && typeof seniorFilterRef.value.clearAllFilters === 'function') {
+    seniorFilterRef.value.clearAllFilters()
   }
   
-  pagination.value.pageNo = 1
-  fetchData()
+  pagination.pageNo = 1
+  loadTaskList()
 }
 
 // 打开高级筛选
@@ -716,8 +773,20 @@ const handleSeniorFilterClear = () => {
 const toggleStatusFilter = (status) => {
   statusFilters.value[status] = !statusFilters.value[status]
   selectedSupervisionStatus.value = ''
-  pagination.value.pageNo = 1
+  pagination.pageNo = 1
   loadTaskList()
+}
+
+// 获取优先级数值
+const getPriorityValue = (priority) => {
+  // 兼容数值与文本两种输入
+  if (typeof priority === 'number') return priority
+  switch (priority) {
+    case '一般优先': return 1
+    case '中优先级': return 2
+    case '高优先级': return 3
+    default: return Number(priority) || 1
+  }
 }
 
 // 数据处理辅助方法

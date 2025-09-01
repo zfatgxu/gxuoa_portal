@@ -182,15 +182,15 @@
               :name="tab.key"
             />
           </el-tabs>
-          <div class="flex items-center ml-4">
-            <el-button
-              class="rounded-md"
-              :style="{ backgroundColor: 'rgb(64,149,229)', borderColor: 'rgb(64,149,229)', color: '#fff', height: '30px', padding: '0 14px', fontSize: '13px', fontWeight: '600' }"
-              @click="goToCreate"
-            >
-              新建督办
-            </el-button>
-          </div>
+<!--          <div class="flex items-center ml-4">-->
+<!--            <el-button-->
+<!--              class="rounded-md"-->
+<!--              :style="{ backgroundColor: 'rgb(64,149,229)', borderColor: 'rgb(64,149,229)', color: '#fff', height: '30px', padding: '0 14px', fontSize: '13px', fontWeight: '600' }"-->
+<!--              @click="goToCreate"-->
+<!--            >-->
+<!--              新建督办-->
+<!--            </el-button>-->
+<!--          </div>-->
         </div>
         <!-- 搜索和筛选功能（响应式布局） -->
         <div class="task-controls">
@@ -460,7 +460,7 @@ import { useRouter } from 'vue-router'
 import { SupervisionIndexApi, SupervisionTaskApi, LeaderRemarkApi } from '@/api/supervision/index'
 import { useUserStore } from '@/store/modules/user'
 import { formatDate } from '@/utils/formatTime'
-import SeniorFilter from './components/seniorFilter.vue'
+import SeniorFilter from '../components/seniorFilter.vue'
 
 const { push } = useRouter()
 const userStore = useUserStore()

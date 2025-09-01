@@ -29,7 +29,14 @@
             <div class="form-row">
               <div class="form-label">督办事项</div>
               <div class="form-content full-width">
-                <el-input :value="orderDetail.orderTitle" readonly />
+                <el-input 
+                  v-if="canEditOrderTitle"
+                  v-model="editForm.orderTitle"
+                  placeholder="请输入督办事项"
+                  maxlength="100"
+                  show-word-limit
+                />
+                <el-input v-else :value="orderDetail.orderTitle" readonly />
               </div>
             </div>
 
@@ -38,6 +45,16 @@
               <div class="form-label">主要内容</div>
               <div class="form-content full-width">
                 <el-input
+                  v-if="canEditContent"
+                  v-model="editForm.content"
+                  type="textarea"
+                  placeholder="请输入主要内容"
+                  :rows="4"
+                  maxlength="500"
+                  show-word-limit
+                />
+                <el-input
+                  v-else
                   type="textarea"
                   :value="orderDetail.content"
                   readonly
@@ -50,11 +67,37 @@
             <div class="form-row">
               <div class="form-label">督办分类</div>
               <div class="form-content half-width">
-                <el-input :value="orderDetail.detailType || getTypeName(orderDetail.type)" readonly />
+                <el-select
+                  v-if="canEditType"
+                  v-model="editForm.type"
+                  placeholder="请选择督办分类"
+                  style="width: 100%"
+                >
+                  <el-option
+                    v-for="option in typeOptions"
+                    :key="option.value"
+                    :label="option.label"
+                    :value="option.value"
+                  />
+                </el-select>
+                <el-input v-else :value="orderDetail.detailType || getTypeName(orderDetail.type)" readonly />
               </div>
               <div class="form-label">紧急程度</div>
               <div class="form-content half-width">
-                <el-input :value="getPriorityName(orderDetail.priority)" readonly />
+                <el-select
+                  v-if="canEditPriority"
+                  v-model="editForm.priority"
+                  placeholder="请选择紧急程度"
+                  style="width: 100%"
+                >
+                  <el-option
+                    v-for="option in priorityOptions"
+                    :key="option.value"
+                    :label="option.label"
+                    :value="option.value"
+                  />
+                </el-select>
+                <el-input v-else :value="getPriorityName(orderDetail.priority)" readonly />
               </div>
             </div>
 
@@ -62,11 +105,34 @@
             <div class="form-row">
               <div class="form-label">完成期限</div>
               <div class="form-content half-width">
-                <el-input :value="formatDate(orderDetail.deadline)" readonly />
+                <el-date-picker
+                  v-if="canEditDeadline"
+                  v-model="editForm.deadline"
+                  type="datetime"
+                  placeholder="请选择完成期限"
+                  format="YYYY-MM-DD HH:mm"
+                  value-format="YYYY-MM-DD HH:mm:ss"
+                  style="width: 100%"
+                />
+                <el-input v-else :value="formatDate(orderDetail.deadline)" readonly />
               </div>
               <div class="form-label">汇报频次</div>
               <div class="form-content half-width">
-                <el-input :value="getReportFrequencyName(orderDetail.reportFrequency)" readonly />
+                <el-select
+                  v-if="canEditReportFrequency"
+                  v-model="editForm.reportFrequency"
+                  placeholder="请选择汇报频次"
+                  style="width: 100%"
+                  clearable
+                >
+                  <el-option
+                    v-for="option in reportFrequencyOptions"
+                    :key="option.value"
+                    :label="option.label"
+                    :value="option.value"
+                  />
+                </el-select>
+                <el-input v-else :value="getReportFrequencyName(orderDetail.reportFrequency)" readonly />
               </div>
             </div>
 
@@ -78,7 +144,24 @@
               </div>
               <div class="form-label">其他校领导</div>
               <div class="form-content half-width">
-                <el-input :value="getOtherLeadersDisplay()" readonly />
+                <el-select
+                  v-if="canEditOtherLeaders"
+                  v-model="editForm.otherLeaderIds"
+                  multiple
+                  placeholder="请选择其他校领导"
+                  :collapse-tags="true"
+                  :max-collapse-tags="3"
+                  style="width: 100%"
+                  clearable
+                >
+                  <el-option
+                    v-for="user in userList"
+                    :key="user.id"
+                    :label="user.nickname || user.username"
+                    :value="user.id"
+                  />
+                </el-select>
+                <el-input v-else :value="getOtherLeadersDisplay()" readonly />
               </div>
             </div>
 
@@ -166,11 +249,34 @@
             <div class="form-row">
               <div class="form-label">督办人</div>
               <div class="form-content half-width">
-                <el-input :value="getSupervisorNames()" readonly />
+                <el-select
+                  v-if="canEditSupervisors"
+                  v-model="editForm.supervisorIds"
+                  multiple
+                  placeholder="请选择督办人"
+                  :collapse-tags="true"
+                  :max-collapse-tags="3"
+                  style="width: 100%"
+                  clearable
+                >
+                  <el-option
+                    v-for="user in userList"
+                    :key="user.id"
+                    :label="user.nickname || user.username"
+                    :value="user.id"
+                  />
+                </el-select>
+                <el-input v-else :value="getSupervisorDisplay()" readonly />
               </div>
               <div class="form-label">联系电话</div>
               <div class="form-content half-width">
-                <el-input :value="getSupervisorPhones()" readonly />
+                <el-input
+                  v-if="canEditOfficePhone"
+                  v-model="editForm.officePhone"
+                  placeholder="请输入联系电话"
+                  maxlength="20"
+                />
+                <el-input v-else :value="getSupervisorPhone()" readonly />
               </div>
             </div>
 
@@ -197,7 +303,7 @@
                             {{ progressRecords[0].title }}
                             <span class="latest-progress-handler" v-if="progressRecords[0].handler">{{ progressRecords[0].handler }}</span>
                             <el-button
-                              v-if="progressRecords[0].isPending && hasEditPermission"
+                              v-if="progressRecords[0].isPending && canEditLeadDeptDetail"
                               type="primary"
                               size="small"
                               @click="editPendingProgress"
@@ -237,7 +343,7 @@
                   <div class="timeline-actions-section">
                     <div class="timeline-actions">
                       <el-button
-                        v-if="hasEditPermission"
+                        v-if="canEditLeadDeptDetail"
                         type="primary"
                         size="small"
                         @click="showAddProgressDialog"
@@ -330,7 +436,16 @@
             <div class="form-row">
               <div class="form-label">是否立项督办</div>
               <div class="form-content full-width">
-                <el-input :value="orderDetail.isProjectSupervision ? '是' : '否'" readonly />
+                <el-select
+                  v-if="canEditIsProjectSupervision"
+                  v-model="editForm.isProjectSupervision"
+                  placeholder="请选择是否立项督办"
+                  style="width: 100%"
+                >
+                  <el-option label="是" :value="true" />
+                  <el-option label="否" :value="false" />
+                </el-select>
+                <el-input v-else :value="orderDetail.isProjectSupervision ? '是' : '否'" readonly />
               </div>
             </div>
 
@@ -343,7 +458,7 @@
             </div>
 
             <!-- 概述 -->
-            <div class="form-row">
+            <div class="form-row" v-if="false">
               <div class="form-label">概述</div>
               <div class="form-content full-width">
                 <div class="summary-content-inline">
@@ -529,6 +644,15 @@ const deptList = ref<DeptVO[]>([])
 // 用户列表
 const userList = ref<UserVO[]>([])
 
+// 督办分类选项
+const typeOptions = ref<Array<{value: number, label: string}>>([])
+
+// 紧急程度选项
+const priorityOptions = computed(() => getIntDictOptions(DICT_TYPE.SUPERVISION_PRIORITY_TYPE))
+
+// 汇报频次选项
+const reportFrequencyOptions = computed(() => getIntDictOptions(DICT_TYPE.REPORT_FREQUENCY))
+
 
 
 
@@ -668,7 +792,16 @@ const editForm = ref({
   coDept: '', // 协办单位ID字符串（逗号分隔）
   collaborateDepts: [] as string[], // 协办单位名称数组（用于显示）
   collaborateDeptIds: [] as number[], // 协办单位ID数组（用于提交）
-  leadDeptDetail: '' // 牵头单位工作推进情况
+  leadDeptDetail: '', // 牵头单位工作推进情况
+  orderTitle: '', // 督办事项
+  content: '', // 主要内容
+  type: 1, // 督办分类
+  priority: 1, // 紧急程度
+  deadline: '', // 完成期限
+  reportFrequency: undefined as number | undefined, // 汇报频次
+  otherLeaderIds: [] as number[], // 其他校领导ID数组
+  supervisorIds: [] as number[], // 督办人ID数组
+  officePhone: '' // 联系电话
 })
 
 
@@ -688,6 +821,18 @@ const getUserList = async () => {
     userList.value = await getSimpleUserList()
   } catch (error) {
     console.error('获取用户列表失败:', error)
+  }
+}
+
+// 获取督办分类选项
+const getTypeOptions = async () => {
+  try {
+    // 根据当前督办单类型获取分类选项
+    const type = orderDetail.value.type || 1
+    typeOptions.value = await OrderApi.getSupervisionDetailTypes(type)
+  } catch (error) {
+    console.error('获取督办分类选项失败:', error)
+    typeOptions.value = []
   }
 }
 
@@ -765,6 +910,19 @@ const getOrderDetail = async (processInstanceId: string) => {
     editForm.value.coDept = data.coDept || ''
     editForm.value.collaborateDepts = getCollaborateDepts(data.coDept)
     editForm.value.leadDeptDetail = data.deptDetail || ''
+    editForm.value.orderTitle = data.orderTitle || ''
+    editForm.value.content = data.content || ''
+    editForm.value.type = data.type || 1
+    editForm.value.priority = data.priority || 1
+    editForm.value.deadline = data.deadline ? utilFormatDate(new Date(data.deadline), 'YYYY-MM-DD HH:mm:ss') : ''
+    editForm.value.reportFrequency = data.reportFrequency
+    // 初始化其他校领导ID数组
+    editForm.value.otherLeaderIds = data.leadLeaders ? 
+      data.leadLeaders.filter(leader => leader.type === '其他分管领导').map(leader => leader.id) : []
+    // 初始化督办人ID数组
+    editForm.value.supervisorIds = data.supervisors ? data.supervisors.map(supervisor => supervisor.id) : []
+    // 初始化联系电话（从督办人信息中获取，或使用现有字段）
+    editForm.value.officePhone = data.officePhone || getSupervisorPhone()
     
   } catch (error) {
     console.error('根据流程实例ID获取督办单详情失败:', error)
@@ -956,15 +1114,56 @@ const getSupervisorPhones = () => {
   return phones.length > 0 ? phones.join('、') : '未设置'
 }
 
+// 获取督办人电话（用于编辑表单初始化）
+const getSupervisorPhone = () => {
+  if (!orderDetail.value.supervisors || !Array.isArray(orderDetail.value.supervisors)) {
+    return ''
+  }
+  
+  // 优先使用第一个督办人的电话
+  const firstSupervisor = orderDetail.value.supervisors[0]
+  if (firstSupervisor && firstSupervisor.phone) {
+    return firstSupervisor.phone
+  }
+  
+  // 兜底使用现有的officePhone字段
+  return orderDetail.value.officePhone || ''
+}
+
+// 获取督办人显示文本（用于只读模式）
+const getSupervisorDisplay = () => {
+  if (!orderDetail.value.supervisors || !Array.isArray(orderDetail.value.supervisors)) {
+    return '未设置'
+  }
+  
+  return orderDetail.value.supervisors
+    .map(supervisor => supervisor.name || supervisor.nickname || supervisor.username || '未知')
+    .join('、')
+}
 
 
 // 权限状态
 const canEditLeadDept = ref(false)           // 牵头单位编辑权限
 const canEditCollaborateDepts = ref(false)   // 协办单位编辑权限
 const canEditLeadDeptDetail = ref(false)     // 工作推进情况编辑权限
+const canEditOrderTitle = ref(false)         // 督办事项编辑权限
+const canEditContent = ref(false)            // 主要内容编辑权限
+const canEditType = ref(false)               // 督办分类编辑权限
+const canEditPriority = ref(false)           // 紧急程度编辑权限
+const canEditDeadline = ref(false)           // 完成期限编辑权限
+const canEditReportFrequency = ref(false)    // 汇报频次编辑权限
+const canEditOtherLeaders = ref(false)       // 其他校领导编辑权限
+const canEditSupervisors = ref(false)        // 督办人编辑权限
+const canEditOfficePhone = ref(false)        // 联系电话编辑权限
 
 // 完整的活动节点数据（从审批详情API获取）
 const fullActivityNodes = ref<any[]>([])
+
+// 获取工作流详情（补充缺失的函数）
+const getWorkflowDetail = async (processInstanceId: string) => {
+  // 为保持兼容性，这里可以是空实现或调用相同接口
+  // 主要的节点数据由 getFullApprovalDetail 负责获取
+}
 
 // 获取完整的审批详情（包含完整的活动节点信息）
 const getFullApprovalDetail = async (processInstanceId: string) => {
@@ -975,6 +1174,12 @@ const getFullApprovalDetail = async (processInstanceId: string) => {
 
     if (data && data.activityNodes) {
       fullActivityNodes.value = data.activityNodes
+      console.log('[approval] 成功获取活动节点', { count: data.activityNodes.length, nodes: data.activityNodes })
+      
+      // 立即刷新权限，确保权限状态及时更新
+      await checkAllPermissions()
+    } else {
+      console.warn('[approval] 未获取到有效的活动节点数据', { data })
     }
   } catch (error) {
     console.error('获取完整审批详情失败:', error)
@@ -1015,6 +1220,18 @@ const NODE_PERMISSIONS = {
     collaborateDepts: false,
     leadDeptDetail: true,     // 协办负责人可编辑工作推进情况
     attachments: true
+  },
+  'update_materials': {
+    orderTitle: true,         // 可编辑督办事项
+    content: true,            // 可编辑主要内容
+    type: true,               // 可编辑督办分类
+    priority: true,           // 可编辑紧急程度
+    deadline: true,           // 可编辑完成期限
+    reportFrequency: true,    // 可编辑汇报频次
+    otherLeaders: true,       // 可编辑其他校领导
+    supervisors: true,        // 可编辑督办人
+    officePhone: true,        // 可编辑联系电话
+    attachments: true         // 可上传附件
   }
 }
 
@@ -1022,14 +1239,38 @@ const NODE_PERMISSIONS = {
 const checkCurrentUserPermissions = () => {
   const currentUserId = userStore.getUser?.id
   if (!currentUserId || !fullActivityNodes.value.length) {
-    return { leadDept: false, collaborateDepts: false, leadDeptDetail: false, attachments: false }
+    console.warn('[perm] 缺少用户ID或活动节点为空', { currentUserId, nodes: fullActivityNodes.value?.length || 0 })
+    return { 
+      leadDept: false, 
+      collaborateDepts: false, 
+      leadDeptDetail: false, 
+      attachments: false,
+      orderTitle: false,
+      content: false,
+      type: false,
+      priority: false,
+      deadline: false,
+      reportFrequency: false,
+      otherLeaders: false,
+      supervisors: false,
+      officePhone: false
+    }
   }
 
   const permissions = {
     leadDept: false,
     collaborateDepts: false,
     leadDeptDetail: false,
-    attachments: false
+    attachments: false,
+    orderTitle: false,
+    content: false,
+    type: false,
+    priority: false,
+    deadline: false,
+    reportFrequency: false,
+    otherLeaders: false,
+    supervisors: false,
+    officePhone: false
   }
 
   // 遍历所有运行中的活动节点
@@ -1042,14 +1283,14 @@ const checkCurrentUserPermissions = () => {
     // 检查节点的tasks中是否有当前用户
     if (node.tasks && node.tasks.length > 0) {
       hasAccess = node.tasks.some(task =>
-        (task.assigneeUser && task.assigneeUser.id === currentUserId) ||
-        (task.ownerUser && task.ownerUser.id === currentUserId)
+        (task.assigneeUser && Number(task.assigneeUser.id) === Number(currentUserId)) ||
+        (task.ownerUser && Number(task.ownerUser.id) === Number(currentUserId))
       )
     }
 
     // 检查candidateUsers
     if (!hasAccess && node.candidateUsers && node.candidateUsers.length > 0) {
-      hasAccess = node.candidateUsers.some(user => user.id === currentUserId)
+      hasAccess = node.candidateUsers.some(user => Number(user.id) === Number(currentUserId))
     }
 
     if (!hasAccess) return
@@ -1057,6 +1298,7 @@ const checkCurrentUserPermissions = () => {
     // 根据节点ID获取权限配置
     const nodePermissions = NODE_PERMISSIONS[nodeId]
     if (nodePermissions) {
+      console.log('[perm] 命中节点权限', { nodeId, nodePermissions })
       Object.keys(nodePermissions).forEach(key => {
         if (nodePermissions[key]) {
           permissions[key] = true
@@ -1065,6 +1307,7 @@ const checkCurrentUserPermissions = () => {
     }
   })
 
+  console.log('[perm] 计算后的权限', permissions)
   return permissions
 }
 
@@ -1076,16 +1319,53 @@ const checkAllPermissions = async () => {
   canEditLeadDept.value = permissions.leadDept
   canEditCollaborateDepts.value = permissions.collaborateDepts
   canEditLeadDeptDetail.value = permissions.leadDeptDetail
+  canEditOrderTitle.value = permissions.orderTitle
+  canEditContent.value = permissions.content
+  canEditType.value = permissions.type
+  canEditPriority.value = permissions.priority
+  canEditDeadline.value = permissions.deadline
+  canEditReportFrequency.value = permissions.reportFrequency
+  canEditOtherLeaders.value = permissions.otherLeaders
+  canEditSupervisors.value = permissions.supervisors
+  canEditOfficePhone.value = permissions.officePhone
 
   // 附件权限基于是否有任何编辑权限
   const hasAnyEditPermission = permissions.leadDept ||
                                permissions.collaborateDepts ||
-                               permissions.leadDeptDetail
+                               permissions.leadDeptDetail ||
+                               permissions.orderTitle ||
+                               permissions.content ||
+                               permissions.type ||
+                               permissions.priority ||
+                               permissions.deadline ||
+                               permissions.reportFrequency ||
+                               permissions.otherLeaders ||
+                               permissions.supervisors ||
+                               permissions.officePhone
   // 这里可以根据实际需求调整附件权限逻辑
+
+  console.log('[perm] 最终可编辑标志', {
+    canEditLeadDept: canEditLeadDept.value,
+    canEditCollaborateDepts: canEditCollaborateDepts.value,
+    canEditLeadDeptDetail: canEditLeadDeptDetail.value,
+    canEditOrderTitle: canEditOrderTitle.value,
+    canEditContent: canEditContent.value,
+    canEditType: canEditType.value,
+    canEditPriority: canEditPriority.value,
+    canEditDeadline: canEditDeadline.value,
+    canEditReportFrequency: canEditReportFrequency.value,
+    canEditOtherLeaders: canEditOtherLeaders.value,
+    canEditSupervisors: canEditSupervisors.value,
+    canEditOfficePhone: canEditOfficePhone.value,
+    hasAnyEditPermission
+  })
 }
 
 const hasEditPermission = computed(() => {
-  return canEditLeadDept.value || canEditCollaborateDepts.value || canEditLeadDeptDetail.value
+  return canEditLeadDept.value || canEditCollaborateDepts.value || canEditLeadDeptDetail.value ||
+         canEditOrderTitle.value || canEditContent.value || canEditType.value ||
+         canEditPriority.value || canEditDeadline.value || canEditReportFrequency.value ||
+         canEditOtherLeaders.value || canEditSupervisors.value || canEditOfficePhone.value
 })
 
 // 监听督办单数据变化，重新检查权限
@@ -1126,8 +1406,76 @@ const parsedSummary = computed(() => {
 
 // 获取督办单工作流更新数据（只传递修改的字段）
 const getSupervisionWorkflowUpdateData = async (startLeaderSelectAssignees?: Record<string, number[]>) => {
-  const updateData: OrderWorkflowUpdateReqVO = {
+  const updateData: any = {
     id: orderDetail.value.id // 督办单ID必传
+  }
+
+  // 处理督办事项
+  if (canEditOrderTitle.value && editForm.value.orderTitle !== orderDetail.value.orderTitle) {
+    updateData.orderTitle = editForm.value.orderTitle
+  }
+
+  // 处理主要内容
+  if (canEditContent.value && editForm.value.content !== orderDetail.value.content) {
+    updateData.content = editForm.value.content
+  }
+
+  // 处理督办分类
+  if (canEditType.value && editForm.value.type !== orderDetail.value.type) {
+    updateData.type = editForm.value.type
+  }
+
+  // 处理紧急程度
+  if (canEditPriority.value && editForm.value.priority !== orderDetail.value.priority) {
+    updateData.priority = editForm.value.priority
+  }
+
+  // 处理完成期限
+  if (canEditDeadline.value && editForm.value.deadline) {
+    const deadlineTimestamp = new Date(editForm.value.deadline).getTime()
+    if (deadlineTimestamp !== orderDetail.value.deadline) {
+      updateData.deadline = deadlineTimestamp
+    }
+  }
+
+  // 处理汇报频次
+  if (canEditReportFrequency.value && editForm.value.reportFrequency !== orderDetail.value.reportFrequency) {
+    updateData.reportFrequency = editForm.value.reportFrequency
+  }
+
+  // 处理其他校领导
+  if (canEditOtherLeaders.value) {
+    const currentOtherLeaderIds = orderDetail.value.leadLeaders ? 
+      orderDetail.value.leadLeaders.filter(leader => leader.type === '其他分管领导').map(leader => leader.id) : []
+    const newOtherLeaderIds = editForm.value.otherLeaderIds || []
+    
+    // 比较数组是否有变化
+    const hasChanged = currentOtherLeaderIds.length !== newOtherLeaderIds.length ||
+      !currentOtherLeaderIds.every(id => newOtherLeaderIds.includes(id))
+    
+    if (hasChanged) {
+      updateData.otherLeaders = newOtherLeaderIds.join(',')
+    }
+  }
+
+  // 处理督办人
+  if (canEditSupervisors.value) {
+    const currentSupervisorIds = orderDetail.value.supervisors ? 
+      orderDetail.value.supervisors.map(supervisor => supervisor.id) : []
+    const newSupervisorIds = editForm.value.supervisorIds || []
+    
+    // 比较数组是否有变化
+    const hasChanged = currentSupervisorIds.length !== newSupervisorIds.length ||
+      !currentSupervisorIds.every(id => newSupervisorIds.includes(id))
+    
+    if (hasChanged) {
+      updateData.supervisors = newSupervisorIds.join(',')
+    }
+  }
+
+  // 处理联系电话
+  if (canEditOfficePhone.value && editForm.value.officePhone !== getSupervisorPhone()) {
+    updateData.officePhone = editForm.value.officePhone
   }
 
   // 获取协办单位数据 - 优先使用编辑表单的数据，其次使用原始数据
@@ -1205,7 +1553,16 @@ const updateSupervisionOrder = async (startLeaderSelectAssignees?: Record<string
     // 只有当有实际修改的字段时才调用接口
     const hasChanges = (updateData.leadDept !== undefined) ||
                       (updateData.coDept !== undefined) ||
-                      (updateData.deptDetail !== undefined)
+                      (updateData.deptDetail !== undefined) ||
+                      (updateData.orderTitle !== undefined) ||
+                      (updateData.content !== undefined) ||
+                      (updateData.type !== undefined) ||
+                      (updateData.priority !== undefined) ||
+                      (updateData.deadline !== undefined) ||
+                      (updateData.reportFrequency !== undefined) ||
+                      (updateData.otherLeaders !== undefined) ||
+                      (updateData.supervisors !== undefined) ||
+                      (updateData.officePhone !== undefined)
 
     if (hasChanges) {
       await OrderApi.updateOrderInWorkflow(updateData)
@@ -1220,6 +1577,50 @@ const updateSupervisionOrder = async (startLeaderSelectAssignees?: Record<string
       }
       if (canEditLeadDeptDetail.value && updateData.deptDetail !== undefined) {
         orderDetail.value.deptDetail = editForm.value.leadDeptDetail
+      }
+      if (canEditOrderTitle.value && updateData.orderTitle !== undefined) {
+        orderDetail.value.orderTitle = editForm.value.orderTitle
+      }
+      if (canEditContent.value && updateData.content !== undefined) {
+        orderDetail.value.content = editForm.value.content
+      }
+      if (canEditType.value && updateData.type !== undefined) {
+        orderDetail.value.type = editForm.value.type
+      }
+      if (canEditPriority.value && updateData.priority !== undefined) {
+        orderDetail.value.priority = editForm.value.priority
+      }
+      if (canEditDeadline.value && updateData.deadline !== undefined) {
+        orderDetail.value.deadline = updateData.deadline
+      }
+      if (canEditReportFrequency.value && updateData.reportFrequency !== undefined) {
+        orderDetail.value.reportFrequency = editForm.value.reportFrequency
+      }
+      // 更新其他校领导本地数据
+      if (canEditOtherLeaders.value && updateData.otherLeaders !== undefined) {
+        // 更新leadLeaders数组中的其他分管领导
+        const otherLeaderUsers = userList.value.filter(user => editForm.value.otherLeaderIds.includes(user.id))
+        const existingLeaders = orderDetail.value.leadLeaders ? 
+          orderDetail.value.leadLeaders.filter(leader => leader.type !== '其他分管领导') : []
+        const newOtherLeaders = otherLeaderUsers.map(user => ({
+          id: user.id,
+          name: user.nickname,
+          type: '其他分管领导'
+        }))
+        orderDetail.value.leadLeaders = [...existingLeaders, ...newOtherLeaders]
+      }
+      // 更新督办人本地数据
+      if (canEditSupervisors.value && updateData.supervisors !== undefined) {
+        const supervisorUsers = userList.value.filter(user => editForm.value.supervisorIds.includes(user.id))
+        orderDetail.value.supervisors = supervisorUsers.map(user => ({
+          id: user.id,
+          name: user.nickname,
+          phone: user.mobile || ''
+        }))
+      }
+      // 更新联系电话本地数据
+      if (canEditOfficePhone.value && updateData.officePhone !== undefined) {
+        orderDetail.value.officePhone = editForm.value.officePhone
       }
     }
     // 返回更新的数据，供工作流使用
@@ -1772,29 +2173,35 @@ const submitAddProgress = async () => {
 
 // 初始化
 onMounted(async () => {
-  // 先获取部门列表和用户列表，确保字段映射能正确工作
+  // 获取基础数据
   await Promise.all([
     getDeptList(),
     getUserList()
   ])
-
-  // 获取流程实例ID，优先使用props传递的参数，然后使用路由参数
-  const processInstanceId = props.id?.toString() ||
-                           route.query.processInstanceId as string ||
-                           route.params.id as string ||
+  
+  // 获取流程实例ID
+  const processInstanceId = props.id?.toString() || 
+                           route.query.processInstanceId as string || 
+                           route.params.id as string || 
                            route.query.id as string
 
   if (processInstanceId) {
-    // 获取完整的审批详情（包含完整的活动节点信息）
+    // 并行获取督办单详情和进度记录
+    await Promise.all([
+      getOrderDetail(processInstanceId),
+      getProgressRecords(processInstanceId, isExpanded.value)
+    ])
+    
+    // 获取工作流详情
+    await getWorkflowDetail(processInstanceId)
+    
+    // 获取完整审批详情（包含活动节点信息）
     await getFullApprovalDetail(processInstanceId)
-
-    // 直接使用流程实例ID获取督办单详情（包含附件信息）
-    await getOrderDetail(processInstanceId)
-
-    // 获取进度更新记录
-    await getProgressRecords(processInstanceId)
-
-    // 数据加载完成后，检查权限
+    
+    // 获取督办分类选项
+    await getTypeOptions()
+    
+    // 检查权限
     await checkAllPermissions()
   } else {
     console.error('缺少流程实例ID参数')

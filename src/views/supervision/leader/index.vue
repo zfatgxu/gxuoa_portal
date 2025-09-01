@@ -38,7 +38,7 @@
           <div class="stat-content">
             <el-icon class="stat-icon"><Warning /></el-icon>
             <div class="stat-info">
-              <div class="stat-label">需要关注</div>
+              <div class="stat-label">已关注</div>
               <div class="stat-number">{{ statistics.attentionCount }}</div>
             </div>
           </div>
@@ -202,7 +202,7 @@
                   backgroundColor: getStatusText(task) === '已超时' ? 'rgb(179, 55, 55)' :
                                  getStatusText(task) === '已结束' ? 'rgb(154, 154, 154)' :
                                  getStatusText(task) === '进行中' ? 'rgb(129, 179, 55)' :
-                                 getStatusText(task) === '需要关注' ? 'rgb(179, 55, 55)' :
+                                 getStatusText(task) === '待审核' ? 'rgb(99, 102, 241)' :
                                  'rgb(154, 154, 154)'
                 }">
                 {{ getStatusText(task) }}
@@ -213,7 +213,7 @@
           <!-- 描述 + 批示 同行展示 -->
           <div
             class="task-desc-row"
-            v-if="getDisplayText(task) || (task.leaderRemarks && task.leaderRemarks.length > 0)"
+            v-if="getDisplayText(task) || getRemarks(task).length > 0"
           >
             <el-tooltip 
               class="desc-box"
@@ -225,17 +225,18 @@
               <span class="text-gray-600 leading-relaxed desc-text inline-block">{{ getTruncatedText(task) }}</span>
             </el-tooltip>
 
-            <div v-if="task.leaderRemarks && task.leaderRemarks.length > 0" class="task-remarks inline-remarks">
+            <div v-if="getRemarks(task).length > 0" class="task-remarks inline-remarks">
               <el-icon class="remark-icon"><Document /></el-icon>
-              <span
-                v-for="(remark, index) in task.leaderRemarks"
-                :key="`${remark.leaderId}-${index}`"
-                class="remark-item"
+              <el-tooltip 
+                :content="getAllRemarksFullText(task)"
+                placement="bottom"
+                effect="dark"
               >
-                <span v-if="index > 0">；</span>
-                <span class="remark-label">{{ getRemarkLabel(remark) }}：</span>
-                <span class="remark-text">{{ remark.remark }}</span>
-              </span>
+                <span class="remark-item">
+                  <span class="remark-label">{{ getFirstRemarkLabel(task) }}：</span>
+                  <span class="remark-text">{{ getFirstRemarkTruncatedText(task) }}</span>
+                </span>
+              </el-tooltip>
             </div>
           </div>
 
@@ -645,7 +646,8 @@ const loadTaskList = async () => {
       }
       
       if (selectedPriority.value) {
-        params.priority = getPriorityValue(selectedPriority.value)
+        const p = getPriorityValue(selectedPriority.value)
+        if (p !== null) params.priority = [p]
       }
       
       // 督办状态筛选：下拉优先，否则按按钮组合
@@ -681,6 +683,7 @@ const loadTaskList = async () => {
           processInstanceId: followItem.processInstanceId,
           createTime: followItem.createTime,
           taskType: 'todo', // 默认为待办状态
+          remarks: followItem.remarks || [], // 保留批示数据
           supervisionPageVOData: {
             id: followItem.id,
             orderTitle: followItem.orderTitle,
@@ -695,8 +698,7 @@ const loadTaskList = async () => {
             // 其他字段可能需要根据实际API返回数据调整
           },
           leadLeaders: followItem.leadLeaders, // 在顶层也添加leadLeaders字段
-          supervisionStatus: followItem.supervisionStatus, // 在顶层也添加supervisionStatus字段
-          leaderRemarks: [] // 初始化为空数组
+          supervisionStatus: followItem.supervisionStatus // 在顶层也添加supervisionStatus字段
         }))
       }
     }
@@ -706,22 +708,6 @@ const loadTaskList = async () => {
     console.log('返回的总数:', result?.total) // 检查返回的总数
 
     const tasks = result.list || []
-
-    // 为每个任务获取批示信息
-    for (const task of tasks) {
-      if (task.processInstanceId) {
-        try {
-          const remarks = await LeaderRemarkApi.getLeaderRemark(task.processInstanceId)
-          task.leaderRemarks = remarks || []
-        } catch (error) {
-          console.error('获取批示信息失败', error)
-          task.leaderRemarks = []
-        }
-      } else {
-        task.leaderRemarks = []
-      }
-    }
-
     taskList.value = tasks
     pagination.total = result.total || 0
     
@@ -780,6 +766,15 @@ const handleTabChange = () => {
 // 处理搜索
 const handleSearch = () => {
   pagination.pageNo = 1 // 重置为第一页
+  // 若选择了下拉状态，按钮恢复为全开，保持与下拉互斥
+  if (selectedSupervisionStatus.value) {
+    statusFilters.value = {
+      pendingReview: true,
+      inProgress: true,
+      overdue: true,
+      completed: true
+    }
+  }
   loadTaskList()
 }
 
@@ -825,6 +820,60 @@ const getDisplayText = (task) => {
 const getTruncatedText = (task) => {
   const text = getDisplayText(task)
   return text.length > 45 ? text.substring(0, 45) + '...' : text
+}
+
+// 按 leaderId 去重，保留每位领导最新一条批示
+const dedupeLatestByLeader = (remarks) => {
+  const seen = new Set()
+  const result = []
+  for (const r of remarks || []) {
+    const id = r?.leaderId
+    if (id == null) continue
+    if (!seen.has(id)) {
+      seen.add(id)
+      result.push(r) // 保留首次出现 = 最新
+    }
+  }
+  return result
+}
+
+// 批示辅助函数
+const getRemarks = (task) => {
+  let remarks = []
+  // 已关注标签页：从 task.remarks 获取
+  if (activeTab.value === 'attention-items') {
+    remarks = Array.isArray(task?.remarks) ? task.remarks : []
+  } else {
+    // 全部事项标签页：从 task.supervisionPageVOData.remarks 获取
+    remarks = Array.isArray(task?.supervisionPageVOData?.remarks) ? task.supervisionPageVOData.remarks : []
+  }
+  return dedupeLatestByLeader(remarks)
+}
+
+const getAllRemarksFullText = (task) => {
+  const remarks = getRemarks(task)
+  if (!remarks.length) return ''
+  // 组合为多行文本：如 “我的批示：XXXX”
+  return remarks
+    .map((r) => `${getRemarkLabel(r)}：${r?.remark || ''}`)
+    .join('; ')
+}
+
+const getFirstRemarkLabel = (task) => {
+  const first = getRemarks(task)[0]
+  return first ? getRemarkLabel(first) : ''
+}
+
+const getFirstRemarkTruncatedText = (task) => {
+  const remarks = getRemarks(task)
+  const first = remarks[0]
+  const text = first?.remark || ''
+  let display = text.length > 45 ? text.slice(0, 45) + '...' : text
+  // 多条批示时，行内文本尾部加省略号提示还有更多
+  if (remarks.length > 1 && !display.endsWith('...')) {
+    display += '...'
+  }
+  return display
 }
 
 const getCreatorDeptName = (task) => {

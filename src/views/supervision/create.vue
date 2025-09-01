@@ -320,17 +320,8 @@ const dictStore = useDictStoreWithOut()
 
 // 获取返回路径的函数
 const getReturnPath = () => {
-  const fromPage = route.query.from as string
-  switch (fromPage) {
-    case 'work_supervision':
-      return '/supervision/work_supervision'
-    case 'special_supervision':
-      return '/supervision/special_supervision'
-    default:
-      // 默认根据督办类型返回对应页面
-      const orderType = getSupervisionOrderType()
-      return orderType === 'special' ? '/supervision/special_supervision' : '/supervision/work_supervision'
-  }
+  // 统一返回新的督办列表页
+  return '/supervision/index'
 }
 
 // 获取督办类型
