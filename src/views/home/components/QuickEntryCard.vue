@@ -26,9 +26,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { BadgeService } from '@/api/home/badge'
 
 const router = useRouter()
 const emit = defineEmits(['goToAllEntries', 'addEntry'])
@@ -66,21 +67,24 @@ const entryList = ref([
     icon: new URL('@/assets/imgs/quickEntry/document.png', import.meta.url).href,
     path: '/gwlz/gwlztodo',
     bgColor: '#4a7eff',
-    badge: '1'
+    badge: '0',
+    badgeKey: 'document'
   },
   {
     name: '邮件',
     icon: new URL('@/assets/imgs/quickEntry/mail.png', import.meta.url).href,
     path: '/mail/index',
     bgColor: '#4cd964',
-    badge: '1'
+    badge: '0',
+    badgeKey: 'mail'
   },
   {
     name: '请假审批',
     icon: new URL('@/assets/imgs/quickEntry/leave.png', import.meta.url).href,
     path: '/leave/list/todo',
     bgColor: '#9c88ff',
-    badge: '1'
+    badge: '0',
+    badgeKey: 'leave'
   },
   // {
   //   name: '出差审批',
@@ -94,7 +98,8 @@ const entryList = ref([
     icon: new URL('@/assets/imgs/quickEntry/supervison.png', import.meta.url).href,
     path: '/supervision/index',
     bgColor: '#70a1ff',
-    badge: '1'
+    badge: '0',
+    badgeKey: 'supervision'
   },
   // {
   //   name: '问题反馈',
@@ -108,7 +113,8 @@ const entryList = ref([
     icon: new URL('@/assets/imgs/quickEntry/feedback.png', import.meta.url).href,
     path: '/seal/seal_todo',
     bgColor: '#70a1ff',
-    badge: '1'
+    badge: '0',
+    badgeKey: 'seal'
   },
 ])
 
@@ -132,9 +138,59 @@ const handleAddEntry = () => {
   ElMessage.info('添加快捷入口功能正在开发中')
 }
 
+// 加载待办数量
+const loadBadgeCounts = async () => {
+  try {
+    const badgeCounts = await BadgeService.getAllBadgeCounts()
+    
+    // 更新每个入口的badge数量
+    entryList.value.forEach(item => {
+      if (item.badgeKey && badgeCounts[item.badgeKey] !== undefined) {
+        const count = badgeCounts[item.badgeKey]
+        item.badge = count > 0 ? count.toString() : ''
+      }
+    })
+  } catch (error) {
+    console.error('加载待办数量失败:', error)
+  }
+}
+
+// 定时刷新待办数量（每5分钟刷新一次）
+let refreshTimer: NodeJS.Timeout | null = null
+
+const startAutoRefresh = () => {
+  // 清除之前的定时器
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+  }
+  
+  // 设置新的定时器
+  refreshTimer = setInterval(() => {
+    loadBadgeCounts()
+  }, 5 * 60 * 1000) // 5分钟
+}
+
+const stopAutoRefresh = () => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+    refreshTimer = null
+  }
+}
+
 onMounted(() => {
+  // 初始加载待办数量
+  loadBadgeCounts()
+  
+  // 开始自动刷新
+  startAutoRefresh()
+  
   // 可以在这里加载用户自定义的快捷入口
   //window.addEventListener('resize', updateMaxEntries)
+})
+
+// 组件卸载时清除定时器
+onBeforeUnmount(() => {
+  stopAutoRefresh()
 })
 
 </script>
