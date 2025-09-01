@@ -440,7 +440,7 @@
               v-model="remarks"
               type="textarea"
               :rows="3"
-              placeholder="请输入备注信息"
+              placeholder=""
               :disabled="isReadOnly"
             />
           </el-descriptions-item>
@@ -457,13 +457,13 @@
           class="approval-descriptions"
         >
           <el-descriptions-item v-if="Number(personnel.level) >= 27" label="请假期间主持工作负责人会签" label-class-name="approval-label">
-            <div>{{ hostApproval }}</div>
+            <div v-html="formatApprovalDisplay(hostApproval)"></div>
           </el-descriptions-item>
           <el-descriptions-item v-if="Number(personnel.level) >= 27" label="校领导意见" label-class-name="approval-label">
-            <div>{{ leaderApproval }}</div>
+            <div v-html="formatApprovalDisplay(leaderApproval)"></div>
           </el-descriptions-item>
           <el-descriptions-item v-if="Number(personnel.level) < 27" label="单位负责人意见" label-class-name="approval-label">
-            <div>{{ leaderApproval }}</div>
+            <div v-html="formatApprovalDisplay(leaderApproval)"></div>
           </el-descriptions-item>
         </el-descriptions>
       </div>
@@ -893,6 +893,73 @@ const fetchUserProfile = async () => {
 // 审批意见数据
 const leaderApproval = ref('');
 const hostApproval = ref('');
+
+// 格式化审批意见显示
+const formatLeaveApprovalReason = (reason: string) => {
+  if (!reason) return ''
+  
+  // 如果是"再次提交"类型的意见，不显示
+  if (reason.includes('再次提交')) {
+    return ''
+  }
+  
+  // 检查是否包含审批人名字和时间的格式（包含换行符和右对齐空格）
+  const lines = reason.split('\n')
+  if (lines.length >= 2) {
+    const firstLine = lines[0].trim()
+    const secondLine = lines[1].trim()
+    
+    // 如果第一行只是"同意"，显示完整格式：同意 + 审批人 + 日期
+    if (firstLine === '同意' && secondLine) {
+      return `同意\n                                                    ${secondLine}`
+    }
+    // 如果第一行只是"不同意"，显示完整格式：不同意 + 审批人 + 日期
+    if (firstLine === '不同意' && secondLine) {
+      return `不同意\n                                                    ${secondLine}`
+    }
+    // 如果第一行是"同意，xxx"格式，显示完整格式
+    if (firstLine.startsWith('同意，') && secondLine) {
+      return `${firstLine}\n                                                    ${secondLine}`
+    }
+    // 如果第一行是"不同意，xxx"格式，显示完整格式
+    if (firstLine.startsWith('不同意，') && secondLine) {
+      return `${firstLine}\n                                                    ${secondLine}`
+    }
+  }
+  
+  // 其他情况直接返回原内容
+  return reason
+}
+
+// 格式化审批意见显示为HTML布局
+const formatApprovalDisplay = (reason: string) => {
+  if (!reason) return ''
+  
+  // 如果是"再次提交"类型的意见，不显示
+  if (reason.includes('再次提交')) {
+    return ''
+  }
+  
+  // 检查是否包含审批人名字和时间的格式（包含换行符和右对齐空格）
+  const lines = reason.split('\n')
+  if (lines.length >= 2) {
+    const firstLine = lines[0].trim()
+    const secondLine = lines[1].trim()
+    
+    if (firstLine && secondLine) {
+      // 意见在第一行，名字日期在第二行右对齐但稍微往左一点
+      return `
+        <div>
+          <div>${firstLine}</div>
+          <div style="text-align: right; margin-top: 5px; padding-right: 50px;">${secondLine}</div>
+        </div>
+      `
+    }
+  }
+  
+  // 其他情况直接返回原内容
+  return reason
+}
 
 // 获取审批意见
 const processInstanceId = ref('');
