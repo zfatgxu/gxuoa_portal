@@ -360,7 +360,9 @@ const checkUnitHasSeals = async (unitName: string) => {
   try {
     const res = await sealApi.getsealPage({
       pageSize: 1, // 只需要检查是否有数据，所以设置为1
-      orgName: unitName
+      orgName: unitName,
+      isAPP: true,
+      enableFlag: 1
     })
     // 检查是否有印章数据
     return res && res.list && res.list.length > 0
@@ -543,7 +545,7 @@ const fetchUnitList = async () => {
 const getDefaultSealTypes = async () => {
   try {
     // 从数据库，印章表中获取
-    const res = await sealApi.getsealPage({ pageSize: 100 }) // 获取印章列表，设置较大的pageSize以获取所有印章
+    const res = await sealApi.getsealPage({ pageSize: 100, isAPP: true, enableFlag: 1 }) // 获取印章列表，设置较大的pageSize以获取所有印章
     if (res && res.data && res.data.list && res.data.list.length > 0) {
       // 将后端返回的印章数据转换为前端需要的格式
       defaultSealTypes.value = res.data.list.map(item => {
@@ -566,7 +568,7 @@ const sealTypeOptions = ref([])
 const getSealTypeOptions = async () => {
   try {
     // 从数据库获取印章类型选项
-    const res = await sealApi.getsealPage({ orgId: selectedUnit.value.id,isAPP: true })
+    const res = await sealApi.getsealPage({ orgId: selectedUnit.value.id, isAPP: true, enableFlag: 1 })
 
     sealTypeOptions.value = res.list.map(item => {
       return {
