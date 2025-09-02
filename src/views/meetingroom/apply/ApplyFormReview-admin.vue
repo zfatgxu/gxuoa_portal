@@ -174,7 +174,7 @@
                   v-model="departmentInfo.opinion"
                   type="textarea"
                   :rows="4"
-                  placeholder="请输入使用单位意见"
+                  placeholder="经审核，该申请符合会议室使用规定，申请材料齐全，使用时间合理，同意该申请。请按时使用会议室，并注意保持会议室整洁。"
                   :disabled="!canEditDepartmentOpinion || formData.status !== 0" />
               </el-form-item>
               <div class="signature-line">
