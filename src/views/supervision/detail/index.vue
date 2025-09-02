@@ -36,7 +36,7 @@
                   maxlength="100"
                   show-word-limit
                 />
-                <el-input v-else :value="orderDetail.orderTitle" readonly />
+                <el-input v-else :value="orderDetail.orderTitle" readonly class="readonly-display" />
               </div>
             </div>
 
@@ -58,6 +58,7 @@
                   type="textarea"
                   :value="orderDetail.content"
                   readonly
+                  class="readonly-display"
                   :rows="4"
                 />
               </div>
@@ -80,7 +81,7 @@
                     :value="option.value"
                   />
                 </el-select>
-                <el-input v-else :value="orderDetail.detailType || getTypeName(orderDetail.type)" readonly />
+                <el-input v-else :value="getDetailTypeName()" readonly class="readonly-display" />
               </div>
               <div class="form-label">紧急程度</div>
               <div class="form-content half-width">
@@ -97,7 +98,7 @@
                     :value="option.value"
                   />
                 </el-select>
-                <el-input v-else :value="getPriorityName(orderDetail.priority)" readonly />
+                <el-input v-else :value="getPriorityName(orderDetail.priority)" readonly class="readonly-display" />
               </div>
             </div>
 
@@ -113,8 +114,12 @@
                   format="YYYY-MM-DD HH:mm"
                   value-format="YYYY-MM-DD HH:mm:ss"
                   style="width: 100%"
+                  :disabled-date="disabledDeadlineDate"
+                  :disabled-hours="disabledDeadlineHours"
+                  :disabled-minutes="disabledDeadlineMinutes"
+                  :default-time="defaultDeadlineTime"
                 />
-                <el-input v-else :value="formatDate(orderDetail.deadline)" readonly />
+                <el-input v-else :value="formatDate(orderDetail.deadline)" readonly class="readonly-display" />
               </div>
               <div class="form-label">汇报频次</div>
               <div class="form-content half-width">
@@ -132,7 +137,7 @@
                     :value="option.value"
                   />
                 </el-select>
-                <el-input v-else :value="getReportFrequencyName(orderDetail.reportFrequency)" readonly />
+                <el-input v-else :value="getReportFrequencyName(orderDetail.reportFrequency)" readonly class="readonly-display" />
               </div>
             </div>
 
@@ -140,7 +145,7 @@
             <div class="form-row">
               <div class="form-label">分管校领导</div>
               <div class="form-content half-width">
-                <el-input :value="getLeadLeaderDisplay()" readonly />
+                <el-input :value="getLeadLeaderDisplay()" readonly class="readonly-display" />
               </div>
               <div class="form-label">其他校领导</div>
               <div class="form-content half-width">
@@ -161,7 +166,7 @@
                     :value="user.id"
                   />
                 </el-select>
-                <el-input v-else :value="getOtherLeadersDisplay()" readonly />
+                <el-input v-else :value="getOtherLeadersDisplay()" readonly class="readonly-display" />
               </div>
             </div>
 
@@ -192,6 +197,7 @@
                     v-if="!orderDetail.leadDept || getLeadDeptNames().length === 0"
                     value="待督办人选择"
                     readonly
+                    class="readonly-display"
                   />
                   <div v-else class="readonly-tags">
                     <el-tag
@@ -230,6 +236,7 @@
                     v-if="!orderDetail.coDept"
                     value="待牵头单位选择"
                     readonly
+                    class="readonly-display"
                   />
                   <div v-else class="readonly-tags">
                     <el-tag
@@ -266,7 +273,7 @@
                     :value="user.id"
                   />
                 </el-select>
-                <el-input v-else :value="getSupervisorDisplay()" readonly />
+                <el-input v-else :value="getSupervisorDisplay()" readonly class="readonly-display" />
               </div>
               <div class="form-label">联系电话</div>
               <div class="form-content half-width">
@@ -276,7 +283,7 @@
                   placeholder="请输入联系电话"
                   maxlength="20"
                 />
-                <el-input v-else :value="getSupervisorPhone()" readonly />
+                <el-input v-else :value="getSupervisorPhone()" readonly class="readonly-display" />
               </div>
             </div>
 
@@ -445,7 +452,7 @@
                   <el-option label="是" :value="true" />
                   <el-option label="否" :value="false" />
                 </el-select>
-                <el-input v-else :value="orderDetail.isProjectSupervision ? '是' : '否'" readonly />
+                <el-input v-else :value="orderDetail.isProjectSupervision ? '是' : '否'" readonly class="readonly-display" />
               </div>
             </div>
 
@@ -453,7 +460,7 @@
             <div class="form-row">
               <div class="form-label">是否结束督办</div>
               <div class="form-content full-width">
-                <el-input :value="orderDetail.isSupervisionClosed ? '是' : '否'" readonly />
+                <el-input :value="orderDetail.isSupervisionClosed ? '是' : '否'" readonly class="readonly-display" />
               </div>
             </div>
 
@@ -645,7 +652,7 @@ const deptList = ref<DeptVO[]>([])
 const userList = ref<UserVO[]>([])
 
 // 督办分类选项
-const typeOptions = ref<Array<{value: number, label: string}>>([])
+const typeOptions = ref<Array<{value: number | string, label: string, id?: number}>>([])
 
 // 紧急程度选项
 const priorityOptions = computed(() => getIntDictOptions(DICT_TYPE.SUPERVISION_PRIORITY_TYPE))
@@ -828,11 +835,42 @@ const getUserList = async () => {
 const getTypeOptions = async () => {
   try {
     // 根据当前督办单类型获取分类选项
-    const type = orderDetail.value.type || 1
-    typeOptions.value = await OrderApi.getSupervisionDetailTypes(type)
+    const supervisionOrderType = orderDetail.value.type || 1
+    const result = await OrderApi.getSupervisionDetailTypes(supervisionOrderType)
+    
+    // 处理返回的数据格式，与 create.vue 保持一致
+    if (result && Array.isArray(result)) {
+      // 检查返回的是对象数组还是字符串数组
+      if (result.length > 0 && typeof result[0] === 'object' && result[0].id) {
+        // 新格式：对象数组，包含id和type字段
+        typeOptions.value = result.map((item) => ({
+          id: item.id, // 保存ID用于删除
+          value: item.id, // 使用id作为值（数字）
+          label: item.type // type字段作为显示标签
+        }))
+      } else {
+        // 旧格式：字符串数组
+        typeOptions.value = result.map((item) => ({
+          value: item, // 使用字符串本身作为值
+          label: item // 字符串作为显示标签
+        }))
+      }
+    } else {
+      typeOptions.value = []
+    }
   } catch (error) {
     console.error('获取督办分类选项失败:', error)
-    typeOptions.value = []
+    // 失败时使用字典兜底
+    try {
+      if (orderDetail.value.type === 2) {
+        typeOptions.value = getIntDictOptions(DICT_TYPE.SPECIAL_SUPERVISION_TYPE)
+      } else {
+        typeOptions.value = getIntDictOptions(DICT_TYPE.WORK_SUPERVISION_TYPE)
+      }
+    } catch (dictError) {
+      console.error('字典兜底失败:', dictError)
+      typeOptions.value = []
+    }
   }
 }
 
@@ -1041,6 +1079,35 @@ const getTypeName = (type: number) => {
   return option?.label || '未知分类'
 }
 
+// 获取督办分类详细名称（优先使用后端返回的 detailType）
+const getDetailTypeName = () => {
+  // 1. 优先使用后端返回的 detailType（如果是字符串直接返回，如果是数字ID则查找对应名称）
+  if (orderDetail.value.detailType) {
+    // 如果 detailType 是字符串，直接返回
+    if (typeof orderDetail.value.detailType === 'string') {
+      return orderDetail.value.detailType
+    }
+    // 如果 detailType 是数字ID，从 typeOptions 中查找对应名称
+    if (typeof orderDetail.value.detailType === 'number' && typeOptions.value.length > 0) {
+      const option = typeOptions.value.find(item => item.value === orderDetail.value.detailType)
+      if (option) {
+        return option.label
+      }
+    }
+  }
+  
+  // 2. 从本地 typeOptions 中根据 orderDetail.type 匹配
+  if (orderDetail.value.type && typeOptions.value.length > 0) {
+    const option = typeOptions.value.find(item => item.value === orderDetail.value.type)
+    if (option) {
+      return option.label
+    }
+  }
+  
+  // 3. 兜底使用字典
+  return getTypeName(orderDetail.value.type)
+}
+
 // 获取督办依据名称
 const getReasonName = (reason: number) => {
   const reasonOptions = getIntDictOptions(DICT_TYPE.SUPERVISION_REASON)
@@ -1198,7 +1265,7 @@ const getCurrentWorkflowNodes = () => {
 // 节点权限配置映射表
 const NODE_PERMISSIONS = {
   'select_leaddept': {
-    leadDept: true,           //  督办人可编辑牵头单位
+    leadDept: true,           // 督办人可编辑牵头单位
     collaborateDepts: false,  // 
     leadDeptDetail: false,    // 
     attachments: true         //如有编辑权限可上传附件
@@ -1212,7 +1279,7 @@ const NODE_PERMISSIONS = {
   'upload_plan': {
     leadDept: false,          // 
     collaborateDepts: false,  // 
-    leadDeptDetail: true,     //  牵头/协办负责人可编辑工作推进情况
+    leadDeptDetail: true,     // 牵头/协办负责人可编辑工作推进情况
     attachments: true         //  如有编辑权限可上传附件
   },
   'co_dept': {
@@ -1432,9 +1499,13 @@ const getSupervisionWorkflowUpdateData = async (startLeaderSelectAssignees?: Rec
 
   // 处理完成期限
   if (canEditDeadline.value && editForm.value.deadline) {
-    const deadlineTimestamp = new Date(editForm.value.deadline).getTime()
-    if (deadlineTimestamp !== orderDetail.value.deadline) {
-      updateData.deadline = deadlineTimestamp
+    // 统一转换为毫秒时间戳进行比较
+    const newDeadlineMillis = new Date(editForm.value.deadline).getTime()
+    const oldDeadlineMillis = orderDetail.value.deadline || 0
+    
+    if (newDeadlineMillis !== oldDeadlineMillis) {
+      // 发送给后端时使用字符串格式（yyyy-MM-dd HH:mm:ss）
+      updateData.deadline = editForm.value.deadline
     }
   }
 
@@ -1773,56 +1844,73 @@ const formatTimestamp = (timestamp: number) => {
   }).replace(/\//g, '/').replace(',', '')
 }
 
-// 预计完成时间选择限制相关方法
+// 时间选择限制通用工具函数
 // 计算默认时间（当前时间的下一个小时）
-const getDefaultProgressTime = () => {
+const getNextHourDefaultTime = () => {
   const now = new Date()
   const nextHour = new Date(now)
   nextHour.setHours(now.getHours() + 1, 0, 0, 0)
   return nextHour
 }
 
-// 设置默认时间
-const defaultProgressTime = ref(getDefaultProgressTime())
-
-// 禁用今日之前的日期
-const disabledProgressDate = (time: Date) => {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0) // 设置为今天的开始时间
-  return time.getTime() < today.getTime()
-}
-
-// 禁用小时
-const disabledProgressHours = () => {
-  const now = new Date()
-  const selectedDate = progressForm.planTime ? new Date(progressForm.planTime) : null
-
-  // 如果选择的是今天，则禁用当前小时之前的小时
-  if (selectedDate && selectedDate.toDateString() === now.toDateString()) {
-    const hours = []
-    for (let i = 0; i < now.getHours(); i++) {
-      hours.push(i)
-    }
-    return hours
+// 构建禁用日期函数
+const buildDisabledDate = (getSelectedStr: () => string) => {
+  return (time: Date) => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0) // 设置为今天的开始时间
+    return time.getTime() < today.getTime()
   }
-  return []
 }
 
-// 禁用分钟
-const disabledProgressMinutes = (hour: number) => {
-  const now = new Date()
-  const selectedDate = progressForm.planTime ? new Date(progressForm.planTime) : null
+// 构建禁用小时函数
+const buildDisabledHours = (getSelectedStr: () => string) => {
+  return () => {
+    const now = new Date()
+    const selectedStr = getSelectedStr()
+    const selectedDate = selectedStr ? new Date(selectedStr) : null
 
-  // 如果选择的是今天且是当前小时，则禁用当前分钟之前的分钟
-  if (selectedDate && selectedDate.toDateString() === now.toDateString() && hour === now.getHours()) {
-    const minutes = []
-    for (let i = 0; i <= now.getMinutes(); i++) {
-      minutes.push(i)
+    // 如果选择的是今天，则禁用当前小时之前的小时
+    if (selectedDate && selectedDate.toDateString() === now.toDateString()) {
+      const hours = []
+      for (let i = 0; i < now.getHours(); i++) {
+        hours.push(i)
+      }
+      return hours
     }
-    return minutes
+    return []
   }
-  return []
 }
+
+// 构建禁用分钟函数
+const buildDisabledMinutes = (getSelectedStr: () => string) => {
+  return (hour: number) => {
+    const now = new Date()
+    const selectedStr = getSelectedStr()
+    const selectedDate = selectedStr ? new Date(selectedStr) : null
+
+    // 如果选择的是今天且是当前小时，则禁用当前分钟之前的分钟
+    if (selectedDate && selectedDate.toDateString() === now.toDateString() && hour === now.getHours()) {
+      const minutes = []
+      for (let i = 0; i <= now.getMinutes(); i++) {
+        minutes.push(i)
+      }
+      return minutes
+    }
+    return []
+  }
+}
+
+// 完成期限时间选择限制
+const defaultDeadlineTime = ref(getNextHourDefaultTime())
+const disabledDeadlineDate = buildDisabledDate(() => editForm.value.deadline)
+const disabledDeadlineHours = buildDisabledHours(() => editForm.value.deadline)
+const disabledDeadlineMinutes = buildDisabledMinutes(() => editForm.value.deadline)
+
+// 预计完成时间选择限制
+const defaultProgressTime = ref(getNextHourDefaultTime())
+const disabledProgressDate = buildDisabledDate(() => progressForm.planTime)
+const disabledProgressHours = buildDisabledHours(() => progressForm.planTime)
+const disabledProgressMinutes = buildDisabledMinutes(() => progressForm.planTime)
 
 // 显示添加进度更新弹窗
 const showAddProgressDialog = () => {
@@ -2510,6 +2598,7 @@ defineExpose({
   margin-right: 8px;
   margin-bottom: 4px;
 }
+
 /* 只读输入框样式 */
 :deep(.el-input.is-disabled .el-input__wrapper) {
   background-color: #f5f7fa;
@@ -2526,7 +2615,6 @@ defineExpose({
 /* 确保只读状态下的样式 */
 :deep(.el-input__inner[readonly]) {
   background-color: #f5f7fa;
-  border-color: #e4e7ed;
   color: #606266;
   cursor: default;
 }
@@ -2535,6 +2623,21 @@ defineExpose({
   background-color: #f5f7fa;
   border-color: #e4e7ed;
   color: #606266;
+  cursor: default;
+}
+
+/* 更高优先级：覆盖全局只读的灰底设置 */
+.order-form :deep(.readonly-display .el-input__inner[readonly]) {
+  background: transparent !important;
+}
+
+.order-form :deep(.readonly-display .el-textarea__inner[readonly]) {
+  background: transparent !important;
+}
+
+.order-form :deep(.readonly-display input[readonly]),
+.order-form :deep(.readonly-display .el-textarea__inner[readonly]) {
+  color: var(--el-text-color-regular);
   cursor: default;
 }
 

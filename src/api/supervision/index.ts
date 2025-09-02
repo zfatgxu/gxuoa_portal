@@ -47,7 +47,7 @@ export interface OrderVO {
   orderCode?: string // 督办编号
   orderTitle: string // 督办标题
   type: number // 督办分类
-  detailType?: string // 督办具体分类（从API获取的字符串）
+  detailType?: number // 督办具体分类（数字ID）
   orderType?: number // 督办类型：1=工作督办，2=专项督办
   reason?: number // 督办依据
   priority: number // 紧急程度
@@ -63,6 +63,7 @@ export interface OrderVO {
   leader?: number // 分管校领导ID，由后端根据牵头单位自动获取，前端不传递
   otherLeaders?: string // 其他校领导ID（逗号分隔，对应数据库 other_leaders）
   summary?: string // 概述信息（字符串格式）
+  officePhone?: string // 办公电话
   // 工作流审批人配置由后端自动设置，前端不传递
   // 以下字段已废弃但保留兼容性，前端不需要传递
   significance?: number // 重要程度 (已废弃)

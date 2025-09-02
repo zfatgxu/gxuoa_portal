@@ -362,7 +362,7 @@ const loadSupervisionTypes = async () => {
         // 新格式：对象数组，包含id和type字段
         supervisionTypeOptions.value = result.map((item) => ({
           id: item.id, // 保存ID用于删除
-          value: item.type, // 使用type字段作为值
+          value: item.id, // 使用id作为值（数字）
           label: item.type // type字段作为显示标签
         }))
       } else {
@@ -452,7 +452,7 @@ const customCategoryValue = ref('')
 const orderForm = reactive({
   orderNumber: '', // 督办编号
   title: '', // 督办标题
-  category: undefined, // 督办分类（字符串类型）
+  category: undefined as number | undefined, // 督办分类（数字ID）
   // basis: undefined, // 督办依据（数字类型）
   urgencyLevel: undefined, // 紧急程度（数字类型）
   reportFrequency: undefined, // 汇报频次 (对应数据库 report_frequency) 1=每日 2=每周 3=每月 4=阶段性
@@ -943,7 +943,7 @@ const addCategoryToDict = async () => {
     }
 
     // 调用API创建督办分类
-    await OrderApi.createSupervisionType(typeData)
+    const newTypeId = await OrderApi.createSupervisionType(typeData)
 
     ElMessage.success('督办分类已添加为常用选项，下次可直接选择')
 
@@ -953,8 +953,8 @@ const addCategoryToDict = async () => {
     // 隐藏添加按钮
     showAddCategoryToDictButton.value = false
 
-    // 将自定义值设置为新添加的值（字符串类型）
-    orderForm.category = customCategoryValue.value.trim()
+    // 将自定义值设置为新添加的值（使用返回的数字ID）
+    orderForm.category = newTypeId
 
     // 清空自定义值
     customCategoryValue.value = ''
@@ -1037,9 +1037,6 @@ const validateRequiredFields = (): string[] => {
   return missingFields
 }
 
-
-
-
 // 自动生成概述内容（模板B：单句）
 const generateAutoSummary = () => {
   const parts: string[] = []
@@ -1120,11 +1117,17 @@ const createOrder = async () => {
     // 使用用户在页面上选择的督办类型，而不是URL参数
     const supervisionType = selectedType.value // 1=工作督办, 2=专项督查
 
+    // 提交前校验分类必须为数字ID
+    if (typeof orderForm.category !== 'number') {
+      ElMessage.error('请选择督办分类或将自定义分类添加为常用选项')
+      return
+    }
+
     const submitData: OrderVO = {
       orderCode: orderForm.orderNumber,
       orderTitle: orderForm.title,
-      type: supervisionType, // 督办类型：1=工作督办, 2=专项督查
-      detailType: orderForm.category, // 督办具体分类（字符串）
+      type: supervisionType,
+      detailType: Number(orderForm.category), // 督办具体分类ID
       orderType: supervisionType, // 1=工作督办, 2=专项督查
       // reason: orderForm.basis, // 已移除“督办依据”，不再提交
       priority: orderForm.urgencyLevel,
@@ -1135,7 +1138,8 @@ const createOrder = async () => {
       content: orderForm.content,
       reportFrequency: orderForm.reportFrequency ? Number(orderForm.reportFrequency) : undefined, // 汇报频次
       otherLeaders: orderForm.otherLeaderIds.join(','), // 其他校领导ID（支持多选，逗号分隔）
-      summary: summaryContent // 添加自动生成的概述信息字符串
+      summary: summaryContent, // 添加自动生成的概述信息字符串
+      officePhone: orderForm.officePhone // 办公电话
     }
 
     // 验证必要的ID字段
