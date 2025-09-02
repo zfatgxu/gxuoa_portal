@@ -49,17 +49,17 @@
                   v-model="editForm.content"
                   type="textarea"
                   placeholder="请输入主要内容"
-                  :rows="4"
-                  maxlength="500"
+                  :autosize="{ minRows: 4 }"
+                  maxlength="2000"
                   show-word-limit
                 />
                 <el-input
                   v-else
                   type="textarea"
-                  :value="orderDetail.content"
+                  :model-value="orderDetail.content"
                   readonly
                   class="readonly-display"
-                  :rows="4"
+                  :autosize="{ minRows: 4 }"
                 />
               </div>
             </div>
@@ -70,7 +70,7 @@
               <div class="form-content half-width">
                 <el-select
                   v-if="canEditType"
-                  v-model="editForm.type"
+                  v-model="editForm.detailType"
                   placeholder="请选择督办分类"
                   style="width: 100%"
                 >
@@ -233,7 +233,7 @@
                 <!-- 只读模式 -->
                 <template v-else>
                   <el-input
-                    v-if="!orderDetail.coDept"
+                    v-if="shouldShowCoDeptPlaceholder || !orderDetail.coDept"
                     value="待牵头单位选择"
                     readonly
                     class="readonly-display"
@@ -283,7 +283,7 @@
                   placeholder="请输入联系电话"
                   maxlength="20"
                 />
-                <el-input v-else :value="getSupervisorPhone()" readonly class="readonly-display" />
+                <el-input v-else :value="orderDetail.officePhone || '未设置'" readonly class="readonly-display" />
               </div>
             </div>
 
@@ -803,6 +803,7 @@ const editForm = ref({
   orderTitle: '', // 督办事项
   content: '', // 主要内容
   type: 1, // 督办分类
+  detailType: '' as string | number, // 督办分类详细类型
   priority: 1, // 紧急程度
   deadline: '', // 完成期限
   reportFrequency: undefined as number | undefined, // 汇报频次
@@ -831,6 +832,21 @@ const getUserList = async () => {
   }
 }
 
+// 提取错误信息的通用函数
+const extractErrorMessage = (error: any): string => {
+  // 优先级：后端响应消息 > Error对象消息 > 字符串化错误
+  if (error?.response?.data?.msg) {
+    return error.response.data.msg
+  }
+  if (error?.data?.msg) {
+    return error.data.msg
+  }
+  if (error?.message) {
+    return error.message
+  }
+  return String(error) || '操作失败'
+}
+
 // 获取督办分类选项
 const getTypeOptions = async () => {
   try {
@@ -857,6 +873,17 @@ const getTypeOptions = async () => {
       }
     } else {
       typeOptions.value = []
+    }
+    
+    // 映射 detailType 值以确保下拉框正确回显
+    if (typeOptions.value.length > 0 && (!editForm.value.detailType || typeof editForm.value.detailType === 'string')) {
+      const detailTypeName = orderDetail.value.detailTypeName || editForm.value.detailType
+      if (detailTypeName) {
+        const matchedOption = typeOptions.value.find(option => option.label === detailTypeName)
+        if (matchedOption) {
+          editForm.value.detailType = matchedOption.value
+        }
+      }
     }
   } catch (error) {
     console.error('获取督办分类选项失败:', error)
@@ -951,6 +978,7 @@ const getOrderDetail = async (processInstanceId: string) => {
     editForm.value.orderTitle = data.orderTitle || ''
     editForm.value.content = data.content || ''
     editForm.value.type = data.type || 1
+    editForm.value.detailType = data.detailType || ''
     editForm.value.priority = data.priority || 1
     editForm.value.deadline = data.deadline ? utilFormatDate(new Date(data.deadline), 'YYYY-MM-DD HH:mm:ss') : ''
     editForm.value.reportFrequency = data.reportFrequency
@@ -959,8 +987,8 @@ const getOrderDetail = async (processInstanceId: string) => {
       data.leadLeaders.filter(leader => leader.type === '其他分管领导').map(leader => leader.id) : []
     // 初始化督办人ID数组
     editForm.value.supervisorIds = data.supervisors ? data.supervisors.map(supervisor => supervisor.id) : []
-    // 初始化联系电话（从督办人信息中获取，或使用现有字段）
-    editForm.value.officePhone = data.officePhone || getSupervisorPhone()
+    // 初始化联系电话
+    editForm.value.officePhone = data.officePhone || ''
     
   } catch (error) {
     console.error('根据流程实例ID获取督办单详情失败:', error)
@@ -1158,44 +1186,6 @@ const getSupervisorNames = () => {
   return supervisorNames.length > 0 ? supervisorNames.join('、') : '未分配'
 }
 
-// 获取督办人联系电话
-const getSupervisorPhones = () => {
-  if (!orderDetail.value.supervisors || !Array.isArray(orderDetail.value.supervisors)) {
-    return '未设置'
-  }
-
-  if (orderDetail.value.supervisors.length === 0) {
-    return '未设置'
-  }
-
-  // 如果只有一个督办人，显示其电话
-  if (orderDetail.value.supervisors.length === 1) {
-    return orderDetail.value.supervisors[0].phone || '未设置'
-  }
-
-  // 如果有多个督办人，显示所有电话（用、分隔）
-  const phones = orderDetail.value.supervisors
-    .map(s => s.phone)
-    .filter(phone => phone)
-
-  return phones.length > 0 ? phones.join('、') : '未设置'
-}
-
-// 获取督办人电话（用于编辑表单初始化）
-const getSupervisorPhone = () => {
-  if (!orderDetail.value.supervisors || !Array.isArray(orderDetail.value.supervisors)) {
-    return ''
-  }
-  
-  // 优先使用第一个督办人的电话
-  const firstSupervisor = orderDetail.value.supervisors[0]
-  if (firstSupervisor && firstSupervisor.phone) {
-    return firstSupervisor.phone
-  }
-  
-  // 兜底使用现有的officePhone字段
-  return orderDetail.value.officePhone || ''
-}
 
 // 获取督办人显示文本（用于只读模式）
 const getSupervisorDisplay = () => {
@@ -1222,6 +1212,46 @@ const canEditReportFrequency = ref(false)    // 汇报频次编辑权限
 const canEditOtherLeaders = ref(false)       // 其他校领导编辑权限
 const canEditSupervisors = ref(false)        // 督办人编辑权限
 const canEditOfficePhone = ref(false)        // 联系电话编辑权限
+
+// 创建必填字段配置
+const CREATION_REQUIRED_FIELDS = [
+  'orderTitle',      // 督办事项
+  'content',         // 主要内容
+  'detailType',      // 督办分类
+  'priority',        // 紧急程度
+  'deadline',        // 完成期限
+  'reportFrequency', // 汇报频次
+  'supervisors',     // 督办人
+  'officePhone'      // 联系电话
+]
+
+// 字段中文名映射
+const FIELD_LABEL_MAP: Record<string, string> = {
+  orderTitle: '督办事项',
+  content: '主要内容',
+  detailType: '督办分类',
+  priority: '紧急程度',
+  deadline: '完成期限',
+  reportFrequency: '汇报频次',
+  supervisors: '督办人',
+  officePhone: '联系电话',
+  leadDept: '牵头单位',
+  leadDeptDetail: '工作推进情况'
+}
+
+// 字段权限映射
+const FIELD_PERM_MAP: Record<string, string> = {
+  orderTitle: 'canEditOrderTitle',
+  content: 'canEditContent',
+  detailType: 'canEditType',
+  priority: 'canEditPriority',
+  deadline: 'canEditDeadline',
+  reportFrequency: 'canEditReportFrequency',
+  supervisors: 'canEditSupervisors',
+  officePhone: 'canEditOfficePhone',
+  leadDept: 'canEditLeadDept',
+  leadDeptDetail: 'canEditLeadDeptDetail'
+}
 
 // 完整的活动节点数据（从审批详情API获取）
 const fullActivityNodes = ref<any[]>([])
@@ -1488,8 +1518,8 @@ const getSupervisionWorkflowUpdateData = async (startLeaderSelectAssignees?: Rec
   }
 
   // 处理督办分类
-  if (canEditType.value && editForm.value.type !== orderDetail.value.type) {
-    updateData.type = editForm.value.type
+  if (canEditType.value && editForm.value.detailType !== orderDetail.value.detailType) {
+    updateData.detailType = editForm.value.detailType
   }
 
   // 处理紧急程度
@@ -1545,7 +1575,7 @@ const getSupervisionWorkflowUpdateData = async (startLeaderSelectAssignees?: Rec
   }
 
   // 处理联系电话
-  if (canEditOfficePhone.value && editForm.value.officePhone !== getSupervisorPhone()) {
+  if (canEditOfficePhone.value && editForm.value.officePhone !== (orderDetail.value.officePhone || '')) {
     updateData.officePhone = editForm.value.officePhone
   }
 
@@ -1581,9 +1611,131 @@ const getSupervisionWorkflowUpdateData = async (startLeaderSelectAssignees?: Rec
   }
   return updateData
 }
+// 获取字段有效值
+const getEffectiveValue = (field: string): any => {
+  // 优先取编辑表单的值，否则取详情数据的值
+  const editValue = (editForm.value as any)[field]
+  const detailValue = (orderDetail.value as any)[field]
+  return editValue !== undefined && editValue !== null ? editValue : detailValue
+}
+
+// 判断字段是否可编辑
+const isEditable = (field: string): boolean => {
+  const permKey = FIELD_PERM_MAP[field]
+  if (!permKey) return false
+  
+  // 通过权限映射获取对应的权限标志
+  const permMap: Record<string, any> = {
+    canEditOrderTitle: canEditOrderTitle.value,
+    canEditContent: canEditContent.value,
+    canEditType: canEditType.value,
+    canEditPriority: canEditPriority.value,
+    canEditDeadline: canEditDeadline.value,
+    canEditReportFrequency: canEditReportFrequency.value,
+    canEditSupervisors: canEditSupervisors.value,
+    canEditOfficePhone: canEditOfficePhone.value,
+    canEditLeadDept: canEditLeadDept.value,
+    canEditLeadDeptDetail: canEditLeadDeptDetail.value
+  }
+  
+  return !!permMap[permKey]
+}
+
+// 通用空值判断
+const isEmpty = (value: any): boolean => {
+  if (value === null || value === undefined) return true
+  if (typeof value === 'string') return value.trim() === ''
+  if (Array.isArray(value)) return value.length === 0
+  if (typeof value === 'number') return false // 数字0也是有效值
+  return false
+}
+
+// 联系电话格式校验
+const validatePhone = (value: string): boolean => {
+  if (!value || !value.trim()) return false
+  const phone = value.trim()
+  // 手机号格式：11位数字，1开头
+  const mobilePattern = /^1[3-9]\d{9}$/
+  // 座机格式：区号-号码 或 纯数字座机
+  const landlinePattern = /^(0\d{2,3}-?\d{7,8}|\d{7,8})$/
+  return mobilePattern.test(phone) || landlinePattern.test(phone)
+}
+
+// 统一校验入口
+const validateBeforeUpdate = async (contextTaskKey?: string): Promise<void> => {
+  // 节点特定规则校验
+  if (contextTaskKey) {
+    switch (contextTaskKey) {
+      case 'select_leaddept':
+        // 督办人选择牵头部门节点 - 检查牵头单位
+        const leadDeptValue = getEffectiveValue('leadDept')
+        if (isEmpty(leadDeptValue)) {
+          throw new Error('请先选择牵头部门')
+        }
+        break
+        
+      case 'implement_plan':
+      case 'upload_plan':
+      case 'co_dept':
+        // 需要填写工作推进情况的节点
+        const hasPendingProgressUpdate = !!pendingProgressUpdate.value
+        const hasExistingProgress = !isEmpty(getEffectiveValue('leadDeptDetail'))
+        
+        if (!hasPendingProgressUpdate && !hasExistingProgress) {
+          throw new Error('请通过"添加工作推进"功能填写工作推进情况')
+        }
+        break
+    }
+  }
+  
+  // 创建必填字段校验（仅校验当前可编辑的字段）
+  for (const field of CREATION_REQUIRED_FIELDS) {
+    if (isEditable(field)) {
+      const value = getEffectiveValue(field)
+      const fieldLabel = FIELD_LABEL_MAP[field] || field
+      
+      if (isEmpty(value)) {
+        throw new Error(`请填写${fieldLabel}`)
+      }
+      
+      // 联系电话额外格式校验
+      if (field === 'officePhone' && typeof value === 'string' && !validatePhone(value)) {
+        throw new Error('请输入正确的手机号或座机号码')
+      }
+    }
+  }
+  
+  // 协办单位提醒（仅当有编辑权限时）
+  if (canEditCollaborateDepts.value) {
+    const collaborateDeptIds = editForm.value.collaborateDeptIds || []
+    const coDept = editForm.value.coDept || ''
+    
+    if (collaborateDeptIds.length === 0 && coDept.trim() === '') {
+      try {
+        await ElMessageBox.confirm(
+          '您未选择协办单位，如确无需要可直接继续提交。是否继续？',
+          '温馨提示',
+          {
+            confirmButtonText: '继续提交',
+            cancelButtonText: '返回选择',
+            type: 'warning',
+            center: true
+          }
+        )
+      } catch (error) {
+        // 用户选择返回选择，抛出特殊错误码
+        throw new Error('USER_CANCELLED_COLLABORATE_DEPT_SELECTION')
+      }
+    }
+  }
+}
+
 // 更新督办单数据（供工作流调用）
-const updateSupervisionOrder = async (startLeaderSelectAssignees?: Record<string, number[]>) => {
+const updateSupervisionOrder = async (startLeaderSelectAssignees?: Record<string, number[]>, contextTaskKey?: string) => {
   try {
+    // 统一校验入口
+    await validateBeforeUpdate(contextTaskKey)
+    
     // 先提交待处理的进度更新（如果有）
     if (pendingProgressUpdate.value) {
       try {
@@ -1701,11 +1853,19 @@ const updateSupervisionOrder = async (startLeaderSelectAssignees?: Record<string
     }
   } catch (error) {
     console.error('更新督办单失败:', error)
-    ElMessage.error('更新督办单失败')
-    return {
-      success: false,
-      data: null
+    // 提取具体错误信息
+    const errorMessage = extractErrorMessage(error)
+    
+    // 如果是用户取消协办单位选择，静默返回，不显示错误
+    if (errorMessage === 'USER_CANCELLED_COLLABORATE_DEPT_SELECTION') {
+      return {
+        success: false,
+        data: null
+      }
     }
+    
+    // 向上抛出具体错误，避免上层显示通用错误
+    throw new Error(errorMessage)
   }
 }
 
@@ -2497,6 +2657,8 @@ defineExpose({
   resize: none;
   transition: all 0.2s ease;
 }
+
+
 
 :deep(.el-select .el-input__wrapper) {
   border-radius: 6px;

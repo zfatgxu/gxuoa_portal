@@ -30,6 +30,7 @@ export interface OrderWorkflowUpdateReqVO {
   leadDept?: string // 牵头单位ID（逗号分隔，支持多选）
   coDept?: string // 协办单位ID（逗号分隔）
   deptDetail?: string // 牵头单位承办情况
+  detailType?: number // 督办具体分类ID
   fileList?: AttachmentFileInfo[] // 附件列表
 }
 

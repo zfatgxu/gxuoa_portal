@@ -151,7 +151,7 @@
                   :default-time="defaultTime"
                 />
               </div>
-              <div class="form-label">汇报频次</div>
+              <div class="form-label required">汇报频次</div>
               <div class="form-content half-width">
                 <el-select v-model="orderForm.reportFrequency" placeholder="请选择汇报频次" class="form-select">
                   <el-option
@@ -236,11 +236,11 @@
                   />
                 </el-select>
               </div>
-              <div class="form-label">联系电话</div>
+              <div class="form-label required">联系电话</div>
               <div class="form-content half-width">
                 <el-input
                   v-model="orderForm.officePhone"
-                  placeholder="请输入联系电话"
+                  placeholder="将自动关联督办人手机号，多个以逗号分隔"
                   class="form-input"
                 />
               </div>
@@ -553,6 +553,37 @@ const rules = {
       trigger: 'blur'
     }
   ],
+  reportFrequency: [
+    { required: true, message: '请选择汇报频次', trigger: 'change' }
+  ],
+  officePhone: [
+    { required: true, message: '请输入联系电话', trigger: 'blur' },
+    {
+      validator: (rule: any, value: string, callback: Function) => {
+        if (!value || !value.trim()) {
+          callback(new Error('联系电话不能为空'))
+          return
+        }
+        const phone = value.trim()
+        // 手机号格式：11位数字，1开头
+        const mobilePattern = /^1[3-9]\d{9}$/
+        // 座机格式：区号-号码 或 纯数字座机
+        const landlinePattern = /^(0\d{2,3}-?\d{7,8}|\d{7,8})$/
+        
+        // 支持逗号分隔的多个号码
+        const phoneNumbers = phone.split(',').map(p => p.trim()).filter(p => p !== '')
+        
+        for (const phoneNum of phoneNumbers) {
+          if (!mobilePattern.test(phoneNum) && !landlinePattern.test(phoneNum)) {
+            callback(new Error('请输入正确的手机号或座机号码（可逗号分隔多个）'))
+            return
+          }
+        }
+        callback()
+      },
+      trigger: 'blur'
+    }
+  ],
   tasks: [
     { required: false, message: '请输入承办事项', trigger: 'blur' },
     {
@@ -699,31 +730,39 @@ const handleSupervisorChange = async (userIds: number[]) => {
     return
   }
 
-  // 只有选择单个督办人时才自动获取手机号
-  if (userIds.length === 1) {
-    const userId = userIds[0]
-    // 调用API获取督办人手机号
+  // 选择了督办人时自动获取所有督办人手机号
+  if (userIds.length >= 1) {
     phoneLoading.value = true
     try {
-      const phoneData = await OrderApi.getSupervisorPhone(userId)
-
-      // 后端直接返回手机号字符串
-      if (phoneData && typeof phoneData === 'string' && phoneData.trim() !== '') {
-        orderForm.officePhone = phoneData.trim()
+      // 并发获取所有督办人的手机号
+      const phonePromises = userIds.map(userId => 
+        OrderApi.getSupervisorPhone(userId).catch(() => '')
+      )
+      const phoneResults = await Promise.all(phonePromises)
+      
+      // 过滤出有效的手机号，去重并用逗号拼接
+      const validPhones = phoneResults
+        .filter(phone => phone && typeof phone === 'string' && phone.trim() !== '')
+        .map(phone => phone.trim())
+        .filter((phone, index, arr) => arr.indexOf(phone) === index) // 去重
+      
+      if (validPhones.length > 0) {
+        orderForm.officePhone = validPhones.join(',')
       } else {
         orderForm.officePhone = ''
-        ElMessage.warning('督办人未设置手机号，请手动填写办公电话')
+        ElMessage.warning('所选督办人均未设置手机号，请手动填写联系电话')
+      }
+      
+      // 如果部分督办人没有手机号，给出提示
+      if (validPhones.length < userIds.length && validPhones.length > 0) {
+        ElMessage.info(`已自动填入${validPhones.length}个督办人的手机号，其余请手动补充`)
       }
     } catch (error) {
       orderForm.officePhone = ''
-      ElMessage.warning('无法获取督办人手机号，请手动填写办公电话')
+      ElMessage.warning('无法获取督办人手机号，请手动填写联系电话')
     } finally {
       phoneLoading.value = false
     }
-  } else if (userIds.length > 1) {
-    // 多选时清空手机号，提示用户手动填写
-    orderForm.officePhone = ''
-    ElMessage.info('选择多个督办人时，请手动填写联系电话')
   } else {
     // 没有选择督办人时清空手机号
     orderForm.officePhone = ''
