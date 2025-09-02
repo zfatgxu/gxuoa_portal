@@ -416,7 +416,8 @@ const getSealTypeOptions = async () => {
     // 获取印章类型
     const params = {
       orgId: detail.value.applyDept,
-      isAPP: true
+      isAPP: true,
+      enableFlag: 1
     }
 
     const res = await sealApi.getsealPage(params)

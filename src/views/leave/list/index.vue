@@ -97,7 +97,7 @@
           class="!w-240px"
         >
           <el-option
-            v-for="dict in getIntDictOptions(DICT_TYPE.LEAVE_STATUS)"
+            v-for="dict in getFilteredStatusOptions()"
             :key="dict.value"
             :label="dict.label"
             :value="dict.value"
@@ -265,6 +265,7 @@ import { dateFormatter2 } from '@/utils/formatTime'
 import { RegisterVO, RegisterApi } from '@/api/leave/create/createForm'
 import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '@/store/modules/user'
 /** 请假登记 列表 */
 defineOptions({ name: 'Register' })
 
@@ -288,21 +289,50 @@ const queryParams = reactive({
   createTime: [],
 })
 const queryFormRef = ref() // 搜索的表单
+const userStore = useUserStore()
+const currentUser = computed(() => userStore.getUser)
 
 /** 获取状态标签类型 */
 const getStatusTagType = (status) => {
+  const userLevel = currentUser.value?.level || 0
+  
+  // 正处级以下用户（level < 27）将"待会签"状态显示为"待审批"
+  if (parseInt(status) === 1 && Number(userLevel) < 27) {
+    return 'primary' // 使用待审批的样式
+  }
+  
   switch (parseInt(status)) {
     case 1: return 'warning' // 待会签
     case 4: return 'info'    // 已取消
     case 2: return 'primary' // 待审批
-    case 3: return 'success' // 已完成
+    case 3: return 'success' // 已通过
     case 0: return 'danger'  // 未通过
     default: return ''
   }
 }
 
+/** 获取过滤后的状态选项 */
+const getFilteredStatusOptions = () => {
+  const userLevel = currentUser.value?.level || 0
+  const allOptions = getIntDictOptions(DICT_TYPE.LEAVE_STATUS)
+  
+  // 正处级以下用户（level < 27）过滤掉"待会签"状态
+  if (Number(userLevel) < 27) {
+    return allOptions.filter(option => parseInt(option.value) !== 1)
+  }
+  
+  return allOptions
+}
+
 /** 获取状态标签文本 */
 const getStatusLabel = (status) => {
+  const userLevel = currentUser.value?.level || 0
+  
+  // 正处级以下用户（level < 27）不显示"待会签"状态
+  if (parseInt(status) === 1 && Number(userLevel) < 27) {
+    return '待审批'
+  }
+  
   const dictList = getIntDictOptions(DICT_TYPE.LEAVE_STATUS)
   const dict = dictList.find(item => parseInt(item.value) === parseInt(status))
   return dict ? dict.label : '未知状态'

@@ -446,10 +446,10 @@
           </el-descriptions-item>
         </el-descriptions>
       </div>
-      <!-- 审批意见 -->
+      <!-- 请假审批意见 -->
       <div v-if="Number(personnel.level) !== 100" class="approval-section">
         <div class="divider">
-          <span class="divider-text">审批意见</span>
+          <span class="divider-text">请假审批意见</span>
         </div>
         <el-descriptions 
           border
@@ -468,12 +468,31 @@
         </el-descriptions>
       </div>
 
+      <!-- 销假审批意见 -->
+      <div v-if="shouldShowCancelLeaveApproval" class="approval-section">
+        <div class="divider">
+          <span class="divider-text">销假审批意见</span>
+        </div>
+        <el-descriptions 
+          border
+          :column="1"
+          class="approval-descriptions"
+        >
+          <el-descriptions-item label="单位负责人意见" label-class-name="approval-label">
+            <div v-html="formatApprovalDisplay(unitLeaderApproval)"></div>
+          </el-descriptions-item>
+          <el-descriptions-item label="人资处意见" label-class-name="approval-label">
+            <div v-html="formatApprovalDisplay(hrApproval)"></div>
+          </el-descriptions-item>
+        </el-descriptions>
+      </div>
+
     </el-card>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { DICT_TYPE, getIntDictOptions, getStrDictOptions, getDictLabel } from '@/utils/dict'
 import { Minus, Plus } from '@element-plus/icons-vue'
 import { pcaTextArr } from "element-china-area-data";
@@ -893,6 +912,30 @@ const fetchUserProfile = async () => {
 // 审批意见数据
 const leaderApproval = ref('');
 const hostApproval = ref('');
+// 销假审批意见数据
+const unitLeaderApproval = ref('');
+const hrApproval = ref('');
+
+// 计算是否显示销假审批意见
+const shouldShowCancelLeaveApproval = computed(() => {
+  // 检查是否包含因私类型（type = 4）
+  const hasPrivateLeave = selectedReasons.value.includes(4);
+  
+  if (!hasPrivateLeave) {
+    return false;
+  }
+  
+  // 计算因私请假的总天数
+  let totalPrivateDays = 0;
+  personalList.value.forEach(personal => {
+    if (personal.personalTotalDays) {
+      totalPrivateDays += Number(personal.personalTotalDays) || 0;
+    }
+  });
+  
+  // 只有因私请假且总天数大于等于7天才显示销假审批意见
+  return totalPrivateDays >= 7;
+});
 
 // 格式化审批意见显示
 const formatLeaveApprovalReason = (reason: string) => {
@@ -980,6 +1023,13 @@ const getApprovalOpinions = async () => {
         } 
         if (node.id==='host_sign' && node.tasks && node.tasks.length > 0) {
           hostApproval.value = node.tasks[0].reason || '';
+        }
+        // 处理销假审批意见
+        if (node.id==='unit_leader_sign' && node.tasks && node.tasks.length > 0) {
+          unitLeaderApproval.value = node.tasks[0].reason || '';
+        }
+        if (node.id==='hr_sign' && node.tasks && node.tasks.length > 0) {
+          hrApproval.value = node.tasks[0].reason || '';
         }
       });
     }
