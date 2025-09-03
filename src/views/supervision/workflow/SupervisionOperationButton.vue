@@ -530,6 +530,21 @@ import ProcessInstanceTimeline from '@/views/bpm/processInstance/detail/ProcessI
 import { isEmpty } from '@/utils/is'
 import { ElMessageBox } from 'element-plus'
 
+// 提取错误信息的通用函数
+const extractErrorMessage = (error: any): string => {
+  // 优先级：后端响应消息 > Error对象消息 > 字符串化错误
+  if (error?.response?.data?.msg) {
+    return error.response.data.msg
+  }
+  if (error?.data?.msg) {
+    return error.data.msg
+  }
+  if (error?.message) {
+    return error.message
+  }
+  return String(error) || '操作失败'
+}
+
 defineOptions({ name: 'SupervisionOperationButton' })
 
 const router = useRouter() // 路由
@@ -790,14 +805,9 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
           await handleStandardSupervisionUpdate()
         } catch (error) {
           console.error('督办单业务逻辑处理失败:', error)
-          // 根据错误类型显示不同的错误消息
-          if (error.message.includes('未选择') || error.message.includes('未填写') || error.message.includes('请填写') || error.message.includes('请通过')) {
-            message.error(error.message)
-          } else if (error.message.includes('权限')) {
-            message.error('您没有执行此操作的权限')
-          } else {
-            message.error('处理督办单业务逻辑失败，请稍后重试')
-          }
+          // 提取具体错误信息
+          const errorMessage = extractErrorMessage(error)
+          message.error(errorMessage)
           return
         }
       }
@@ -1317,56 +1327,11 @@ const handleStandardSupervisionUpdate = async () => {
   const leadDeptValidation = await validateLeadDeptRequirements()
   if (!leadDeptValidation) return
 
-  // 获取当前任务节点信息
+  // 更新督办单数据（由详情页内部判断是否有实际变更）
   const taskKey = runningTask.value?.taskDefinitionKey || ''
-  const orderDetail = props.supervisionDetailRef.getOrderDetailData()
-  const editFormData = props.supervisionDetailRef.getEditFormData()
-
-  if (!orderDetail?.id) {
-    throw new Error('督办单ID不存在')
-  }
-
-  // 根据节点类型进行特定验证
-  if (taskKey === 'select_leaddept') {
-    // 督办人选择牵头部门节点 - 检查编辑表单中的牵头单位或原始数据中的牵头单位
-    const leadDeptId = editFormData?.leadDept || orderDetail.leadDept
-    console.log('牵头部门验证:', {
-      taskKey,
-      editFormLeadDept: editFormData?.leadDept,
-      orderDetailLeadDept: orderDetail.leadDept,
-      finalLeadDeptId: leadDeptId
-    })
-    if (!leadDeptId) {
-      throw new Error('请先选择牵头部门')
-    }
-  } else if (['implement_plan', 'upload_plan', 'co_dept'].includes(taskKey)) {
-    // 需要填写工作推进情况的节点 - 检查是否有待提交的进度更新或已有的工作推进情况
-    const hasPendingProgressUpdate = props.supervisionDetailRef.pendingProgressUpdate
-    const hasExistingProgress = editFormData?.leadDeptDetail && editFormData.leadDeptDetail.trim() !== ''
-
-    console.log('工作推进情况验证:', {
-      taskKey,
-      hasPendingProgressUpdate: !!hasPendingProgressUpdate,
-      hasExistingProgress,
-      leadDeptDetail: editFormData?.leadDeptDetail,
-      pendingProgressUpdate: hasPendingProgressUpdate
-    })
-
-    if (!hasPendingProgressUpdate && !hasExistingProgress) {
-      throw new Error('请通过"添加工作推进"功能填写工作推进情况')
-    }
-  }
-
-  // 更新督办单数据（如果有任何编辑权限）
-  const hasAnyEditPermission = props.supervisionDetailRef.canEditLeadDept ||
-                               props.supervisionDetailRef.canEditCollaborateDepts ||
-                               props.supervisionDetailRef.canEditLeadDeptDetail
-
-  if (hasAnyEditPermission) {
-    const updateResult = await props.supervisionDetailRef.updateSupervisionOrder(approveReasonForm.nextAssignees)
-    if (!updateResult.success) {
-      throw new Error('更新督办单数据失败')
-    }
+  const updateResult = await props.supervisionDetailRef.updateSupervisionOrder(approveReasonForm.nextAssignees, taskKey)
+  if (!updateResult.success) {
+    throw new Error('更新督办单数据失败')
   }
 }
 

@@ -151,7 +151,7 @@
                   :default-time="defaultTime"
                 />
               </div>
-              <div class="form-label">汇报频次</div>
+              <div class="form-label required">汇报频次</div>
               <div class="form-content half-width">
                 <el-select v-model="orderForm.reportFrequency" placeholder="请选择汇报频次" class="form-select">
                   <el-option
@@ -236,11 +236,11 @@
                   />
                 </el-select>
               </div>
-              <div class="form-label">联系电话</div>
+              <div class="form-label required">联系电话</div>
               <div class="form-content half-width">
                 <el-input
                   v-model="orderForm.officePhone"
-                  placeholder="请输入联系电话"
+                  placeholder="将自动关联督办人手机号，多个以逗号分隔"
                   class="form-input"
                 />
               </div>
@@ -362,7 +362,7 @@ const loadSupervisionTypes = async () => {
         // 新格式：对象数组，包含id和type字段
         supervisionTypeOptions.value = result.map((item) => ({
           id: item.id, // 保存ID用于删除
-          value: item.type, // 使用type字段作为值
+          value: item.id, // 使用id作为值（数字）
           label: item.type // type字段作为显示标签
         }))
       } else {
@@ -452,7 +452,7 @@ const customCategoryValue = ref('')
 const orderForm = reactive({
   orderNumber: '', // 督办编号
   title: '', // 督办标题
-  category: undefined, // 督办分类（字符串类型）
+  category: undefined as number | undefined, // 督办分类（数字ID）
   // basis: undefined, // 督办依据（数字类型）
   urgencyLevel: undefined, // 紧急程度（数字类型）
   reportFrequency: undefined, // 汇报频次 (对应数据库 report_frequency) 1=每日 2=每周 3=每月 4=阶段性
@@ -549,6 +549,37 @@ const rules = {
         } else {
           callback()
         }
+      },
+      trigger: 'blur'
+    }
+  ],
+  reportFrequency: [
+    { required: true, message: '请选择汇报频次', trigger: 'change' }
+  ],
+  officePhone: [
+    { required: true, message: '请输入联系电话', trigger: 'blur' },
+    {
+      validator: (rule: any, value: string, callback: Function) => {
+        if (!value || !value.trim()) {
+          callback(new Error('联系电话不能为空'))
+          return
+        }
+        const phone = value.trim()
+        // 手机号格式：11位数字，1开头
+        const mobilePattern = /^1[3-9]\d{9}$/
+        // 座机格式：区号-号码 或 纯数字座机
+        const landlinePattern = /^(0\d{2,3}-?\d{7,8}|\d{7,8})$/
+        
+        // 支持逗号分隔的多个号码
+        const phoneNumbers = phone.split(',').map(p => p.trim()).filter(p => p !== '')
+        
+        for (const phoneNum of phoneNumbers) {
+          if (!mobilePattern.test(phoneNum) && !landlinePattern.test(phoneNum)) {
+            callback(new Error('请输入正确的手机号或座机号码（可逗号分隔多个）'))
+            return
+          }
+        }
+        callback()
       },
       trigger: 'blur'
     }
@@ -699,31 +730,39 @@ const handleSupervisorChange = async (userIds: number[]) => {
     return
   }
 
-  // 只有选择单个督办人时才自动获取手机号
-  if (userIds.length === 1) {
-    const userId = userIds[0]
-    // 调用API获取督办人手机号
+  // 选择了督办人时自动获取所有督办人手机号
+  if (userIds.length >= 1) {
     phoneLoading.value = true
     try {
-      const phoneData = await OrderApi.getSupervisorPhone(userId)
-
-      // 后端直接返回手机号字符串
-      if (phoneData && typeof phoneData === 'string' && phoneData.trim() !== '') {
-        orderForm.officePhone = phoneData.trim()
+      // 并发获取所有督办人的手机号
+      const phonePromises = userIds.map(userId => 
+        OrderApi.getSupervisorPhone(userId).catch(() => '')
+      )
+      const phoneResults = await Promise.all(phonePromises)
+      
+      // 过滤出有效的手机号，去重并用逗号拼接
+      const validPhones = phoneResults
+        .filter(phone => phone && typeof phone === 'string' && phone.trim() !== '')
+        .map(phone => phone.trim())
+        .filter((phone, index, arr) => arr.indexOf(phone) === index) // 去重
+      
+      if (validPhones.length > 0) {
+        orderForm.officePhone = validPhones.join(',')
       } else {
         orderForm.officePhone = ''
-        ElMessage.warning('督办人未设置手机号，请手动填写办公电话')
+        ElMessage.warning('所选督办人均未设置手机号，请手动填写联系电话')
+      }
+      
+      // 如果部分督办人没有手机号，给出提示
+      if (validPhones.length < userIds.length && validPhones.length > 0) {
+        ElMessage.info(`已自动填入${validPhones.length}个督办人的手机号，其余请手动补充`)
       }
     } catch (error) {
       orderForm.officePhone = ''
-      ElMessage.warning('无法获取督办人手机号，请手动填写办公电话')
+      ElMessage.warning('无法获取督办人手机号，请手动填写联系电话')
     } finally {
       phoneLoading.value = false
     }
-  } else if (userIds.length > 1) {
-    // 多选时清空手机号，提示用户手动填写
-    orderForm.officePhone = ''
-    ElMessage.info('选择多个督办人时，请手动填写联系电话')
   } else {
     // 没有选择督办人时清空手机号
     orderForm.officePhone = ''
@@ -943,7 +982,7 @@ const addCategoryToDict = async () => {
     }
 
     // 调用API创建督办分类
-    await OrderApi.createSupervisionType(typeData)
+    const newTypeId = await OrderApi.createSupervisionType(typeData)
 
     ElMessage.success('督办分类已添加为常用选项，下次可直接选择')
 
@@ -953,8 +992,8 @@ const addCategoryToDict = async () => {
     // 隐藏添加按钮
     showAddCategoryToDictButton.value = false
 
-    // 将自定义值设置为新添加的值（字符串类型）
-    orderForm.category = customCategoryValue.value.trim()
+    // 将自定义值设置为新添加的值（使用返回的数字ID）
+    orderForm.category = newTypeId
 
     // 清空自定义值
     customCategoryValue.value = ''
@@ -1037,9 +1076,6 @@ const validateRequiredFields = (): string[] => {
   return missingFields
 }
 
-
-
-
 // 自动生成概述内容（模板B：单句）
 const generateAutoSummary = () => {
   const parts: string[] = []
@@ -1120,11 +1156,17 @@ const createOrder = async () => {
     // 使用用户在页面上选择的督办类型，而不是URL参数
     const supervisionType = selectedType.value // 1=工作督办, 2=专项督查
 
+    // 提交前校验分类必须为数字ID
+    if (typeof orderForm.category !== 'number') {
+      ElMessage.error('请选择督办分类或将自定义分类添加为常用选项')
+      return
+    }
+
     const submitData: OrderVO = {
       orderCode: orderForm.orderNumber,
       orderTitle: orderForm.title,
-      type: supervisionType, // 督办类型：1=工作督办, 2=专项督查
-      detailType: orderForm.category, // 督办具体分类（字符串）
+      type: supervisionType,
+      detailType: Number(orderForm.category), // 督办具体分类ID
       orderType: supervisionType, // 1=工作督办, 2=专项督查
       // reason: orderForm.basis, // 已移除“督办依据”，不再提交
       priority: orderForm.urgencyLevel,
@@ -1135,7 +1177,8 @@ const createOrder = async () => {
       content: orderForm.content,
       reportFrequency: orderForm.reportFrequency ? Number(orderForm.reportFrequency) : undefined, // 汇报频次
       otherLeaders: orderForm.otherLeaderIds.join(','), // 其他校领导ID（支持多选，逗号分隔）
-      summary: summaryContent // 添加自动生成的概述信息字符串
+      summary: summaryContent, // 添加自动生成的概述信息字符串
+      officePhone: orderForm.officePhone // 办公电话
     }
 
     // 验证必要的ID字段
