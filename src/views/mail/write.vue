@@ -556,7 +556,9 @@ const remoteSearch = async (query: string) => {
     
     // 调用getSimpleUserList获取所有用户
     const users = await getSimpleUserList()
-    console.log('👥 用户列表API响应:', users)
+    for (const user of users) {
+      console.log(user.deptNames)
+    }
     
     if (users && Array.isArray(users)) {
       console.log(`✅ 获取用户列表成功，共 ${users.length} 个用户`)
@@ -575,12 +577,12 @@ const remoteSearch = async (query: string) => {
       // 转换为前端需要的格式
       userOptions.value = filteredUsers.slice(0, 50).map((user: any) => ({
         value: user.id.toString(), // 使用用户ID作为值
-        label: `${user.nickname || user.username} <${user.username}>`, // 显示格式：姓名 <用户名>
+        label: `${user.nickname || user.username} <${user.deptNames ? user.deptNames.join(', ') : ''}>`, // 显示格式：姓名 <部门名称>
         avatar: user.avatar || '',
         name: user.nickname || user.username,
         email: user.username, // 用户名作为邮箱标识
         userId: user.id,
-        deptName: user.deptId ? `部门${user.deptId}` : '' // 可以根据需要获取部门名称
+        deptName: user.deptNames ? user.deptNames.join(', ') : '' // 使用部门名称
       }))
       
       console.log('🔄 更新用户选项列表:', userOptions.value)
@@ -936,12 +938,12 @@ onMounted(async () => {
       // 转换为前端需要的格式，限制显示前20个用户
       userOptions.value = users.slice(0, 20).map((user: any) => ({
         value: user.id.toString(),
-        label: `${user.nickname || user.username} <${user.username}>`,
+        label: `${user.nickname || user.username} <${user.deptNames ? user.deptNames.join(', ') : ''}>`,
         avatar: user.avatar || '',
         name: user.nickname || user.username,
         email: user.username,
         userId: user.id,
-        deptName: user.deptId ? `部门${user.deptId}` : ''
+        deptName: user.deptNames ? user.deptNames.join(', ') : ''
       }))
       
       console.log('🔄 初始化用户选项列表:', userOptions.value)
