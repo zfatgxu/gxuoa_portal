@@ -1,6 +1,37 @@
 import request from '@/config/axios'
 import type { PageParam } from '@/api/supervision'
 
+// 身份证号工具函数
+/**
+ * 格式化身份证号显示（隐藏中间部分）
+ * @param idCard 身份证号
+ * @returns 格式化后的身份证号
+ */
+export const formatIdCard = (idCard: string): string => {
+  if (!idCard || idCard.length !== 18) return idCard
+  return idCard.replace(/(\d{6})(\d{8})(\d{4})/, '$1****$2$3')
+}
+
+/**
+ * 验证身份证号格式
+ * @param idCard 身份证号
+ * @returns 是否为有效身份证号
+ */
+export const isValidIdCard = (idCard: string): boolean => {
+  return /^[0-9X]{18}$/.test(idCard)
+}
+
+/**
+ * 获取当前用户身份证号（需要从用户信息中获取）
+ * @returns 当前用户身份证号
+ */
+export const getCurrentUserIdCard = (): string => {
+  // 这里需要根据实际的用户信息获取方式来实现
+  // 例如从localStorage、store或其他地方获取用户信息
+  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+  return userInfo?.idCard || ''
+}
+
 // 邮件发送请求参数接口
 export interface SendMailReqVO {
   toEmails: string[]           // 收件人邮箱列表
@@ -17,7 +48,7 @@ export interface SendMailReqVO {
 export interface CreateMailContentReqVO {
   subject: string              // 邮件主题
   content: string              // 邮件内容
-  senderId: number             // 发件人ID
+  senderId: string             // 发件人ID（身份证号）
   receiverIds: string          // 收件人ID列表，逗号分隔
   ccUserIds?: string           // 抄送人ID列表，逗号分隔
   priority?: number            // 邮件优先级(1-普通,2-重要,3-紧急)
@@ -40,12 +71,13 @@ export interface MailDetailVO {
   content: string
   status: number
   folder: string
-  senderId: number
+  senderId: string  // 发件人ID（身份证号）
   sender: {
     id: number
     nickname: string
     email: string
     workId: string
+    idCard: string  // 新增身份证号字段
   }
   receiverIds: string
   receivers: Array<{
@@ -105,7 +137,7 @@ export interface MailListItemVO {
   createTime: string
   updateTime: string
   // 分页列表特有字段
-  senderId?: number
+  senderId?: string  // 发件人ID（身份证号）
   senderName?: string
   receiverNames?: string
   attachmentCount?: number

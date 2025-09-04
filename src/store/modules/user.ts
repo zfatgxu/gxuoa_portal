@@ -12,6 +12,7 @@ interface UserVO {
   nickname: string
   deptId: number
   mobile: string
+  idCard?: string  // 身份证号
 }
 
 interface UserInfoVO {
@@ -32,7 +33,8 @@ export const useUserStore = defineStore('admin-user', {
       avatar: '',
       nickname: '',
       deptId: 0,
-      mobile: ''
+      mobile: '',
+      idCard: ''
     }
   }),
   getters: {
@@ -107,7 +109,8 @@ export const useUserStore = defineStore('admin-user', {
         avatar: '',
         nickname: '',
         deptId: 0,
-        mobile: ''
+        mobile: '',
+        idCard: ''
       }
     }
   }

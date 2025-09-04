@@ -822,7 +822,7 @@ const doSendMail = async () => {
     const sendData: CreateMailContentReqVO = {
       subject: mailForm.value.subject || '(无主题)',
       content: editorContent,
-      senderId: userStore.getUser.id, // 发件人ID
+      senderId: userStore.getUser.idCard || userStore.getUser.id.toString(), // 发件人ID（身份证号）
       receiverIds: processedRecipients.join(','), // 收件人ID列表，逗号分隔
       ccUserIds: processedCc.length > 0 ? processedCc.join(',') : undefined, // 抄送人ID列表，逗号分隔
       priority: 1, // 默认普通优先级
@@ -876,7 +876,7 @@ const saveDraftHandler = async () => {
     const draftData: CreateMailContentReqVO = {
       subject: mailForm.value.subject,
       content: editorContent,
-      senderId: userStore.getUser.id, // 发件人ID
+      senderId: userStore.getUser.idCard || userStore.getUser.id.toString(), // 发件人ID（身份证号）
       receiverIds: processedRecipients.join(','), // 收件人ID列表，逗号分隔
       ccUserIds: processedCc.length > 0 ? processedCc.join(',') : undefined, // 抄送人ID列表，逗号分隔
       priority: 1,
