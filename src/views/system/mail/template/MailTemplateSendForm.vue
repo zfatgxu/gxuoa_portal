@@ -32,7 +32,7 @@
   </Dialog>
 </template>
 <script lang="ts" setup>
-import * as MailTemplateApi from '@/api/system/mail/template'
+import * as MailTemplateApi from '@/api/system/mail/letter'
 
 defineOptions({ name: 'SystemMailTemplateSendForm' })
 
@@ -89,8 +89,8 @@ const submitForm = async () => {
   // 提交请求
   formLoading.value = true
   try {
-    const data = formData.value as MailTemplateApi.MailSendReqVO
-    const logId = await MailTemplateApi.sendMail(data)
+    const data = formData.value as MailTemplateApi.MailTemplateSendReqVO
+    const logId = await MailTemplateApi.sendTemplateMail(data)
     if (logId) {
       message.success('提交发送成功！发送结果，见发送日志编号：' + logId)
     }
