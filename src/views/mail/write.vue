@@ -103,7 +103,7 @@
         <!-- 工具栏 -->
         <div class="toolbar">
           <div class="toolbar-left">
-            <div class="tool-btn primary" @click="sendMail">
+            <div class="tool-btn primary" @click="sendMailHandler">
               <el-icon><Position /></el-icon>
               <span>发送</span>
             </div>
@@ -111,7 +111,7 @@
               <el-icon><View /></el-icon>
               <span>预览</span>
             </div>
-            <div class="tool-btn">
+            <div class="tool-btn" @click="triggerFileUpload">
               <el-icon><Files /></el-icon>
               <span>附件</span>
             </div>
@@ -155,10 +155,13 @@
                 filterable
                 remote
                 reserve-keyword
-                placeholder="请输入收件人"
-                :remote-method="searchUsers"
+                allow-create
+                default-first-option
+                placeholder="请输入收件人姓名、工号或邮箱地址"
+                :remote-method="remoteSearch"
                 :loading="loading"
                 class="recipient-select"
+                @change="validateRecipients"
               >
                 <el-option
                   v-for="item in userOptions"
@@ -191,10 +194,13 @@
                 filterable
                 remote
                 reserve-keyword
-                placeholder="请输入抄送人"
-                :remote-method="searchUsers"
+                allow-create
+                default-first-option
+                placeholder="请输入抄送人姓名、工号或邮箱地址"
+                :remote-method="remoteSearch"
                 :loading="loading"
                 class="recipient-select"
+                @change="validateCc"
               >
                 <el-option
                   v-for="item in userOptions"
@@ -221,10 +227,13 @@
                 filterable
                 remote
                 reserve-keyword
-                placeholder="请输入密送人"
-                :remote-method="searchUsers"
+                allow-create
+                default-first-option
+                placeholder="请输入密送人姓名、工号或邮箱地址"
+                :remote-method="remoteSearch"
                 :loading="loading"
                 class="recipient-select"
+                @change="validateBcc"
               >
                 <el-option
                   v-for="item in userOptions"
@@ -329,8 +338,29 @@
         </div>
         
         <!-- 编辑器内容区 -->
-        <div class="editor-content" contenteditable="true" @input="onEditorInput" style="flex: 1; padding: 20px; background-color: #ffffff; min-height: 300px; outline: none; border-radius: 0 0 4px 4px;">
+        <div class="editor-content" contenteditable="true" @input="handleEditorInput" style="flex: 1; padding: 20px; background-color: #ffffff; min-height: 300px; outline: none; border-radius: 0 0 4px 4px;">
           <p>请输入正文</p>
+        </div>
+        
+        <!-- 隐藏的文件输入 -->
+        <input 
+          id="file-input" 
+          type="file" 
+          multiple 
+          style="display: none" 
+          @change="(e: Event) => handleFileUpload(((e.target as HTMLInputElement).files))"
+        />
+        
+        <!-- 附件列表 -->
+        <div v-if="mailForm.attachments.length > 0" class="attachments-list" style="padding: 10px 20px; border-top: 1px solid #e0e0e0;">
+          <div class="attachment-item" v-for="(file, index) in mailForm.attachments" :key="index" style="display: inline-flex; align-items: center; margin-right: 10px; margin-bottom: 5px; padding: 6px 10px; background: #f0f0f0; border-radius: 6px; font-size: 12px;">
+            <el-icon style="margin-right: 5px; color: #409eff;"><Files /></el-icon>
+            <div style="display: flex; flex-direction: column;">
+              <span>{{ file.name }}</span>
+              <span style="color: #666; font-size: 10px;">{{ formatFileSize(file.size) }}</span>
+            </div>
+            <span @click="removeAttachment(index)" style="margin-left: 8px; cursor: pointer; color: #f56c6c; font-weight: bold;" title="删除附件">&times;</span>
+          </div>
         </div>
         
         <!-- 发件人信息 -->
@@ -380,18 +410,19 @@
             </div>
             
             <div class="group-contacts" v-if="group.expanded">
-              <div 
-                v-for="contact in filteredContacts(group.contacts)" 
-                :key="contact.id"
-                class="contact-item"
-                @click="addRecipient(contact)"
-              >
-                <el-avatar :size="24">{{ contact.name.substring(0, 1) }}</el-avatar>
-                <div class="contact-info" style="flex: 1; min-width: 0; overflow: hidden;">
-                  <div class="contact-name" style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ contact.name }}</div>
-                  <div class="contact-email" style="font-size: 11px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ contact.email }}</div>
-                </div>
+                          <div 
+              v-for="contact in filteredContacts(group.contacts)" 
+              :key="contact.id"
+              class="contact-item"
+              @click="addRecipient(contact)"
+            >
+              <el-avatar :size="24">{{ contact.name.substring(0, 1) }}</el-avatar>
+              <div class="contact-info" style="flex: 1; min-width: 0; overflow: hidden;">
+                <div class="contact-name" style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ contact.name }}</div>
+                <div class="contact-email" style="font-size: 11px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ contact.email }}</div>
+                <div v-if="contact.deptName" class="contact-dept" style="font-size: 10px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ contact.deptName }}</div>
               </div>
+            </div>
             </div>
           </div>
         </div>
@@ -400,11 +431,14 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
+import { sendMail, saveDraft, type CreateMailContentReqVO } from '@/api/system/mail/letter/index'
+import { getSimpleUserList } from '@/api/system/user'
+import { getAccessToken } from '@/utils/auth'
 import '@/views/mail/mail.css'
 import topImage from '@/views/mail/image/top.png'
 
@@ -438,21 +472,12 @@ library.add(
 import {
   Document,
   Edit,
-  Star,
   Position,
   Files,
   Delete,
-  Folder,
-  Search,
-  Plus,
   ArrowDown,
-  ArrowRight,
   Setting,
-  Back,
-  Paperclip,
   Clock,
-  CaretTop,
-  CaretBottom,
   Avatar,
   PictureFilled,
   Link,
@@ -464,22 +489,27 @@ import {
 
 // 导入mock数据
 import { 
-  sidebarItems as mockSidebarItems, 
   userOptions as mockUserOptions, 
-  contactGroups as mockContactGroups,
-  sendingOptions as mockSendingOptions,
-  searchUsers
+  contactGroups as mockContactGroups
 } from './mock/write.js'
 
 const router = useRouter()
 
 // 表单数据
-const mailForm = ref({
+const mailForm = ref<{
+  recipients: string[]
+  cc: string[]
+  bcc: string[]
+  subject: string
+  content: string
+  attachments: File[]
+}>({
   recipients: [],
   cc: [],
   bcc: [],
   subject: '',
-  content: ''
+  content: '',
+  attachments: []
 })
 
 // UI状态
@@ -488,11 +518,13 @@ const showBcc = ref(false)
 const contactSearch = ref('')
 const loading = ref(false)
 
-// 使用mock数据
-const sidebarItems = ref(mockSidebarItems)
-const userOptions = ref(mockUserOptions)
+// 使用mock数据，更新userOptions以包含邮箱地址
+const userOptions = ref(mockUserOptions.map(user => ({
+  ...user,
+  value: user.value.includes('@') ? user.value : `${user.value}@example.com`,
+  label: user.value.includes('@') ? user.label : `${user.label} <${user.value}@example.com>`
+})))
 const contactGroups = ref(mockContactGroups.map(group => ({ ...group, expanded: true })))
-const sendingOptions = mockSendingOptions
 
 // 当前用户信息
 const userStore = useUserStore();
@@ -506,41 +538,83 @@ const currentTime = computed(() => {
   return `${hours}:${minutes}`
 })
 
-// 菜单图标映射
-const getMenuIcon = (iconName) => {
-  const iconMap = {
-    'Edit': ['fas', 'pen-to-square'],
-    'Document': ['fas', 'envelope'],
-    'Star': ['fas', 'star'],
-    'Position': ['fas', 'paper-plane'],
-    'Files': ['fas', 'file'],
-    'Delete': ['fas', 'trash'],
-    'Folder': ['fas', 'folder'],
-    'Search': ['fas', 'search'],
-    'Plus': ['fas', 'plus'],
-    'Folder-Delete': ['fas', 'dumpster']
-  }
+
+
+// 邮箱格式验证 - 修改为可选验证
+const isValidEmail = (email: string): boolean => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+// 搜索用户/联系人 - 使用getSimpleUserList获取真实用户数据
+const remoteSearch = async (query: string) => {
+  console.log(`🔍 开始搜索联系人，关键词: "${query}"`)
   
-  return iconMap[iconName] || ['fas', 'envelope'] // 默认图标
-}
-
-// 模拟搜索用户
-const remoteSearch = (query) => {
-  if (query) {
+  try {
     loading.value = true
-    searchUsers(query).then(results => {
-      userOptions.value = results
-      loading.value = false
+    console.log('📡 调用后端用户列表API...')
+    
+    // 调用getSimpleUserList获取所有用户
+    const users = await getSimpleUserList()
+    console.log('👥 用户列表API响应:', users)
+    
+    if (users && Array.isArray(users)) {
+      console.log(`✅ 获取用户列表成功，共 ${users.length} 个用户`)
+      
+      // 如果有搜索关键词，进行过滤
+      let filteredUsers = users
+      if (query) {
+        filteredUsers = users.filter(user => 
+          (user.nickname && user.nickname.toLowerCase().includes(query.toLowerCase())) ||
+          (user.username && user.username.toLowerCase().includes(query.toLowerCase())) ||
+          (user.email && user.email.toLowerCase().includes(query.toLowerCase()))
+        )
+        console.log(`🔍 过滤后找到 ${filteredUsers.length} 个匹配用户`)
+      }
+      
+      // 转换为前端需要的格式
+      userOptions.value = filteredUsers.slice(0, 50).map((user: any) => ({
+        value: user.id.toString(), // 使用用户ID作为值
+        label: `${user.nickname || user.username} <${user.username}>`, // 显示格式：姓名 <用户名>
+        avatar: user.avatar || '',
+        name: user.nickname || user.username,
+        email: user.username, // 用户名作为邮箱标识
+        userId: user.id,
+        deptName: user.deptId ? `部门${user.deptId}` : '' // 可以根据需要获取部门名称
+      }))
+      
+      console.log('🔄 更新用户选项列表:', userOptions.value)
+    } else {
+      console.warn('⚠️ API没有返回数据，使用mock数据')
+      // 如果API没有返回数据，使用mock数据
+      const filteredMockUsers = mockUserOptions.filter(user => 
+        user.label.toLowerCase().includes(query.toLowerCase()) ||
+        user.value.toLowerCase().includes(query.toLowerCase())
+      )
+      userOptions.value = filteredMockUsers
+      console.log('📋 使用过滤后的mock数据:', userOptions.value)
+    }
+  } catch (error: unknown) {
+    console.error('❌ 搜索联系人失败:', error)
+    console.error('🔍 搜索错误详情:', {
+      message: (error as any)?.message,
+      response: (error as any)?.response,
+      status: (error as any)?.response?.status
     })
-  } else {
-    userOptions.value = mockUserOptions
+    // 降级使用mock数据
+    const filteredMockUsers = mockUserOptions.filter(user => 
+      user.label.toLowerCase().includes(query.toLowerCase()) ||
+      user.value.toLowerCase().includes(query.toLowerCase())
+    )
+    userOptions.value = filteredMockUsers
+    console.log('📋 降级使用mock数据:', userOptions.value)
+  } finally {
+    loading.value = false
+    console.log('🏁 搜索完成，loading状态:', loading.value)
   }
 }
 
-// 切换联系人列表显示 - 已移除折叠功能
-const toggleContactList = () => {
-  // 不再需要
-}
+
 
 // 切换分组展开状态
 const toggleGroupExpand = (index) => {
@@ -556,93 +630,330 @@ const filteredContacts = (contacts) => {
   )
 }
 
-// 添加收件人
-const addRecipient = (contact) => {
-  const recipient = {
-    value: contact.id,
-    label: `${contact.name} <${contact.email}>`
-  }
-  if (!mailForm.value.recipients.some(item => item.value === recipient.value)) {
-    mailForm.value.recipients.push(recipient)
+// 验证收件人 - 修改为支持姓名输入
+const validateRecipients = () => {
+  // 对于OA内部人员，允许输入姓名，不需要强制邮箱格式
+  // 这里可以添加其他验证逻辑，比如检查姓名是否在联系人列表中
+  console.log('收件人验证通过:', mailForm.value.recipients)
+}
+
+// 验证抄送人 - 修改为支持姓名输入
+const validateCc = () => {
+  // 对于OA内部人员，允许输入姓名，不需要强制邮箱格式
+  console.log('抄送人验证通过:', mailForm.value.cc)
+}
+
+// 验证密送人 - 修改为支持姓名输入
+const validateBcc = () => {
+  // 对于OA内部人员，允许输入姓名，不需要强制邮箱格式
+  console.log('密送人验证通过:', mailForm.value.bcc)
+}
+
+// 添加收件人 - 修改为支持姓名输入
+const addRecipient = (contact: any) => {
+  const identifier = contact.email || contact.name
+  if (identifier && !mailForm.value.recipients.includes(identifier)) {
+    mailForm.value.recipients.push(identifier)
   }
 }
 
 // 处理编辑器输入
-const handleEditorInput = (e) => {
-  mailForm.value.content = e.target.innerHTML
+const handleEditorInput = (e: Event) => {
+  const target = e.target as HTMLElement
+  // 使用textContent获取纯文本，或者使用innerHTML但需要进行XSS过滤
+  mailForm.value.content = target.innerHTML
+}
+
+// 触发文件选择
+const triggerFileUpload = () => {
+  const fileInput = document.getElementById('file-input') as HTMLInputElement
+  if (fileInput) {
+    fileInput.click()
+  }
+}
+
+// 格式化文件大小
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+// 删除附件
+const removeAttachment = (index: number) => {
+  const fileName = mailForm.value.attachments[index].name
+  mailForm.value.attachments.splice(index, 1)
+  ElMessage.success(`已删除附件: ${fileName}`)
+}
+
+// 重置表单
+const resetForm = () => {
+  mailForm.value = {
+    recipients: [],
+    cc: [],
+    bcc: [],
+    subject: '',
+    content: '',
+    attachments: []
+  }
+  
+  // 重置编辑器内容
+  const editorContent = document.querySelector('.editor-content')
+  if (editorContent) {
+    editorContent.innerHTML = '<p>请输入正文</p>'
+  }
+  
+  // 隐藏抄送和密送
+  showCc.value = false
+  showBcc.value = false
+}
+
+// 处理文件上传
+const handleFileUpload = (files: FileList | null) => {
+  if (files) {
+    const newFiles = Array.from(files)
+    // 验证文件大小（限制每个文件最大25MB）
+    const oversizedFiles = newFiles.filter(file => file.size > 25 * 1024 * 1024)
+    if (oversizedFiles.length > 0) {
+      ElMessage.warning(`文件 ${oversizedFiles.map(f => f.name).join(', ')} 超过25MB限制`)
+      return
+    }
+    
+    mailForm.value.attachments = [...mailForm.value.attachments, ...newFiles]
+    ElMessage.success(`成功添加 ${newFiles.length} 个附件`)
+  }
 }
 
 // 发送邮件
-const sendMail = () => {
+const sendMailHandler = async () => {
   if (!mailForm.value.recipients.length) {
     ElMessage.warning('请选择收件人')
     return
   }
+  
   if (!mailForm.value.subject) {
-    ElMessageBox.confirm('是否确认发送无主题邮件？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }).then(() => {
-      doSendMail()
-    }).catch(() => {})
-    return
+    try {
+      await ElMessageBox.confirm('是否确认发送无主题邮件？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      })
+    } catch {
+      return
+    }
   }
-  doSendMail()
+  
+  await doSendMail()
+}
+
+// 处理收件人：将姓名转换为用户ID，使用getSimpleUserList获取真实用户数据
+const processRecipients = async (recipients: string[]): Promise<string[]> => {
+  const processedUserIds: string[] = []
+  
+  try {
+    // 获取所有用户列表
+    const users = await getSimpleUserList()
+    
+    for (const recipient of recipients) {
+      // 检查是否已经是用户ID（数字格式）
+      if (/^\d+$/.test(recipient)) {
+        // 如果已经是用户ID格式，直接添加
+        processedUserIds.push(recipient)
+      } else if (isValidEmail(recipient)) {
+        // 如果是邮箱格式，需要查找对应的用户ID
+        const user = users.find((u: any) => 
+          u.username === recipient || u.email === recipient
+        )
+        if (user && user.id) {
+          processedUserIds.push(user.id.toString())
+        } else {
+          // 如果找不到用户，使用邮箱作为标识符
+          processedUserIds.push(recipient)
+        }
+      } else {
+        // 如果是姓名，尝试查找对应的用户ID
+        const user = users.find((u: any) => 
+          u.nickname === recipient || 
+          u.username === recipient ||
+          (u.nickname && u.nickname.toLowerCase().includes(recipient.toLowerCase())) ||
+          (u.username && u.username.toLowerCase().includes(recipient.toLowerCase()))
+        )
+        if (user && user.id) {
+          processedUserIds.push(user.id.toString())
+        } else {
+          // 如果找不到用户，使用姓名作为标识符
+          processedUserIds.push(recipient)
+        }
+      }
+    }
+  } catch (error: unknown) {
+    console.error('❌ 获取用户列表失败，使用原始收件人信息:', error)
+    // 如果API调用失败，直接使用原始收件人信息
+    return recipients
+  }
+  
+  return processedUserIds
 }
 
 // 执行发送邮件
-const doSendMail = () => {
-  loading.value = true
-  setTimeout(() => {
-    loading.value = false
+const doSendMail = async () => {
+  try {
+    loading.value = true
+    
+    // 验证必填字段
+    if (!mailForm.value.recipients.length) {
+      ElMessage.warning('请选择收件人')
+      return
+    }
+    
+    // 获取编辑器实际内容
+    const editorContent = document.querySelector('.editor-content')?.innerHTML || ''
+    
+    // 处理收件人：转换为用户ID
+    const processedRecipients = await processRecipients(mailForm.value.recipients)
+    
+    // 处理抄送人：转换为用户ID
+    const processedCc = mailForm.value.cc.length > 0 ? await processRecipients(mailForm.value.cc) : []
+    
+    const sendData: CreateMailContentReqVO = {
+      subject: mailForm.value.subject || '(无主题)',
+      content: editorContent,
+      senderId: userStore.getUser.id, // 发件人ID
+      receiverIds: processedRecipients.join(','), // 收件人ID列表，逗号分隔
+      ccUserIds: processedCc.length > 0 ? processedCc.join(',') : undefined, // 抄送人ID列表，逗号分隔
+      priority: 1, // 默认普通优先级
+      isDraft: false, // 不是草稿
+      requestReadReceipt: false, // 默认不请求已读回执
+      status: 0, // 正常状态
+      folder: 'sent' // 已发送文件夹
+    }
+    
+    console.log('发送邮件数据:', sendData)
+    
+    // 检查用户登录状态
+    const currentToken = getAccessToken()
+    console.log('🔑 当前 accessToken:', currentToken ? '已设置' : '未设置')
+    console.log('👤 用户信息:', userStore.getUser)
+    
+    if (!currentToken) {
+      ElMessage.error('用户未登录，请先登录')
+      router.push('/login')
+      return
+    }
+    
+    // 直接调用发送邮件API，axios拦截器会自动携带token
+    await sendMail(sendData)
     ElMessage.success('邮件发送成功')
-    router.push('/mail/inbox')
-  }, 1000)
+    
+    // 清空表单
+    resetForm()
+    router.push('/mail')
+  } catch (error: any) {
+    console.error('发送邮件失败:', error)
+    const errorMsg = error?.response?.data?.message || error?.message || '网络错误，请稍后重试'
+    ElMessage.error(`发送失败: ${errorMsg}`)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 保存草稿 - 修复类型错误
+const saveDraftHandler = async () => {
+  try {
+    // 获取编辑器实际内容
+    const editorContent = document.querySelector('.editor-content')?.innerHTML || ''
+    
+    // 处理收件人：转换为用户ID
+    const processedRecipients = await processRecipients(mailForm.value.recipients)
+    
+    // 处理抄送人：转换为用户ID
+    const processedCc = mailForm.value.cc.length > 0 ? await processRecipients(mailForm.value.cc) : []
+    
+    const draftData: CreateMailContentReqVO = {
+      subject: mailForm.value.subject,
+      content: editorContent,
+      senderId: userStore.getUser.id, // 发件人ID
+      receiverIds: processedRecipients.join(','), // 收件人ID列表，逗号分隔
+      ccUserIds: processedCc.length > 0 ? processedCc.join(',') : undefined, // 抄送人ID列表，逗号分隔
+      priority: 1,
+      isDraft: true, // 是草稿
+      requestReadReceipt: false,
+      status: 0, // 正常状态
+      folder: 'drafts' // 草稿文件夹
+    }
+    
+    console.log('保存草稿数据:', draftData)
+    
+    await saveDraft(draftData)
+    ElMessage.success('草稿保存成功')
+    router.push('/mail')
+  } catch (error: any) {
+    console.error('保存草稿失败:', error)
+    const errorMsg = error?.response?.data?.message || error?.message || '网络错误，请稍后重试'
+    ElMessage.error(`保存失败: ${errorMsg}`)
+  }
 }
 
 // 关闭编辑器
-const closeEditor = () => {
-  ElMessageBox.confirm('是否保存草稿？', '提示', {
-    confirmButtonText: '保存',
-    cancelButtonText: '不保存',
-    distinguishCancelAndClose: true,
-    closeOnClickModal: false
-  }).then(() => {
+const closeEditor = async () => {
+  try {
+    await ElMessageBox.confirm('是否保存草稿？', '提示', {
+      confirmButtonText: '保存',
+      cancelButtonText: '不保存',
+      distinguishCancelAndClose: true,
+      closeOnClickModal: false
+    })
+    
     // 保存草稿
-    console.log('保存草稿:', mailForm.value)
-    ElMessage.success('草稿保存成功')
-    router.push('/mail/inbox')
-  }).catch((action) => {
+    await saveDraftHandler()
+  } catch (action) {
     if (action === 'cancel') {
       // 不保存，直接返回
-      router.push('/mail/inbox')
+      router.push('/mail')
     }
-  })
+  }
 }
 
-// 上传附件
-const uploadAttachment = () => {
-  console.log('上传附件')
-}
 
-// 插入图片
-const insertImage = () => {
-  console.log('插入图片')
-}
-
-// 插入表格
-const insertTable = () => {
-  console.log('插入表格')
-}
 
 // 文本格式化命令
-const execFormatCommand = (command) => {
-  document.execCommand(command, false, null)
+const execFormatCommand = (command: string) => {
+  document.execCommand(command, false, '')
 }
 
-onMounted(() => {
+onMounted(async () => {
   // 初始化编辑器
+  console.log('🚀 组件挂载完成，开始初始化用户列表...')
+  
+  try {
+    // 获取初始用户列表
+    const users = await getSimpleUserList()
+    if (users && Array.isArray(users)) {
+      console.log(`✅ 初始化获取用户列表成功，共 ${users.length} 个用户`)
+      
+      // 转换为前端需要的格式，限制显示前20个用户
+      userOptions.value = users.slice(0, 20).map((user: any) => ({
+        value: user.id.toString(),
+        label: `${user.nickname || user.username} <${user.username}>`,
+        avatar: user.avatar || '',
+        name: user.nickname || user.username,
+        email: user.username,
+        userId: user.id,
+        deptName: user.deptId ? `部门${user.deptId}` : ''
+      }))
+      
+      console.log('🔄 初始化用户选项列表:', userOptions.value)
+    } else {
+      console.warn('⚠️ 初始化时API没有返回数据，使用mock数据')
+      userOptions.value = mockUserOptions
+    }
+  } catch (error: unknown) {
+    console.error('❌ 初始化用户列表失败:', error)
+    console.log('📋 使用mock数据作为初始选项')
+    userOptions.value = mockUserOptions
+  }
 })
 </script>
 

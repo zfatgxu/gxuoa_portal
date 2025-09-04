@@ -64,8 +64,7 @@
       </div>
       <div class="toolbar-right">
         <span class="email-count">共{{ emails.length }}封 ⬇</span>
-        <span class="refresh-icon">🔄</span>
-
+        <span class="refresh-icon" @click="$emit('syncMails')" style="cursor: pointer" title="同步邮件">🔄</span>
       </div>
     </div>
 
@@ -135,6 +134,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   deleteEmails: [emailIds: number[]]
   toggleStar: [emailId: number]
+  syncMails: []
 }>()
 
 // --- 全选逻辑 ---

@@ -81,6 +81,63 @@ const crudSchemas = reactive<CrudSchema[]>([
       component: 'Radio'
     }
   },
+  // 新增邮件接收配置字段
+  {
+    label: '接收协议',
+    field: 'receiveProtocol',
+    form: {
+      component: 'Select',
+      componentProps: {
+        options: [
+          { label: 'IMAP', value: 'IMAP' },
+          { label: 'POP3', value: 'POP3' }
+        ]
+      },
+      value: 'IMAP'
+    }
+  },
+  {
+    label: '接收服务器',
+    field: 'receiveHost'
+  },
+  {
+    label: '接收端口',
+    field: 'receivePort',
+    form: {
+      component: 'InputNumber',
+      value: 993
+    }
+  },
+  {
+    label: '接收SSL',
+    field: 'receiveSslEnable',
+    dictType: DICT_TYPE.INFRA_BOOLEAN_STRING,
+    dictClass: 'boolean',
+    form: {
+      component: 'Radio'
+    }
+  },
+  {
+    label: '自动同步',
+    field: 'autoSync',
+    dictType: DICT_TYPE.INFRA_BOOLEAN_STRING,
+    dictClass: 'boolean',
+    form: {
+      component: 'Radio'
+    }
+  },
+  {
+    label: '同步间隔(分钟)',
+    field: 'syncInterval',
+    form: {
+      component: 'InputNumber',
+      value: 5,
+      componentProps: {
+        min: 1,
+        max: 1440
+      }
+    }
+  },
   {
     label: '创建时间',
     field: 'createTime',

@@ -43,6 +43,22 @@
       <template #action="{ row }">
         <el-button
           link
+          type="success"
+          @click="handleTestConnection(row.id)"
+          :loading="testingConnection[row.id]"
+        >
+          测试连接
+        </el-button>
+        <el-button
+          link
+          type="info"
+          @click="handleSyncMail(row.id)"
+          :loading="syncingMail[row.id]"
+        >
+          同步邮件
+        </el-button>
+        <el-button
+          link
           type="primary"
           @click="openForm('update', row.id)"
           v-hasPermi="['system:mail-account:update']"
@@ -79,8 +95,13 @@ import { allSchemas } from './account.data'
 import * as MailAccountApi from '@/api/system/mail/account'
 import MailAccountForm from './MailAccountForm.vue'
 import MailAccountDetail from './MailAccountDetail.vue'
+import { ElMessage } from 'element-plus'
 
 defineOptions({ name: 'SystemMailAccount' })
+
+// 加载状态
+const testingConnection = ref<Record<number, boolean>>({})
+const syncingMail = ref<Record<number, boolean>>({})
 
 // tableObject：表格的属性对象，可获得分页大小、条数等属性
 // tableMethods：表格的操作对象，可进行获得分页、删除记录等操作
@@ -120,6 +141,32 @@ const handleDeleteBatch = async () => {
   if (ids.length === 0) return
   await MailAccountApi.deleteMailAccountList(ids)
   tableMethods.getList()
+}
+
+/** 测试邮件连接 */
+const handleTestConnection = async (id: number) => {
+  try {
+    testingConnection.value[id] = true
+    await MailAccountApi.testMailAccountConnection(id)
+    ElMessage.success('邮件账号连接测试成功')
+  } catch (error: any) {
+    ElMessage.error(`连接测试失败: ${error?.message || '未知错误'}`)
+  } finally {
+    testingConnection.value[id] = false
+  }
+}
+
+/** 同步邮件 */
+const handleSyncMail = async (id: number) => {
+  try {
+    syncingMail.value[id] = true
+    await MailAccountApi.syncMailAccount(id)
+    ElMessage.success('邮件同步成功')
+  } catch (error: any) {
+    ElMessage.error(`邮件同步失败: ${error?.message || '未知错误'}`)
+  } finally {
+    syncingMail.value[id] = false
+  }
 }
 
 /** 初始化 **/
