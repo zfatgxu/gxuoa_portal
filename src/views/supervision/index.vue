@@ -459,7 +459,7 @@ import { Filter, Document } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { SupervisionIndexApi, SupervisionTaskApi, LeaderRemarkApi } from '@/api/supervision/index'
 import { useUserStore } from '@/store/modules/user'
-import { formatDate } from '@/utils/formatTime'
+import { formatDate as utilFormatDate } from '@/utils/formatTime'
 import SeniorFilter from './components/seniorFilter.vue'
 
 const { push } = useRouter()
@@ -929,7 +929,7 @@ const fetchData = async () => {
             try {
               const date = new Date(dateValue)
               if (isNaN(date.getTime())) return ''
-              return formatDate(date, 'YYYY-MM-DD')
+              return utilFormatDate(date, 'YYYY年MM月DD日 HH:mm')
             } catch {
               return ''
             }
@@ -954,8 +954,8 @@ const fetchData = async () => {
             summary: supervisionData.summary || '', // 添加概述字段映射
             leadDepartment: parseLeadDepts(supervisionData.leadDeptNameMap),
             assistDepartments: parseCoDepts(supervisionData.coDeptNameMap),
-            createdDate: formatOrderDate(task.createTime),
-            deadline: formatOrderDate(supervisionData.deadline),
+            createdDate: task.createTime ? utilFormatDate(new Date(task.createTime), 'YYYY年MM月DD日 HH:mm') : '未设置',
+            deadline: supervisionData.deadline ? utilFormatDate(new Date(supervisionData.deadline), 'YYYY年MM月DD日 HH:mm') : '未设置',
             deadlineTimestamp: supervisionData.deadline, // 保存原始时间戳
             supervisor: getLeadLeadersText(supervisionData.leadLeaders) || '未分配',
             priority: getPriorityText(supervisionData.priority),
@@ -990,7 +990,7 @@ const fetchData = async () => {
             try {
               const date = new Date(dateValue)
               if (isNaN(date.getTime())) return ''
-              return formatDate(date, 'YYYY-MM-DD')
+              return utilFormatDate(date, 'YYYY年MM月DD日 HH:mm')
             } catch {
               return ''
             }

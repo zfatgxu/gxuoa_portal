@@ -20,9 +20,19 @@
       
       <!-- 导出按钮 -->
       <div class="export-buttons">
-        <el-button type="default" :icon="Download" size="large" @click="exportPDF">导出PDF</el-button>
-        <el-button type="default" :icon="Download" size="large" @click="exportExcel">导出Excel</el-button>
-        <el-button type="default" :icon="Download" size="large" @click="exportImage">导出图片</el-button>
+        <el-dropdown @command="handleExport">
+          <el-button type="primary" :loading="exportLoading">
+            <Download class="w-4 h-4 mr-1" />
+            导出
+            <el-icon class="el-icon--right"><arrow-down /></el-icon>
+          </el-button>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="excel">导出 Excel</el-dropdown-item>
+              <el-dropdown-item command="pdf">导出 PDF</el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
       </div>
     </div>
     
@@ -223,7 +233,9 @@
             <el-table-column prop="startDate" align="center" label="开始日期" />
             <el-table-column label="操作" align="center" fixed="right">
               <template #default="scope">
-                <el-button type="primary" link @click="viewDetail(scope.row)">详情</el-button>
+                <el-button type="primary" link size="small" @click="handleRowAction(scope.row)">
+                  查看详情
+                </el-button>
               </template>
             </el-table-column>
           </el-table>
@@ -239,8 +251,11 @@
     
     <!-- 高级筛选弹框 -->
     <SeniorFilter
+      ref="seniorFilterRef"
       v-model="seniorFilterVisible"
+      :result-count="seniorFilterResultCount"
       @apply="handleSeniorFilterApply"
+      @clear="handleSeniorFilterClear"
     />
   </div>
 </template>
@@ -248,11 +263,14 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick, watch, computed } from 'vue'
 import { CalendarRange, Timer, CircleCheck, Bell, Funnel, ChartSpline, ChartPie, Table, List } from 'lucide-vue-next'
-import { Download } from '@element-plus/icons-vue'
+import { formatDate as utilFormatDate } from '@/utils/formatTime'
+import { Download, ArrowDown } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import { ElMessage } from 'element-plus'
 import SeniorFilter from '../components/seniorFilter.vue'
-import { SupervisionIndexApi, OrderApi, MonthlyDataItem } from '@/api/supervision'
+import { SupervisionIndexApi } from '@/api/supervision/index'
+import Pagination from '@/components/Pagination/index.vue'
+import request from '@/config/axios'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -341,9 +359,15 @@ const pagination = ref({
 
 // 高级筛选
 const seniorFilterVisible = ref(false)
+const seniorFilterParams = ref({})
+const seniorFilterResultCount = ref(0)
+const seniorFilterRef = ref()
 const activeFilters = ref({
   selectedFiltersCount: 0
 })
+
+// 导出相关
+const exportLoading = ref(false)
 
 // 初始化折线图
 const initLineChart = (chartRef: any, title: string, data: any) => {
@@ -468,12 +492,29 @@ const loadStatisticsData = async () => {
     // 处理图表数据
     processChartData()
     
-    // 2. 获取详细列表数据（不受图表筛选影响）
+    // 2. 获取详细列表数据（支持高级筛选）
     const params: any = {
       pageNo: pagination.value.page,
       pageSize: pagination.value.limit
     }
 
+    // 优先使用高级筛选参数
+    if (Object.keys(seniorFilterParams.value).length > 0) {
+      const filters = seniorFilterParams.value
+      // 处理高级筛选参数，转换为后端接口格式
+      Object.keys(filters).forEach(key => {
+        const value = filters[key]
+        if (Array.isArray(value) && value.length > 0) {
+          // 数组参数直接赋值，qs会自动处理为重复键名格式
+          params[key] = value
+        } else if (value !== null && value !== undefined && value !== '') {
+          params[key] = value
+        }
+      })
+      console.log('使用高级筛选参数:', filters)
+    }
+
+    console.log('最终传递给后端的参数:', params)
     const listResponse = await SupervisionIndexApi.getIndexData(params)
     
     // 更新详细表格数据
@@ -484,7 +525,7 @@ const loadStatisticsData = async () => {
         try {
           const date = new Date(dateValue)
           if (isNaN(date.getTime())) return ''
-          return date.toISOString().split('T')[0]
+          return utilFormatDate(date, 'YYYY年MM月DD日 HH:mm')
         } catch {
           return ''
         }
@@ -506,13 +547,18 @@ const loadStatisticsData = async () => {
         supervisor: item.supervisorName || '未设置',
         leadDept: parseLeadDepts(item.leadDeptNameMap),
         status: item.supervisionStatus || 1,
-        startDate: formatOrderDate(item.createTime),
+        startDate: item.createTime ? utilFormatDate(new Date(item.createTime), 'YYYY年MM月DD日 HH:mm') : '未设置',
         processInstanceId: item.processInstanceId, // 添加流程实例ID用于跳转
         taskId: item.taskId // 添加任务ID用于跳转
       }
     })
     
     pagination.value.total = listResponse.total || 0
+    
+    // 更新高级筛选结果数量
+    if (Object.keys(seniorFilterParams.value).length > 0) {
+      seniorFilterResultCount.value = listResponse.total || 0
+    }
     
   } catch (error) {
     console.error('加载统计数据失败:', error)
@@ -679,12 +725,24 @@ const handlePagination = (paginationData: any) => {
 
 // 处理高级筛选应用
 const handleSeniorFilterApply = (filters: any) => {
+  seniorFilterParams.value = filters
   activeFilters.value = {
     selectedFiltersCount: filters.selectedFiltersCount || 0
   }
-  // 这里可以根据筛选条件重新加载数据
+  // 根据筛选条件重新加载数据
   loadStatisticsData()
   ElMessage.success('筛选条件已应用')
+}
+
+// 处理高级筛选清空
+const handleSeniorFilterClear = () => {
+  seniorFilterParams.value = {}
+  seniorFilterResultCount.value = 0
+  activeFilters.value = {
+    selectedFiltersCount: 0
+  }
+  // 重新获取数据
+  loadStatisticsData()
 }
 
 // 获取优先级文本 - 修复映射关系
@@ -788,16 +846,129 @@ const viewDetail = (row: any) => {
 }
 
 // 导出功能
-const exportPDF = () => {
-  ElMessage.info('导出PDF功能开发中')
+const handleExport = async (format: string) => {
+  if (exportLoading.value) return
+  
+  try {
+    exportLoading.value = true
+    
+    // 获取图表 Base64
+    const lineChartBase64 = getChartBase64(typeLineChart.value)
+    const pieChartBase64 = getChartBase64(typePieChart.value)
+    
+    // 构建导出参数
+    const exportParams = {
+      scope: 'allFiltered', // 默认导出受筛选全部
+      lineChartBase64,
+      pieChartBase64,
+      ...seniorFilterParams.value // 传递高级筛选参数
+    }
+    
+    // 调用导出接口
+    console.log('发送导出请求:', {
+      url: `/supervision/order/export-excel?format=${format}`,
+      params: exportParams
+    })
+    
+    const response = await request.postOriginal({
+      url: `/supervision/order/export-excel?format=${format}`,
+      data: exportParams,
+      responseType: 'blob',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    console.log('导出响应:', {
+      status: response.status,
+      headers: response.headers,
+      dataType: typeof response.data,
+      dataSize: response.data?.size || 'unknown'
+    })
+    
+    // 检查响应数据类型
+    if (response.data instanceof Blob) {
+      // 检查 Blob 是否为 JSON 错误响应
+      if (response.data.type === 'application/json') {
+        try {
+          const errorText = await response.data.text()
+          const errorData = JSON.parse(errorText)
+          console.error('服务器返回错误:', errorData)
+          ElMessage.error(`导出失败：${errorData.msg || '服务器错误'}`)
+          return
+        } catch (e) {
+          console.error('解析错误响应失败:', e)
+          ElMessage.error('导出失败：服务器返回了无效数据')
+          return
+        }
+      }
+      // 下载文件
+      downloadBlob(response.data, response.headers)
+    } else {
+      // 如果不是 Blob，可能是错误响应
+      console.error('响应不是文件类型:', response.data)
+      ElMessage.error('导出失败：服务器返回了非文件数据')
+      return
+    }
+    
+    ElMessage.success(`${format === 'excel' ? 'Excel' : 'PDF'} 导出成功`)
+    
+  } catch (error) {
+    console.error('导出失败:', error)
+    ElMessage.error('导出失败，请稍后重试')
+  } finally {
+    exportLoading.value = false
+  }
 }
 
-const exportExcel = () => {
-  ElMessage.info('导出Excel功能开发中')
+// 获取图表 Base64
+const getChartBase64 = (chartRef: any): string => {
+  if (!chartRef?.value) return ''
+  
+  try {
+    const chartInstance = echarts.getInstanceByDom(chartRef.value)
+    if (!chartInstance) return ''
+    
+    return chartInstance.getDataURL({
+      type: 'png',
+      pixelRatio: 2,
+      backgroundColor: '#fff'
+    })
+  } catch (error) {
+    console.error('获取图表Base64失败:', error)
+    return ''
+  }
 }
 
-const exportImage = () => {
-  ElMessage.info('导出图片功能开发中')
+// 下载 Blob 文件
+const downloadBlob = (blob: Blob, headers: any) => {
+  const contentDisposition = headers?.['content-disposition'] || headers?.['Content-Disposition']
+  let fileName = 'OAS督办统计-明细.xlsx'
+  
+  if (contentDisposition) {
+    const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=(['"]?)([^'"\n]*?)\1/)
+    if (fileNameMatch && fileNameMatch[2]) {
+      fileName = decodeURIComponent(fileNameMatch[2])
+    }
+  }
+  
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = fileName
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
+}
+
+// 处理表格行操作
+const handleRowAction = (row: any) => {
+  if (row.processInstanceId) {
+    router.push(`/supervision/workflow/detail/${row.processInstanceId}`)
+  } else {
+    ElMessage.warning('该督办单暂无详情信息')
+  }
 }
 
 // 监听图表类型变化

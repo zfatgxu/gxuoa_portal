@@ -375,7 +375,7 @@ import { ElMessage } from 'element-plus'
 import SupervisionDetailDialog from '../components/SupervisionDetailDialog.vue'
 import SeniorFilter from '../components/seniorFilter.vue'
 import { SupervisionTaskApi, LeaderRemarkApi, SupervisionIndexApi, SupervisionFollowApi } from '@/api/supervision/index'
-import { dateFormatter } from '@/utils/formatTime'
+import { dateFormatter, formatDate as utilFormatDate } from '@/utils/formatTime'
 import { useUserStore } from '@/store/modules/user'
 import { useRouter } from 'vue-router'
 
@@ -421,11 +421,7 @@ const calculateDisplayStatusNew = (supervisionStatus) => {
 // 格式化日期，只显示年月日
 const formatDateOnly = (timestamp) => {
   if (!timestamp) return ''
-  const date = new Date(timestamp)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+  return utilFormatDate(new Date(timestamp), 'YYYY年MM月DD日 HH:mm')
 }
 
 // 获取用户store
@@ -900,7 +896,7 @@ const getTypeText = (task) => {
 const getDeadlineText = (task) => {
   const deadline = task.supervisionPageVOData?.deadline
   if (!deadline) return '无'
-  return formatDateOnly(deadline)
+  return utilFormatDate(new Date(deadline), 'YYYY年MM月DD日 HH:mm')
 }
 
 // 根据任务状态获取截止时间的样式类 - 基于supervisionStatus
@@ -984,7 +980,7 @@ const getPriorityText = (task) => {
 
 const formatCreateTime = (timestamp) => {
   if (!timestamp) return ''
-  return formatDateOnly(timestamp)
+  return utilFormatDate(new Date(timestamp), 'YYYY年MM月DD日 HH:mm')
 }
 
 // Methods
@@ -1053,10 +1049,10 @@ const viewTaskDetail = async (task) => {
       supervisor: getLeadLeadersText(supervisionData.leadLeaders) || getLeadLeadersText(task.leadLeaders) || '',
       priority: getPriorityText(task),
       status: getStatusText(task), // 添加状态信息
-      deadline: supervisionData.deadline ? dateFormatter(null, null, supervisionData.deadline) : '无',
+      deadline: supervisionData.deadline ? utilFormatDate(new Date(supervisionData.deadline), 'YYYY年MM月DD日 HH:mm') : '无',
       deadlineTimestamp: supervisionData.deadline, // 添加原始时间戳
-      createTime: dateFormatter(null, null, task.createTime),
-      createdDate: dateFormatter(null, null, task.createTime),
+      createTime: utilFormatDate(new Date(task.createTime), 'YYYY年MM月DD日 HH:mm'),
+      createdDate: utilFormatDate(new Date(task.createTime), 'YYYY年MM月DD日 HH:mm'),
       orderNumber: supervisionData.orderCode || '',
       processInstanceId: task.processInstance?.id || task.processInstanceId,
       // 添加流程实例信息以匹配组件期望的数据结构

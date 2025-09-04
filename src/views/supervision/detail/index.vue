@@ -1012,7 +1012,7 @@ const formatDate = (timestamp: number | string | null) => {
   
   if (isNaN(time) || time <= 0) return '未设置'
   
-  return utilFormatDate(new Date(time), 'YYYY/MM/DD HH:mm')
+  return utilFormatDate(new Date(time), 'YYYY年MM月DD日 HH:mm')
 }
 
 // 获取页面标题
@@ -1995,13 +1995,7 @@ const getProgressRecords = async (processInstanceId: string, showAll: boolean = 
 const formatTimestamp = (timestamp: number) => {
   if (!timestamp) return ''
   const date = new Date(timestamp)
-  return date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  }).replace(/\//g, '/').replace(',', '')
+  return utilFormatDate(date, 'YYYY年MM月DD日 HH:mm')
 }
 
 // 时间选择限制通用工具函数
