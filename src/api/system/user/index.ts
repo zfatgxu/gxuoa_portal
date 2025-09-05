@@ -98,3 +98,8 @@ export const getSimpleUserList = (): Promise<UserVO[]> => {
 export const getUserListByDeptId = (deptId: number): Promise<UserVO[]> => {
   return request.get({ url: '/app/user/list-by-dept', params: { deptId: deptId } })
 }
+
+// 通过身份证号获取用户详情
+export const getUserByIdCard = (idCard: string): Promise<UserVO> => {
+  return request.get({ url: '/app/user/get-by-id-card', params: { idCard } })
+}
