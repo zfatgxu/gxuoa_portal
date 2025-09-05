@@ -139,6 +139,9 @@
             :normal-form-api="fApi"
             :writable-fields="writableFields"
             :supervision-detail-ref="supervisionDetailRef"
+            :is-lead-dept-leader-ready="isLeadDeptLeaderReadyFlag"
+            :is-lead-dept-leader="isLeadDeptLeaderFlag"
+            :lead-dept-leader-ids="leadDeptLeaderIdsRef"
             @success="refresh"
           />
         </div>
@@ -181,6 +184,12 @@ const processDefinition = ref<any>({}) // 流程定义
 const processModelView = ref<any>({}) // 流程模型视图
 const operationButtonRef = ref() // 操作按钮组件 ref
 const supervisionDetailRef = ref() // 督办详情组件 ref
+
+// 本地响应式状态，用于同步子组件暴露的 computed 属性
+const isLeadDeptLeaderReadyFlag = ref(false)
+const isLeadDeptLeaderFlag = ref(false)
+const leadDeptLeaderIdsRef = ref<number[]>([])
+
 const auditIconsMap = {
   [TaskStatusEnum.RUNNING]: runningSvg,
   [TaskStatusEnum.APPROVE]: approveSvg,
@@ -334,12 +343,38 @@ const refresh = () => {
 /** 当前的Tab */
 const activeTab = ref('form')
 
+// 同步子组件暴露的 computed 属性到本地响应式状态
+watch(
+  () => supervisionDetailRef.value?.isLeadDeptLeaderReady?.value,
+  (newValue, oldValue) => {
+    isLeadDeptLeaderReadyFlag.value = !!newValue
+  },
+  { immediate: true }
+)
+
+watch(
+  () => supervisionDetailRef.value?.isLeadDeptLeader?.value,
+  (newValue, oldValue) => {
+    isLeadDeptLeaderFlag.value = !!newValue
+  },
+  { immediate: true }
+)
+
+watch(
+  () => supervisionDetailRef.value?.getOrderDetailData?.()?.leadDeptLeaderIds,
+  (newValue) => {
+    leadDeptLeaderIdsRef.value = Array.isArray(newValue) ? newValue : []
+  },
+  { immediate: true }
+)
+
 /** 初始化 */
 const userOptions = ref<UserApi.UserVO[]>([]) // 用户列表
 onMounted(async () => {
   getDetail()
   // 获得用户列表
   userOptions.value = await UserApi.getSimpleUserList()
+  
 })
 </script>
 

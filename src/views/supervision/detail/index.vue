@@ -297,11 +297,10 @@
                     <div class="latest-progress-header">
                       <Icon icon="ep:star-filled" class="header-icon" />
                       最新动态
-                      <span v-if="progressRecords[0].isPending" class="pending-badge">待提交</span>
                     </div>
                     <div class="latest-progress-item">
                       <div class="latest-progress-dot">
-                        <div class="dot-inner" :class="{ 'pending-dot': progressRecords[0].isPending }"></div>
+                        <div class="dot-inner"></div>
                       </div>
                       <div class="latest-progress-content">
                         <div class="latest-progress-header-row">
@@ -309,15 +308,7 @@
                             <Icon icon="ep:user" class="user-icon" />
                             {{ progressRecords[0].title }}
                             <span class="latest-progress-handler" v-if="progressRecords[0].handler">{{ progressRecords[0].handler }}</span>
-                            <el-button
-                              v-if="progressRecords[0].isPending && canEditLeadDeptDetail"
-                              type="primary"
-                              size="small"
-                              @click="editPendingProgress"
-                              class="edit-pending-btn"
-                            >
-                              编辑
-                            </el-button>
+                            <!-- 移除了编辑待提交进度的按钮 -->
                           </div>
                           <div v-if="progressRecords[0].expectedTime" class="latest-progress-expected-time-right">
                             <Icon icon="ep:calendar" class="calendar-icon" />
@@ -452,7 +443,7 @@
                   <el-option label="是" :value="true" />
                   <el-option label="否" :value="false" />
                 </el-select>
-                <el-input v-else :value="orderDetail.isProjectSupervision ? '是' : '否'" readonly class="readonly-display" />
+                <el-input v-else :value="projectApprovalText" readonly class="readonly-display" />
               </div>
             </div>
 
@@ -460,7 +451,7 @@
             <div class="form-row">
               <div class="form-label">是否结束督办</div>
               <div class="form-content full-width">
-                <el-input :value="orderDetail.isSupervisionClosed ? '是' : '否'" readonly class="readonly-display" />
+                <el-input :value="closeApprovalText" readonly class="readonly-display" />
               </div>
             </div>
 
@@ -563,7 +554,7 @@
             <Icon icon="ep:close" class="btn-icon" />
             取消
           </el-button>
-          <el-button type="primary" @click="submitAddProgress" class="submit-btn">
+          <el-button type="primary" @click="submitAddProgress" :loading="progressSubmitting" :disabled="progressSubmitting" class="submit-btn">
             <Icon icon="ep:check" class="btn-icon" />
             添加更新
           </el-button>
@@ -611,22 +602,25 @@
       </template>
     </el-dialog>
 
+
   </ContentWrap>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch, reactive } from 'vue'
+import { ref, onMounted, computed, watch, reactive, nextTick, shallowRef } from 'vue'
 import { useRoute } from 'vue-router'
 import { OrderApi, LeaderRemarkApi, type OrderRespVO, type OrderSaveReqVO, type OrderWorkflowUpdateReqVO, type AttachmentFileInfo, type AttachmentRespVO } from '@/api/supervision'
 import { getSimpleDeptList, getDept, type DeptVO } from '@/api/system/dept'
 import { getSimpleUserList, type UserVO } from '@/api/system/user'
 import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
-import { formatDate as utilFormatDate } from '@/utils/formatTime'
+import { formatDate } from '@/utils/formatTime'
+import { utilFormatDate } from '@/utils/dateUtil'
 import { useUserStore } from '@/store/modules/user'
 import { ElMessage, ElMessageBox, type UploadUserFile } from 'element-plus'
 import { WarningFilled } from '@element-plus/icons-vue'
 import { UploadFile } from '@/components/UploadFile'
 import { Icon } from '@/components/Icon'
+import * as DeptApi from '@/api/system/dept'
 import * as FileApi from '@/api/infra/file'
 import * as ProcessInstanceApi from '@/api/bpm/processInstance'
 
@@ -670,9 +664,10 @@ const isExpanded = ref(true)                     // 当前是否为展开状态
 const isToggling = ref(false)                    // 是否正在切换状态（防止频繁点击）
 const addProgressDialogVisible = ref(false)     // 添加进度弹窗状态
 const addRemarkDialogVisible = ref(false)       // 添加批示弹窗状态
+const progressSubmitting = ref(false)           // 进度提交中状态
+const hasNewProgressInThisSession = ref(false)  // 本会话是否新增过进度记录
 const progressSortOrder = ref<'asc' | 'desc'>('desc') // 进度记录排序方式，默认倒序（最新在前）
-const pendingProgressUpdate = ref<any>(null)    // 待提交的进度更新数据
-const isEditingPendingProgress = ref(false)     // 是否正在编辑待提交的进度
+// 移除了 pendingProgressUpdate 和 isEditingPendingProgress 相关逻辑
 
 // 进度更新表单数据
 const progressForm = reactive({
@@ -742,6 +737,30 @@ const isCurrentUserLeader = computed(() => {
   }
   
   return orderDetail.value.leadLeaders.some(leader => leader.id === currentUserId)
+})
+
+// 牵头单位负责人数据是否就绪
+const isLeadDeptLeaderReady = computed(() => {
+  const hasOrderId = !!orderDetail.value.id
+  const hasLeadDeptLeaderIds = Array.isArray(orderDetail.value.leadDeptLeaderIds)
+  
+  return hasOrderId && hasLeadDeptLeaderIds
+})
+
+// 判断当前用户是否为牵头单位负责人
+const isLeadDeptLeader = computed(() => {
+  const currentUserId = userStore.getUser?.id
+  const currentUserIdNum = Number(currentUserId)
+  
+  if (!currentUserId || !isLeadDeptLeaderReady.value) {
+    return false
+  }
+  
+  // 直接使用后端返回的 leadDeptLeaderIds 进行判断
+  const leadDeptLeaderIds = orderDetail.value.leadDeptLeaderIds || []
+  const isLeader = leadDeptLeaderIds.some(leaderId => Number(leaderId) === currentUserIdNum)
+  
+  return isLeader
 })
 
 // 计算显示的进度记录（除了最新的，并按排序方式显示）
@@ -930,18 +949,6 @@ const getLeadDeptNames = () => {
   })
 }
 
-// 将牵头单位数据转换为统一格式（数组）
-const normalizeLeadDept = (leadDept: any): number[] => {
-  if (!leadDept) return []
-  if (Array.isArray(leadDept)) return leadDept
-  if (typeof leadDept === 'number') return [leadDept]
-  if (typeof leadDept === 'string') {
-    return leadDept.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))
-  }
-  return []
-}
-
-
 
 // 根据流程实例ID获取督办单详情
 const getOrderDetail = async (processInstanceId: string) => {
@@ -962,15 +969,12 @@ const getOrderDetail = async (processInstanceId: string) => {
       ...data,
       // 确保数组字段正确初始化
       supervisors: data.supervisors || [],
-      leadLeaders: data.leadLeaders || [],
-      // 确保其他字段正确处理null值
-      coDept: data.coDept || '',
-      leadDept: data.leadDept || null,
-      deptDetail: data.deptDetail || null
+      leadLeaders: data.leadLeaders || []
     }
-
+    
+    // 时间显示现在直接基于活动节点数据，无需初始化冻结时间
     // 初始化编辑表单数据
-    editForm.value.leadDept = normalizeLeadDept(data.leadDept)
+    editForm.value.leadDept = data.leadDept ? data.leadDept.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id)) : []
     editForm.value.leadDeptNames = getLeadDeptNames()
     editForm.value.coDept = data.coDept || ''
     editForm.value.collaborateDepts = getCollaborateDepts(data.coDept)
@@ -1271,7 +1275,6 @@ const getFullApprovalDetail = async (processInstanceId: string) => {
 
     if (data && data.activityNodes) {
       fullActivityNodes.value = data.activityNodes
-      console.log('[approval] 成功获取活动节点', { count: data.activityNodes.length, nodes: data.activityNodes })
       
       // 立即刷新权限，确保权限状态及时更新
       await checkAllPermissions()
@@ -1302,13 +1305,13 @@ const NODE_PERMISSIONS = {
   },
   'implement_plan': {
     leadDept: false,          // 
-    collaborateDepts: true,   // 牵头单位负责人可编辑协办单位
+    collaborateDepts: false,  // 协办单位不可编辑
     leadDeptDetail: true,     //牵头/协办负责人可编辑工作推进情况
     attachments: true         // 如有编辑权限可上传附件
   },
   'upload_plan': {
     leadDept: false,          // 
-    collaborateDepts: false,  // 
+    collaborateDepts: true,   // 牵头单位负责人可编辑协办单位
     leadDeptDetail: true,     // 牵头/协办负责人可编辑工作推进情况
     attachments: true         //  如有编辑权限可上传附件
   },
@@ -1395,7 +1398,6 @@ const checkCurrentUserPermissions = () => {
     // 根据节点ID获取权限配置
     const nodePermissions = NODE_PERMISSIONS[nodeId]
     if (nodePermissions) {
-      console.log('[perm] 命中节点权限', { nodeId, nodePermissions })
       Object.keys(nodePermissions).forEach(key => {
         if (nodePermissions[key]) {
           permissions[key] = true
@@ -1404,7 +1406,6 @@ const checkCurrentUserPermissions = () => {
     }
   })
 
-  console.log('[perm] 计算后的权限', permissions)
   return permissions
 }
 
@@ -1441,21 +1442,6 @@ const checkAllPermissions = async () => {
                                permissions.officePhone
   // 这里可以根据实际需求调整附件权限逻辑
 
-  console.log('[perm] 最终可编辑标志', {
-    canEditLeadDept: canEditLeadDept.value,
-    canEditCollaborateDepts: canEditCollaborateDepts.value,
-    canEditLeadDeptDetail: canEditLeadDeptDetail.value,
-    canEditOrderTitle: canEditOrderTitle.value,
-    canEditContent: canEditContent.value,
-    canEditType: canEditType.value,
-    canEditPriority: canEditPriority.value,
-    canEditDeadline: canEditDeadline.value,
-    canEditReportFrequency: canEditReportFrequency.value,
-    canEditOtherLeaders: canEditOtherLeaders.value,
-    canEditSupervisors: canEditSupervisors.value,
-    canEditOfficePhone: canEditOfficePhone.value,
-    hasAnyEditPermission
-  })
 }
 
 const hasEditPermission = computed(() => {
@@ -1579,19 +1565,22 @@ const getSupervisionWorkflowUpdateData = async (startLeaderSelectAssignees?: Rec
     updateData.officePhone = editForm.value.officePhone
   }
 
-  // 获取协办单位数据 - 优先使用编辑表单的数据，其次使用原始数据
-  let coDeptSource = ''
-  if (canEditCollaborateDepts.value && editForm.value.coDept) {
-    coDeptSource = editForm.value.coDept
-  } else if (orderDetail.value.coDept) {
-    coDeptSource = orderDetail.value.coDept
-  }
   // 处理协办单位数据
-  if (coDeptSource) {
-    const { coDeptString, coDeptArray } = ensureDataConsistency(coDeptSource)
-    updateData.coDept = coDeptString
-
+  if (canEditCollaborateDepts.value) {
+    // 在 upload_plan 节点，总是提交协办单位数据（包括清空的情况）
+    const coDeptSource = editForm.value.coDept || ''
+    if (coDeptSource) {
+      const { coDeptString, coDeptArray } = ensureDataConsistency(coDeptSource)
+      updateData.coDept = coDeptString
+    } else {
+      // 支持清空协办单位
+      updateData.coDept = ''
+    }
     // 工作流审批人配置由后端自动设置，前端不需要处理
+  } else if (orderDetail.value.coDept) {
+    // 无编辑权限时，保持原有数据
+    const { coDeptString, coDeptArray } = ensureDataConsistency(orderDetail.value.coDept)
+    updateData.coDept = coDeptString
   }
   // 处理牵头单位（督办人可编辑）
   if (canEditLeadDept.value && editForm.value.leadDept.length > 0) {
@@ -1663,6 +1652,11 @@ const validatePhone = (value: string): boolean => {
 
 // 统一校验入口
 const validateBeforeUpdate = async (contextTaskKey?: string): Promise<void> => {
+  // 通用规则：有"添加工作推进"按钮权限时，必须在本会话新增一条进度记录
+  if (canEditLeadDeptDetail.value && !hasNewProgressInThisSession.value) {
+    throw new Error('请先新增一条工作推进记录再提交')
+  }
+  
   // 节点特定规则校验
   if (contextTaskKey) {
     switch (contextTaskKey) {
@@ -1677,11 +1671,9 @@ const validateBeforeUpdate = async (contextTaskKey?: string): Promise<void> => {
       case 'implement_plan':
       case 'upload_plan':
       case 'co_dept':
-        // 需要填写工作推进情况的节点
-        const hasPendingProgressUpdate = !!pendingProgressUpdate.value
-        const hasExistingProgress = !isEmpty(getEffectiveValue('leadDeptDetail'))
-        
-        if (!hasPendingProgressUpdate && !hasExistingProgress) {
+        // 需要填写工作推进情况的节点：改为仅检查是否存在至少一条进度记录
+        const hasProgressRecords = Array.isArray(progressRecords.value) && progressRecords.value.length > 0
+        if (!hasProgressRecords) {
           throw new Error('请通过"添加工作推进"功能填写工作推进情况')
         }
         break
@@ -1736,40 +1728,7 @@ const updateSupervisionOrder = async (startLeaderSelectAssignees?: Record<string
     // 统一校验入口
     await validateBeforeUpdate(contextTaskKey)
     
-    // 先提交待处理的进度更新（如果有）
-    if (pendingProgressUpdate.value) {
-      try {
-        // 获取processInstanceId（在清空数据之前）
-        const processInstanceId = pendingProgressUpdate.value.processInstanceId ||
-                                 props.id?.toString() ||
-                                 route.query.processInstanceId as string ||
-                                 route.params.id as string ||
-                                 route.query.id as string
-
-        await OrderApi.insertSupervisionOrderTaskNew(pendingProgressUpdate.value)
-        ElMessage.success('进度更新提交成功')
-
-        // 移除界面上的待提交标记
-        if (progressRecords.value.length > 0 && progressRecords.value[0].isPending) {
-          progressRecords.value[0].isPending = false
-        }
-
-        // 清空待处理的进度更新数据
-        pendingProgressUpdate.value = null
-
-        // 重新加载进度记录，保持当前的展开/折叠状态
-        if (processInstanceId) {
-          await getProgressRecords(processInstanceId, isExpanded.value)
-        }
-      } catch (progressError) {
-        console.error('提交进度更新失败:', progressError)
-        ElMessage.error('提交进度更新失败，审批流程已终止')
-        return {
-          success: false,
-          data: null
-        }
-      }
-    }
+    // 移除了待提交进度更新的逻辑，现在进度更新直接提交
 
     const updateData = await getSupervisionWorkflowUpdateData(startLeaderSelectAssignees)
 
@@ -1998,6 +1957,106 @@ const formatTimestamp = (timestamp: number) => {
   return utilFormatDate(date, 'YYYY年MM月DD日 HH:mm')
 }
 
+// 根据节点key获取指定节点的通过时间
+const getNodePassTimeByKey = (taskDefinitionKey: string): number | null => {
+  if (!fullActivityNodes.value || fullActivityNodes.value.length === 0) {
+    return null
+  }
+  
+  // 查找已完成的指定节点 (status === 2)，使用 id 字段匹配
+  const targetNode = fullActivityNodes.value.find(node => 
+    node.status === 2 && node.id === taskDefinitionKey
+  )
+  
+  if (targetNode && targetNode.endTime) {
+    return Number(targetNode.endTime)
+  }
+  
+  return null
+}
+
+// 获取督查办主任审核通过时间（立项督办）
+const getDirectorCheckPassTime = (): number | null => {
+  return getNodePassTimeByKey('director_check')
+}
+
+// 获取督查办主任复核通过时间（结束督办）
+const getDirectorRecheckPassTime = (): number | null => {
+  return getNodePassTimeByKey('director_recheck')
+}
+
+// 获取审批通过时间
+const getApprovalPassTime = (preferType?: 'project' | 'close'): number | null => {
+  // 优先级1: 从流程节点中查找通过节点的 endTime
+  if (fullActivityNodes.value && fullActivityNodes.value.length > 0) {
+    // 查找已完成的节点 (status === 2)
+    const completedNodes = fullActivityNodes.value.filter(node => node.status === 2)
+    
+    if (completedNodes.length > 0) {
+      // 按完成时间倒序排列，取最新的完成节点
+      const sortedNodes = completedNodes.sort((a, b) => {
+        const endTimeA = a.endTime || 0
+        const endTimeB = b.endTime || 0
+        return endTimeB - endTimeA
+      })
+      
+      const latestCompletedNode = sortedNodes[0]
+      if (latestCompletedNode.endTime) {
+        return latestCompletedNode.endTime
+      }
+    }
+  }
+  
+  // 优先级2: 使用 props.applyTime
+  if (props.applyTime) {
+    const applyTimeNum = typeof props.applyTime === 'string' ? 
+      new Date(props.applyTime).getTime() : 
+      Number(props.applyTime)
+    if (!isNaN(applyTimeNum) && applyTimeNum > 0) {
+      return applyTimeNum
+    }
+  }
+  
+  // 优先级3: 返回 null（无时间）
+  return null
+}
+
+// 计算属性：立项督办审批状态文本（使用督查办主任审核通过时间）
+const projectApprovalText = computed(() => {
+  // 未通过或未审批：显示空白
+  if (!orderDetail.value.isProjectSupervision) {
+    return ''
+  }
+  
+  // 获取督查办主任审核通过时间
+  const passTime = getDirectorCheckPassTime()
+  if (passTime) {
+    const formattedTime = utilFormatDate(new Date(passTime), 'YYYY年MM月DD日 HH:mm')
+    return `同意督办 ${formattedTime}`
+  }
+  
+  // 找不到时间：只显示"同意督办"
+  return '同意督办'
+})
+
+// 计算属性：结束督办审批状态文本（使用督查办主任复核通过时间）
+const closeApprovalText = computed(() => {
+  // 未通过或未审批：显示空白
+  if (!orderDetail.value.isSupervisionClosed) {
+    return ''
+  }
+  
+  // 获取督查办主任复核通过时间
+  const passTime = getDirectorRecheckPassTime()
+  if (passTime) {
+    const formattedTime = utilFormatDate(new Date(passTime), 'YYYY年MM月DD日 HH:mm')
+    return `同意结束督办 ${formattedTime}`
+  }
+  
+  // 找不到时间：只显示"同意结束督办"
+  return '同意结束督办'
+})
+
 // 时间选择限制通用工具函数
 // 计算默认时间（当前时间的下一个小时）
 const getNextHourDefaultTime = () => {
@@ -2113,8 +2172,8 @@ const submitAddRemark = async () => {
     remarkForm.remark = ''
 
     // 刷新进度记录列表
-    if (processInstanceId) {
-      await getProgressRecords(processInstanceId, isExpanded.value)
+    if (refreshProcessInstanceId) {
+      await getProgressRecords(refreshProcessInstanceId, isExpanded.value)
     }
   } catch (error) {
     console.error('添加批示失败:', error)
@@ -2176,47 +2235,14 @@ const remarkFormRef = ref()
 // 取消添加进度更新
 const cancelAddProgress = () => {
   addProgressDialogVisible.value = false
-
-  // 如果是编辑模式，恢复原来的数据，不清空待提交记录
-  if (isEditingPendingProgress.value) {
-    isEditingPendingProgress.value = false
-    // 重置表单但不清空待处理的进度更新数据
-    progressForm.deptDetail = ''
-    progressForm.planTime = ''
-    progressForm.fileList = []
-  } else {
-    // 如果是新增模式，清空所有数据
-    pendingProgressUpdate.value = null
-    // 移除界面上的待提交记录（如果有）
-    if (progressRecords.value.length > 0 && progressRecords.value[0].isPending) {
-      progressRecords.value.shift()
-      // 如果还有其他记录，将第一个标记为最新
-      if (progressRecords.value.length > 0) {
-        progressRecords.value[0].isLatest = true
-      }
-    }
-    // 重置表单
-    progressForm.deptDetail = ''
-    progressForm.planTime = ''
-    progressForm.fileList = []
-  }
+  
+  // 重置表单
+  progressForm.deptDetail = ''
+  progressForm.planTime = ''
+  progressForm.fileList = []
 }
 
-// 编辑待提交的进度更新
-const editPendingProgress = () => {
-  if (pendingProgressUpdate.value) {
-    // 将待提交的数据重新填入表单
-    progressForm.deptDetail = pendingProgressUpdate.value.deptDetail
-    progressForm.planTime = pendingProgressUpdate.value.planTime || ''
-    progressForm.fileList = pendingProgressUpdate.value.fileList || []
-
-    // 标记为编辑模式，但不移除界面上的待提交记录
-    isEditingPendingProgress.value = true
-
-    // 打开编辑弹窗
-    addProgressDialogVisible.value = true
-  }
-}
+// 移除了编辑待提交进度的功能
 
 // 自定义进度更新文件上传方法
 const customProgressUpload = async (options) => {
@@ -2325,9 +2351,12 @@ const checkUploadStatus = () => {
   }
 }
 
-// 提交添加进度更新（立即显示在界面上，并暂存数据等待工作流审批通过时一并提交）
+// 提交添加进度更新（直接调用后端接口立即新增进度记录）
 const submitAddProgress = async () => {
   if (!progressFormRef.value) return
+  
+  // 防止重复提交
+  if (progressSubmitting.value) return
 
   // 检查文件上传状态
   const uploadStatus = checkUploadStatus()
@@ -2343,7 +2372,23 @@ const submitAddProgress = async () => {
   }
 
   try {
+    // 表单验证
     await progressFormRef.value.validate()
+    
+    // 二次确认弹窗
+    await ElMessageBox.confirm(
+      '确认提交该工作进度吗？',
+      '二次确认',
+      {
+        confirmButtonText: '确认提交',
+        cancelButtonText: '取消',
+        type: 'warning',
+        distinguishCancelAndClose: true
+      }
+    )
+    
+    // 开始提交
+    progressSubmitting.value = true
 
     const fileList = progressForm.fileList
       .filter(file => file.url && file.url !== '')
@@ -2358,58 +2403,46 @@ const submitAddProgress = async () => {
                              route.params.id as string ||
                              route.query.id as string
 
-    // 暂存进度更新数据，等待工作流审批通过时一并提交
-    pendingProgressUpdate.value = {
+    // 直接调用后端接口新增进度记录
+    const progressData = {
       processInstanceId: processInstanceId || '',
       deptDetail: progressForm.deptDetail,
       planTime: progressForm.planTime || undefined,
       fileList: fileList.length > 0 ? fileList : undefined
     }
 
-    // 如果是编辑模式，更新现有记录
-    if (isEditingPendingProgress.value) {
-      // 更新界面上的待提交记录
-      if (progressRecords.value.length > 0 && progressRecords.value[0].isPending) {
-        progressRecords.value[0].description = progressForm.deptDetail
-        progressRecords.value[0].expectedTime = progressForm.planTime ? formatTimestamp(new Date(progressForm.planTime).getTime()) : ''
-        progressRecords.value[0].attachments = fileList
-        progressRecords.value[0].time = formatTimestamp(Date.now()) // 更新时间
-      }
-      isEditingPendingProgress.value = false
-      ElMessage.success('进度更新已修改，将在审批通过时正式提交')
-    } else {
-      // 新增模式：立即在界面上显示新添加的进度记录
-      const newProgressRecord = {
-        title: userStore.getUser?.dept?.name || '当前部门',
-        handler: userStore.getUser?.nickname || '当前用户',
-        description: progressForm.deptDetail,
-        expectedTime: progressForm.planTime ? formatTimestamp(new Date(progressForm.planTime).getTime()) : '',
-        time: formatTimestamp(Date.now()),
-        attachments: fileList,
-        createTime: Date.now(),
-        isLatest: true,
-        isPending: true // 标记为待提交状态
-      }
-
-      // 将之前的最新记录标记为非最新
-      if (progressRecords.value.length > 0 && progressRecords.value[0].isLatest) {
-        progressRecords.value[0].isLatest = false
-      }
-
-      // 将新记录添加到最前面
-      progressRecords.value.unshift(newProgressRecord)
-      ElMessage.success('进度更新已添加，将在审批通过时正式提交')
-    }
-
+    await OrderApi.insertSupervisionOrderTaskNew(progressData)
+    
+    // 标记本会话已新增进度记录
+    hasNewProgressInThisSession.value = true
+    
+    ElMessage.success('进度记录已成功添加')
     addProgressDialogVisible.value = false
 
     // 重置表单
     progressForm.deptDetail = ''
     progressForm.planTime = ''
     progressForm.fileList = []
+
+    // 刷新进度记录列表
+    const refreshProcessInstanceId = props.id?.toString() ||
+                                   route.query.processInstanceId as string ||
+                                   route.params.id as string ||
+                                   route.query.id as string
+    if (refreshProcessInstanceId) {
+      await getProgressRecords(refreshProcessInstanceId, isExpanded.value)
+    }
   } catch (error) {
+    // 用户取消确认时，error 是字符串 'cancel' 或 'close'，不显示错误信息
+    if (error === 'cancel' || error === 'close') {
+      // 用户取消，静默处理
+      return
+    }
+    
     console.error('添加进度更新失败:', error)
     ElMessage.error('添加进度更新失败')
+  } finally {
+    progressSubmitting.value = false
   }
 }
 
@@ -2418,7 +2451,8 @@ onMounted(async () => {
   // 获取基础数据
   await Promise.all([
     getDeptList(),
-    getUserList()
+    getUserList(),
+    getTypeOptions()
   ])
   
   // 获取流程实例ID
@@ -2428,11 +2462,15 @@ onMounted(async () => {
                            route.query.id as string
 
   if (processInstanceId) {
-    // 并行获取督办单详情和进度记录
-    await Promise.all([
-      getOrderDetail(processInstanceId),
-      getProgressRecords(processInstanceId, isExpanded.value)
-    ])
+    try {
+      // 并行获取督办单详情和进度记录
+      await Promise.all([
+        getOrderDetail(processInstanceId),
+        getProgressRecords(processInstanceId, isExpanded.value)
+      ])
+    } catch (error) {
+      console.error('❌ 详情接口调用失败:', error)
+    }
     
     // 获取工作流详情
     await getWorkflowDetail(processInstanceId)
@@ -2460,31 +2498,26 @@ const getEditFormData = () => {
   return editForm.value
 }
 
-// 清理待提交的进度更新数据
-const clearPendingProgressUpdate = () => {
-  pendingProgressUpdate.value = null
-  // 移除界面上的待提交记录（如果有）
-  if (progressRecords.value.length > 0 && progressRecords.value[0].isPending) {
-    progressRecords.value.shift()
-    // 如果还有其他记录，将第一个标记为最新
-    if (progressRecords.value.length > 0) {
-      progressRecords.value[0].isLatest = true
-    }
-  }
-}
+// 移除冻结时间相关逻辑，现在直接基于指定节点的通过时间显示
+
+
+// 移除了清理待提交进度更新数据的功能
 
 // 暴露方法供外部调用
 defineExpose({
   updateSupervisionOrder,
   hasEditPermission: computed(() => hasEditPermission.value),
-  pendingProgressUpdate: computed(() => pendingProgressUpdate.value),
-  clearPendingProgressUpdate,
+  // 移除了 pendingProgressUpdate 相关的暴露接口
   cancelAddProgress,
+  showAddProgressDialog,
   getOrderDetailData,
   getEditFormData,
   canEditLeadDept: computed(() => canEditLeadDept.value),
   canEditCollaborateDepts: computed(() => canEditCollaborateDepts.value),
-  canEditLeadDeptDetail: computed(() => canEditLeadDeptDetail.value)
+  canEditLeadDeptDetail: computed(() => canEditLeadDeptDetail.value),
+  // 新增：牵头单位负责人权限判断
+  isLeadDeptLeaderReady: computed(() => isLeadDeptLeaderReady.value),
+  isLeadDeptLeader: computed(() => isLeadDeptLeader.value)
 })
 </script>
 
@@ -2871,26 +2904,6 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 6px;
-}
-
-/* 待提交状态样式 */
-.pending-badge {
-  background: #f56c6c;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 12px;
-  margin-left: 10px;
-}
-
-.pending-dot {
-  background: #f56c6c !important;
-}
-
-.edit-pending-btn {
-  margin-left: 10px;
-  font-size: 12px;
-  padding: 4px 8px;
 }
 
 .latest-progress-header-row {
