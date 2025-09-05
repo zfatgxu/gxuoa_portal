@@ -73,6 +73,7 @@
         @delete-emails="handleDeleteEmails"
         @toggle-star="handleToggleStar"
         @sync-mails="handleSyncMails"
+        @view-email-detail="handleViewEmailDetail"
       />
     </div>
   </div>
@@ -95,6 +96,7 @@ import {
   getMailStats,
   sendMail,
   saveDraft,
+  getLetterDetail,
   type MailListItemVO,
   type MailStatsVO,
   type SendMailReqVO,
@@ -417,6 +419,75 @@ async function handleToggleStar(emailId: number) {
       status: error?.response?.status
     })
     ElMessage.error('操作失败')
+  }
+}
+
+// 处理查看邮件详情
+async function handleViewEmailDetail(emailId: number) {
+  console.log(`📧 开始查看邮件详情，邮件ID: ${emailId}`)
+  
+  try {
+    console.log('📡 调用邮件详情API...')
+    const emailDetail = await getLetterDetail(emailId)
+    console.log('📊 邮件详情API响应:', emailDetail)
+    
+    // 验证返回的数据结构
+    if (!emailDetail) {
+      throw new Error('邮件详情数据为空')
+    }
+    
+    if (!emailDetail.content) {
+      throw new Error('邮件内容数据缺失')
+    }
+    
+    // 这里可以跳转到邮件详情页面或显示弹窗
+    // 暂时使用弹窗显示邮件详情
+    ElMessageBox.alert(
+      `
+        <div style="text-align: left;">
+          <h3>${emailDetail.content?.subject || '无主题'}</h3>
+          <p><strong>发件人:</strong> ${emailDetail.senders?.[0]?.senderIdCard || '未知'}</p>
+          <p><strong>收件人:</strong> ${emailDetail.recipients?.map(r => r.recipientIdCard).join(', ') || '无'}</p>
+          <p><strong>发送时间:</strong> ${emailDetail.content?.sendTime ? new Date(emailDetail.content.sendTime).toLocaleString() : '未知'}</p>
+          <p><strong>优先级:</strong> ${emailDetail.content?.priority === 1 ? '普通' : emailDetail.content?.priority === 2 ? '重要' : emailDetail.content?.priority === 3 ? '紧急' : '未知'}</p>
+          <p><strong>已读回执:</strong> ${emailDetail.content?.requestReadReceipt ? '是' : '否'}</p>
+          <hr>
+          <div style="margin-top: 20px;">
+            <strong>邮件内容:</strong>
+            <div style="border: 1px solid #ddd; padding: 10px; margin-top: 10px; background: #f9f9f9; white-space: pre-wrap; max-height: 300px; overflow-y: auto;">
+              ${emailDetail.content?.content || '无内容'}
+            </div>
+          </div>
+          ${emailDetail.attachments && emailDetail.attachments.length > 0 ? `
+            <div style="margin-top: 20px;">
+              <strong>附件:</strong>
+              <ul style="margin-top: 10px;">
+                ${emailDetail.attachments.map(att => `<li>${att.fileName} (${(att.fileSize / 1024).toFixed(2)} KB)</li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
+        </div>
+      `,
+      '邮件详情',
+      {
+        dangerouslyUseHTMLString: true,
+        confirmButtonText: '关闭',
+        customClass: 'email-detail-dialog'
+      }
+    )
+    
+    console.log('✅ 邮件详情显示成功')
+  } catch (error: any) {
+    console.error('❌ 获取邮件详情失败:', error)
+    console.error('🔍 邮件详情错误详情:', {
+      message: error?.message,
+      response: error?.response,
+      status: error?.response?.status,
+      data: error?.response?.data
+    })
+    
+    const errorMsg = error?.response?.data?.message || error?.message || '获取邮件详情失败'
+    ElMessage.error(`查看邮件详情失败: ${errorMsg}`)
   }
 }
 

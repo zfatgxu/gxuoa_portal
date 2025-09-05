@@ -628,6 +628,16 @@
     border-color: #4285f4;
 }
 
+/* 邮件详情弹窗样式 */
+.email-detail-dialog {
+    max-width: 600px;
+}
+
+.email-detail-dialog .el-message-box__content {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
 .action-btn.primary:hover {
     background-color: #3367d6;
 }

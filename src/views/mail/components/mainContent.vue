@@ -74,8 +74,8 @@
         <div class="group-label-bar">
           <span class="group-label">{{ group.label }}({{ group.emails.length }}封)</span>
         </div>
-        <div v-for="email in group.emails" :key="email.id" class="email-item" :class="{draft: email.isDraft, deleted: email.deletedAt}">
-          <input type="checkbox" class="email-checkbox" v-model="selectedEmails" :value="email.id" />
+        <div v-for="email in group.emails" :key="email.id" class="email-item" :class="{draft: email.isDraft, deleted: email.deletedAt}" @click="viewEmailDetail(email.id)">
+          <input type="checkbox" class="email-checkbox" v-model="selectedEmails" :value="email.id" @click.stop />
           <span class="email-icon">{{ email.isDraft ? '📝' : email.deletedAt ? '🗑️' : '📁' }}</span>
           <span class="sender">{{ email.sender }}</span>
           <span class="subject">
@@ -84,7 +84,7 @@
             <span v-if="email.deletedAt" class="deleted-info">(删除于: {{ email.deletedAt }})</span>
           </span>
           <span class="time">{{ email.time }}</span>
-          <span class="star-btn" :class="{starred: email.isStarred}" @click="toggleStar(email.id)">
+          <span class="star-btn" :class="{starred: email.isStarred}" @click.stop="toggleStar(email.id)">
             {{ email.isStarred ? '★' : '☆' }}
           </span>
         </div>
@@ -135,6 +135,7 @@ const emit = defineEmits<{
   deleteEmails: [emailIds: number[]]
   toggleStar: [emailId: number]
   syncMails: []
+  viewEmailDetail: [emailId: number]
 }>()
 
 // --- 全选逻辑 ---
@@ -169,6 +170,12 @@ function deleteSelectedEmails() {
 // 切换星标状态
 function toggleStar(emailId: number) {
   emit('toggleStar', emailId)
+}
+
+// 查看邮件详情
+function viewEmailDetail(emailId: number) {
+  console.log('📧 查看邮件详情，邮件ID:', emailId)
+  emit('viewEmailDetail', emailId)
 }
 
 // 日期分组辅助
