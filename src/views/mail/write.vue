@@ -436,7 +436,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
-import { sendMail, saveDraft, type CreateMailContentReqVO } from '@/api/system/mail/letter/index'
+import { sendMail, saveDraft, type SendMailReqVO, type SaveDraftReqVO } from '@/api/system/mail/letter/index'
 import { getSimpleUserList } from '@/api/system/user'
 import { getAccessToken } from '@/utils/auth'
 import '@/views/mail/mail.css'
@@ -819,17 +819,14 @@ const doSendMail = async () => {
     // 处理抄送人：转换为用户ID
     const processedCc = mailForm.value.cc.length > 0 ? await processRecipients(mailForm.value.cc) : []
     
-    const sendData: CreateMailContentReqVO = {
+    const sendData: SendMailReqVO = {
       subject: mailForm.value.subject || '(无主题)',
       content: editorContent,
-      senderId: userStore.getUser.idCard || userStore.getUser.id.toString(), // 发件人ID（身份证号）
-      receiverIds: processedRecipients.join(','), // 收件人ID列表，逗号分隔
-      ccUserIds: processedCc.length > 0 ? processedCc.join(',') : undefined, // 抄送人ID列表，逗号分隔
+      recipientIdCards: processedRecipients, // 收件人身份证号列表
+      ccIdCards: processedCc.length > 0 ? processedCc : undefined, // 抄送人身份证号列表
       priority: 1, // 默认普通优先级
       isDraft: false, // 不是草稿
-      requestReadReceipt: false, // 默认不请求已读回执
-      status: 0, // 正常状态
-      folder: 'sent' // 已发送文件夹
+      requestReadReceipt: false // 默认不请求已读回执
     }
     
     console.log('发送邮件数据:', sendData)
@@ -873,17 +870,14 @@ const saveDraftHandler = async () => {
     // 处理抄送人：转换为用户ID
     const processedCc = mailForm.value.cc.length > 0 ? await processRecipients(mailForm.value.cc) : []
     
-    const draftData: CreateMailContentReqVO = {
+    const draftData: SaveDraftReqVO = {
       subject: mailForm.value.subject,
       content: editorContent,
-      senderId: userStore.getUser.idCard || userStore.getUser.id.toString(), // 发件人ID（身份证号）
-      receiverIds: processedRecipients.join(','), // 收件人ID列表，逗号分隔
-      ccUserIds: processedCc.length > 0 ? processedCc.join(',') : undefined, // 抄送人ID列表，逗号分隔
+      recipientIdCards: processedRecipients.length > 0 ? processedRecipients : undefined, // 收件人身份证号列表（草稿可选）
+      ccIdCards: processedCc.length > 0 ? processedCc : undefined, // 抄送人身份证号列表
       priority: 1,
       isDraft: true, // 是草稿
-      requestReadReceipt: false,
-      status: 0, // 正常状态
-      folder: 'drafts' // 草稿文件夹
+      requestReadReceipt: false
     }
     
     console.log('保存草稿数据:', draftData)
