@@ -110,8 +110,12 @@ import {
   deleteMails,
   toggleMailStar as toggleStarAPI,
   getMailStats,
+  sendMail,
+  saveDraft,
   type MailListItemVO,
-  type MailStatsVO
+  type MailStatsVO,
+  type SendMailReqVO,
+  type SaveDraftReqVO
 } from '@/api/system/mail/letter/index'
 
 interface Email {
@@ -422,6 +426,124 @@ onMounted(async () => {
     })
   }
 })
+
+// 发信功能辅助函数
+async function handleSendMail(mailData: SendMailReqVO) {
+  try {
+    // 参数校验
+    if (!mailData.subject || mailData.subject.trim() === '') {
+      ElMessage.error('邮件主题不能为空')
+      return
+    }
+    
+    if (!mailData.content || mailData.content.trim() === '') {
+      ElMessage.error('邮件内容不能为空')
+      return
+    }
+    
+    if (!mailData.recipientIdCards || mailData.recipientIdCards.length === 0) {
+      ElMessage.error('收件人不能为空')
+      return
+    }
+    
+    // 过滤掉空的身份证号
+    const validRecipients = mailData.recipientIdCards.filter(id => id && id.trim() !== '')
+    if (validRecipients.length === 0) {
+      ElMessage.error('收件人身份证号不能为空')
+      return
+    }
+    
+    // 构建发送数据
+    const sendData: SendMailReqVO = {
+      subject: mailData.subject.trim(),
+      content: mailData.content.trim(),
+      recipientIdCards: validRecipients,
+      priority: mailData.priority || 1,
+      requestReadReceipt: mailData.requestReadReceipt || false,
+      isDraft: false
+    }
+    
+    // 如果有抄送人，也进行过滤
+    if (mailData.ccIdCards && mailData.ccIdCards.length > 0) {
+      const validCcRecipients = mailData.ccIdCards.filter(id => id && id.trim() !== '')
+      if (validCcRecipients.length > 0) {
+        sendData.ccIdCards = validCcRecipients
+      }
+    }
+    
+    console.log('📤 开始发送邮件...', sendData)
+    const letterId = await sendMail(sendData)
+    console.log('✅ 邮件发送成功，信件ID:', letterId)
+    ElMessage.success('邮件发送成功')
+    
+    // 重新加载已发送文件夹
+    await loadFolderEmails('sent')
+    // 重新加载邮件统计
+    await loadMailStats()
+    
+    return letterId
+  } catch (error: any) {
+    console.error('❌ 邮件发送失败:', error)
+    ElMessage.error(`邮件发送失败: ${error?.message || '未知错误'}`)
+    throw error
+  }
+}
+
+async function handleSaveDraft(draftData: SaveDraftReqVO) {
+  try {
+    // 草稿的参数校验相对宽松，但基本字段还是需要检查
+    if (!draftData.subject || draftData.subject.trim() === '') {
+      ElMessage.error('邮件主题不能为空')
+      return
+    }
+    
+    if (!draftData.content || draftData.content.trim() === '') {
+      ElMessage.error('邮件内容不能为空')
+      return
+    }
+    
+    // 构建草稿数据
+    const saveData: SaveDraftReqVO = {
+      subject: draftData.subject.trim(),
+      content: draftData.content.trim(),
+      priority: draftData.priority || 1,
+      requestReadReceipt: draftData.requestReadReceipt || false,
+      isDraft: true
+    }
+    
+    // 如果有收件人，进行过滤
+    if (draftData.recipientIdCards && draftData.recipientIdCards.length > 0) {
+      const validRecipients = draftData.recipientIdCards.filter(id => id && id.trim() !== '')
+      if (validRecipients.length > 0) {
+        saveData.recipientIdCards = validRecipients
+      }
+    }
+    
+    // 如果有抄送人，也进行过滤
+    if (draftData.ccIdCards && draftData.ccIdCards.length > 0) {
+      const validCcRecipients = draftData.ccIdCards.filter(id => id && id.trim() !== '')
+      if (validCcRecipients.length > 0) {
+        saveData.ccIdCards = validCcRecipients
+      }
+    }
+    
+    console.log('💾 开始保存草稿...', saveData)
+    const letterId = await saveDraft(saveData)
+    console.log('✅ 草稿保存成功，信件ID:', letterId)
+    ElMessage.success('草稿保存成功')
+    
+    // 重新加载草稿文件夹
+    await loadFolderEmails('drafts')
+    // 重新加载邮件统计
+    await loadMailStats()
+    
+    return letterId
+  } catch (error: any) {
+    console.error('❌ 草稿保存失败:', error)
+    ElMessage.error(`草稿保存失败: ${error?.message || '未知错误'}`)
+    throw error
+  }
+}
 
 const router = useRouter()
 function goCompose() {

@@ -286,6 +286,35 @@ export interface SearchMailReqVO {
   pageSize?: number
 }
 
+// ==================== 发信功能相关VO ====================
+
+// 发送邮件请求VO
+export interface SendMailReqVO {
+  subject: string                    // 邮件主题，必填
+  content: string                    // 邮件内容，必填
+  priority?: number                  // 优先级(1-普通,2-重要,3-紧急)，可选
+  requestReadReceipt?: boolean       // 是否请求已读回执，可选
+  recipientIdCards: string[]         // 收件人身份证号列表，必填
+  ccIdCards?: string[]               // 抄送人身份证号列表，可选
+  isDraft?: boolean                  // 是否为草稿，可选
+}
+
+// 保存草稿请求VO（收件人字段可选）
+export interface SaveDraftReqVO {
+  subject: string                    // 邮件主题，必填
+  content: string                    // 邮件内容，必填
+  priority?: number                  // 优先级(1-普通,2-重要,3-紧急)，可选
+  requestReadReceipt?: boolean       // 是否请求已读回执，可选
+  recipientIdCards?: string[]        // 收件人身份证号列表，可选（草稿可以不填收件人）
+  ccIdCards?: string[]               // 抄送人身份证号列表，可选
+  isDraft?: boolean                  // 是否为草稿，可选
+}
+
+// 发信响应VO
+export interface SendMailRespVO {
+  id: number                         // 创建的信件ID
+}
+
 // ==================== 信件内容相关API ====================
 
 /**
@@ -485,5 +514,27 @@ export const toggleMailStar = async (id: number): Promise<boolean> => {
  */
 export const getMailStats = async (): Promise<MailStatsVO> => {
   const response = await request.get({ url: '/api/system/mail/letter/stats' })
+  return response.data
+}
+
+// ==================== 发信功能相关API ====================
+
+/**
+ * 发送邮件
+ * @param data 发送邮件请求参数
+ * @returns Promise<number> 返回创建的信件ID
+ */
+export const sendMail = async (data: SendMailReqVO): Promise<number> => {
+  const response = await request.post({ url: '/api/system/mail/letter/send', data })
+  return response.data
+}
+
+/**
+ * 保存草稿
+ * @param data 保存草稿请求参数
+ * @returns Promise<number> 返回创建的信件ID
+ */
+export const saveDraft = async (data: SaveDraftReqVO): Promise<number> => {
+  const response = await request.post({ url: '/api/system/mail/letter/save-draft', data })
   return response.data
 }
