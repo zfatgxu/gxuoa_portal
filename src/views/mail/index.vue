@@ -16,16 +16,6 @@
             <span class="btn-text">写信</span>
           </button>
           <div class="sidebar-divider"></div>
-          <button class="inbox-btn">
-            <span class="icon icon--inbox">
-              <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2" y="8" width="16" height="10" rx="2" fill="#FFB74D"/>
-                <rect x="6" y="4" width="8" height="6" rx="1" fill="#E3F2FD" stroke="#64B5F6" stroke-width="1"/>
-                <path d="M6 7l4 2 4-2" fill="none" stroke="#64B5F6" stroke-width="1"/>
-              </svg>
-            </span>
-            <span class="btn-text">收信</span>
-          </button>
         </div>
 
         <!-- 文件夹列表 -->
@@ -64,13 +54,6 @@
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="5" y="7" width="10" height="9" rx="2" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M3 7h14" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M8 10v3" stroke="#ff9800" stroke-width="1.2"/><path d="M12 10v3" stroke="#ff9800" stroke-width="1.2"/></svg>
     </span>
             <span class="folder-name">已删除</span><span class="folder-badge">{{ getDeletedCount() }}</span>
-          </div>
-          <div class="folder-item">
-    <span class="folder-icon">
-      <!-- 垃圾箱SVG -->
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="12" rx="3" stroke="#ff9800" stroke-width="1.5" fill="none"/><rect x="8" y="10" width="4" height="4" rx="1" stroke="#ff9800" stroke-width="1.2" fill="none"/></svg>
-    </span>
-            <span class="folder-name">垃圾箱</span><span class="folder-badge">8</span>
           </div>
           <div class="folder-item">
     <span class="folder-icon">
