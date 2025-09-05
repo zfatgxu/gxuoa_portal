@@ -561,6 +561,7 @@ const props = defineProps<{
   normalFormApi: any // 流程表单 formCreate Api
   writableFields: string[] // 流程表单可以编辑的字段
   supervisionDetailRef?: any // 督办详情组件引用
+  leadDeptLeaderIds?: number[] // 牵头单位负责人ID数组
 }>()
 
 const formLoading = ref(false) // 表单加载中
@@ -862,22 +863,7 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
       nextAssigneesActivityNode.value = []
       message.success('审批通过成功')
     } else {
-      // 督办单专用逻辑：审批拒绝时清理待处理的进度更新数据
-      if (props.supervisionDetailRef) {
-        try {
-          // 清理待提交的进度更新数据
-          if (props.supervisionDetailRef.pendingProgressUpdate) {
-            // 通过调用取消方法来清理待提交数据
-            const cancelMethod = props.supervisionDetailRef.cancelAddProgress ||
-                                props.supervisionDetailRef.clearPendingProgressUpdate
-            if (cancelMethod) {
-              cancelMethod()
-            }
-          }
-        } catch (error) {
-          console.error('清理待处理进度更新失败:', error)
-        }
-      }
+      // 移除了审批拒绝时清理待处理进度更新数据的逻辑，因为现在进度更新直接提交
 
       // 督办系统特殊逻辑：先调用督办拒绝接口
       try {
@@ -1123,18 +1109,29 @@ const isShowButton = (btnType: OperationButtonType): boolean => {
     isShow = runningTask.value.buttonsSetting[btnType].enable
   }
 
-  // 督办系统特殊逻辑：拒绝按钮现在在所有节点都显示
-  // 注释掉原来的限制逻辑
-  // if (btnType === OperationButtonType.REJECT) {
-  //   const isSupervisionAdminNode = checkIsSupervisionAdminNode()
-  //   if (!isSupervisionAdminNode) {
-  //     // 非督查办管理员节点不显示拒绝按钮
-  //     isShow = false
-  //   }
-  // }
+  // 获取当前节点key
+  const currentTaskKey = runningTask.value?.taskDefinitionKey
+  
+  // 督办系统特殊逻辑：节点+身份规则控制按钮可见性
+  if (btnType === OperationButtonType.REJECT) {
+    // select_leaddept 和 implement_plan 节点不显示拒绝按钮
+    if (currentTaskKey === 'select_leaddept' || currentTaskKey === 'implement_plan') {
+      isShow = false
+    }
+  }
+  
+  // implement_plan 节点的通过按钮：仅牵头单位负责人可见
+  if (btnType === OperationButtonType.APPROVE && currentTaskKey === 'implement_plan') {
+    const currentUserId = userId
+    const leadDeptLeaderIds = props.leadDeptLeaderIds || []
+    
+    // 只有当前用户在牵头单位负责人列表中才显示通过按钮
+    isShow = leadDeptLeaderIds.includes(Number(currentUserId))
+  }
 
   return isShow
 }
+
 
 /** 获取按钮的显示名称 */
 const getButtonDisplayName = (btnType: OperationButtonType) => {
@@ -1223,20 +1220,17 @@ const validateLeadDeptRequirements = async (): Promise<boolean> => {
     }
 
     // 检查工作推进情况是否已填写（牵头单位负责人和协办单位负责人都必须填写）
-    // 现在支持两种方式：1. 传统的leadDeptDetail字段 2. 新的待提交进度更新
     const leadDeptDetail = editForm?.leadDeptDetail || orderDetail.leadDeptDetail
-    const hasPendingProgressUpdate = props.supervisionDetailRef.pendingProgressUpdate
 
     console.log('牵头单位负责人验证:', {
       isLeadDeptLeader,
       isCoDeptLeader,
       leadDeptDetail,
-      hasPendingProgressUpdate: !!hasPendingProgressUpdate,
       editFormLeadDeptDetail: editForm?.leadDeptDetail,
       orderDetailLeadDeptDetail: orderDetail.leadDeptDetail
     })
 
-    if ((!leadDeptDetail || leadDeptDetail.trim() === '') && !hasPendingProgressUpdate) {
+    if (!leadDeptDetail || leadDeptDetail.trim() === '') {
       if (isLeadDeptLeader) {
         message.error('作为牵头单位负责人，您必须通过"添加工作推进"功能填写工作推进情况后才能通过审批')
       } else if (isCoDeptLeader) {

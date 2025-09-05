@@ -20,19 +20,10 @@
       
       <!-- 导出按钮 -->
       <div class="export-buttons">
-        <el-dropdown @command="handleExport">
-          <el-button type="primary" :loading="exportLoading">
-            <Download class="w-4 h-4 mr-1" />
-            导出
-            <el-icon class="el-icon--right"><arrow-down /></el-icon>
-          </el-button>
-          <template #dropdown>
-            <el-dropdown-menu>
-              <el-dropdown-item command="excel">导出 Excel</el-dropdown-item>
-              <el-dropdown-item command="pdf">导出 PDF</el-dropdown-item>
-            </el-dropdown-menu>
-          </template>
-        </el-dropdown>
+        <el-button type="primary" :loading="exportLoading" @click="handleExportExcel">
+          <Download class="w-4 h-4 mr-1" />
+          导出 Excel
+        </el-button>
       </div>
     </div>
     
@@ -264,7 +255,7 @@
 import { ref, onMounted, nextTick, watch, computed } from 'vue'
 import { CalendarRange, Timer, CircleCheck, Bell, Funnel, ChartSpline, ChartPie, Table, List } from 'lucide-vue-next'
 import { formatDate as utilFormatDate } from '@/utils/formatTime'
-import { Download, ArrowDown } from '@element-plus/icons-vue'
+import { Download } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import { ElMessage } from 'element-plus'
 import SeniorFilter from '../components/seniorFilter.vue'
@@ -845,53 +836,36 @@ const viewDetail = (row: any) => {
   }
 }
 
-// 导出功能
-const handleExport = async (format: string) => {
+// 导出Excel功能
+const handleExportExcel = async () => {
   if (exportLoading.value) return
   
   try {
     exportLoading.value = true
     
-    // 获取图表 Base64
-    const lineChartBase64 = getChartBase64(typeLineChart.value)
-    const pieChartBase64 = getChartBase64(typePieChart.value)
-    
-    // 构建导出参数
+    // 构建导出参数 - 使用现有接口格式
     const exportParams = {
-      scope: 'allFiltered', // 默认导出受筛选全部
-      lineChartBase64,
-      pieChartBase64,
+      pageSize: -1, // 导出全部数据
       ...seniorFilterParams.value // 传递高级筛选参数
     }
     
-    // 调用导出接口
     console.log('发送导出请求:', {
-      url: `/supervision/order/export-excel?format=${format}`,
+      url: '/supervision/order/export-excel',
       params: exportParams
     })
     
-    const response = await request.postOriginal({
-      url: `/supervision/order/export-excel?format=${format}`,
-      data: exportParams,
-      responseType: 'blob',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-    
-    console.log('导出响应:', {
-      status: response.status,
-      headers: response.headers,
-      dataType: typeof response.data,
-      dataSize: response.data?.size || 'unknown'
+    const response = await request.get({
+      url: '/supervision/order/export-excel',
+      params: exportParams,
+      responseType: 'blob'
     })
     
     // 检查响应数据类型
-    if (response.data instanceof Blob) {
+    if (response instanceof Blob) {
       // 检查 Blob 是否为 JSON 错误响应
-      if (response.data.type === 'application/json') {
+      if (response.type === 'application/json') {
         try {
-          const errorText = await response.data.text()
+          const errorText = await response.text()
           const errorData = JSON.parse(errorText)
           console.error('服务器返回错误:', errorData)
           ElMessage.error(`导出失败：${errorData.msg || '服务器错误'}`)
@@ -903,15 +877,12 @@ const handleExport = async (format: string) => {
         }
       }
       // 下载文件
-      downloadBlob(response.data, response.headers)
+      downloadBlobSimple(response)
+      ElMessage.success('Excel 导出成功')
     } else {
-      // 如果不是 Blob，可能是错误响应
-      console.error('响应不是文件类型:', response.data)
+      console.error('响应不是文件类型:', response)
       ElMessage.error('导出失败：服务器返回了非文件数据')
-      return
     }
-    
-    ElMessage.success(`${format === 'excel' ? 'Excel' : 'PDF'} 导出成功`)
     
   } catch (error) {
     console.error('导出失败:', error)
@@ -921,36 +892,9 @@ const handleExport = async (format: string) => {
   }
 }
 
-// 获取图表 Base64
-const getChartBase64 = (chartRef: any): string => {
-  if (!chartRef?.value) return ''
-  
-  try {
-    const chartInstance = echarts.getInstanceByDom(chartRef.value)
-    if (!chartInstance) return ''
-    
-    return chartInstance.getDataURL({
-      type: 'png',
-      pixelRatio: 2,
-      backgroundColor: '#fff'
-    })
-  } catch (error) {
-    console.error('获取图表Base64失败:', error)
-    return ''
-  }
-}
-
-// 下载 Blob 文件
-const downloadBlob = (blob: Blob, headers: any) => {
-  const contentDisposition = headers?.['content-disposition'] || headers?.['Content-Disposition']
-  let fileName = 'OAS督办统计-明细.xlsx'
-  
-  if (contentDisposition) {
-    const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=(['"]?)([^'"\n]*?)\1/)
-    if (fileNameMatch && fileNameMatch[2]) {
-      fileName = decodeURIComponent(fileNameMatch[2])
-    }
-  }
+// 简化的下载 Blob 文件
+const downloadBlobSimple = (blob: Blob) => {
+  const fileName = `OAS督办统计-明细-${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '').replace(/(\d{8})(\d{4})/, '$1_$2')}.xlsx`
   
   const url = window.URL.createObjectURL(blob)
   const link = document.createElement('a')

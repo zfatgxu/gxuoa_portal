@@ -113,11 +113,6 @@ import {
   type MailListItemVO,
   type MailStatsVO
 } from '@/api/system/mail/letter/index'
-import { 
-  getSimpleMailAccountList, 
-  syncMailAccount,
-  type MailAccountVO
-} from '@/api/system/mail/account'
 
 interface Email {
   id: number
@@ -156,29 +151,25 @@ const mailStats = ref<MailStatsVO>({
   inboxUnreadCount: 0
 })
 
-// 邮件账号相关状态
-const mailAccounts = ref<MailAccountVO[]>([])
-const selectedAccountId = ref<number>()
-const syncStatus = ref<Record<number, { syncing: boolean; lastSync?: Date }>>({})
 
 // 转换后端邮件数据为前端格式
 function convertMailToEmail(mail: MailListItemVO): Email {
-  const date = mail.receiveTime || mail.sendTime
-  const dateStr = date ? new Date(date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-  const timeStr = date ? new Date(date).toTimeString().slice(0, 5) : new Date().toTimeString().slice(0, 5)
+  const date = mail.sendTime
+  const dateStr = new Date(date).toISOString().split('T')[0]
+  const timeStr = new Date(date).toTimeString().slice(0, 5)
   
   return {
-    id: mail.id!,
-    sender: mail.fromMail || '未知发件人',
-    subject: mail.subject || '无主题',
+    id: mail.id,
+    sender: mail.fromUserName,
+    subject: mail.subject,
     time: timeStr,
     date: dateStr,
     deletedAt: mail.deletedAt ? new Date(mail.deletedAt).toISOString().split('T')[0] : undefined,
     isDraft: mail.isDraft,
     isStarred: mail.isStarred,
     starredAt: mail.starredAt ? new Date(mail.starredAt).toISOString().split('T')[0] : undefined,
-    fromMail: mail.fromMail,
-    toMail: Array.isArray(mail.toMail) ? mail.toMail.join(', ') : mail.toMail || '',  // 修复类型错误
+    fromMail: mail.fromUserName,
+    toMail: mail.toUserNames,
     content: mail.content,
     isRead: mail.isRead
   }
@@ -210,8 +201,8 @@ async function loadFolderEmails(folder: string) {
         return
     }
     
-    if (response.data && Array.isArray(response.data.list)) {
-      allEmails[folder] = response.data.list.map(convertMailToEmail)
+    if (response && Array.isArray(response.list)) {
+      allEmails[folder] = response.list.map(convertMailToEmail)
     }
   } catch (error: any) {
     console.error(`加载${folder}邮件失败:`, error)
@@ -233,39 +224,13 @@ async function loadMailStats() {
   }
 }
 
-// 加载邮件账号列表
-async function loadMailAccounts() {
-  try {
-    const response = await getSimpleMailAccountList()
-    if (response.data) {
-      mailAccounts.value = response.data
-      if (mailAccounts.value.length > 0 && !selectedAccountId.value) {
-        selectedAccountId.value = mailAccounts.value[0].id
-      }
-    }
-  } catch (error) {
-    console.error('加载邮件账号失败:', error)
-  }
-}
 
-// 同步指定账号的邮件
-async function handleSyncAccount(accountId?: number) {
-  console.log('🔄 开始同步邮件账号:', accountId || selectedAccountId.value)
-  
-  const targetAccountId = accountId || selectedAccountId.value
-  if (!targetAccountId) {
-    console.warn('⚠️ 未选择邮件账号')
-    ElMessage.warning('请先选择邮件账号')
-    return
-  }
 
+// 同步邮件方法（简化版）
+async function handleSyncMails() {
+  console.log('🔄 同步邮件')
   try {
-    console.log('📡 设置同步状态为进行中...')
-    syncStatus.value[targetAccountId] = { syncing: true }
     const loadingInstance = ElLoading.service({ text: '正在同步邮件...' })
-    
-    console.log('📥 调用同步接口: syncMailAccount')
-    await syncMailAccount(targetAccountId)
     
     console.log('🔄 重新加载当前文件夹邮件...')
     await loadFolderEmails(selectedFolder.value)
@@ -273,30 +238,13 @@ async function handleSyncAccount(accountId?: number) {
     console.log('📊 重新加载邮件统计...')
     await loadMailStats()
     
-    syncStatus.value[targetAccountId] = { 
-      syncing: false, 
-      lastSync: new Date() 
-    }
-    
     console.log('✅ 邮件同步完成')
     ElMessage.success('邮件同步成功')
     loadingInstance.close()
   } catch (error: any) {
     console.error('❌ 同步邮件失败:', error)
-    console.error('🔍 同步错误详情:', {
-      message: error?.message,
-      response: error?.response,
-      status: error?.response?.status
-    })
-    syncStatus.value[targetAccountId] = { syncing: false }
     ElMessage.error('同步邮件失败')
   }
-}
-
-// 兼容原有的同步方法
-async function handleSyncMails() {
-  console.log('🔄 调用兼容同步方法')
-  await handleSyncAccount()
 }
 
 const folderLabels: Record<string, string> = {
@@ -439,17 +387,18 @@ function getStarredCount(): number {
   return count
 }
 
+function getInboxCount(): number {
+  const count = mailStats.value.inboxCount || allEmails.inbox?.length || 0
+  console.log(`📥 收件箱数量: ${count} (统计: ${mailStats.value.inboxCount}, 本地: ${allEmails.inbox?.length})`)
+  return count
+}
+
 function getSentCount(): number {
   const count = mailStats.value.sentCount || allEmails.sent?.length || 0
   console.log(`📤 已发送数量: ${count} (统计: ${mailStats.value.sentCount}, 本地: ${allEmails.sent?.length})`)
   return count
 }
 
-function getInboxCount(): number {
-  const count = mailStats.value.inboxCount || allEmails.inbox?.length || 0
-  console.log(`📥 收件箱数量: ${count} (统计: ${mailStats.value.inboxCount}, 本地: ${allEmails.inbox?.length})`)
-  return count
-}
 
 // 组件挂载时初始化数据
 onMounted(async () => {
@@ -457,13 +406,10 @@ onMounted(async () => {
   console.log('📅 当前时间:', new Date().toISOString())
   
   try {
-    console.log('👤 第一步: 加载邮件账号列表...')
-    await loadMailAccounts()
-    
-    console.log('📊 第二步: 加载邮件统计信息...')
+    console.log('📊 第一步: 加载邮件统计信息...')
     await loadMailStats()
     
-    console.log('📥 第三步: 加载收件箱邮件...')
+    console.log('📥 第二步: 加载收件箱邮件...')
     await loadFolderEmails('inbox')
     
     console.log('✅ 邮件组件初始化完成')
