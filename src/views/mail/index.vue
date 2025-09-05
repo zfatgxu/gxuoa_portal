@@ -87,9 +87,9 @@
         :folderName="folderLabels[selectedFolder]" 
         :emails="allEmails[selectedFolder] || []" 
         :isDeletedFolder="selectedFolder==='deleted'"
-        @deleteEmails="handleDeleteEmails"
-        @toggleStar="handleToggleStar"
-        @syncMails="handleSyncMails"
+        @delete-emails="handleDeleteEmails"
+        @toggle-star="handleToggleStar"
+        @sync-mails="handleSyncMails"
       />
     </div>
   </div>
@@ -183,48 +183,106 @@ function convertMailToEmail(mail: MailListItemVO): Email {
 async function loadFolderEmails(folder: string) {
   try {
     loading.value = true
+    console.log(`📥 开始加载${folder}邮件...`)
+    
     let response
     
     switch (folder) {
       case 'inbox':
+        console.log('📨 调用收件箱API...')
         response = await getInboxMails({ pageNo: 1, pageSize: 100 })
         break
       case 'sent':
+        console.log('📤 调用发件箱API...')
         response = await getSentMails({ pageNo: 1, pageSize: 100 })
         break
       case 'drafts':
+        console.log('📝 调用草稿箱API...')
         response = await getDraftMails({ pageNo: 1, pageSize: 100 })
         break
       case 'starred':
+        console.log('⭐ 调用星标邮件API...')
         response = await getStarredMails({ pageNo: 1, pageSize: 100 })
         break
       case 'deleted':
+        console.log('🗑️ 调用已删除邮件API...')
         response = await getDeletedMails({ pageNo: 1, pageSize: 100 })
         break
       default:
+        console.log(`❌ 未知文件夹类型: ${folder}`)
         return
     }
     
+    console.log(`📊 ${folder}邮件API响应:`, response)
+    
     if (response && Array.isArray(response.list)) {
+      console.log(`📋 ${folder}邮件列表长度:`, response.list.length)
       allEmails[folder] = response.list.map(convertMailToEmail)
+      console.log(`✅ ${folder}邮件加载成功，转换后数量:`, allEmails[folder].length)
+    } else {
+      console.log(`⚠️ ${folder}邮件响应格式异常:`, response)
+      allEmails[folder] = []
     }
   } catch (error: any) {
-    console.error(`加载${folder}邮件失败:`, error)
-    ElMessage.error(`加载邮件失败: ${error?.message || '未知错误'}`)
+    console.error(`❌ 加载${folder}邮件失败:`, error)
+    console.error('🔍 错误详情:', {
+      message: error?.message,
+      response: error?.response,
+      status: error?.response?.status,
+      data: error?.response?.data
+    })
+    
+    // 根据错误类型显示不同的错误信息
+    let errorMsg = '未知错误'
+    if (error?.response?.status === 401) {
+      errorMsg = '用户未登录，请重新登录'
+    } else if (error?.response?.status === 403) {
+      errorMsg = '权限不足，无法访问邮件'
+    } else if (error?.response?.status === 404) {
+      errorMsg = '邮件服务不可用'
+    } else if (error?.response?.data?.msg) {
+      errorMsg = error.response.data.msg
+    } else if (error?.message) {
+      errorMsg = error.message
+    }
+    
+    ElMessage.error(`加载${folderLabels[folder] || folder}失败: ${errorMsg}`)
+    
+    // 确保在错误情况下也清空对应文件夹的数据
+    allEmails[folder] = []
   } finally {
     loading.value = false
+    console.log(`🏁 ${folder}邮件加载流程结束`)
   }
 }
 
 // 加载邮件统计信息
 async function loadMailStats() {
   try {
+    console.log('📊 开始加载邮件统计信息...')
     const response = await getMailStats()
+    console.log('📈 邮件统计API响应:', response)
+    
     if (response) {
       mailStats.value = response
+      console.log('✅ 邮件统计加载成功:', {
+        inboxCount: response.inboxCount,
+        sentCount: response.sentCount,
+        draftsCount: response.draftsCount,
+        starredCount: response.starredCount,
+        deletedCount: response.deletedCount
+      })
+    } else {
+      console.log('⚠️ 邮件统计响应为空')
     }
-  } catch (error) {
-    console.error('加载邮件统计失败:', error)
+  } catch (error: any) {
+    console.error('❌ 加载邮件统计失败:', error)
+    console.error('🔍 统计错误详情:', {
+      message: error?.message,
+      response: error?.response,
+      status: error?.response?.status,
+      data: error?.response?.data
+    })
   }
 }
 
@@ -266,9 +324,16 @@ async function selectFolder(folder: string) {
   
   selectedFolder.value = folder
   console.log(`📥 开始加载文件夹 ${folder} 的邮件...`)
+  
+  // 如果是发件箱，添加特殊处理
+  if (folder === 'sent') {
+    console.log('📤 正在加载发件箱，检查是否有已发送的邮件...')
+  }
+  
   await loadFolderEmails(folder)
   
   console.log(`✅ 文件夹切换完成: ${folder}`)
+  console.log(`📊 当前文件夹邮件数量:`, allEmails[folder]?.length || 0)
 }
 
 // 处理删除邮件
@@ -404,6 +469,33 @@ function getSentCount(): number {
 }
 
 
+// 测试发件箱加载的调试函数
+async function testSentMailLoading() {
+  console.log('🧪 开始测试发件箱加载...')
+  try {
+    console.log('📤 直接调用发件箱API...')
+    const response = await getSentMails({ pageNo: 1, pageSize: 100 })
+    console.log('📊 发件箱API直接响应:', response)
+    
+    if (response && Array.isArray(response.list)) {
+      console.log('✅ 发件箱API调用成功，邮件数量:', response.list.length)
+      if (response.list.length > 0) {
+        console.log('📧 第一封邮件示例:', response.list[0])
+      }
+    } else {
+      console.log('⚠️ 发件箱API响应格式异常')
+    }
+  } catch (error: any) {
+    console.error('❌ 发件箱API测试失败:', error)
+    console.error('🔍 测试错误详情:', {
+      message: error?.message,
+      response: error?.response,
+      status: error?.response?.status,
+      data: error?.response?.data
+    })
+  }
+}
+
 // 组件挂载时初始化数据
 onMounted(async () => {
   console.log('🚀 邮件组件开始挂载...')
@@ -415,6 +507,10 @@ onMounted(async () => {
     
     console.log('📥 第二步: 加载收件箱邮件...')
     await loadFolderEmails('inbox')
+    
+    // 测试发件箱加载
+    console.log('🧪 第三步: 测试发件箱加载...')
+    await testSentMailLoading()
     
     console.log('✅ 邮件组件初始化完成')
   } catch (error: any) {

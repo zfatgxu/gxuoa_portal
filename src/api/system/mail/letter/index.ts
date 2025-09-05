@@ -1,5 +1,5 @@
 import request from '@/config/axios'
-import type { PageParam } from '@/api/supervision'
+import type {PageParam} from '@/api/supervision'
 
 // ==================== 信件内容相关VO ====================
 
@@ -350,8 +350,7 @@ export const deleteLetterContent = async (id: number) => {
  * @returns Promise<LetterDetailRespVO>
  */
 export const getLetterDetail = async (id: number): Promise<LetterDetailRespVO> => {
-  const response = await request.get({ url: `/system/letter/content/detail/${id}` })
-  return response.data
+  return await request.get({url: `/system/letter/content/detail/${id}`})
 }
 
 /**
@@ -360,8 +359,7 @@ export const getLetterDetail = async (id: number): Promise<LetterDetailRespVO> =
  * @returns Promise<{list: LetterContentRespVO[], total: number}>
  */
 export const getLetterPage = async (params: LetterContentPageReqVO): Promise<{list: LetterContentRespVO[], total: number}> => {
-  const response = await request.get({ url: '/system/letter/content/page', params })
-  return response.data
+  return await request.get({url: '/system/letter/content/page', params})
 }
 
 // ==================== 收件人相关API ====================
@@ -381,8 +379,7 @@ export const updateLetterRecipient = async (data: LetterRecipientUpdateReqVO) =>
  * @returns Promise<{list: LetterRecipientRespVO[], total: number}>
  */
 export const getLetterRecipientPage = async (params: LetterRecipientPageReqVO): Promise<{list: LetterRecipientRespVO[], total: number}> => {
-  const response = await request.get({ url: '/system/letter/recipient/page', params })
-  return response.data
+  return await request.get({ url: '/system/letter/recipient/page', params })
 }
 
 // ==================== 发件人相关API ====================
@@ -402,8 +399,7 @@ export const updateLetterSender = async (data: LetterSenderUpdateReqVO) => {
  * @returns Promise<{list: LetterSenderRespVO[], total: number}>
  */
 export const getLetterSenderPage = async (params: LetterSenderPageReqVO): Promise<{list: LetterSenderRespVO[], total: number}> => {
-  const response = await request.get({ url: '/system/letter/sender/page', params })
-  return response.data
+  return await request.get({url: '/system/letter/sender/page', params})
 }
 
 // ==================== 联系人星标相关API ====================
@@ -432,8 +428,7 @@ export const deleteLetterContactStar = async (id: number) => {
  * @returns Promise<{list: LetterContactStarRespVO[], total: number}>
  */
 export const getLetterContactStarPage = async (params: LetterContactStarPageReqVO): Promise<{list: LetterContactStarRespVO[], total: number}> => {
-  const response = await request.get({ url: '/system/letter/contact-star/page', params })
-  return response.data
+  return await request.get({url: '/system/letter/contact-star/page', params})
 }
 
 // ==================== 邮件列表相关API ====================
@@ -444,8 +439,7 @@ export const getLetterContactStarPage = async (params: LetterContactStarPageReqV
  * @returns Promise<{list: MailListItemVO[], total: number}>
  */
 export const getInboxMails = async (params: { pageNo: number; pageSize: number }): Promise<{list: MailListItemVO[], total: number}> => {
-  const response = await request.get({ url: '/api/system/mail/letter/inbox', params })
-  return response.data
+  return await request.get({url: '/api/system/mail/letter/inbox', params})
 }
 
 /**
@@ -454,8 +448,7 @@ export const getInboxMails = async (params: { pageNo: number; pageSize: number }
  * @returns Promise<{list: MailListItemVO[], total: number}>
  */
 export const getSentMails = async (params: { pageNo: number; pageSize: number }): Promise<{list: MailListItemVO[], total: number}> => {
-  const response = await request.get({ url: '/api/system/mail/letter/sent', params })
-  return response.data
+  return await request.get({url: '/api/system/mail/letter/sent', params})
 }
 
 /**
@@ -464,8 +457,7 @@ export const getSentMails = async (params: { pageNo: number; pageSize: number })
  * @returns Promise<{list: MailListItemVO[], total: number}>
  */
 export const getDraftMails = async (params: { pageNo: number; pageSize: number }): Promise<{list: MailListItemVO[], total: number}> => {
-  const response = await request.get({ url: '/api/system/mail/letter/drafts', params })
-  return response.data
+  return await request.get({url: '/api/system/mail/letter/drafts', params})
 }
 
 /**
@@ -474,8 +466,7 @@ export const getDraftMails = async (params: { pageNo: number; pageSize: number }
  * @returns Promise<{list: MailListItemVO[], total: number}>
  */
 export const getStarredMails = async (params: { pageNo: number; pageSize: number }): Promise<{list: MailListItemVO[], total: number}> => {
-  const response = await request.get({ url: '/api/system/mail/letter/starred', params })
-  return response.data
+  return await request.get({url: '/api/system/mail/letter/starred', params})
 }
 
 /**
@@ -484,8 +475,7 @@ export const getStarredMails = async (params: { pageNo: number; pageSize: number
  * @returns Promise<{list: MailListItemVO[], total: number}>
  */
 export const getDeletedMails = async (params: { pageNo: number; pageSize: number }): Promise<{list: MailListItemVO[], total: number}> => {
-  const response = await request.get({ url: '/api/system/mail/letter/deleted', params })
-  return response.data
+  return await request.get({url: '/api/system/mail/letter/deleted', params})
 }
 
 /**
@@ -494,8 +484,7 @@ export const getDeletedMails = async (params: { pageNo: number; pageSize: number
  * @returns Promise<{list: MailListItemVO[], total: number}>
  */
 export const getUnreadMails = async (params: { pageNo: number; pageSize: number }): Promise<{list: MailListItemVO[], total: number}> => {
-  const response = await request.get({ url: '/api/system/mail/letter/unread', params })
-  return response.data
+  return await request.get({url: '/api/system/mail/letter/unread', params})
 }
 
 /**
@@ -504,8 +493,7 @@ export const getUnreadMails = async (params: { pageNo: number; pageSize: number 
  * @returns Promise<boolean>
  */
 export const deleteMails = async (data: { ids: number[] }): Promise<boolean> => {
-  const response = await request.post({ url: '/api/system/mail/letter/delete', data })
-  return response.data
+  return await request.post({url: '/api/system/mail/letter/delete', data})
 }
 
 /**
@@ -514,8 +502,7 @@ export const deleteMails = async (data: { ids: number[] }): Promise<boolean> => 
  * @returns Promise<boolean>
  */
 export const toggleMailStar = async (id: number): Promise<boolean> => {
-  const response = await request.post({ url: `/api/system/mail/letter/${id}/toggle-star` })
-  return response.data
+  return await request.post({url: `/api/system/mail/letter/${id}/toggle-star`})
 }
 
 /**
@@ -523,8 +510,7 @@ export const toggleMailStar = async (id: number): Promise<boolean> => {
  * @returns Promise<MailStatsVO>
  */
 export const getMailStats = async (): Promise<MailStatsVO> => {
-  const response = await request.get({ url: '/api/system/mail/letter/stats' })
-  return response.data
+  return await request.get({url: '/api/system/mail/letter/stats'})
 }
 
 // ==================== 发信功能相关API ====================
@@ -535,8 +521,7 @@ export const getMailStats = async (): Promise<MailStatsVO> => {
  * @returns Promise<number> 返回创建的信件ID
  */
 export const sendMail = async (data: SendMailReqVO): Promise<number> => {
-  const response = await request.post({ url: '/api/system/mail/letter/send', data })
-  return response.data
+  return await request.post({url: '/api/system/mail/letter/send', data})
 }
 
 /**
@@ -545,6 +530,5 @@ export const sendMail = async (data: SendMailReqVO): Promise<number> => {
  * @returns Promise<number> 返回创建的信件ID
  */
 export const saveDraft = async (data: SaveDraftReqVO): Promise<number> => {
-  const response = await request.post({ url: '/api/system/mail/letter/save-draft', data })
-  return response.data
+  return await request.post({url: '/api/system/mail/letter/save-draft', data})
 }

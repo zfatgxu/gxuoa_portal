@@ -750,53 +750,64 @@ const sendMailHandler = async () => {
   await doSendMail()
 }
 
-// 处理收件人：将姓名转换为用户ID，使用getSimpleUserList获取真实用户数据
+// 处理收件人：将姓名转换为身份证号，使用getSimpleUserList获取真实用户数据
 const processRecipients = async (recipients: string[]): Promise<string[]> => {
-  const processedUserIds: string[] = []
+  const processedIdCards: string[] = []
   
   try {
     // 获取所有用户列表
     const users = await getSimpleUserList()
+    console.log('📋 获取用户列表用于处理收件人:', users)
     
     for (const recipient of recipients) {
-      // 检查是否已经是用户ID（数字格式）
-      if (/^\d+$/.test(recipient)) {
-        // 如果已经是用户ID格式，直接添加
-        processedUserIds.push(recipient)
+      console.log(`🔍 处理收件人: "${recipient}"`)
+      
+      // 检查是否已经是身份证号格式（18位数字或带X）
+      if (/^[0-9X]{15,18}$/.test(recipient)) {
+        // 如果已经是身份证号格式，直接添加
+        console.log(`✅ 身份证号格式，直接添加: ${recipient}`)
+        processedIdCards.push(recipient)
       } else if (isValidEmail(recipient)) {
-        // 如果是邮箱格式，需要查找对应的用户ID
+        // 如果是邮箱格式，需要查找对应的身份证号
         const user = users.find((u: any) => 
           u.username === recipient || u.email === recipient
         )
-        if (user && user.id) {
-          processedUserIds.push(user.id.toString())
+        if (user && user.idCard) {
+          console.log(`✅ 通过邮箱找到用户身份证号: ${user.idCard}`)
+          processedIdCards.push(user.idCard)
         } else {
+          console.log(`⚠️ 通过邮箱未找到用户，使用邮箱作为标识符: ${recipient}`)
           // 如果找不到用户，使用邮箱作为标识符
-          processedUserIds.push(recipient)
+          processedIdCards.push(recipient)
         }
       } else {
-        // 如果是姓名，尝试查找对应的用户ID
+        // 如果是姓名或用户ID，尝试查找对应的身份证号
         const user = users.find((u: any) => 
           u.nickname === recipient || 
           u.username === recipient ||
+          u.id?.toString() === recipient ||
           (u.nickname && u.nickname.toLowerCase().includes(recipient.toLowerCase())) ||
           (u.username && u.username.toLowerCase().includes(recipient.toLowerCase()))
         )
-        if (user && user.id) {
-          processedUserIds.push(user.id.toString())
+        if (user && user.idCard) {
+          console.log(`✅ 通过姓名/ID找到用户身份证号: ${user.idCard}`)
+          processedIdCards.push(user.idCard)
         } else {
-          // 如果找不到用户，使用姓名作为标识符
-          processedUserIds.push(recipient)
+          console.log(`⚠️ 通过姓名/ID未找到用户，使用原始值作为标识符: ${recipient}`)
+          // 如果找不到用户，使用原始值作为标识符
+          processedIdCards.push(recipient)
         }
       }
     }
+    
+    console.log('📤 处理后的收件人身份证号列表:', processedIdCards)
   } catch (error: unknown) {
     console.error('❌ 获取用户列表失败，使用原始收件人信息:', error)
     // 如果API调用失败，直接使用原始收件人信息
     return recipients
   }
   
-  return processedUserIds
+  return processedIdCards
 }
 
 // 执行发送邮件
@@ -813,10 +824,10 @@ const doSendMail = async () => {
     // 获取编辑器实际内容
     const editorContent = document.querySelector('.editor-content')?.innerHTML || ''
     
-    // 处理收件人：转换为用户ID
+    // 处理收件人：转换为身份证号
     const processedRecipients = await processRecipients(mailForm.value.recipients)
     
-    // 处理抄送人：转换为用户ID
+    // 处理抄送人：转换为身份证号
     const processedCc = mailForm.value.cc.length > 0 ? await processRecipients(mailForm.value.cc) : []
     
     const sendData: SendMailReqVO = {
@@ -864,10 +875,10 @@ const saveDraftHandler = async () => {
     // 获取编辑器实际内容
     const editorContent = document.querySelector('.editor-content')?.innerHTML || ''
     
-    // 处理收件人：转换为用户ID
+    // 处理收件人：转换为身份证号
     const processedRecipients = await processRecipients(mailForm.value.recipients)
     
-    // 处理抄送人：转换为用户ID
+    // 处理抄送人：转换为身份证号
     const processedCc = mailForm.value.cc.length > 0 ? await processRecipients(mailForm.value.cc) : []
     
     const draftData: SaveDraftReqVO = {
