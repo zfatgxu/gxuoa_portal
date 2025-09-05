@@ -787,7 +787,7 @@ const doSendMail = async () => {
     tagsViewStore.delView(currentRoute)
     
     // 跳转到邮件列表页面
-    router.push('/mail')
+    router.push('/mail/index')
   } catch (error: any) {
     console.error('发送邮件失败:', error)
     const errorMsg = error?.response?.data?.message || error?.message || '网络错误，请稍后重试'
