@@ -468,56 +468,118 @@ const isValidEmail = (email: string): boolean => {
   return emailRegex.test(email)
 }
 
-// 搜索用户/联系人 - 使用getSimpleUserList获取真实用户数据
+// 预加载用户列表
+const allUsers = ref<any[]>([])
+
+
+// 并发加载所有数据
+const loadAllData = async () => {
+  console.log('🚀 开始并发加载所有数据...')
+  
+  try {
+    // 使用 Promise.allSettled 进行并发加载，即使某个请求失败也不会影响其他请求
+    const results = await Promise.allSettled([
+      // 加载用户列表
+      (async () => {
+        console.log('📡 并发加载用户列表...')
+        const users = await getSimpleUserList()
+        if (users && Array.isArray(users)) {
+          console.log(`✅ 并发加载用户列表成功，共 ${users.length} 个用户`)
+          allUsers.value = users
+          
+          // 转换为前端需要的格式，限制显示前20个用户
+          userOptions.value = users.slice(0, 20).map((user: any) => ({
+            value: user.id.toString(),
+            label: `${user.nickname || user.username} <${user.deptNames ? user.deptNames.join(', ') : ''}>`,
+            avatar: user.avatar || '',
+            name: user.nickname || user.username,
+            email: user.username,
+            userId: user.id,
+            deptName: user.deptNames ? user.deptNames.join(', ') : ''
+          }))
+          
+          console.log('🔄 并发初始化用户选项列表:', userOptions.value)
+          return { type: 'users', data: users, success: true }
+        } else {
+          throw new Error('用户列表数据格式错误')
+        }
+      })(),
+      
+      // 可以在这里添加其他需要预加载的数据
+      // 例如：加载联系人分组、邮件模板等
+      // (async () => {
+      //   console.log('📡 并发加载联系人分组...')
+      //   const groups = await getContactGroups()
+      //   console.log(`✅ 并发加载联系人分组成功，共 ${groups.length} 个分组`)
+      //   return { type: 'groups', data: groups, success: true }
+      // })(),
+    ])
+    
+    // 处理并发加载结果
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        console.log(`✅ 并发加载任务 ${index + 1} 成功:`, result.value)
+      } else {
+        console.error(`❌ 并发加载任务 ${index + 1} 失败:`, result.reason)
+      }
+    })
+    
+    // 检查是否有任何任务失败，如果有则使用备用数据
+    const hasFailures = results.some(result => result.status === 'rejected')
+    if (hasFailures) {
+      console.warn('⚠️ 部分并发加载任务失败，使用备用数据')
+      if (allUsers.value.length === 0) {
+        userOptions.value = mockUserOptions
+        console.log('📋 使用mock用户数据作为备用')
+      }
+    }
+    
+    console.log('🏁 并发加载完成')
+  } catch (error: unknown) {
+    console.error('❌ 并发加载过程中发生错误:', error)
+    // 确保有备用数据
+    if (allUsers.value.length === 0) {
+      userOptions.value = mockUserOptions
+      console.log('📋 使用mock数据作为最终备用')
+    }
+  }
+}
+
+// 搜索用户/联系人 - 基于预加载的用户列表进行过滤
 const remoteSearch = async (query: string) => {
   console.log(`🔍 开始搜索联系人，关键词: "${query}"`)
   
   try {
     loading.value = true
-    console.log('📡 调用后端用户列表API...')
     
-    // 调用getSimpleUserList获取所有用户
-    const users = await getSimpleUserList()
-    for (const user of users) {
-      console.log(user.deptNames)
+    if (allUsers.value.length === 0) {
+      // 如果还没有预加载用户列表，使用并发加载
+      await loadAllData()
     }
     
-    if (users && Array.isArray(users)) {
-      console.log(`✅ 获取用户列表成功，共 ${users.length} 个用户`)
-      
-      // 如果有搜索关键词，进行过滤
-      let filteredUsers = users
-      if (query) {
-        filteredUsers = users.filter(user => 
-          (user.nickname && user.nickname.toLowerCase().includes(query.toLowerCase())) ||
-          (user.username && user.username.toLowerCase().includes(query.toLowerCase())) ||
-          (user.email && user.email.toLowerCase().includes(query.toLowerCase()))
-        )
-        console.log(`🔍 过滤后找到 ${filteredUsers.length} 个匹配用户`)
-      }
-      
-      // 转换为前端需要的格式
-      userOptions.value = filteredUsers.slice(0, 50).map((user: any) => ({
-        value: user.id.toString(), // 使用用户ID作为值
-        label: `${user.nickname || user.username} <${user.deptNames ? user.deptNames.join(', ') : ''}>`, // 显示格式：姓名 <部门名称>
-        avatar: user.avatar || '',
-        name: user.nickname || user.username,
-        email: user.username, // 用户名作为邮箱标识
-        userId: user.id,
-        deptName: user.deptNames ? user.deptNames.join(', ') : '' // 使用部门名称
-      }))
-      
-      console.log('🔄 更新用户选项列表:', userOptions.value)
-    } else {
-      console.warn('⚠️ API没有返回数据，使用mock数据')
-      // 如果API没有返回数据，使用mock数据
-      const filteredMockUsers = mockUserOptions.filter(user => 
-        user.label.toLowerCase().includes(query.toLowerCase()) ||
-        user.value.toLowerCase().includes(query.toLowerCase())
+    // 基于预加载的用户列表进行过滤
+    let filteredUsers = allUsers.value
+    if (query) {
+      filteredUsers = allUsers.value.filter(user => 
+        (user.nickname && user.nickname.toLowerCase().includes(query.toLowerCase())) ||
+        (user.username && user.username.toLowerCase().includes(query.toLowerCase())) ||
+        (user.email && user.email.toLowerCase().includes(query.toLowerCase()))
       )
-      userOptions.value = filteredMockUsers
-      console.log('📋 使用过滤后的mock数据:', userOptions.value)
+      console.log(`🔍 过滤后找到 ${filteredUsers.length} 个匹配用户`)
     }
+    
+    // 转换为前端需要的格式
+    userOptions.value = filteredUsers.slice(0, 50).map((user: any) => ({
+      value: user.id.toString(), // 使用用户ID作为值
+      label: `${user.nickname || user.username} <${user.deptNames ? user.deptNames.join(', ') : ''}>`, // 显示格式：姓名 <部门名称>
+      avatar: user.avatar || '',
+      name: user.nickname || user.username,
+      email: user.username, // 用户名作为邮箱标识
+      userId: user.id,
+      deptName: user.deptNames ? user.deptNames.join(', ') : '' // 使用部门名称
+    }))
+    
+    console.log('🔄 更新用户选项列表:', userOptions.value)
   } catch (error: unknown) {
     console.error('❌ 搜索联系人失败:', error)
     console.error('🔍 搜索错误详情:', {
@@ -672,14 +734,19 @@ const sendMailHandler = async () => {
   await doSendMail()
 }
 
-// 处理收件人：将姓名转换为身份证号，使用getSimpleUserList获取真实用户数据
+// 处理收件人：将姓名转换为身份证号，使用预加载的用户列表
 const processRecipients = async (recipients: string[]): Promise<string[]> => {
   const processedIdCards: string[] = []
   
   try {
-    // 获取所有用户列表
-    const users = await getSimpleUserList()
-    console.log('📋 获取用户列表用于处理收件人:', users)
+    // 使用预加载的用户列表
+    let users = allUsers.value
+    if (users.length === 0) {
+      // 如果预加载的用户列表为空，使用并发加载
+      await loadAllData()
+      users = allUsers.value
+    }
+    console.log('📋 使用用户列表处理收件人:', users)
     
     for (const recipient of recipients) {
       console.log(`🔍 处理收件人: "${recipient}"`)
@@ -861,35 +928,10 @@ const execFormatCommand = (command: string) => {
 
 onMounted(async () => {
   // 初始化编辑器
-  console.log('🚀 组件挂载完成，开始初始化用户列表...')
+  console.log('🚀 组件挂载完成，开始并发加载所有数据...')
   
-  try {
-    // 获取初始用户列表
-    const users = await getSimpleUserList()
-    if (users && Array.isArray(users)) {
-      console.log(`✅ 初始化获取用户列表成功，共 ${users.length} 个用户`)
-      
-      // 转换为前端需要的格式，限制显示前20个用户
-      userOptions.value = users.slice(0, 20).map((user: any) => ({
-        value: user.id.toString(),
-        label: `${user.nickname || user.username} <${user.deptNames ? user.deptNames.join(', ') : ''}>`,
-        avatar: user.avatar || '',
-        name: user.nickname || user.username,
-        email: user.username,
-        userId: user.id,
-        deptName: user.deptNames ? user.deptNames.join(', ') : ''
-      }))
-      
-      console.log('🔄 初始化用户选项列表:', userOptions.value)
-    } else {
-      console.warn('⚠️ 初始化时API没有返回数据，使用mock数据')
-      userOptions.value = mockUserOptions
-    }
-  } catch (error: unknown) {
-    console.error('❌ 初始化用户列表失败:', error)
-    console.log('📋 使用mock数据作为初始选项')
-    userOptions.value = mockUserOptions
-  }
+  // 并发加载所有数据
+  await loadAllData()
 })
 </script>
 
