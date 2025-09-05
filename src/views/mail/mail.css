@@ -531,9 +531,17 @@
     color: #ccc;
     cursor: pointer;
     font-size: 14px;
+    user-select: none;
+    pointer-events: auto;
+    z-index: 1;
+    position: relative;
 }
 
 .star-btn:hover {
+    color: #fbbc04;
+}
+
+.star-btn.starred {
     color: #fbbc04;
 }
 
