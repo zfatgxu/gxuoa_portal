@@ -139,8 +139,6 @@
             :normal-form-api="fApi"
             :writable-fields="writableFields"
             :supervision-detail-ref="supervisionDetailRef"
-            :is-lead-dept-leader-ready="isLeadDeptLeaderReadyFlag"
-            :is-lead-dept-leader="isLeadDeptLeaderFlag"
             :lead-dept-leader-ids="leadDeptLeaderIdsRef"
             @success="refresh"
           />
@@ -186,8 +184,6 @@ const operationButtonRef = ref() // 操作按钮组件 ref
 const supervisionDetailRef = ref() // 督办详情组件 ref
 
 // 本地响应式状态，用于同步子组件暴露的 computed 属性
-const isLeadDeptLeaderReadyFlag = ref(false)
-const isLeadDeptLeaderFlag = ref(false)
 const leadDeptLeaderIdsRef = ref<number[]>([])
 
 const auditIconsMap = {
@@ -344,22 +340,6 @@ const refresh = () => {
 const activeTab = ref('form')
 
 // 同步子组件暴露的 computed 属性到本地响应式状态
-watch(
-  () => supervisionDetailRef.value?.isLeadDeptLeaderReady?.value,
-  (newValue, oldValue) => {
-    isLeadDeptLeaderReadyFlag.value = !!newValue
-  },
-  { immediate: true }
-)
-
-watch(
-  () => supervisionDetailRef.value?.isLeadDeptLeader?.value,
-  (newValue, oldValue) => {
-    isLeadDeptLeaderFlag.value = !!newValue
-  },
-  { immediate: true }
-)
-
 watch(
   () => supervisionDetailRef.value?.getOrderDetailData?.()?.leadDeptLeaderIds,
   (newValue) => {

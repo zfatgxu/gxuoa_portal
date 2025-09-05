@@ -166,7 +166,7 @@
                 }">
                 {{ getTypeText(task) }}
               </span>
-              <h4 class="task-title" @click.stop="viewTaskDetail(task)">{{ getTaskTitle(task) }}</h4>
+              <h4 class="task-title" @click.stop="navigateToWorkflowDetail(task)">{{ getTaskTitle(task) }}</h4>
               <!-- 关注按钮 - 只在全部事项标签页显示 -->
               <el-button
                 v-if="activeTab === 'all-items'"
@@ -294,34 +294,44 @@
       </div>
     </div>
 
-    <!-- 督办详情弹窗 -->
-    <SupervisionDetailDialog
-      v-model="detailDialogVisible"
-      :task-data="selectedTask"
-      :process-instance-id="selectedTask?.processInstanceId"
-      :supervision-status="selectedTask?.supervisionStatus"
-      @close="handleDetailClose"
-    />
 
     <!-- Add Instruction Dialog -->
     <el-dialog
       v-model="instructionDialogVisible"
       title="新增批示"
-      width="60%"
+      width="600px"
+      class="add-progress-dialog"
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+      destroy-on-close
     >
-      <el-form :model="instructionForm" label-width="100px">
-        <el-form-item label="批示内容">
-          <el-input
-            v-model="instructionForm.content"
-            type="textarea"
-            :rows="8"
-            placeholder="请输入批示内容"
-          />
-        </el-form-item>
-      </el-form>
+      <div class="progress-dialog-content">
+        <el-form :model="instructionForm" :rules="instructionRules" ref="instructionFormRef" label-width="0" :hide-required-asterisk="true" class="progress-form">
+          <el-form-item prop="content" class="form-item-custom">
+            <el-input
+              v-model="instructionForm.content"
+              type="textarea"
+              :rows="6"
+              placeholder="请输入批示内容..."
+              maxlength="500"
+              show-word-limit
+              class="textarea-custom"
+            />
+          </el-form-item>
+        </el-form>
+      </div>
+
       <template #footer>
-        <el-button @click="instructionDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitInstruction">确定</el-button>
+        <div class="dialog-footer-custom">
+          <el-button @click="cancelInstruction" class="cancel-btn">
+            <Icon icon="ep:close" class="btn-icon" />
+            取消
+          </el-button>
+          <el-button type="primary" @click="submitInstruction" class="submit-btn">
+            <Icon icon="ep:check" class="btn-icon" />
+            确定
+          </el-button>
+        </div>
       </template>
     </el-dialog>
 
@@ -372,7 +382,7 @@ import {
   OfficeBuilding, User, Filter
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import SupervisionDetailDialog from '../components/SupervisionDetailDialog.vue'
+import { Icon } from '@/components/Icon'
 import SeniorFilter from '../components/seniorFilter.vue'
 import { SupervisionTaskApi, LeaderRemarkApi, SupervisionIndexApi, SupervisionFollowApi } from '@/api/supervision/index'
 import { dateFormatter, formatDate as utilFormatDate } from '@/utils/formatTime'
@@ -450,10 +460,8 @@ const selectedPriority = ref('')
 const selectedSupervisionStatus = ref('')
 const selectedDepartment = ref('')
 const selectedStatus = ref('')
-const detailDialogVisible = ref(false)
 const instructionDialogVisible = ref(false)
 const historyDialogVisible = ref(false)
-const selectedTask = ref(null)
 const loading = ref(false)
 
 // 关注相关状态
@@ -463,6 +471,15 @@ const followLoading = ref({}) // 存储每个任务的关注操作loading状态
 const instructionForm = reactive({
   content: ''
 })
+
+const instructionFormRef = ref()
+
+// 批示表单验证规则
+const instructionRules = {
+  content: [
+    { required: true, message: '请输入批示内容', trigger: 'blur' }
+  ]
+}
 
 // 分页相关
 const pagination = reactive({
@@ -1025,74 +1042,24 @@ const getStatusText = (task) => {
   return '进行中'
 }
 
-// 获取督办状态用于详情弹窗显示（与外面状态标签保持一致）
-const getSupervisionStatusForDialog = (task) => {
-  // 直接返回与外面状态标签一致的状态文本
-  return getStatusText(task)
-}
 
-const viewTaskDetail = async (task) => {
-  try {
-    // 转换数据格式以匹配SupervisionDetailDialog组件期望的格式
-    const supervisionData = task.supervisionPageVOData || {}
-    const coDeptNames = Object.values(supervisionData.coDeptNameMap || {})
-
-    selectedTask.value = {
-      id: supervisionData.id,
-      title: supervisionData.orderTitle || '未知任务',
-      description: supervisionData.content || '',
-      mainContent: supervisionData.content || '',
-      undertakingContent: supervisionData.undertakeMatter || '',
-      leadDepartment: supervisionData.leadDeptName || '',
-      assistDepartments: coDeptNames,
-      collaborators: coDeptNames,
-      supervisor: getLeadLeadersText(supervisionData.leadLeaders) || getLeadLeadersText(task.leadLeaders) || '',
-      priority: getPriorityText(task),
-      status: getStatusText(task), // 添加状态信息
-      deadline: supervisionData.deadline ? utilFormatDate(new Date(supervisionData.deadline), 'YYYY年MM月DD日 HH:mm') : '无',
-      deadlineTimestamp: supervisionData.deadline, // 添加原始时间戳
-      createTime: utilFormatDate(new Date(task.createTime), 'YYYY年MM月DD日 HH:mm'),
-      createdDate: utilFormatDate(new Date(task.createTime), 'YYYY年MM月DD日 HH:mm'),
-      orderNumber: supervisionData.orderCode || '',
-      processInstanceId: task.processInstance?.id || task.processInstanceId,
-      // 添加流程实例信息以匹配组件期望的数据结构
-      processInstance: {
-        id: task.processInstance?.id || task.processInstanceId
-      },
-      // 添加原型需要的字段
-      issueUnit: supervisionData.creatorDeptName || '', // 下发单位
-      coDeptNameMap: supervisionData.coDeptNameMap || {}, // 协办部门映射
-      taskType: task.taskType, // 添加任务类型信息
-      // 添加督办状态，用于详情弹窗中的状态显示
-      supervisionStatus: getSupervisionStatusForDialog(task)
-    }
-    detailDialogVisible.value = true
-  } catch (error) {
-    console.error('获取任务详情失败', error)
-    ElMessage.error('获取任务详情失败')
-  }
-}
-
-const handleDetailClose = () => {
-  detailDialogVisible.value = false
-  selectedTask.value = null
-}
+const currentInstructionTask = ref(null)
 
 const addInstruction = (task) => {
-  selectedTask.value = task
+  currentInstructionTask.value = task
   instructionDialogVisible.value = true
+  console.log('addInstruction')
 }
 
 const submitInstruction = async () => {
-  if (!instructionForm.content.trim()) {
-    ElMessage.warning('请输入批示内容')
-    return
-  }
+  if (!instructionFormRef.value) return
 
   try {
+    await instructionFormRef.value.validate()
+
     // 调用新增批示API
     await LeaderRemarkApi.insertLeaderRemark({
-      processInstanceId: selectedTask.value.processInstanceId,
+      processInstanceId: currentInstructionTask.value.processInstanceId,
       remark: instructionForm.content.trim()
     })
 
@@ -1105,9 +1072,14 @@ const submitInstruction = async () => {
     // 重新加载任务列表以显示最新批示
     await loadTaskList()
   } catch (error) {
-    console.error('提交批示失败', error)
+    console.error('提交批示失败:', error)
     ElMessage.error('提交批示失败')
   }
+}
+
+const cancelInstruction = () => {
+  instructionDialogVisible.value = false
+  instructionForm.content = ''
 }
 
 const showMoreHistory = () => {
@@ -1605,6 +1577,132 @@ onMounted(() => {
   padding: 50px;
   color: #909399;
   font-size: 16px;
+}
+
+/* 添加进度更新弹窗样式 */
+.add-progress-dialog {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.add-progress-dialog :deep(.el-dialog) {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.add-progress-dialog :deep(.el-dialog__header) {
+  background: #f8f9fa;
+  color: #2c3e50;
+  padding: 16px 20px;
+  margin: 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.add-progress-dialog :deep(.el-dialog__title) {
+  font-size: 16px;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.add-progress-dialog :deep(.el-dialog__headerbtn) {
+  top: 16px;
+  right: 16px;
+}
+
+.add-progress-dialog :deep(.el-dialog__close) {
+  color: #6c757d;
+  font-size: 16px;
+}
+
+.add-progress-dialog :deep(.el-dialog__close):hover {
+  color: #495057;
+}
+
+.add-progress-dialog :deep(.el-dialog__body) {
+  padding: 0;
+  background: white;
+}
+
+.progress-dialog-content {
+  padding: 20px;
+}
+
+.progress-form {
+  background: white;
+  border-radius: 6px;
+  padding: 20px;
+  margin: 0;
+  border: 1px solid #f0f0f0;
+}
+
+.form-item-custom {
+  margin-bottom: 20px;
+}
+
+.form-item-custom :deep(.el-form-item__label) {
+  font-weight: 500;
+  color: #2c3e50;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.textarea-custom :deep(.el-textarea__inner) {
+  border-radius: 6px;
+  border: 1px solid #dcdfe6;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 12px;
+  resize: none;
+}
+
+.textarea-custom :deep(.el-textarea__inner):focus {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+}
+
+.dialog-footer-custom {
+  padding: 16px 20px;
+  background: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.cancel-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid #d0d7de;
+  background: white;
+  color: #656d76;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.cancel-btn:hover {
+  border-color: #adb5bd;
+  color: #495057;
+}
+
+.submit-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  background: #1890ff;
+  border: 1px solid #1890ff;
+  color: white;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.submit-btn:hover {
+  background: #40a9ff;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(24, 144, 255, 0.2);
+}
+
+.btn-icon {
+  margin-right: 4px;
+  font-size: 12px;
 }
 
 /* Element Plus 深度选择器 */

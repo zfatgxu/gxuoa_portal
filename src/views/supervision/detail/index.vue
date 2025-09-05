@@ -2172,8 +2172,8 @@ const submitAddRemark = async () => {
     remarkForm.remark = ''
 
     // 刷新进度记录列表
-    if (refreshProcessInstanceId) {
-      await getProgressRecords(refreshProcessInstanceId, isExpanded.value)
+    if (processInstanceId) {
+      await getProgressRecords(processInstanceId, isExpanded.value)
     }
   } catch (error) {
     console.error('添加批示失败:', error)
@@ -2425,12 +2425,8 @@ const submitAddProgress = async () => {
     progressForm.fileList = []
 
     // 刷新进度记录列表
-    const refreshProcessInstanceId = props.id?.toString() ||
-                                   route.query.processInstanceId as string ||
-                                   route.params.id as string ||
-                                   route.query.id as string
-    if (refreshProcessInstanceId) {
-      await getProgressRecords(refreshProcessInstanceId, isExpanded.value)
+    if (processInstanceId) {
+      await getProgressRecords(processInstanceId, isExpanded.value)
     }
   } catch (error) {
     // 用户取消确认时，error 是字符串 'cancel' 或 'close'，不显示错误信息

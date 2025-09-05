@@ -561,8 +561,6 @@ const props = defineProps<{
   normalFormApi: any // 流程表单 formCreate Api
   writableFields: string[] // 流程表单可以编辑的字段
   supervisionDetailRef?: any // 督办详情组件引用
-  isLeadDeptLeaderReady?: boolean // 牵头单位负责人数据是否就绪
-  isLeadDeptLeader?: boolean // 当前用户是否为牵头单位负责人
   leadDeptLeaderIds?: number[] // 牵头单位负责人ID数组
 }>()
 
