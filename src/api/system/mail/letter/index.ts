@@ -489,6 +489,16 @@ export const getDeletedMails = async (params: { pageNo: number; pageSize: number
 }
 
 /**
+ * 获取未读邮件
+ * @param params 分页参数
+ * @returns Promise<{list: MailListItemVO[], total: number}>
+ */
+export const getUnreadMails = async (params: { pageNo: number; pageSize: number }): Promise<{list: MailListItemVO[], total: number}> => {
+  const response = await request.get({ url: '/api/system/mail/letter/unread', params })
+  return response.data
+}
+
+/**
  * 批量删除邮件
  * @param data 删除请求参数
  * @returns Promise<boolean>

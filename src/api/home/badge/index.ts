@@ -1,9 +1,8 @@
-import request from '@/config/axios'
 import { getHomeToDoPage } from '@/api/home/todo'
 import { SupervisionTaskApi } from '@/api/supervision'
 import { getSealTodoPage } from '@/api/seal'
 import { RegisterApi } from '@/api/leave/create/createForm'
-import { getMailLogPage } from '@/api/system/mail/log'
+import { getUnreadMails } from '@/api/system/mail/letter'
 
 // Badge数据接口
 export interface BadgeData {
@@ -74,7 +73,7 @@ export class BadgeService {
   // 获取邮件待办数量（未读邮件）
   static async getMailTodoCount(): Promise<number> {
     try {
-      const response = await getMailLogPage({ 
+      const response = await getUnreadMails({ 
         pageNo: 1, 
         pageSize: 1 
       })
