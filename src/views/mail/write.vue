@@ -2,86 +2,6 @@
   <div class="mail-container">
     <!-- 主体内容区 -->
     <div class="content-wrapper">
-      <!-- 左侧边栏 -->
-      <div class="sidebar">
-        <!-- 顶部按钮区域 -->
-        <div class="sidebar-top">
-          <button class="compose-btn active">
-            <span class="icon icon--compose">
-              <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 14l8.5-8.5c.6-.6 1.6-.6 2.2 0l1.8 1.8c.6.6.6 1.6 0 2.2L7 18H3v-4z" fill="#f5a623"/>
-                <path d="M12.3 3.7l4 4" stroke="#f5a623" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-            </span>
-            <span class="btn-text">写信</span>
-          </button>
-          <div class="sidebar-divider"></div>
-          <button class="inbox-btn">
-            <span class="icon icon--inbox">
-              <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                <rect x="2" y="8" width="16" height="10" rx="2" fill="#FFB74D"/>
-                <rect x="6" y="4" width="8" height="6" rx="1" fill="#E3F2FD" stroke="#64B5F6" stroke-width="1"/>
-                <path d="M6 7l4 2 4-2" fill="none" stroke="#64B5F6" stroke-width="1"/>
-              </svg>
-            </span>
-            <span class="btn-text">收信</span>
-          </button>
-        </div>
-
-        <!-- 文件夹列表 -->
-        <div class="folder-list">
-          <div class="folder-item">
-            <span class="folder-icon">
-              <!-- 信箱SVG -->
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="12" rx="3" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M2 6l8 6 8-6" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
-            </span>
-            <span class="folder-name">收件箱</span><span class="folder-badge">1</span>
-          </div>
-          <div class="folder-item">
-            <span class="folder-icon">
-              <!-- 星标SVG -->
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="10,2 12,7.5 18,7.5 13,11.5 15,17 10,13.5 5,17 7,11.5 2,7.5 8,7.5" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
-            </span>
-            <span class="folder-name">星标邮件</span>
-          </div>
-          <div class="folder-item">
-            <span class="folder-icon">
-              <!-- 纸飞机SVG -->
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="2,18 18,10 2,2 5,10 2,18" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
-            </span>
-            <span class="folder-name">已发送</span>
-          </div>
-          <div class="folder-item">
-            <span class="folder-icon">
-              <!-- 文件夹SVG -->
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="10" rx="2" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M2 6l6-4 4 4h6" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
-            </span>
-            <span class="folder-name">草稿箱</span><span class="folder-badge">4</span>
-          </div>
-          <div class="folder-item">
-            <span class="folder-icon">
-              <!-- 垃圾桶SVG -->
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="5" y="7" width="10" height="9" rx="2" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M3 7h14" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M8 10v3" stroke="#ff9800" stroke-width="1.2"/><path d="M12 10v3" stroke="#ff9800" stroke-width="1.2"/></svg>
-            </span>
-            <span class="folder-name">已删除</span>
-          </div>
-          <div class="folder-item">
-            <span class="folder-icon">
-              <!-- 垃圾箱SVG -->
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="12" rx="3" stroke="#ff9800" stroke-width="1.5" fill="none"/><rect x="8" y="10" width="4" height="4" rx="1" stroke="#ff9800" stroke-width="1.2" fill="none"/></svg>
-            </span>
-            <span class="folder-name">垃圾箱</span><span class="folder-badge">8</span>
-          </div>
-          <div class="folder-item">
-            <span class="folder-icon">
-              <!-- 文件夹SVG -->
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="2,18 18,10 2,2 5,10 2,18" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
-            </span>
-            <span class="folder-name">我的文件夹</span>
-          </div>
-        </div>
-      </div>
-      
       <!-- 主内容区域 -->
       <div class="main-content">
         <div class="header">
@@ -436,6 +356,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
+import { useTagsViewStore } from '@/store/modules/tagsView'
 import { sendMail, saveDraft, type SendMailReqVO, type SaveDraftReqVO } from '@/api/system/mail/letter/index'
 import { getSimpleUserList } from '@/api/system/user'
 import { getAccessToken } from '@/utils/auth'
@@ -494,6 +415,7 @@ import {
 } from './mock/write.js'
 
 const router = useRouter()
+const tagsViewStore = useTagsViewStore()
 
 // 表单数据
 const mailForm = ref<{
@@ -859,6 +781,12 @@ const doSendMail = async () => {
     
     // 清空表单
     resetForm()
+    
+    // 关闭当前标签页
+    const currentRoute = router.currentRoute.value
+    tagsViewStore.delView(currentRoute)
+    
+    // 跳转到邮件列表页面
     router.push('/mail')
   } catch (error: any) {
     console.error('发送邮件失败:', error)
@@ -895,7 +823,6 @@ const saveDraftHandler = async () => {
     
     await saveDraft(draftData)
     ElMessage.success('草稿保存成功')
-    router.push('/mail')
   } catch (error: any) {
     console.error('保存草稿失败:', error)
     const errorMsg = error?.response?.data?.message || error?.message || '网络错误，请稍后重试'
@@ -913,11 +840,13 @@ const closeEditor = async () => {
       closeOnClickModal: false
     })
     
-    // 保存草稿
+    // 保存草稿（不关闭标签页）
     await saveDraftHandler()
   } catch (action) {
     if (action === 'cancel') {
-      // 不保存，直接返回
+      // 不保存，直接关闭标签页并返回
+      const currentRoute = router.currentRoute.value
+      tagsViewStore.delView(currentRoute)
       router.push('/mail')
     }
   }
@@ -977,86 +906,6 @@ onMounted(async () => {
   overflow: hidden; /* 防止溢出出现滚动条 */
 }
 
-/* 使用:deep选择器来正确应用按钮样式 */
-.sidebar :deep(.sidebar-top) {
-  margin: 0 -8px 20px -8px;
-  background: #fff;
-  border-radius: 18px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-  padding: 12px 8px 8px 8px;
-  border-bottom: 2px solid #e3f2fd;
-}
-
-.sidebar :deep(.compose-btn), .sidebar :deep(.inbox-btn) {
-  width: 100%;
-  padding: 8px 6px;
-  margin: 8px 0;
-  border: none;
-  background-color: transparent;
-  cursor: pointer;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  color: #0b2a5a;
-  font-weight: 800;
-}
-
-.sidebar :deep(.sidebar-divider) {
-  height: 1px;
-  background: #e5e7eb;
-  margin: 6px 2px;
-}
-
-.sidebar :deep(.compose-btn.active) { color: #0b2a5a; }
-
-.sidebar :deep(.compose-btn:hover), .sidebar :deep(.inbox-btn:hover) { opacity: 0.9; }
-
-.sidebar :deep(.compose-btn.active:hover) {
-  background-color: #3367d6;
-}
-
-.folder-list {
-  flex: 1;
-  background: #fff;
-  margin: 0 -8px -8px -8px;
-  padding: 8px;
-  border-radius: 18px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-}
-
-.folder-item {
-  display: flex;
-  align-items: center;
-  padding: 8px 6px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #333;
-  border-radius: 12px;
-  margin-bottom: 3px;
-}
-
-.folder-icon {
-  margin-right: 8px;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-}
-
-.folder-name {
-  flex: 1;
-  font-size: 13px;
-}
-
-.folder-badge {
-  background-color: #e0e0e0;
-  border-radius: 10px;
-  padding: 0 6px;
-  font-size: 11px;
-  color: #666;
-  margin-left: 4px;
-}
 
 /* 顶部标题栏 */
 .mail-header {
@@ -1102,7 +951,7 @@ onMounted(async () => {
   display: flex;
   flex: 1;
   background-color: #f5f7f9;
-  padding: 0 8px 8px 8px;
+  padding: 8px;
   gap: 8px;
 }
 
@@ -1116,6 +965,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  width: 100%;
 }
 
 /* 工具栏 */
