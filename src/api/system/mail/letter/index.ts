@@ -56,6 +56,8 @@ export interface LetterContentPageReqVO extends PageParam {
 export interface LetterRecipientRespVO {
   id: number                   // 记录ID
   letterId: number             // 信件ID
+  userId: number               // 用户ID
+  userName: string             // 用户姓名
   recipientIdCard: string      // 收件人身份证号
   recipientType: number        // 收件人类型(1-主收件人,2-抄送人)
   isRead: boolean              // 是否已读
@@ -92,6 +94,8 @@ export interface LetterRecipientPageReqVO extends PageParam {
 export interface LetterSenderRespVO {
   id: number                   // 记录ID
   letterId: number             // 信件ID
+  userId: number               // 用户ID
+  userName: string             // 用户姓名
   senderIdCard: string         // 发件人身份证号
   isDraft: boolean             // 是否为草稿(0-已发送,1-草稿)
   isRead: boolean              // 是否已读
@@ -128,8 +132,11 @@ export interface LetterSenderPageReqVO extends PageParam {
 // 联系人星标响应VO - 对应后端 LetterContactStarRespVO
 export interface LetterContactStarRespVO {
   id: number                   // 记录ID
+  userId: number               // 用户ID
+  userName: string             // 用户姓名
   userIdCard: string           // 用户身份证号
   contactIdCard: string        // 联系人身份证号
+  remark: string               // 备注
   createTime: string           // 创建时间
   updateTime: string           // 更新时间
   tenantId: number             // 租户编号
@@ -137,11 +144,15 @@ export interface LetterContactStarRespVO {
 
 // 联系人星标创建请求VO - 对应后端 LetterContactStarCreateReqVO
 export interface LetterContactStarCreateReqVO {
+  userId: number               // 用户ID
+  userName: string             // 用户姓名
   contactIdCard: string        // 联系人身份证号
+  remark: string               // 备注
 }
 
 // 联系人星标分页查询请求VO - 对应后端 LetterContactStarPageReqVO
 export interface LetterContactStarPageReqVO extends PageParam {
+  userName?: string            // 用户姓名
   contactIdCard?: string       // 联系人身份证号
 }
 
@@ -508,11 +519,11 @@ export const deleteMails = async (data: { ids: number[] }): Promise<boolean> => 
 
 /**
  * 切换邮件星标状态
- * @param id 邮件ID
+ * @param data 邮件ID列表
  * @returns Promise<boolean>
  */
-export const toggleMailStar = async (id: number): Promise<boolean> => {
-  return await request.post({url: `/letter/mail/${id}/toggle-star`})
+export const toggleMailStar = async (data: { ids: number[] }): Promise<boolean> => {
+  return await request.put({url: '/letter/mail/toggle-star', data})
 }
 
 /**
@@ -565,11 +576,11 @@ export const markAsUnread = async (data: { ids: number[] }): Promise<boolean> =>
 
 /**
  * 切换信件星标状态
- * @param id 信件ID
+ * @param data 信件ID列表
  * @returns Promise<boolean>
  */
-export const toggleStar = async (id: number): Promise<boolean> => {
-  return await request.put({url: `/letter/toggle-star?id=${id}`})
+export const toggleStar = async (data: { ids: number[] }): Promise<boolean> => {
+  return await request.put({url: '/letter/toggle-star', data})
 }
 
 /**
@@ -582,12 +593,30 @@ export const moveToTrash = async (data: { ids: number[] }): Promise<boolean> => 
 }
 
 /**
+ * 从垃圾箱恢复信件
+ * @param data 信件ID列表
+ * @returns Promise<boolean>
+ */
+export const restoreFromTrash = async (data: { ids: number[] }): Promise<boolean> => {
+  return await request.put({url: '/letter/restore-from-trash', data})
+}
+
+/**
  * 彻底删除信件
  * @param data 信件ID列表
  * @returns Promise<boolean>
  */
 export const permanentDelete = async (data: { ids: number[] }): Promise<boolean> => {
   return await request.delete({url: '/letter/permanent-delete', data})
+}
+
+/**
+ * 搜索信件
+ * @param params 搜索参数
+ * @returns Promise<{list: LetterContentRespVO[], total: number}>
+ */
+export const searchLetters = async (params: SearchMailReqVO): Promise<{list: LetterContentRespVO[], total: number}> => {
+  return await request.get({url: '/letter/search', params})
 }
 
 // ==================== 信件查询接口 ====================
