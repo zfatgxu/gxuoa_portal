@@ -32,7 +32,7 @@
         <button class="tool-btn">
           转发
         </button>
-        <button class="tool-btn">
+        <button class="tool-btn" @click="markAllAsRead">
           全部标记为已读
         </button>
         <select class="tool-select" v-model="markAsValue" @change="handleMarkAsChange">
@@ -206,6 +206,16 @@ function handleMarkAsChange() {
       emit('showMessage', { type: 'warning', message: '请先选择要标记的邮件' })
       markAsValue.value = '' // 重置选择
     }
+  }
+}
+
+// 全部标记为已读
+function markAllAsRead() {
+  const allEmailIds = props.emails.map(email => email.id)
+  if (allEmailIds.length > 0) {
+    emit('markEmails', { action: 'read', emailIds: allEmailIds })
+  } else {
+    emit('showMessage', { type: 'warning', message: '当前文件夹没有邮件' })
   }
 }
 
