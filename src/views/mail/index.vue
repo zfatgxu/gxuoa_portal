@@ -372,7 +372,7 @@ async function handleToggleStar(emailId: number) {
   
   try {
     console.log('📡 调用切换星标API...')
-    await toggleStarAPI(emailId)
+    await toggleStarAPI({ ids: [emailId] })
     
     console.log('🔄 在所有文件夹中查找并更新邮件的星标状态...')
     Object.keys(allEmails).forEach(folderKey => {
