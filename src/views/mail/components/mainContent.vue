@@ -31,32 +31,23 @@
           </span>
         </span>
         <button class="tool-btn" @click="deleteSelectedEmails" :disabled="selectedEmails.length === 0">
-          <span class="tool-btn-icon">
-            <el-icon><Delete /></el-icon>
-          </span>
           {{ isDeletedFolder ? '彻底删除' : '删除' }}
         </button>
+        <button class="tool-btn" @click="permanentDeleteSelectedEmails" :disabled="selectedEmails.length === 0">
+          彻底删除
+        </button>
         <button class="tool-btn">
-          <span class="tool-btn-icon">
-            <!-- 转发：极简带右上角箭头的方框 -->
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-              <path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5z"/>
-              <path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0v-5z"/>
-            </svg>
-          </span>
           转发
         </button>
         <button class="tool-btn">
-          <span class="tool-btn-icon">
-            <!-- 全部标记为已读：信封 -->
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 16 16">
-              <path d="M8.47 1.318a1 1 0 0 0-.94 0l-6 3.2A1 1 0 0 0 1 5.4v.817l5.75 3.45L8 8.917l1.25.75L15 6.217V5.4a1 1 0 0 0-.53-.882l-6-3.2ZM15 7.383l-4.778 2.867L15 13.117V7.383Zm-.035 6.88L8 10.082l-6.965 4.18A1 1 0 0 0 2 15h12a1 1 0 0 0 .965-.738ZM1 13.116l4.778-2.867L1 7.383v5.734Z"/>
-            </svg>
-          </span>
           全部标记为已读
         </button>
-        <select class="tool-select">
-          <option>标记为...</option>
+        <select class="tool-select" v-model="markAsValue" @change="handleMarkAsChange">
+          <option value="" disabled selected style="display: none;">标记为...</option>
+          <option value="read">已读邮件</option>
+          <option value="unread">未读邮件</option>
+          <option value="star">星标邮件</option>
+          <option value="unstar">取消星标</option>
         </select>
         <select class="tool-select">
           <option>移动...</option>
@@ -109,8 +100,6 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { ElIcon } from 'element-plus'
-import { Delete } from '@element-plus/icons-vue'
 import topImage from '@/views/mail/image/top.png'
 
 interface Email {
@@ -133,6 +122,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   deleteEmails: [emailIds: number[]]
+  permanentDeleteEmails: [emailIds: number[]]
+  markEmails: [data: { action: string, emailIds: number[] }]
+  showMessage: [data: { type: string, message: string }]
   toggleStar: [emailId: number]
   syncMails: []
   viewEmailDetail: [emailId: number]
@@ -140,6 +132,7 @@ const emit = defineEmits<{
 
 // --- 全选逻辑 ---
 const selectedEmails = ref<(string|number)[]>([])
+const markAsValue = ref('')
 const allSelected = computed({
   get() {
     return props.emails.length > 0 && selectedEmails.value.length === props.emails.length
@@ -164,6 +157,30 @@ function deleteSelectedEmails() {
     const emailIds = selectedEmails.value.map(id => Number(id))
     emit('deleteEmails', emailIds)
     selectedEmails.value = []
+  }
+}
+
+// 彻底删除选中的邮件
+function permanentDeleteSelectedEmails() {
+  if (selectedEmails.value.length > 0) {
+    const emailIds = selectedEmails.value.map(id => Number(id))
+    emit('permanentDeleteEmails', emailIds)
+    selectedEmails.value = []
+  }
+}
+
+// 处理标记为操作
+function handleMarkAsChange() {
+  if (markAsValue.value && markAsValue.value !== '') {
+    if (selectedEmails.value.length > 0) {
+      const emailIds = selectedEmails.value.map(id => Number(id))
+      emit('markEmails', { action: markAsValue.value, emailIds })
+      markAsValue.value = '' // 重置选择
+    } else {
+      // 如果没有选中邮件，显示提示并重置选择
+      emit('showMessage', { type: 'warning', message: '请先选择要标记的邮件' })
+      markAsValue.value = '' // 重置选择
+    }
   }
 }
 

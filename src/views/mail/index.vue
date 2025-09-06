@@ -34,19 +34,19 @@
     </span>
             <span class="folder-name">星标邮件</span><span class="folder-badge">{{ getStarredCount() }}</span>
           </div>
-          <div class="folder-item" :class="{active: selectedFolder==='sent'}" @click="selectFolder('sent')">
-    <span class="folder-icon">
-      <!-- 纸飞机SVG -->
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="2,18 18,10 2,2 5,10 2,18" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
-    </span>
-            <span class="folder-name">已发送</span><span class="folder-badge">{{ getSentCount() }}</span>
-          </div>
           <div class="folder-item" :class="{active: selectedFolder==='drafts'}" @click="selectFolder('drafts')">
     <span class="folder-icon">
       <!-- 文件夹SVG -->
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="10" rx="2" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M2 6l6-4 4 4h6" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
     </span>
             <span class="folder-name">草稿箱</span><span class="folder-badge">{{ getDraftCount() }}</span>
+          </div>
+          <div class="folder-item" :class="{active: selectedFolder==='sent'}" @click="selectFolder('sent')">
+    <span class="folder-icon">
+      <!-- 纸飞机SVG -->
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="2,18 18,10 2,2 5,10 2,18" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
+    </span>
+            <span class="folder-name">已发送</span><span class="folder-badge">{{ getSentCount() }}</span>
           </div>
           <div class="folder-item" :class="{active: selectedFolder==='deleted'}" @click="selectFolder('deleted')">
     <span class="folder-icon">
@@ -71,6 +71,9 @@
         :emails="allEmails[selectedFolder] || []" 
         :isDeletedFolder="selectedFolder==='deleted'"
         @delete-emails="handleDeleteEmails"
+        @permanent-delete-emails="handlePermanentDeleteEmails"
+        @mark-emails="handleMarkEmails"
+        @show-message="handleShowMessage"
         @toggle-star="handleToggleStar"
         @sync-mails="handleSyncMails"
         @view-email-detail="handleViewEmailDetail"
@@ -84,7 +87,7 @@ import MainContent from './components/mainContent.vue'
 import { ref, reactive, onMounted } from 'vue'
 import '@/views/mail/mail.css'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElLoading } from 'element-plus'
+import { ElMessage, ElLoading, ElMessageBox } from 'element-plus'
 import { 
   getInboxMails, 
   getSentMails, 
@@ -92,6 +95,9 @@ import {
   getStarredMails,
   getDeletedMails,
   moveToTrash,
+  permanentDelete,
+  markAsRead,
+  markAsUnread,
   toggleStar as toggleStarAPI,
   getMailStats,
   getLetterDetail,
@@ -359,6 +365,200 @@ async function handleDeleteEmails(emailIds: number[]) {
   } finally {
     loading.value = false
     console.log('🏁 删除邮件流程结束，loading状态:', loading.value)
+  }
+}
+
+// 处理彻底删除邮件
+async function handlePermanentDeleteEmails(emailIds: number[]) {
+  console.log(`💀 开始彻底删除邮件，ID列表:`, emailIds)
+  console.log(`📁 当前文件夹: ${selectedFolder.value}`)
+  
+  try {
+    // 显示确认对话框
+    await ElMessageBox.confirm(
+      `确定要彻底删除这 ${emailIds.length} 封邮件吗？此操作不可恢复！`,
+      '彻底删除确认',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+    
+    loading.value = true
+    console.log('📡 调用彻底删除邮件API...')
+    await permanentDelete({ ids: emailIds })
+    
+    console.log('🔄 从当前文件夹移除邮件...')
+    const currentEmails = allEmails[selectedFolder.value]
+    emailIds.forEach(emailId => {
+      const emailIndex = currentEmails.findIndex(email => email.id === emailId)
+      if (emailIndex !== -1) {
+        console.log(`💀 彻底移除邮件: ${emailId}`)
+        currentEmails.splice(emailIndex, 1)
+      }
+    })
+    
+    // 重新加载已删除文件夹（如果需要）
+    if (selectedFolder.value !== 'deleted') {
+      console.log('📥 重新加载已删除文件夹...')
+      await loadFolderEmails('deleted')
+    }
+    
+    console.log('📊 重新加载邮件统计...')
+    await loadMailStats()
+    
+    console.log(`✅ 成功彻底删除 ${emailIds.length} 封邮件`)
+    ElMessage.success(`成功彻底删除 ${emailIds.length} 封邮件`)
+  } catch (error: any) {
+    if (error === 'cancel') {
+      console.log('🚫 用户取消了彻底删除操作')
+      return
+    }
+    
+    console.error('❌ 彻底删除邮件失败:', error)
+    console.error('🔍 彻底删除错误详情:', {
+      message: error?.message,
+      response: error?.response,
+      status: error?.response?.status
+    })
+    ElMessage.error('彻底删除邮件失败')
+  } finally {
+    loading.value = false
+    console.log('🏁 彻底删除邮件流程结束，loading状态:', loading.value)
+  }
+}
+
+// 处理显示消息
+function handleShowMessage(data: { type: string, message: string }) {
+  const { type, message } = data
+  if (type === 'warning') {
+    ElMessage.warning(message)
+  } else if (type === 'error') {
+    ElMessage.error(message)
+  } else if (type === 'success') {
+    ElMessage.success(message)
+  } else {
+    ElMessage.info(message)
+  }
+}
+
+// 处理标记邮件操作
+async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
+  const { action, emailIds } = data
+  console.log(`🏷️ 开始标记邮件操作: ${action}，ID列表:`, emailIds)
+  console.log(`📁 当前文件夹: ${selectedFolder.value}`)
+  
+  try {
+    loading.value = true
+    let successMessage = ''
+    
+    switch (action) {
+      case 'read':
+        console.log('📡 调用标记为已读API...')
+        await markAsRead({ ids: emailIds })
+        successMessage = `成功标记 ${emailIds.length} 封邮件为已读`
+        
+        // 更新本地状态
+        emailIds.forEach(emailId => {
+          Object.keys(allEmails).forEach(folderKey => {
+            const email = allEmails[folderKey].find(e => e.id === emailId)
+            if (email) {
+              email.isRead = true
+            }
+          })
+        })
+        break
+        
+      case 'unread':
+        console.log('📡 调用标记为未读API...')
+        await markAsUnread({ ids: emailIds })
+        successMessage = `成功标记 ${emailIds.length} 封邮件为未读`
+        
+        // 更新本地状态
+        emailIds.forEach(emailId => {
+          Object.keys(allEmails).forEach(folderKey => {
+            const email = allEmails[folderKey].find(e => e.id === emailId)
+            if (email) {
+              email.isRead = false
+            }
+          })
+        })
+        break
+        
+      case 'star':
+        console.log('📡 调用添加星标API...')
+        await toggleStarAPI({ ids: emailIds })
+        successMessage = `成功为 ${emailIds.length} 封邮件添加星标`
+        
+        // 更新本地状态
+        const today = new Date().toISOString().split('T')[0]
+        emailIds.forEach(emailId => {
+          Object.keys(allEmails).forEach(folderKey => {
+            const email = allEmails[folderKey].find(e => e.id === emailId)
+            if (email) {
+              email.isStarred = true
+              email.starredAt = today
+            }
+          })
+        })
+        
+        // 重新加载星标文件夹
+        await loadFolderEmails('starred')
+        break
+        
+      case 'unstar':
+        console.log('📡 调用取消星标API...')
+        await toggleStarAPI({ ids: emailIds })
+        successMessage = `成功取消 ${emailIds.length} 封邮件的星标`
+        
+        // 更新本地状态
+        emailIds.forEach(emailId => {
+          Object.keys(allEmails).forEach(folderKey => {
+            const email = allEmails[folderKey].find(e => e.id === emailId)
+            if (email) {
+              email.isStarred = false
+              email.starredAt = undefined
+              
+              // 从星标文件夹中移除
+              if (folderKey === 'starred') {
+                const starredIndex = allEmails.starred.findIndex(e => e.id === emailId)
+                if (starredIndex !== -1) {
+                  allEmails.starred.splice(starredIndex, 1)
+                }
+              }
+            }
+          })
+        })
+        
+        // 重新加载星标文件夹
+        await loadFolderEmails('starred')
+        break
+        
+      default:
+        console.error(`❌ 未知的标记操作: ${action}`)
+        ElMessage.error('未知的标记操作')
+        return
+    }
+    
+    console.log('📊 重新加载邮件统计...')
+    await loadMailStats()
+    
+    console.log(`✅ ${successMessage}`)
+    ElMessage.success(successMessage)
+    
+  } catch (error: any) {
+    console.error('❌ 标记邮件失败:', error)
+    console.error('🔍 标记错误详情:', {
+      message: error?.message,
+      response: error?.response,
+      status: error?.response?.status
+    })
+    ElMessage.error('标记邮件失败')
+  } finally {
+    loading.value = false
+    console.log('🏁 标记邮件流程结束，loading状态:', loading.value)
   }
 }
 
