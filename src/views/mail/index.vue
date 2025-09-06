@@ -70,6 +70,7 @@
         :folderName="folderLabels[selectedFolder]" 
         :emails="allEmails[selectedFolder] || []" 
         :isDeletedFolder="selectedFolder==='deleted'"
+        :mailStats="mailStats"
         @delete-emails="handleDeleteEmails"
         @permanent-delete-emails="handlePermanentDeleteEmails"
         @mark-emails="handleMarkEmails"
@@ -634,6 +635,34 @@ async function handleViewEmailDetail(emailId: number) {
     
     if (!emailDetail.content) {
       throw new Error('邮件内容数据缺失')
+    }
+    
+    // 检查邮件是否已读，如果未读则标记为已读
+    const currentEmail = Object.values(allEmails).flat().find(email => email.id === emailId)
+    if (currentEmail && !currentEmail.isRead) {
+      console.log('📖 邮件未读，开始标记为已读...')
+      try {
+        await markAsRead({ ids: [emailId] })
+        
+        // 更新本地状态
+        Object.keys(allEmails).forEach(folderKey => {
+          const email = allEmails[folderKey].find(e => e.id === emailId)
+          if (email) {
+            email.isRead = true
+            console.log(`📧 邮件 ${emailId} 在文件夹 ${folderKey} 中标记为已读`)
+          }
+        })
+        
+        // 重新加载邮件统计
+        await loadMailStats()
+        
+        console.log('✅ 邮件标记为已读成功')
+      } catch (markError: any) {
+        console.error('❌ 标记邮件为已读失败:', markError)
+        // 即使标记失败，仍然显示邮件详情
+      }
+    } else {
+      console.log('📖 邮件已经是已读状态，无需标记')
     }
     
     // 这里可以跳转到邮件详情页面或显示弹窗

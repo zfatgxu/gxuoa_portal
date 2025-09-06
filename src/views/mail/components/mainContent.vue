@@ -22,13 +22,6 @@
         <input type="checkbox" v-model="allSelected" class="select-all-checkbox" title="全选/取消全选" />
         <span class="toolbar-inbox-label">
           {{ folderName }}
-          <span class="inbox-toolbar-icon">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M5 6l5-4 5 4"/>
-              <path d="M3 11h14"/>
-              <path d="M3 15h14"/>
-            </svg>
-          </span>
         </span>
         <button class="tool-btn" @click="deleteSelectedEmails" :disabled="selectedEmails.length === 0">
           {{ isDeletedFolder ? '彻底删除' : '删除' }}
@@ -54,7 +47,7 @@
         </select>
       </div>
       <div class="toolbar-right">
-        <span class="email-count">共{{ emails.length }}封 ⬇</span>
+        <span class="email-count">{{ emailCountText }} ⬇</span>
         <span class="refresh-icon" @click="$emit('syncMails')" style="cursor: pointer" title="同步邮件">🔄</span>
       </div>
     </div>
@@ -65,12 +58,13 @@
         <div class="group-label-bar">
           <span class="group-label">{{ group.label }}({{ group.emails.length }}封)</span>
         </div>
-        <div v-for="email in group.emails" :key="email.id" class="email-item" :class="{draft: email.isDraft, deleted: email.deletedAt}" @click="viewEmailDetail(email.id)">
+        <div v-for="email in group.emails" :key="email.id" class="email-item" :class="{draft: email.isDraft, deleted: email.deletedAt, unread: !email.isRead}" @click="viewEmailDetail(email.id)">
           <input type="checkbox" class="email-checkbox" v-model="selectedEmails" :value="email.id" @click.stop />
           <span class="email-icon">{{ email.isDraft ? '📝' : email.deletedAt ? '🗑️' : '📁' }}</span>
           <span class="sender">{{ email.sender }}</span>
           <span class="subject">
             {{ email.subject }}
+            <span v-if="email.content" class="email-content"> - {{ stripHtml(email.content) }}</span>
             <span v-if="email.isDraft" class="draft-label">[草稿]</span>
             <span v-if="email.deletedAt" class="deleted-info">(删除于: {{ email.deletedAt }})</span>
           </span>
@@ -112,12 +106,19 @@ interface Email {
   isDraft?: boolean
   isStarred?: boolean
   starredAt?: string // 新增：星标日期字段
+  content?: string // 新增：邮件内容字段
+  isRead?: boolean // 新增：是否已读字段
 }
 
 const props = defineProps<{ 
   folderName: string, 
   emails: Array<Email>,
-  isDeletedFolder: boolean
+  isDeletedFolder: boolean,
+  mailStats?: {
+    totalCount: number,
+    totalUnreadCount: number,
+    inboxUnreadCount: number
+  }
 }>()
 
 const emit = defineEmits<{
@@ -151,6 +152,29 @@ watch(() => props.emails, () => {
   selectedEmails.value = []
 })
 
+// 计算邮件数量显示文本
+const emailCountText = computed(() => {
+  const totalCount = props.emails.length
+  const unreadCount = props.emails.filter(email => !email.isRead).length
+  
+  if (props.mailStats && props.folderName === '收件箱') {
+    // 对于收件箱，使用统计数据
+    const stats = props.mailStats
+    if (stats.inboxUnreadCount > 0) {
+      return `(共 ${stats.totalCount} 封，其中 未读邮件 ${stats.inboxUnreadCount} 封)`
+    } else {
+      return `(共 ${stats.totalCount} 封)`
+    }
+  } else {
+    // 对于其他文件夹，使用当前显示的邮件数据
+    if (unreadCount > 0) {
+      return `(共 ${totalCount} 封，其中 未读邮件 ${unreadCount} 封)`
+    } else {
+      return `(共 ${totalCount} 封)`
+    }
+  }
+})
+
 // 删除选中的邮件
 function deleteSelectedEmails() {
   if (selectedEmails.value.length > 0) {
@@ -176,6 +200,7 @@ function handleMarkAsChange() {
       const emailIds = selectedEmails.value.map(id => Number(id))
       emit('markEmails', { action: markAsValue.value, emailIds })
       markAsValue.value = '' // 重置选择
+      selectedEmails.value = [] // 自动取消邮件选择
     } else {
       // 如果没有选中邮件，显示提示并重置选择
       emit('showMessage', { type: 'warning', message: '请先选择要标记的邮件' })
@@ -193,6 +218,18 @@ function toggleStar(emailId: number) {
 function viewEmailDetail(emailId: number) {
   console.log('📧 查看邮件详情，邮件ID:', emailId)
   emit('viewEmailDetail', emailId)
+}
+
+// 去除HTML标签，只保留纯文本
+function stripHtml(html: string): string {
+  if (!html) return ''
+  // 创建一个临时的div元素来解析HTML
+  const temp = document.createElement('div')
+  temp.innerHTML = html
+  // 获取纯文本内容
+  const text = temp.textContent || temp.innerText || ''
+  // 清理多余的空白字符
+  return text.replace(/\s+/g, ' ').trim()
 }
 
 // 日期分组辅助

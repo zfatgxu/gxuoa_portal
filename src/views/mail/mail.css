@@ -324,7 +324,7 @@
     min-height: 2em;
     padding: 0 1.2em;
     border: 1px solid #e0e0e0;
-    border-radius: 0.13em;
+    border-radius: 12px;
     background-color: #fff;
     font-size: 1em;
     color: #222;
@@ -505,7 +505,7 @@
     width: 120px;
     margin-right: 12px;
     font-weight: 500;
-    color: #333;
+    color: #000; /* 改为黑色字体 */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -513,11 +513,24 @@
 
 .subject {
     flex: 1;
-    color: #666;
+    color: #000; /* 改为黑色字体 */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     margin-right: 12px;
+}
+
+/* 邮件内容文本样式 */
+.email-content {
+    color: #666; /* 灰色字体 */
+    font-weight: normal;
+}
+
+/* 未读邮件样式 */
+.email-item.unread .sender,
+.email-item.unread .subject,
+.email-item.unread .time {
+    font-weight: bold; /* 未读邮件加粗显示 */
 }
 
 .time {
