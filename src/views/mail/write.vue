@@ -357,7 +357,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
 import { useTagsViewStore } from '@/store/modules/tagsView'
-import { sendMail, saveDraft, type SendMailReqVO, type SaveDraftReqVO } from '@/api/system/mail/letter/index'
+import { sendLetter, saveDraft, type LetterSendReqVO } from '@/api/system/mail/letter/index'
 import { getSimpleUserList } from '@/api/system/user'
 import { getAccessToken } from '@/utils/auth'
 import '@/views/mail/mail.css'
@@ -561,9 +561,7 @@ const remoteSearch = async (query: string) => {
     let filteredUsers = allUsers.value
     if (query) {
       filteredUsers = allUsers.value.filter(user => 
-        (user.nickname && user.nickname.toLowerCase().includes(query.toLowerCase())) ||
-        (user.username && user.username.toLowerCase().includes(query.toLowerCase())) ||
-        (user.email && user.email.toLowerCase().includes(query.toLowerCase()))
+        user.nickname && user.nickname.toLowerCase().includes(query.toLowerCase())
       )
       console.log(`🔍 过滤后找到 ${filteredUsers.length} 个匹配用户`)
     }
@@ -587,10 +585,9 @@ const remoteSearch = async (query: string) => {
       response: (error as any)?.response,
       status: (error as any)?.response?.status
     })
-    // 降级使用mock数据
+    // 降级使用mock数据 - 仅搜索nickname
     const filteredMockUsers = mockUserOptions.filter(user => 
-      user.label.toLowerCase().includes(query.toLowerCase()) ||
-      user.value.toLowerCase().includes(query.toLowerCase())
+      user.label.toLowerCase().includes(query.toLowerCase())
     )
     userOptions.value = filteredMockUsers
     console.log('📋 降级使用mock数据:', userOptions.value)
@@ -607,12 +604,11 @@ const toggleGroupExpand = (index) => {
   contactGroups.value[index].expanded = !contactGroups.value[index].expanded
 }
 
-// 过滤联系人
+// 过滤联系人 - 仅搜索nickname
 const filteredContacts = (contacts) => {
   if (!contactSearch.value) return contacts
   return contacts.filter(contact => 
-    contact.name.toLowerCase().includes(contactSearch.value.toLowerCase()) || 
-    contact.email.toLowerCase().includes(contactSearch.value.toLowerCase())
+    contact.name.toLowerCase().includes(contactSearch.value.toLowerCase())
   )
 }
 
@@ -819,7 +815,7 @@ const doSendMail = async () => {
     // 处理抄送人：转换为身份证号
     const processedCc = mailForm.value.cc.length > 0 ? await processRecipients(mailForm.value.cc) : []
     
-    const sendData: SendMailReqVO = {
+    const sendData: LetterSendReqVO = {
       subject: mailForm.value.subject || '(无主题)',
       content: editorContent,
       recipientIdCards: processedRecipients, // 收件人身份证号列表
@@ -842,8 +838,8 @@ const doSendMail = async () => {
       return
     }
     
-    // 直接调用发送邮件API，axios拦截器会自动携带token
-    await sendMail(sendData)
+    // 直接调用发送信件API，axios拦截器会自动携带token
+    await sendLetter(sendData)
     ElMessage.success('邮件发送成功')
     
     // 清空表单
@@ -876,10 +872,10 @@ const saveDraftHandler = async () => {
     // 处理抄送人：转换为身份证号
     const processedCc = mailForm.value.cc.length > 0 ? await processRecipients(mailForm.value.cc) : []
     
-    const draftData: SaveDraftReqVO = {
+    const draftData: LetterSendReqVO = {
       subject: mailForm.value.subject,
       content: editorContent,
-      recipientIdCards: processedRecipients.length > 0 ? processedRecipients : undefined, // 收件人身份证号列表（草稿可选）
+      recipientIdCards: processedRecipients.length > 0 ? processedRecipients : [], // 收件人身份证号列表（草稿可以为空）
       ccIdCards: processedCc.length > 0 ? processedCc : undefined, // 抄送人身份证号列表
       priority: 1,
       isDraft: true, // 是草稿
