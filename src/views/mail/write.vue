@@ -225,10 +225,24 @@
               </template>
             </el-dropdown>
             
-            <div class="tool-select">
-              <span>字号</span>
-              <el-icon><ArrowDown /></el-icon>
-            </div>
+            <el-dropdown trigger="click" @command="changeFontSize">
+              <div class="tool-select" title="选择字号">
+                <span>{{ selectedFontSize }}</span>
+                <el-icon><ArrowDown /></el-icon>
+              </div>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item 
+                    v-for="size in fontSizeOptions"
+                    :key="size.value"
+                    :command="size.value"
+                    :style="{ fontSize: size.size }"
+                  >
+                    {{ size.label }}
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
           </div>
           
           <div class="toolbar-group">
@@ -542,6 +556,16 @@ const fontOptions = [
   { value: '黑体', label: '黑体' },
   { value: '楷书', label: '楷书' },
   { value: '幼圆', label: '幼圆' }
+]
+
+// 字号选择状态
+const selectedFontSize = ref('中')
+const fontSizeOptions = [
+  { value: '小', label: '小', size: '12px' },
+  { value: '中', label: '中', size: '14px' },
+  { value: '大', label: '大', size: '16px' },
+  { value: '较大', label: '较大', size: '18px' },
+  { value: '最大', label: '最大', size: '20px' }
 ]
 
 // 右键菜单状态
@@ -1456,6 +1480,18 @@ const getFontFamily = (fontName: string): string => {
   return fontMap[fontName] || 'SimSun, "宋体", serif'
 }
 
+// 获取字号大小
+const getFontSize = (sizeName: string): string => {
+  const sizeMap: { [key: string]: string } = {
+    '小': '12px',
+    '中': '14px',
+    '大': '16px',
+    '较大': '18px',
+    '最大': '20px'
+  }
+  return sizeMap[sizeName] || '14px'
+}
+
 // 切换字体
 const changeFont = (fontName: string) => {
   // 更新选中的字体
@@ -1491,6 +1527,47 @@ const changeFont = (fontName: string) => {
   } else {
     // 如果没有选中文本，设置整个编辑器的字体
     editor.style.fontFamily = getFontFamily(fontName)
+  }
+  
+  // 更新编辑器内容
+  handleEditorInput({ target: editor } as any)
+}
+
+// 切换字号
+const changeFontSize = (sizeName: string) => {
+  // 更新选中的字号
+  selectedFontSize.value = sizeName
+  
+  const editor = document.querySelector('.editor-content') as HTMLElement
+  if (!editor) return
+  
+  // 确保编辑器获得焦点
+  editor.focus()
+  
+  // 获取当前选择
+  const selection = window.getSelection()
+  if (!selection || selection.rangeCount === 0) {
+    // 如果没有选择文本，设置整个编辑器的字号
+    editor.style.fontSize = getFontSize(sizeName)
+    return
+  }
+  
+  const range = selection.getRangeAt(0)
+  const selectedText = range.toString()
+  
+  if (selectedText) {
+    // 如果有选中的文本，只对选中文本应用字号
+    const span = document.createElement('span')
+    span.style.fontSize = getFontSize(sizeName)
+    span.textContent = selectedText
+    range.deleteContents()
+    range.insertNode(span)
+    
+    // 清除选择
+    selection.removeAllRanges()
+  } else {
+    // 如果没有选中文本，设置整个编辑器的字号
+    editor.style.fontSize = getFontSize(sizeName)
   }
   
   // 更新编辑器内容
@@ -1584,10 +1661,11 @@ onMounted(async () => {
     }
   })
   
-  // 设置编辑器默认字体
+  // 设置编辑器默认字体和字号
   const editor = document.querySelector('.editor-content') as HTMLElement
   if (editor) {
     editor.style.fontFamily = getFontFamily(selectedFont.value)
+    editor.style.fontSize = getFontSize(selectedFontSize.value)
   }
   
   // 并发加载所有数据
@@ -1871,6 +1949,27 @@ onMounted(async () => {
 
 .font-youyuan {
   font-family: YouYuan, "幼圆", sans-serif;
+}
+
+/* 字号样式定义 */
+.font-size-small {
+  font-size: 12px;
+}
+
+.font-size-medium {
+  font-size: 14px;
+}
+
+.font-size-large {
+  font-size: 16px;
+}
+
+.font-size-larger {
+  font-size: 18px;
+}
+
+.font-size-largest {
+  font-size: 20px;
 }
 
 
