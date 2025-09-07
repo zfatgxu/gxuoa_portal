@@ -1082,6 +1082,9 @@ const handleEditorInput = (e: Event) => {
   // 使用textContent获取纯文本，或者使用innerHTML但需要进行XSS过滤
   mailForm.value.content = target.innerHTML
   
+  // 应用列表样式
+  applyListStyles()
+  
   // 更新格式按钮状态
   updateFormatStates()
 }
@@ -1333,8 +1336,30 @@ const saveDraftHandler = async () => {
   }
 }
 
-
-
+// 应用列表样式
+const applyListStyles = () => {
+  const editor = document.querySelector('.editor-content') as HTMLElement
+  if (!editor) return
+  
+  // 统一处理所有列表元素
+  const allLists = editor.querySelectorAll('ol, ul')
+  
+  allLists.forEach(list => {
+    const listElement = list as HTMLElement
+    listElement.style.margin = '0'
+    listElement.style.paddingLeft = '30px'
+    listElement.style.listStylePosition = 'outside'
+    
+    // 应用列表项样式
+    const listItems = list.querySelectorAll('li')
+    listItems.forEach(li => {
+      const liElement = li as HTMLElement
+      liElement.style.margin = '4px 0'
+      liElement.style.paddingLeft = '8px'
+      liElement.style.lineHeight = '1.5'
+    })
+  })
+}
 
 // 文本格式化命令
 const execFormatCommand = (command: string) => {
@@ -1388,6 +1413,13 @@ const execFormatCommand = (command: string) => {
         // 清除选择
         selection.removeAllRanges()
       }
+    }
+    
+    // 如果是列表命令，直接应用样式
+    if (command === 'insertOrderedList' || command === 'insertUnorderedList') {
+      setTimeout(() => {
+        applyListStyles()
+      }, 50)
     }
     
     // 格式应用完成后，延迟更新状态确保DOM已更新
@@ -1637,40 +1669,6 @@ onMounted(async () => {
   flex-wrap: wrap;
 }
 
-.tool-icon {
-  min-width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  cursor: pointer;
-  padding: 0 5px;
-  font-size: 12px;
-}
-
-.tool-icon:hover {
-  background-color: #ecf5ff;
-}
-
-.format-btn {
-  display: flex;
-  align-items: center;
-  padding: 0 8px;
-  height: 28px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.format-btn:hover {
-  background-color: #ecf5ff;
-}
-
-.format-btn .el-icon {
-  margin-left: 5px;
-}
-
 /* 编辑器内容区 */
 .editor-content {
   flex: 1;
@@ -1680,6 +1678,44 @@ onMounted(async () => {
   outline: none;
   color: #303133;
   font-size: 14px;
+}
+
+
+/* 列表样式 */
+.mail-container .editor-content ol,
+.mail-container .editor-content ul {
+  margin: 0 !important;
+  padding-left: 30px !important;
+  list-style-position: outside !important;
+}
+
+.mail-container .editor-content ol {
+  list-style-type: decimal !important;
+}
+
+.mail-container .editor-content ul {
+  list-style-type: disc !important;
+}
+
+.mail-container .editor-content ol li,
+.mail-container .editor-content ul li {
+  margin: 4px 0 !important;
+  padding-left: 8px !important;
+  line-height: 1.5 !important;
+}
+
+/* 嵌套列表样式 */
+.mail-container .editor-content ol ol,
+.mail-container .editor-content ul ul,
+.mail-container .editor-content ol ul,
+.mail-container .editor-content ul ol {
+  padding-left: 20px !important;
+}
+
+/* 段落样式 */
+.mail-container .editor-content p {
+  margin: 8px 0 !important;
+  line-height: 1.5 !important;
 }
 
 /* 编辑器placeholder样式 */
