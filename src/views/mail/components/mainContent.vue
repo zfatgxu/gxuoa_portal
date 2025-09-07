@@ -60,20 +60,20 @@
           <div class="group-label-bar">
             <span class="group-label">{{ group.label }}({{ group.emails.length }}封)</span>
           </div>
-          <div v-for="email in group.emails" :key="email.id" class="email-item" :class="{draft: email.isDraft, deleted: email.deletedAt, unread: !email.isRead}" @click="viewEmailDetail(email.id)">
-            <input type="checkbox" class="email-checkbox" v-model="selectedEmails" :value="email.id" @click.stop />
-            <span class="email-icon">{{ email.isDraft ? '📝' : email.deletedAt ? '🗑️' : '📁' }}</span>
-            <span class="sender">{{ email.sender }}</span>
-            <span class="subject">
-              {{ email.subject }}
-              <span v-if="email.content" class="email-content"> - {{ stripHtml(email.content) }}</span>
-              <span v-if="email.isDraft" class="draft-label">[草稿]</span>
-            </span>
-            <span class="time">{{ email.time }}</span>
-            <span class="star-btn" :class="{starred: email.isStarred}" @click.stop="toggleStar(email.id)">
-              {{ email.isStarred ? '★' : '☆' }}
-            </span>
-          </div>
+        <div v-for="email in group.emails" :key="email.id" class="email-item" :class="{draft: email.isDraft, deleted: email.deletedAt, unread: !email.isRead}" @click="viewEmailDetail(email.id)" @contextmenu.prevent="showContextMenu($event, email)">
+          <input type="checkbox" class="email-checkbox" v-model="selectedEmails" :value="email.id" @click.stop />
+          <span class="email-icon">{{ email.isDraft ? '📝' : email.deletedAt ? '🗑️' : '📁' }}</span>
+          <span class="sender">{{ email.sender }}</span>
+          <span class="subject">
+            {{ email.subject }}
+            <span v-if="email.content" class="email-content"> - {{ stripHtml(email.content) }}</span>
+            <span v-if="email.isDraft" class="draft-label">[草稿]</span>
+          </span>
+          <span class="time">{{ email.time }}</span>
+          <span class="star-btn" :class="{starred: email.isStarred}" @click.stop="toggleStar(email.id)">
+            {{ email.isStarred ? '★' : '☆' }}
+          </span>
+        </div>
         </template>
       </div>
 
@@ -133,6 +133,23 @@
       <button class="action-btn" @click="currentPage=Math.min(totalPages,currentPage+1)">下一页</button>
       <button class="action-btn" @click="currentPage=totalPages">末页</button>
     </div>
+    </div>
+
+    <!-- 右键上下文菜单 -->
+    <div v-if="contextMenu.visible" class="context-menu" :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }" @click.stop>
+      <!-- 根据邮件状态显示不同的菜单选项 -->
+      <div v-if="contextMenu.email && !contextMenu.email.isRead" class="context-menu-item" @click="markAsRead">
+        标记为已读
+      </div>
+      <div v-if="contextMenu.email && contextMenu.email.isRead" class="context-menu-item" @click="markAsUnread">
+        标记为未读
+      </div>
+      <div v-if="contextMenu.email && !contextMenu.email.deletedAt" class="context-menu-item" @click="deleteEmail">
+        删除
+      </div>
+      <div v-if="contextMenu.email && contextMenu.email.deletedAt" class="context-menu-item" @click="permanentDeleteEmail">
+        彻底删除
+      </div>
     </div>
   </div>
 </template>
@@ -206,6 +223,70 @@ const allSelected = computed({
 watch(() => props.emails, () => {
   selectedEmails.value = []
 })
+
+// --- 右键上下文菜单逻辑 ---
+const contextMenu = ref({
+  visible: false,
+  x: 0,
+  y: 0,
+  email: null as Email | null
+})
+
+// 显示上下文菜单
+function showContextMenu(event: MouseEvent, email: Email) {
+  event.preventDefault()
+  event.stopPropagation()
+  
+  contextMenu.value = {
+    visible: true,
+    x: event.clientX,
+    y: event.clientY,
+    email: email
+  }
+  
+  // 点击其他地方隐藏菜单
+  setTimeout(() => {
+    document.addEventListener('click', hideContextMenu, { once: true })
+  }, 0)
+}
+
+// 隐藏上下文菜单
+function hideContextMenu() {
+  contextMenu.value.visible = false
+  contextMenu.value.email = null
+}
+
+// 标记为已读
+function markAsRead() {
+  if (contextMenu.value.email) {
+    emit('markEmails', { action: 'read', emailIds: [contextMenu.value.email.id] })
+    hideContextMenu()
+  }
+}
+
+// 标记为未读
+function markAsUnread() {
+  if (contextMenu.value.email) {
+    emit('markEmails', { action: 'unread', emailIds: [contextMenu.value.email.id] })
+    hideContextMenu()
+  }
+}
+
+// 删除邮件
+function deleteEmail() {
+  if (contextMenu.value.email) {
+    emit('deleteEmails', [contextMenu.value.email.id])
+    hideContextMenu()
+  }
+}
+
+// 彻底删除邮件
+function permanentDeleteEmail() {
+  if (contextMenu.value.email) {
+    emit('permanentDeleteEmails', [contextMenu.value.email.id])
+    hideContextMenu()
+  }
+}
 
 // 计算邮件数量显示文本
 const emailCountText = computed(() => {
