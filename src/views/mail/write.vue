@@ -258,8 +258,7 @@
         </div>
         
         <!-- 编辑器内容区 -->
-        <div class="editor-content" contenteditable="true" @input="handleEditorInput" style="flex: 1; padding: 20px; background-color: #ffffff; min-height: 300px; outline: none; border-radius: 0 0 4px 4px;">
-          <p>请输入正文</p>
+        <div class="editor-content" contenteditable="true" @input="handleEditorInput" data-placeholder="请输入正文" style="flex: 1; padding: 20px; background-color: #ffffff; min-height: 300px; outline: none; border-radius: 0 0 4px 4px;">
         </div>
         
         <!-- 隐藏的文件输入 -->
@@ -1075,7 +1074,7 @@ const resetForm = () => {
   // 重置编辑器内容
   const editorContent = document.querySelector('.editor-content')
   if (editorContent) {
-    editorContent.innerHTML = '<p>请输入正文</p>'
+    editorContent.innerHTML = ''
   }
   
   // 隐藏抄送和密送
@@ -1574,6 +1573,13 @@ onMounted(async () => {
   outline: none;
   color: #303133;
   font-size: 14px;
+}
+
+/* 编辑器placeholder样式 */
+.editor-content:empty:before {
+  content: attr(data-placeholder);
+  color: #c0c4cc;
+  pointer-events: none;
 }
 
 /* 发件人信息 */
