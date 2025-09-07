@@ -218,13 +218,28 @@
           </div>
           
           <div class="toolbar-group">
-            <div class="tool-btn" @click="execFormatCommand('bold')" title="加粗">
+            <div 
+              class="tool-btn" 
+              :class="{ 'active': formatStates.bold }"
+              @click="execFormatCommand('bold')" 
+              title="加粗"
+            >
               <font-awesome-icon :icon="['fas', 'bold']" />
             </div>
-            <div class="tool-btn" @click="execFormatCommand('italic')" title="斜体">
+            <div 
+              class="tool-btn" 
+              :class="{ 'active': formatStates.italic }"
+              @click="execFormatCommand('italic')" 
+              title="斜体"
+            >
               <font-awesome-icon :icon="['fas', 'italic']" />
             </div>
-            <div class="tool-btn" @click="execFormatCommand('underline')" title="下划线">
+            <div 
+              class="tool-btn" 
+              :class="{ 'active': formatStates.underline }"
+              @click="execFormatCommand('underline')" 
+              title="下划线"
+            >
               <font-awesome-icon :icon="['fas', 'underline']" />
             </div>
             <div class="tool-btn">
@@ -255,7 +270,19 @@
         </div>
         
         <!-- 编辑器内容区 -->
-        <div class="editor-content" contenteditable="true" @input="handleEditorInput" data-placeholder="请输入正文" style="flex: 1; padding: 20px; background-color: #ffffff; min-height: 300px; outline: none; border-radius: 0 0 4px 4px;">
+        <div 
+          class="editor-content" 
+          contenteditable="true" 
+          @input="handleEditorInput" 
+          @mouseup="updateFormatStates"
+          @keyup="updateFormatStates"
+          @keydown="updateFormatStates"
+          @focus="updateFormatStates"
+          @blur="updateFormatStates"
+          @selectionchange="updateFormatStates"
+          data-placeholder="请输入正文" 
+          style="flex: 1; padding: 20px; background-color: #ffffff; min-height: 300px; outline: none; border-radius: 0 0 4px 4px;"
+        >
         </div>
         
         <!-- 隐藏的文件输入 -->
@@ -486,6 +513,13 @@ const showCc = ref(false)
 const showBcc = ref(false)
 const contactSearch = ref('')
 const loading = ref(false)
+
+// 格式按钮状态
+const formatStates = ref({
+  bold: false,
+  italic: false,
+  underline: false
+})
 
 // 右键菜单状态
 const contextMenu = ref({
@@ -1024,11 +1058,32 @@ const validateBcc = () => {
 }
 
 
+// 更新格式按钮状态
+const updateFormatStates = () => {
+  try {
+    // 确保编辑器有焦点
+    const editor = document.querySelector('.editor-content') as HTMLElement
+    if (editor && document.activeElement !== editor) {
+      editor.focus()
+    }
+    
+    // 更新格式状态
+    formatStates.value.bold = document.queryCommandState('bold')
+    formatStates.value.italic = document.queryCommandState('italic')
+    formatStates.value.underline = document.queryCommandState('underline')
+  } catch (error) {
+    console.error('更新格式状态失败:', error)
+  }
+}
+
 // 处理编辑器输入
 const handleEditorInput = (e: Event) => {
   const target = e.target as HTMLElement
   // 使用textContent获取纯文本，或者使用innerHTML但需要进行XSS过滤
   mailForm.value.content = target.innerHTML
+  
+  // 更新格式按钮状态
+  updateFormatStates()
 }
 
 // 触发文件选择
@@ -1283,12 +1338,80 @@ const saveDraftHandler = async () => {
 
 // 文本格式化命令
 const execFormatCommand = (command: string) => {
-  document.execCommand(command, false, '')
+  // 获取编辑器元素
+  const editor = document.querySelector('.editor-content') as HTMLElement
+  if (!editor) {
+    return
+  }
+  
+  // 确保编辑器获得焦点
+  editor.focus()
+  
+  // 获取当前选择
+  const selection = window.getSelection()
+  if (!selection || selection.rangeCount === 0) {
+    return
+  }
+  
+  // 使用现代方法处理格式化
+  try {
+    // 执行格式化命令
+    const success = document.execCommand(command, false, '')
+    
+    // 如果 execCommand 失败，尝试使用 Selection API
+    if (!success) {
+      const range = selection.getRangeAt(0)
+      const selectedText = range.toString()
+      
+      if (selectedText) {
+        // 创建格式化元素
+        let formatElement: HTMLElement
+        switch (command) {
+          case 'bold':
+            formatElement = document.createElement('strong')
+            break
+          case 'italic':
+            formatElement = document.createElement('em')
+            break
+          case 'underline':
+            formatElement = document.createElement('u')
+            break
+          default:
+            return
+        }
+        
+        // 应用格式化
+        formatElement.textContent = selectedText
+        range.deleteContents()
+        range.insertNode(formatElement)
+        
+        // 清除选择
+        selection.removeAllRanges()
+      }
+    }
+    
+    // 格式应用完成后，延迟更新状态确保DOM已更新
+    setTimeout(() => {
+      updateFormatStates()
+    }, 100)
+    
+  } catch (error) {
+    console.error('格式化命令执行失败:', error)
+  }
 }
 
 onMounted(async () => {
-  // 初始化编辑器
-  console.log('🚀 组件挂载完成，开始并发加载所有数据...')
+  // 添加全局选择变化监听器
+  document.addEventListener('selectionchange', () => {
+    const selection = window.getSelection()
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0)
+      const editor = document.querySelector('.editor-content')
+      if (editor && editor.contains(range.commonAncestorContainer)) {
+        updateFormatStates()
+      }
+    }
+  })
   
   // 并发加载所有数据
   await loadAllData()
@@ -1404,6 +1527,16 @@ onMounted(async () => {
 
 .tool-btn:hover {
   background-color: #f0f0f0;
+}
+
+.tool-btn.active {
+  background-color: #409eff;
+  color: white;
+  border-color: #409eff;
+}
+
+.tool-btn.active:hover {
+  background-color: #337ecc;
 }
 
 .tool-btn.primary {
