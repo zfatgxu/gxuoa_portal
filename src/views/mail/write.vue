@@ -90,7 +90,7 @@
                   :value="item.value"
                 >
                   <div class="user-option">
-                    <el-avatar :size="24" :src="item.avatar">{{ item.label.substring(0, 1) }}</el-avatar>
+                    <el-avatar :size="24" :src="item.avatar">{{ item.label?.substring(0, 1) || '?' }}</el-avatar>
                     <span>{{ item.label }}</span>
                   </div>
                 </el-option>
@@ -129,7 +129,7 @@
                   :value="item.value"
                 >
                   <div class="user-option">
-                    <el-avatar :size="24" :src="item.avatar">{{ item.label.substring(0, 1) }}</el-avatar>
+                    <el-avatar :size="24" :src="item.avatar">{{ item.label?.substring(0, 1) || '?' }}</el-avatar>
                     <span>{{ item.label }}</span>
                   </div>
                 </el-option>
@@ -162,7 +162,7 @@
                   :value="item.value"
                 >
                   <div class="user-option">
-                    <el-avatar :size="24" :src="item.avatar">{{ item.label.substring(0, 1) }}</el-avatar>
+                    <el-avatar :size="24" :src="item.avatar">{{ item.label?.substring(0, 1) || '?' }}</el-avatar>
                     <span>{{ item.label }}</span>
                   </div>
                 </el-option>
@@ -309,56 +309,113 @@
         </div>
         
         <div class="contact-groups" style="flex: 1; overflow-y: auto; padding: 10px;">
-          <div 
-            v-for="(group, index) in contactGroups" 
-            :key="index"
-            class="contact-group"
-            style="margin-bottom: 10px;"
-          >
+          <!-- 最近联系人分组 -->
+          <div class="contact-group" style="margin-bottom: 10px;">
             <div 
               class="folder-item" 
-              @click="toggleGroupExpand(index)"
+              @click="toggleRecentContactsExpand"
               style="display: flex; align-items: center; padding: 6px 4px; cursor: pointer; font-size: 12px; color: #333; border-radius: 2px; margin-bottom: 2px;"
             >
               <span class="folder-icon">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M4 6l4 4 4-4" stroke="#ff9800" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" :transform="!group.expanded ? 'rotate(-90 8 8)' : ''"/>
+                  <path d="M4 6l4 4 4-4" stroke="#ff9800" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" :transform="!recentContactsExpanded ? 'rotate(-90 8 8)' : ''"/>
                 </svg>
               </span>
-              <span class="folder-name">{{ group.name }}</span>
-              <span class="folder-badge">{{ group.contacts.length }}</span>
+              <span class="folder-name">最近联系人</span>
+              <span class="folder-badge">{{ filteredRecentContacts.length || 0 }}</span>
             </div>
             
-            <div class="group-contacts" v-if="group.expanded">
-                          <div 
-              v-for="contact in filteredContacts(group.contacts)" 
-              :key="contact.id"
-              class="contact-item"
-              @click="addRecipient(contact)"
-            >
-              <el-avatar :size="24">{{ contact.name.substring(0, 1) }}</el-avatar>
-              <div class="contact-info" style="flex: 1; min-width: 0; overflow: hidden;">
-                <div class="contact-name" style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ contact.name }}</div>
-                <div class="contact-email" style="font-size: 11px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ contact.email }}</div>
-                <div v-if="contact.deptName" class="contact-dept" style="font-size: 10px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ contact.deptName }}</div>
+            <div class="group-contacts" v-if="recentContactsExpanded">
+              <div 
+                v-for="contact in filteredRecentContacts" 
+                :key="contact.name"
+                class="contact-item"
+                @click="addRecentRecipient(contact)"
+                @contextmenu.prevent="showContextMenu($event, contact, 'recent')"
+                style="display: flex; align-items: center; padding: 6px 12px 6px 25px; cursor: pointer; transition: background-color 0.2s; border-radius: 4px; margin: 2px 4px;"
+              >
+                <el-avatar :size="24" style="margin-right: 8px; background-color: #4e73df;">{{ contact.name?.substring(0, 1) || '?' }}</el-avatar>
+                <div class="contact-info" style="flex: 1; min-width: 0; overflow: hidden;">
+                  <div class="contact-name" style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; color: #303133;">{{ contact.name }}</div>
+                  <div class="contact-time" style="font-size: 11px; color: #909399; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    {{ formatLastSendTime(contact.lastSendTime) }}
+                  </div>
+                </div>
+              </div>
+              <!-- 空状态提示 -->
+              <div v-if="filteredRecentContacts.length === 0 && !contactSearch.trim()" style="padding: 20px 25px; text-align: center; color: #909399; font-size: 12px;">
+                暂无最近联系人
               </div>
             </div>
+          </div>
+          
+          <!-- 星标联系人分组 -->
+          <div class="contact-group" style="margin-bottom: 10px;">
+            <div 
+              class="folder-item" 
+              @click="toggleStarredContactsExpand"
+              style="display: flex; align-items: center; padding: 6px 4px; cursor: pointer; font-size: 12px; color: #333; border-radius: 2px; margin-bottom: 2px;"
+            >
+              <span class="folder-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M4 6l4 4 4-4" stroke="#ff9800" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" :transform="!starredContactsExpanded ? 'rotate(-90 8 8)' : ''"/>
+                </svg>
+              </span>
+              <span class="folder-name">星标联系人</span>
+              <span class="folder-badge">{{ filteredStarredContacts.length || 0 }}</span>
+            </div>
+            
+            <div class="group-contacts" v-if="starredContactsExpanded">
+              <div 
+                v-for="contact in filteredStarredContacts" 
+                :key="contact.id"
+                class="contact-item"
+                @click="addStarredRecipient(contact)"
+                @contextmenu.prevent="showContextMenu($event, contact, 'starred')"
+                style="display: flex; align-items: center; padding: 6px 12px 6px 25px; cursor: pointer; transition: background-color 0.2s; border-radius: 4px; margin: 2px 4px;"
+              >
+                <el-avatar :size="24" style="margin-right: 8px; background-color: #ff9800;">{{ (starredContactDisplayNames.get(contact.id) || '?').substring(0, 1) }}</el-avatar>
+                <div class="contact-info" style="flex: 1; min-width: 0; overflow: hidden;">
+                  <div class="contact-name" style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; color: #303133;">{{ starredContactDisplayNames.get(contact.id) || '加载中...' }}</div>
+                  <div class="contact-time" style="font-size: 11px; color: #909399; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    {{ formatLastSendTime(contact.createTime) }}
+                  </div>
+                </div>
+              </div>
+              <!-- 空状态提示 -->
+              <div v-if="filteredStarredContacts.length === 0 && !contactSearch.trim()" style="padding: 20px 25px; text-align: center; color: #909399; font-size: 12px;">
+                暂无星标联系人
+              </div>
             </div>
           </div>
         </div>
+      </div>
+    </div>
+    
+    <!-- 右键菜单 -->
+    <div 
+      v-if="contextMenu.visible"
+      :key="`context-menu-${contextMenu.contact?.name || 'unknown'}-${contextMenu.type}`"
+      class="context-menu"
+      :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
+      @click.stop
+    >
+      <div class="context-menu-item" @click="toggleContactStar">
+        <el-icon><Star /></el-icon>
+        <span>{{ isContactStarred ? '取消星标' : '添加星标' }}</span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
 import { useTagsViewStore } from '@/store/modules/tagsView'
-import { sendLetter, saveDraft, type LetterSendReqVO } from '@/api/system/mail/letter/index'
-import { getSimpleUserList } from '@/api/system/user'
+import { sendLetter, saveDraft, getSentMails, getLetterContactStarPage, createLetterContactStar, deleteLetterContactStar, type LetterSendReqVO, type MailListItemVO, type LetterContactStarRespVO, type LetterContactStarCreateReqVO } from '@/api/system/mail/letter/index'
+import { getSimpleUserList, getUserByIdCard } from '@/api/system/user'
 import { getAccessToken } from '@/utils/auth'
 import '@/views/mail/mail.css'
 import topImage from '@/views/mail/image/top.png'
@@ -405,14 +462,10 @@ import {
   ArrowRightBold,
   ArrowLeftBold,
   View,
-  Close
+  Close,
+  Star
 } from '@element-plus/icons-vue'
 
-// 导入mock数据
-import { 
-  userOptions as mockUserOptions, 
-  contactGroups as mockContactGroups
-} from './mock/write.js'
 
 const router = useRouter()
 const tagsViewStore = useTagsViewStore()
@@ -440,17 +493,57 @@ const showBcc = ref(false)
 const contactSearch = ref('')
 const loading = ref(false)
 
-// 使用mock数据，更新userOptions以包含邮箱地址
-const userOptions = ref(mockUserOptions.map(user => ({
-  ...user,
-  value: user.value.includes('@') ? user.value : `${user.value}@example.com`,
-  label: user.value.includes('@') ? user.label : `${user.label} <${user.value}@example.com>`
-})))
-const contactGroups = ref(mockContactGroups.map(group => ({ ...group, expanded: true })))
+// 右键菜单状态
+const contextMenu = ref({
+  visible: false,
+  x: 0,
+  y: 0,
+  contact: null as any,
+  type: '' as 'recent' | 'starred'
+})
+
+// 用户选项数据
+const userOptions = ref<any[]>([])
+
+// 最近联系人数据
+const recentContacts = ref<any[]>([])
+const recentContactsExpanded = ref(true)
+
+// 星标联系人数据
+const starredContacts = ref<LetterContactStarRespVO[]>([])
+const starredContactsExpanded = ref(true)
+
+// 星标联系人显示名称映射
+const starredContactDisplayNames = ref<Map<number, string>>(new Map())
 
 // 当前用户信息
 const userStore = useUserStore();
 const currentUser = computed(() => userStore.getUser.nickname || '未登录用户');
+
+// 过滤后的最近联系人（基于搜索关键词）
+const filteredRecentContacts = computed(() => {
+  if (!contactSearch.value.trim()) {
+    return recentContacts.value
+  }
+  
+  const searchTerm = contactSearch.value.toLowerCase().trim()
+  return recentContacts.value.filter(contact => 
+    contact.name && contact.name.toLowerCase().startsWith(searchTerm)
+  )
+})
+
+// 过滤后的星标联系人（基于搜索关键词）
+const filteredStarredContacts = computed(() => {
+  if (!contactSearch.value.trim()) {
+    return starredContacts.value
+  }
+  
+  const searchTerm = contactSearch.value.toLowerCase().trim()
+  return starredContacts.value.filter(contact => {
+    const displayName = starredContactDisplayNames.value.get(contact.id)
+    return displayName && displayName.toLowerCase().startsWith(searchTerm)
+  })
+})
 
 // 当前时间
 const currentTime = computed(() => {
@@ -471,6 +564,121 @@ const isValidEmail = (email: string): boolean => {
 // 预加载用户列表
 const allUsers = ref<any[]>([])
 
+// 星标联系人用户信息缓存
+const starredContactUserCache = ref<Map<string, any>>(new Map())
+
+// 获取星标联系人的显示名称
+const getStarredContactDisplayName = async (contact: LetterContactStarRespVO): Promise<string> => {
+  try {
+    // 先检查缓存
+    if (starredContactUserCache.value.has(contact.contactIdCard)) {
+      const cachedUser = starredContactUserCache.value.get(contact.contactIdCard)
+      return cachedUser.nickname || cachedUser.username || '未知用户'
+    }
+    
+    // 从缓存中获取用户信息
+    const user = await getUserByIdCard(contact.contactIdCard)
+    if (user) {
+      // 缓存用户信息
+      starredContactUserCache.value.set(contact.contactIdCard, user)
+      return user.nickname || user.username || '未知用户'
+    }
+    
+    return '未知用户'
+  } catch (error) {
+    console.error('获取星标联系人用户信息失败:', error)
+    return '未知用户'
+  }
+}
+
+
+// 获取最近联系人
+const loadRecentContacts = async () => {
+  try {
+    console.log('📡 开始加载最近联系人...')
+    const response = await getSentMails({ pageNo: 1, pageSize: 50 })
+    
+    if (response && Array.isArray(response.list)) {
+      console.log(`📊 获取到 ${response.list.length} 封已发送邮件`)
+      
+      // 提取收件人信息并去重
+      const contactMap = new Map()
+      
+      response.list.forEach((mail: MailListItemVO) => {
+        if (mail.toUserNames) {
+          // 解析收件人姓名列表（可能是逗号分隔的字符串）
+          const recipients = mail.toUserNames.split(',').map(name => name.trim()).filter(name => name)
+          
+          recipients.forEach(recipientName => {
+            if (recipientName && !contactMap.has(recipientName)) {
+              contactMap.set(recipientName, {
+                name: recipientName,
+                lastSendTime: mail.sendTime,
+                sendCount: 1
+              })
+            } else if (contactMap.has(recipientName)) {
+              // 更新发送次数和最新发送时间
+              const existing = contactMap.get(recipientName)
+              existing.sendCount += 1
+              if (new Date(mail.sendTime) > new Date(existing.lastSendTime)) {
+                existing.lastSendTime = mail.sendTime
+              }
+            }
+          })
+        }
+      })
+      
+      // 转换为数组并按最后发送时间倒序排列
+      recentContacts.value = Array.from(contactMap.values())
+        .sort((a, b) => new Date(b.lastSendTime).getTime() - new Date(a.lastSendTime).getTime())
+        .slice(0, 20) // 只显示最近20个联系人
+      
+      console.log(`✅ 最近联系人加载成功，共 ${recentContacts.value.length} 个联系人`)
+    } else {
+      console.log('⚠️ 已发送邮件响应格式异常')
+      recentContacts.value = []
+    }
+  } catch (error: any) {
+    console.error('❌ 加载最近联系人失败:', error)
+    recentContacts.value = []
+  }
+}
+
+// 获取星标联系人
+const loadStarredContacts = async () => {
+  try {
+    console.log('📡 开始加载星标联系人...')
+    const response = await getLetterContactStarPage({ pageNo: 1, pageSize: 50 })
+    
+    if (response && Array.isArray(response.list)) {
+      console.log(`📊 获取到 ${response.list.length} 个星标联系人`)
+      
+      // 直接使用API返回的星标联系人数据
+      starredContacts.value = response.list
+        .sort((a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime())
+        .slice(0, 20) // 只显示最近20个星标联系人
+      
+      console.log(`✅ 星标联系人加载成功，共 ${starredContacts.value.length} 个联系人`)
+      
+      // 异步加载每个联系人的显示名称
+      starredContacts.value.forEach(async (contact) => {
+        try {
+          const displayName = await getStarredContactDisplayName(contact)
+          starredContactDisplayNames.value.set(contact.id, displayName)
+        } catch (error) {
+          console.error(`获取联系人 ${contact.contactIdCard} 的显示名称失败:`, error)
+          starredContactDisplayNames.value.set(contact.id, '未知用户')
+        }
+      })
+    } else {
+      console.log('⚠️ 星标联系人响应格式异常')
+      starredContacts.value = []
+    }
+  } catch (error: any) {
+    console.error('❌ 加载星标联系人失败:', error)
+    starredContacts.value = []
+  }
+}
 
 // 并发加载所有数据
 const loadAllData = async () => {
@@ -505,14 +713,19 @@ const loadAllData = async () => {
         }
       })(),
       
-      // 可以在这里添加其他需要预加载的数据
-      // 例如：加载联系人分组、邮件模板等
-      // (async () => {
-      //   console.log('📡 并发加载联系人分组...')
-      //   const groups = await getContactGroups()
-      //   console.log(`✅ 并发加载联系人分组成功，共 ${groups.length} 个分组`)
-      //   return { type: 'groups', data: groups, success: true }
-      // })(),
+      // 加载最近联系人
+      (async () => {
+        console.log('📡 并发加载最近联系人...')
+        await loadRecentContacts()
+        return { type: 'recentContacts', success: true }
+      })(),
+      
+      // 加载星标联系人
+      (async () => {
+        console.log('📡 并发加载星标联系人...')
+        await loadStarredContacts()
+        return { type: 'starredContacts', success: true }
+      })(),
     ])
     
     // 处理并发加载结果
@@ -524,24 +737,15 @@ const loadAllData = async () => {
       }
     })
     
-    // 检查是否有任何任务失败，如果有则使用备用数据
+    // 检查是否有任何任务失败
     const hasFailures = results.some(result => result.status === 'rejected')
     if (hasFailures) {
-      console.warn('⚠️ 部分并发加载任务失败，使用备用数据')
-      if (allUsers.value.length === 0) {
-        userOptions.value = mockUserOptions
-        console.log('📋 使用mock用户数据作为备用')
-      }
+      console.warn('⚠️ 部分并发加载任务失败')
     }
     
     console.log('🏁 并发加载完成')
   } catch (error: unknown) {
     console.error('❌ 并发加载过程中发生错误:', error)
-    // 确保有备用数据
-    if (allUsers.value.length === 0) {
-      userOptions.value = mockUserOptions
-      console.log('📋 使用mock数据作为最终备用')
-    }
   }
 }
 
@@ -585,12 +789,8 @@ const remoteSearch = async (query: string) => {
       response: (error as any)?.response,
       status: (error as any)?.response?.status
     })
-    // 降级使用mock数据 - 仅搜索nickname
-    const filteredMockUsers = mockUserOptions.filter(user => 
-      user.label.toLowerCase().includes(query.toLowerCase())
-    )
-    userOptions.value = filteredMockUsers
-    console.log('📋 降级使用mock数据:', userOptions.value)
+    // 搜索失败时清空用户选项
+    userOptions.value = []
   } finally {
     loading.value = false
     console.log('🏁 搜索完成，loading状态:', loading.value)
@@ -599,18 +799,216 @@ const remoteSearch = async (query: string) => {
 
 
 
-// 切换分组展开状态
-const toggleGroupExpand = (index) => {
-  contactGroups.value[index].expanded = !contactGroups.value[index].expanded
+// 切换分组展开状态 - 已移除，因为contactGroups未定义
+
+// 切换最近联系人展开状态
+const toggleRecentContactsExpand = () => {
+  recentContactsExpanded.value = !recentContactsExpanded.value
 }
 
-// 过滤联系人 - 仅搜索nickname
-const filteredContacts = (contacts) => {
-  if (!contactSearch.value) return contacts
-  return contacts.filter(contact => 
-    contact.name.toLowerCase().includes(contactSearch.value.toLowerCase())
-  )
+// 切换星标联系人展开状态
+const toggleStarredContactsExpand = () => {
+  starredContactsExpanded.value = !starredContactsExpanded.value
 }
+
+// 格式化最后发送时间
+const formatLastSendTime = (timeStr: string): string => {
+  if (!timeStr) return ''
+  
+  const now = new Date()
+  const sendTime = new Date(timeStr)
+  const diffMs = now.getTime() - sendTime.getTime()
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+  const diffMinutes = Math.floor(diffMs / (1000 * 60))
+  
+  if (diffDays > 0) {
+    return `${diffDays}天前`
+  } else if (diffHours > 0) {
+    return `${diffHours}小时前`
+  } else if (diffMinutes > 0) {
+    return `${diffMinutes}分钟前`
+  } else {
+    return '刚刚'
+  }
+}
+
+// 添加最近联系人为收件人
+const addRecentRecipient = (contact: any) => {
+  if (contact.name && !mailForm.value.recipients.includes(contact.name)) {
+    mailForm.value.recipients.push(contact.name)
+    ElMessage.success(`已添加收件人: ${contact.name}`)
+  }
+}
+
+// 添加星标联系人为收件人
+const addStarredRecipient = (contact: LetterContactStarRespVO) => {
+  const displayName = starredContactDisplayNames.value.get(contact.id)
+  if (displayName && !mailForm.value.recipients.includes(displayName)) {
+    mailForm.value.recipients.push(displayName)
+    ElMessage.success(`已添加收件人: ${displayName}`)
+  }
+}
+
+// 显示右键菜单
+const showContextMenu = (event: MouseEvent, contact: any, type: 'recent' | 'starred') => {
+  // 先关闭之前的菜单
+  if (contextMenu.value.visible) {
+    contextMenu.value.visible = false
+  }
+  
+  // 使用 nextTick 确保 DOM 更新完成
+  nextTick(() => {
+    contextMenu.value = {
+      visible: true,
+      x: event.clientX,
+      y: event.clientY,
+      contact,
+      type
+    }
+    
+    // 点击其他地方关闭菜单
+    const closeMenu = () => {
+      if (contextMenu.value) {
+        contextMenu.value.visible = false
+      }
+      document.removeEventListener('click', closeMenu)
+    }
+    
+    // 延迟添加事件监听器，避免立即触发
+    setTimeout(() => {
+      document.addEventListener('click', closeMenu)
+    }, 100)
+  })
+}
+
+// 检查联系人是否已星标
+const isContactStarred = computed(() => {
+  if (!contextMenu.value || !contextMenu.value.contact || !contextMenu.value.type) {
+    return false
+  }
+  
+  const contact = contextMenu.value.contact
+  if (contextMenu.value.type === 'starred') {
+    // 如果是从星标联系人列表右键，说明已经是星标
+    return true
+  } else if (contextMenu.value.type === 'recent') {
+    // 检查最近联系人是否在星标列表中
+    return starredContacts.value.some(starred => {
+      const starredDisplayName = starredContactDisplayNames.value.get(starred.id)
+      return starredDisplayName === contact.name || starred.contactIdCard === contact.idCard
+    })
+  }
+  return false
+})
+
+// 切换联系人星标状态
+const toggleContactStar = async () => {
+  if (!contextMenu.value || !contextMenu.value.contact) return
+  
+  const contact = contextMenu.value.contact
+  const isStarred = isContactStarred.value
+  
+  try {
+    if (isStarred) {
+      // 取消星标
+      let starredContact
+      if (contextMenu.value.type === 'starred') {
+        // 如果是从星标联系人列表右键，直接使用当前联系人
+        starredContact = contact
+      } else {
+        // 如果是从最近联系人列表右键，需要查找对应的星标联系人
+        starredContact = starredContacts.value.find(starred => {
+          const starredDisplayName = starredContactDisplayNames.value.get(starred.id)
+          return starredDisplayName === contact.name || starred.contactIdCard === contact.idCard
+        })
+      }
+      
+      if (starredContact) {
+        await deleteLetterContactStar(starredContact.id)
+        const displayName = starredContactDisplayNames.value.get(starredContact.id) || contact.name || '该联系人'
+        ElMessage.success(`已取消 ${displayName} 的星标`)
+      }
+    } else {
+      // 添加星标
+      console.log('🔍 开始添加星标联系人...')
+      console.log('📋 当前联系人信息:', contact)
+      console.log('👤 当前用户信息:', userStore.getUser)
+      
+      // 需要获取联系人的身份证号
+      let contactIdCard = contact.idCard
+      if (!contactIdCard) {
+        // 从用户列表中查找
+        const user = allUsers.value.find((u: any) => 
+          u.nickname === contact.name || u.username === contact.name
+        )
+        if (user?.idCard) {
+          contactIdCard = user.idCard
+        } else {
+          // 如果找不到身份证号，尝试使用用户ID作为标识
+          contactIdCard = user?.id?.toString() || contact.name
+        }
+        console.log('🔍 从用户列表查找结果:', user)
+        console.log('🆔 最终使用的身份证号:', contactIdCard)
+      }
+      
+      // 验证必要字段
+      const currentUser = userStore.getUser
+      if (!currentUser.id) {
+        throw new Error('用户ID不能为空，请重新登录')
+      }
+      if (!currentUser.nickname) {
+        throw new Error('用户姓名不能为空，请重新登录')
+      }
+      if (!contactIdCard) {
+        throw new Error('联系人身份证号不能为空')
+      }
+      
+      const starData: LetterContactStarCreateReqVO = {
+        userId: currentUser.id,
+        userName: currentUser.nickname,
+        contactIdCard: contactIdCard,
+        remark: `从最近联系人添加`
+      }
+      
+      console.log('📤 发送星标数据:', starData)
+      
+      await createLetterContactStar(starData)
+      ElMessage.success(`已为 ${contact.name} 添加星标`)
+    }
+    
+    // 重新加载星标联系人列表
+    await loadStarredContacts()
+    
+    // 关闭右键菜单
+    if (contextMenu.value) {
+      contextMenu.value.visible = false
+    }
+  } catch (error: any) {
+    console.error('❌ 切换星标状态失败:', error)
+    console.error('🔍 错误详情:', {
+      message: error?.message,
+      response: error?.response,
+      status: error?.response?.status,
+      data: error?.response?.data
+    })
+    
+    let errorMsg = '操作失败，请稍后重试'
+    if (error?.response?.data?.message) {
+      errorMsg = error.response.data.message
+    } else if (error?.message) {
+      errorMsg = error.message
+    }
+    
+    // 特殊处理系统异常
+    if (errorMsg === '系统异常') {
+      errorMsg = '系统异常，可能是数据格式不正确或权限不足。请检查用户信息是否完整。'
+    }
+    
+    ElMessage.error(`操作失败: ${errorMsg}`)
+  }
+}
+
 
 // 验证收件人 - 修改为支持姓名输入
 const validateRecipients = () => {
@@ -631,13 +1029,6 @@ const validateBcc = () => {
   console.log('密送人验证通过:', mailForm.value.bcc)
 }
 
-// 添加收件人 - 修改为支持姓名输入
-const addRecipient = (contact: any) => {
-  const identifier = contact.email || contact.name
-  if (identifier && !mailForm.value.recipients.includes(identifier)) {
-    mailForm.value.recipients.push(identifier)
-  }
-}
 
 // 处理编辑器输入
 const handleEditorInput = (e: Event) => {
@@ -1301,5 +1692,74 @@ onMounted(async () => {
 .contact-email {
   font-size: 12px;
   color: #909399;
+}
+
+/* 星标联系人特殊样式 */
+.folder-badge {
+  margin-left: auto;
+  background-color: #909399;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 16px;
+  text-align: center;
+}
+
+.folder-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #333;
+  border-radius: 2px;
+  margin-bottom: 2px;
+  transition: background-color 0.2s;
+}
+
+.folder-item:hover {
+  background-color: #f5f5f5;
+}
+
+.folder-icon {
+  margin-right: 6px;
+  transition: transform 0.2s;
+}
+
+.folder-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+/* 右键菜单样式 */
+.context-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  min-width: 120px;
+  overflow: hidden;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #303133;
+  transition: background-color 0.2s;
+}
+
+.context-menu-item:hover {
+  background-color: #f5f7fa;
+}
+
+.context-menu-item .el-icon {
+  margin-right: 8px;
+  font-size: 16px;
 }
 </style>

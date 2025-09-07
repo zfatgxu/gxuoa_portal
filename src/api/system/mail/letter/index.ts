@@ -102,11 +102,8 @@ export interface LetterSenderPageReqVO extends PageParam {
 // 联系人星标响应VO - 对应后端 LetterContactStarRespVO
 export interface LetterContactStarRespVO {
   id: number                   // 记录ID
-  userId: number               // 用户ID
-  userName: string             // 用户姓名
   userIdCard: string           // 用户身份证号
   contactIdCard: string        // 联系人身份证号
-  remark: string               // 备注
   createTime: string           // 创建时间
   updateTime: string           // 更新时间
   tenantId: number             // 租户编号
