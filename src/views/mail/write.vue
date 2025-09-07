@@ -1238,6 +1238,40 @@ const processRecipients = async (recipients: string[]): Promise<string[]> => {
   return processedIdCards
 }
 
+// 确保所有样式以内联方式保存
+const ensureInlineStyles = () => {
+  const editor = document.querySelector('.editor-content') as HTMLElement
+  if (!editor) return
+  
+  // 应用列表样式
+  applyListStyles()
+  
+  // 确保所有格式化元素都有内联样式
+  const strongElements = editor.querySelectorAll('strong')
+  strongElements.forEach(el => {
+    const element = el as HTMLElement
+    if (!element.style.fontWeight) {
+      element.style.fontWeight = 'bold'
+    }
+  })
+  
+  const emElements = editor.querySelectorAll('em')
+  emElements.forEach(el => {
+    const element = el as HTMLElement
+    if (!element.style.fontStyle) {
+      element.style.fontStyle = 'italic'
+    }
+  })
+  
+  const uElements = editor.querySelectorAll('u')
+  uElements.forEach(el => {
+    const element = el as HTMLElement
+    if (!element.style.textDecoration) {
+      element.style.textDecoration = 'underline'
+    }
+  })
+}
+
 // 执行发送邮件
 const doSendMail = async () => {
   try {
@@ -1248,6 +1282,9 @@ const doSendMail = async () => {
       ElMessage.warning('请选择收件人')
       return
     }
+    
+    // 确保所有样式以内联方式保存
+    ensureInlineStyles()
     
     // 获取编辑器实际内容
     const editorContent = document.querySelector('.editor-content')?.innerHTML || ''
@@ -1269,6 +1306,7 @@ const doSendMail = async () => {
     }
     
     console.log('发送邮件数据:', sendData)
+    console.log('📧 邮件HTML内容预览:', editorContent)
     
     // 检查用户登录状态
     const currentToken = getAccessToken()
@@ -1306,6 +1344,9 @@ const doSendMail = async () => {
 // 保存草稿 - 修复类型错误
 const saveDraftHandler = async () => {
   try {
+    // 确保所有样式以内联方式保存
+    ensureInlineStyles()
+    
     // 获取编辑器实际内容
     const editorContent = document.querySelector('.editor-content')?.innerHTML || ''
     
@@ -1326,6 +1367,7 @@ const saveDraftHandler = async () => {
     }
     
     console.log('保存草稿数据:', draftData)
+    console.log('📝 草稿HTML内容预览:', editorContent)
     
     await saveDraft(draftData)
     ElMessage.success('草稿保存成功')
@@ -1336,7 +1378,7 @@ const saveDraftHandler = async () => {
   }
 }
 
-// 应用列表样式
+// 应用列表样式 - 确保所有样式以内联方式保存
 const applyListStyles = () => {
   const editor = document.querySelector('.editor-content') as HTMLElement
   if (!editor) return
@@ -1346,18 +1388,37 @@ const applyListStyles = () => {
   
   allLists.forEach(list => {
     const listElement = list as HTMLElement
-    listElement.style.margin = '0'
-    listElement.style.paddingLeft = '30px'
-    listElement.style.listStylePosition = 'outside'
+    
+    // 使用 cssText 确保样式被完整保存到HTML中
+    listElement.style.cssText = 'margin: 0; padding-left: 30px; list-style-position: outside;'
+    
+    // 为有序列表设置样式类型
+    if (list.tagName.toLowerCase() === 'ol') {
+      listElement.style.listStyleType = 'decimal'
+    } else {
+      listElement.style.listStyleType = 'disc'
+    }
     
     // 应用列表项样式
     const listItems = list.querySelectorAll('li')
     listItems.forEach(li => {
       const liElement = li as HTMLElement
-      liElement.style.margin = '4px 0'
-      liElement.style.paddingLeft = '8px'
-      liElement.style.lineHeight = '1.5'
+      // 使用 cssText 确保样式被完整保存
+      liElement.style.cssText = 'margin: 4px 0; padding-left: 8px; line-height: 1.5;'
     })
+  })
+  
+  // 处理段落样式
+  const paragraphs = editor.querySelectorAll('p')
+  paragraphs.forEach(p => {
+    const pElement = p as HTMLElement
+    // 确保段落样式也被保存
+    if (!pElement.style.margin) {
+      pElement.style.margin = '8px 0'
+    }
+    if (!pElement.style.lineHeight) {
+      pElement.style.lineHeight = '1.5'
+    }
   })
 }
 
@@ -1394,12 +1455,15 @@ const execFormatCommand = (command: string) => {
         switch (command) {
           case 'bold':
             formatElement = document.createElement('strong')
+            formatElement.style.fontWeight = 'bold'
             break
           case 'italic':
             formatElement = document.createElement('em')
+            formatElement.style.fontStyle = 'italic'
             break
           case 'underline':
             formatElement = document.createElement('u')
+            formatElement.style.textDecoration = 'underline'
             break
           default:
             return
