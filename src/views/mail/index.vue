@@ -150,11 +150,50 @@ function convertMailToEmail(mail: MailListItemVO): Email {
   const dateStr = new Date(date).toISOString().split('T')[0]
   const timeStr = new Date(date).toTimeString().slice(0, 5)
   
+  // 计算时间显示逻辑
+  const today = new Date()
+  const mailDate = new Date(date)
+  
+  // 获取今天的日期字符串 (YYYY-MM-DD)
+  const todayStr = today.toISOString().split('T')[0]
+  
+  // 获取昨天的日期字符串
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayStr = yesterday.toISOString().split('T')[0]
+  
+  // 判断显示逻辑
+  let displayTime: string
+  if (dateStr === todayStr) {
+    // 1. 假如是今天，显示 今天 hh:mm
+    displayTime = `今天 ${timeStr}`
+  } else if (dateStr === yesterdayStr) {
+    // 2. 假如是昨天，显示 昨天 hh:mm
+    displayTime = `昨天 ${timeStr}`
+  } else {
+    // 检查是否是今年
+    const currentYear = today.getFullYear()
+    const mailYear = mailDate.getFullYear()
+    
+    if (mailYear === currentYear) {
+      // 3. 假如早于今天但在今年，显示 m月d日
+      const month = mailDate.getMonth() + 1 // getMonth() 返回 0-11，需要 +1
+      const day = mailDate.getDate()
+      displayTime = `${month}月${day}日`
+    } else {
+      // 4. 假如早于今年，显示 yyyy/mm/dd
+      const year = mailDate.getFullYear()
+      const month = String(mailDate.getMonth() + 1).padStart(2, '0')
+      const day = String(mailDate.getDate()).padStart(2, '0')
+      displayTime = `${year}/${month}/${day}`
+    }
+  }
+  
   return {
     id: mail.id,
     sender: mail.fromUserName,
     subject: mail.subject,
-    time: timeStr,
+    time: displayTime,
     date: dateStr,
     deletedAt: mail.deletedAt ? new Date(mail.deletedAt).toISOString().split('T')[0] : undefined,
     isDraft: mail.isDraft,

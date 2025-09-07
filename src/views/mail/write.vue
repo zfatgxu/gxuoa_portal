@@ -460,31 +460,58 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { useUserStore } from '@/store/modules/user'
-import { useTagsViewStore } from '@/store/modules/tagsView'
-import { sendLetter, saveDraft, getSentMails, getLetterContactStarPage, createLetterContactStar, deleteLetterContactStar, type LetterSendReqVO, type MailListItemVO, type LetterContactStarRespVO, type LetterContactStarCreateReqVO } from '@/api/system/mail/letter/index'
-import { getSimpleUserList, getUserByIdCard } from '@/api/system/user'
-import { getAccessToken } from '@/utils/auth'
+import {computed, nextTick, onMounted, ref} from 'vue'
+import {useRouter} from 'vue-router'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {useUserStore} from '@/store/modules/user'
+import {useTagsViewStore} from '@/store/modules/tagsView'
+import {
+  createLetterContactStar,
+  deleteLetterContactStar,
+  getLetterContactStarPage,
+  getSentMails,
+  type LetterContactStarCreateReqVO,
+  type LetterContactStarRespVO,
+  type LetterSendReqVO,
+  type MailListItemVO,
+  saveDraft,
+  sendLetter
+} from '@/api/system/mail/letter/index'
+import {getSimpleUserList, getUserByIdCard} from '@/api/system/user'
+import {getAccessToken} from '@/utils/auth'
 import '@/views/mail/mail.css'
 import topImage from '@/views/mail/image/top.png'
 
 // 导入Font Awesome组件和图标
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { library } from '@fortawesome/fontawesome-svg-core'
+import {FontAwesomeIcon} from '@fortawesome/vue-fontawesome'
+import {library} from '@fortawesome/fontawesome-svg-core'
 import {
-  faAlignLeft,
   faAlignCenter,
-  faAlignRight,
   faAlignJustify,
-  faListUl,
-  faListOl,
+  faAlignLeft,
+  faAlignRight,
   faBold,
   faItalic,
+  faListOl,
+  faListUl,
   faUnderline
 } from '@fortawesome/free-solid-svg-icons'
+import {
+  ArrowDown,
+  ArrowLeftBold,
+  ArrowRightBold,
+  Avatar,
+  Clock,
+  Document,
+  Edit,
+  Files,
+  Link,
+  PictureFilled,
+  Position,
+  Setting,
+  Star,
+  View
+} from '@element-plus/icons-vue'
 
 // 添加图标到库
 library.add(
@@ -498,22 +525,6 @@ library.add(
   faItalic,
   faUnderline
 )
-import {
-  Document,
-  Edit,
-  Position,
-  Files,
-  ArrowDown,
-  Setting,
-  Clock,
-  Avatar,
-  PictureFilled,
-  Link,
-  ArrowRightBold,
-  ArrowLeftBold,
-  View,
-  Star
-} from '@element-plus/icons-vue'
 
 
 const router = useRouter()
@@ -629,13 +640,6 @@ const currentTime = computed(() => {
 })
 
 
-
-// 邮箱格式验证 - 修改为可选验证
-const isValidEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return emailRegex.test(email)
-}
-
 // 预加载用户列表
 const allUsers = ref<any[]>([])
 
@@ -648,7 +652,7 @@ const getStarredContactDisplayName = async (contact: LetterContactStarRespVO): P
     // 先检查缓存
     if (starredContactUserCache.value.has(contact.contactIdCard)) {
       const cachedUser = starredContactUserCache.value.get(contact.contactIdCard)
-      return cachedUser.nickname || cachedUser.username || '未知用户'
+      return cachedUser.nickname || '未知用户'
     }
     
     // 从缓存中获取用户信息
@@ -656,7 +660,7 @@ const getStarredContactDisplayName = async (contact: LetterContactStarRespVO): P
     if (user) {
       // 缓存用户信息
       starredContactUserCache.value.set(contact.contactIdCard, user)
-      return user.nickname || user.username || '未知用户'
+      return user.nickname || '未知用户'
     }
     
     return '未知用户'
@@ -736,7 +740,7 @@ const loadStarredContacts = async () => {
       console.log(`✅ 星标联系人加载成功，共 ${starredContacts.value.length} 个联系人`)
       
       // 异步加载每个联系人的显示名称
-      starredContacts.value.forEach(async (contact) => {
+      for (const contact of starredContacts.value) {
         try {
           const displayName = await getStarredContactDisplayName(contact)
           starredContactDisplayNames.value.set(contact.id, displayName)
@@ -744,7 +748,7 @@ const loadStarredContacts = async () => {
           console.error(`获取联系人 ${contact.contactIdCard} 的显示名称失败:`, error)
           starredContactDisplayNames.value.set(contact.id, '未知用户')
         }
-      })
+      }
     } else {
       console.log('⚠️ 星标联系人响应格式异常')
       starredContacts.value = []
@@ -773,10 +777,9 @@ const loadAllData = async () => {
           // 转换为前端需要的格式，限制显示前20个用户
           userOptions.value = users.slice(0, 20).map((user: any) => ({
             value: user.id.toString(),
-            label: `${user.nickname || user.username} <${user.deptNames ? user.deptNames.join(', ') : ''}>`,
+            label: `${user.nickname || '未知用户'} <${user.deptNames ? user.deptNames.join(', ') : ''}>`,
             avatar: user.avatar || '',
-            name: user.nickname || user.username,
-            email: user.username,
+            name: user.nickname || '未知用户',
             userId: user.id,
             deptName: user.deptNames ? user.deptNames.join(', ') : ''
           }))
@@ -839,19 +842,35 @@ const remoteSearch = async (query: string) => {
     // 基于预加载的用户列表进行过滤
     let filteredUsers = allUsers.value
     if (query) {
-      filteredUsers = allUsers.value.filter(user => 
-        user.nickname && user.nickname.toLowerCase().includes(query.toLowerCase())
-      )
+      const searchTerm = query.toLowerCase().trim()
+      
+      // 如果搜索词太短，不进行过滤
+      if (searchTerm.length < 1) {
+        filteredUsers = allUsers.value.slice(0, 20) // 显示前20个用户
+      } else {
+        filteredUsers = allUsers.value.filter(user => {
+          // 只支持姓名前缀匹配
+          return user.nickname && user.nickname.toLowerCase().startsWith(searchTerm)
+        })
+        
+        // 按姓名排序
+        filteredUsers.sort((a, b) => {
+          const aName = (a.nickname || '').toLowerCase()
+          const bName = (b.nickname || '').toLowerCase()
+          
+          return aName.localeCompare(bName)
+        })
+      }
+      
       console.log(`🔍 过滤后找到 ${filteredUsers.length} 个匹配用户`)
     }
     
-    // 转换为前端需要的格式
+    // 转换为前端需要的格式，显示部门名称
     userOptions.value = filteredUsers.slice(0, 50).map((user: any) => ({
       value: user.id.toString(), // 使用用户ID作为值
-      label: `${user.nickname || user.username} <${user.deptNames ? user.deptNames.join(', ') : ''}>`, // 显示格式：姓名 <部门名称>
+      label: `${user.nickname || '未知用户'} <${user.deptNames ? user.deptNames.join(', ') : ''}>`, // 显示格式：姓名 <部门名称>
       avatar: user.avatar || '',
-      name: user.nickname || user.username,
-      email: user.username, // 用户名作为邮箱标识
+      name: user.nickname || '未知用户',
       userId: user.id,
       deptName: user.deptNames ? user.deptNames.join(', ') : '' // 使用部门名称
     }))
@@ -871,10 +890,6 @@ const remoteSearch = async (query: string) => {
     console.log('🏁 搜索完成，loading状态:', loading.value)
   }
 }
-
-
-
-// 切换分组展开状态 - 已移除，因为contactGroups未定义
 
 // 切换最近联系人展开状态
 const toggleRecentContactsExpand = () => {
@@ -1015,7 +1030,7 @@ const toggleContactStar = async () => {
       if (!contactIdCard) {
         // 从用户列表中查找
         const user = allUsers.value.find((u: any) => 
-          u.nickname === contact.name || u.username === contact.name
+          u.nickname === contact.name
         )
         if (user?.idCard) {
           contactIdCard = user.idCard
@@ -1242,27 +1257,12 @@ const processRecipients = async (recipients: string[]): Promise<string[]> => {
         // 如果已经是身份证号格式，直接添加
         console.log(`✅ 身份证号格式，直接添加: ${recipient}`)
         processedIdCards.push(recipient)
-      } else if (isValidEmail(recipient)) {
-        // 如果是邮箱格式，需要查找对应的身份证号
-        const user = users.find((u: any) => 
-          u.username === recipient || u.email === recipient
-        )
-        if (user && user.idCard) {
-          console.log(`✅ 通过邮箱找到用户身份证号: ${user.idCard}`)
-          processedIdCards.push(user.idCard)
-        } else {
-          console.log(`⚠️ 通过邮箱未找到用户，使用邮箱作为标识符: ${recipient}`)
-          // 如果找不到用户，使用邮箱作为标识符
-          processedIdCards.push(recipient)
-        }
       } else {
         // 如果是姓名或用户ID，尝试查找对应的身份证号
         const user = users.find((u: any) => 
           u.nickname === recipient || 
-          u.username === recipient ||
           u.id?.toString() === recipient ||
-          (u.nickname && u.nickname.toLowerCase().includes(recipient.toLowerCase())) ||
-          (u.username && u.username.toLowerCase().includes(recipient.toLowerCase()))
+          (u.nickname && u.nickname.toLowerCase().includes(recipient.toLowerCase()))
         )
         if (user && user.idCard) {
           console.log(`✅ 通过姓名/ID找到用户身份证号: ${user.idCard}`)

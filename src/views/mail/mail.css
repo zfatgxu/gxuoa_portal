@@ -534,10 +534,12 @@
 }
 
 .time {
-    width: 40px;
+    width: 80px;
     color: #666;
     font-size: 11px;
     margin-right: 8px;
+    text-align: right;
+    white-space: nowrap;
 }
 
 .star-btn {

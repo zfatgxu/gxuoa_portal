@@ -66,7 +66,6 @@
             {{ email.subject }}
             <span v-if="email.content" class="email-content"> - {{ stripHtml(email.content) }}</span>
             <span v-if="email.isDraft" class="draft-label">[草稿]</span>
-            <span v-if="email.deletedAt" class="deleted-info">(删除于: {{ email.deletedAt }})</span>
           </span>
           <span class="time">{{ email.time }}</span>
           <span class="star-btn" :class="{starred: email.isStarred}" @click.stop="toggleStar(email.id)">
