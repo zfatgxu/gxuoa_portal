@@ -52,27 +52,73 @@
       </div>
     </div>
 
-    <!-- 邮件列表分组显示 -->
-    <div class="email-list">
-      <template v-for="group in groupedEmails" :key="group.label">
-        <div class="group-label-bar">
-          <span class="group-label">{{ group.label }}({{ group.emails.length }}封)</span>
+    <!-- 邮件列表或详情显示区域 -->
+    <div class="email-content-container">
+      <!-- 邮件列表分组显示 -->
+      <div v-if="!selectedEmailDetail" class="email-list">
+        <template v-for="group in groupedEmails" :key="group.label">
+          <div class="group-label-bar">
+            <span class="group-label">{{ group.label }}({{ group.emails.length }}封)</span>
+          </div>
+          <div v-for="email in group.emails" :key="email.id" class="email-item" :class="{draft: email.isDraft, deleted: email.deletedAt, unread: !email.isRead}" @click="viewEmailDetail(email.id)">
+            <input type="checkbox" class="email-checkbox" v-model="selectedEmails" :value="email.id" @click.stop />
+            <span class="email-icon">{{ email.isDraft ? '📝' : email.deletedAt ? '🗑️' : '📁' }}</span>
+            <span class="sender">{{ email.sender }}</span>
+            <span class="subject">
+              {{ email.subject }}
+              <span v-if="email.content" class="email-content"> - {{ stripHtml(email.content) }}</span>
+              <span v-if="email.isDraft" class="draft-label">[草稿]</span>
+            </span>
+            <span class="time">{{ email.time }}</span>
+            <span class="star-btn" :class="{starred: email.isStarred}" @click.stop="toggleStar(email.id)">
+              {{ email.isStarred ? '★' : '☆' }}
+            </span>
+          </div>
+        </template>
+      </div>
+
+      <!-- 邮件详情显示区域 -->
+      <div v-else class="email-detail-panel">
+        <div class="detail-header">
+          <button class="back-btn" @click="closeEmailDetail">← 返回</button>
+          <h3 class="detail-title">{{ selectedEmailDetail.subject || '无主题' }}</h3>
         </div>
-        <div v-for="email in group.emails" :key="email.id" class="email-item" :class="{draft: email.isDraft, deleted: email.deletedAt, unread: !email.isRead}" @click="viewEmailDetail(email.id)">
-          <input type="checkbox" class="email-checkbox" v-model="selectedEmails" :value="email.id" @click.stop />
-          <span class="email-icon">{{ email.isDraft ? '📝' : email.deletedAt ? '🗑️' : '📁' }}</span>
-          <span class="sender">{{ email.sender }}</span>
-          <span class="subject">
-            {{ email.subject }}
-            <span v-if="email.content" class="email-content"> - {{ stripHtml(email.content) }}</span>
-            <span v-if="email.isDraft" class="draft-label">[草稿]</span>
-          </span>
-          <span class="time">{{ email.time }}</span>
-          <span class="star-btn" :class="{starred: email.isStarred}" @click.stop="toggleStar(email.id)">
-            {{ email.isStarred ? '★' : '☆' }}
-          </span>
+        <div class="detail-meta">
+          <div class="meta-row">
+            <span class="meta-label">发件人:</span>
+            <span class="meta-value">{{ selectedEmailDetail.sender || '未知' }}</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">收件人:</span>
+            <span class="meta-value">{{ selectedEmailDetail.toMail || '无' }}</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">发送时间:</span>
+            <span class="meta-value">{{ selectedEmailDetail.time || '未知' }}</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">优先级:</span>
+            <span class="meta-value">{{ getPriorityText(selectedEmailDetail.priority) }}</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">已读回执:</span>
+            <span class="meta-value">{{ selectedEmailDetail.requestReadReceipt ? '是' : '否' }}</span>
+          </div>
         </div>
-      </template>
+        <div class="detail-content">
+          <div class="content-label">邮件内容:</div>
+          <div class="content-body" v-html="formatContentForDisplay(selectedEmailDetail.content || '')">
+          </div>
+        </div>
+        <div v-if="selectedEmailDetail.attachments && selectedEmailDetail.attachments.length > 0" class="detail-attachments">
+          <div class="attachments-label">附件:</div>
+          <ul class="attachments-list">
+            <li v-for="att in selectedEmailDetail.attachments" :key="att.id" class="attachment-item">
+              {{ att.fileName }} ({{ formatFileSize(att.fileSize) }})
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
     <!-- 分页 -->
     <div class="pagination">
@@ -94,6 +140,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import topImage from '@/views/mail/image/top.png'
+import { getUserByIdCard } from '@/api/system/user/index'
 
 interface Email {
   id: number
@@ -107,6 +154,10 @@ interface Email {
   starredAt?: string // 新增：星标日期字段
   content?: string // 新增：邮件内容字段
   isRead?: boolean // 新增：是否已读字段
+  toMail?: string // 新增：收件人字段
+  priority?: number // 新增：优先级字段
+  requestReadReceipt?: boolean // 新增：已读回执字段
+  attachments?: Array<{id: number, fileName: string, fileSize: number}> // 新增：附件字段
 }
 
 const props = defineProps<{ 
@@ -128,11 +179,16 @@ const emit = defineEmits<{
   toggleStar: [emailId: number]
   syncMails: []
   viewEmailDetail: [emailId: number]
+  getEmailDetail: [emailId: number]
 }>()
 
 // --- 全选逻辑 ---
 const selectedEmails = ref<(string|number)[]>([])
 const markAsValue = ref('')
+
+// --- 邮件详情显示逻辑 ---
+const selectedEmailDetail = ref<Email | null>(null)
+const userDetailsCache = ref<Record<string, any>>({}) // 用户详情缓存
 const allSelected = computed({
   get() {
     return props.emails.length > 0 && selectedEmails.value.length === props.emails.length
@@ -226,7 +282,153 @@ function toggleStar(emailId: number) {
 // 查看邮件详情
 function viewEmailDetail(emailId: number) {
   console.log('📧 查看邮件详情，邮件ID:', emailId)
+  
+  // 先查找本地邮件数据
+  const localEmail = props.emails.find(email => email.id === emailId)
+  if (localEmail) {
+    selectedEmailDetail.value = localEmail
+  }
+  
+  // 通知父组件获取详细数据
+  emit('getEmailDetail', emailId)
   emit('viewEmailDetail', emailId)
+}
+
+// 关闭邮件详情
+function closeEmailDetail() {
+  selectedEmailDetail.value = null
+}
+
+// 获取优先级文本
+function getPriorityText(priority?: number): string {
+  switch (priority) {
+    case 1: return '普通'
+    case 2: return '重要'
+    case 3: return '紧急'
+    default: return '未知'
+  }
+}
+
+// 格式化文件大小
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+// 解析邮件内容，处理HTML标签和格式
+function parseEmailContent(content: string): string {
+  if (!content) return '无内容'
+  
+  // 创建一个临时的div元素来解析HTML
+  const temp = document.createElement('div')
+  temp.innerHTML = content
+  
+  // 获取纯文本内容
+  let textContent = temp.textContent || temp.innerText || ''
+  
+  // 清理多余的空白字符
+  textContent = textContent.replace(/\s+/g, ' ').trim()
+  
+  // 处理换行符，保持原有的段落结构
+  textContent = textContent.replace(/\n\s*\n/g, '\n\n')
+  
+  // 处理特殊字符
+  textContent = textContent
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+  
+  return textContent
+}
+
+// 格式化邮件内容，添加适当的换行和段落
+function formatEmailContent(content: string): string {
+  if (!content) return '无内容'
+  
+  // 解析HTML内容
+  const parsedContent = parseEmailContent(content)
+  
+  // 添加段落分隔
+  let formattedContent = parsedContent
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .join('\n\n')
+  
+  // 确保内容不为空
+  if (!formattedContent.trim()) {
+    return '无内容'
+  }
+  
+  return formattedContent
+}
+
+// 格式化内容用于显示，保持换行和段落结构
+function formatContentForDisplay(content: string): string {
+  if (!content) return '无内容'
+  
+  // 将换行符转换为HTML换行标签
+  return content
+    .replace(/\n/g, '<br>')
+    .replace(/\n\n/g, '<br><br>')
+    .replace(/\s{2,}/g, ' ') // 合并多个空格
+}
+
+// 通过身份证获取用户详情
+async function getUserDetailByIdCard(idCard: string): Promise<any> {
+  if (!idCard) return null
+  
+  // 检查缓存
+  if (userDetailsCache.value[idCard]) {
+    return userDetailsCache.value[idCard]
+  }
+  
+  try {
+    console.log(`🔍 通过身份证获取用户详情: ${idCard}`)
+    const userDetail = await getUserByIdCard(idCard)
+    console.log(`✅ 用户详情获取成功:`, userDetail)
+    
+    // 缓存用户详情
+    userDetailsCache.value[idCard] = userDetail
+    return userDetail
+  } catch (error: any) {
+    console.error(`❌ 获取用户详情失败:`, error)
+    return null
+  }
+}
+
+// 解析收件人信息，将身份证号转换为真实姓名
+async function parseRecipients(recipients: string): Promise<string> {
+  if (!recipients) return '无'
+  
+  // 分割收件人（可能是多个，用逗号分隔）
+  const recipientList = recipients.split(',').map(r => r.trim())
+  const parsedNames: string[] = []
+  
+  for (const recipient of recipientList) {
+    if (!recipient) continue
+    
+    // 判断是否为身份证号（18位数字）
+    if (/^\d{18}$/.test(recipient)) {
+      const userDetail = await getUserDetailByIdCard(recipient)
+      if (userDetail && userDetail.nickname) {
+        parsedNames.push(userDetail.nickname) // 只显示真实姓名
+      } else {
+        parsedNames.push(recipient) // 如果获取不到用户详情，显示原身份证号
+      }
+    } else {
+      // 不是身份证号，直接显示
+      parsedNames.push(recipient)
+    }
+  }
+  
+  return parsedNames.join(', ')
 }
 
 // 去除HTML标签，只保留纯文本
@@ -298,27 +500,36 @@ const groupedEmails = computed(() => {
 const pageSize = ref(15)
 const currentPage = ref(1)
 const totalPages = computed(() => Math.ceil(props.emails.length / pageSize.value))
-const pagedEmails = computed(() => {
-  // 按日期和时间升序排列；根据文件夹类型选择排序依据
-  const sorted = [...props.emails].sort((a, b) => {
-    if (props.isDeletedFolder) {
-      const aDate = a.deletedAt || a.date
-      const bDate = b.deletedAt || b.date
-      if (aDate !== bDate) return aDate.localeCompare(bDate)
-      return a.time.localeCompare(b.time)
-    } else if (props.folderName === '星标邮件') {
-      const aDate = a.starredAt || a.date
-      const bDate = b.starredAt || b.date
-      if (aDate !== bDate) return aDate.localeCompare(bDate)
-      return a.time.localeCompare(b.time)
-    }
-    if (a.date !== b.date) return a.date.localeCompare(b.date)
-    return a.time.localeCompare(b.time)
-  })
-  const start = (currentPage.value - 1) * pageSize.value
-  return sorted.slice(start, start + pageSize.value)
-})
 watch([() => props.emails, pageSize], () => {
   currentPage.value = 1
+})
+
+// 接收父组件传递的详细邮件数据
+async function updateEmailDetail(emailDetail: any) {
+  if (emailDetail && selectedEmailDetail.value) {
+    // 解析收件人信息
+    const recipientsStr = emailDetail.recipients?.map((r: any) => r.recipientIdCard).join(', ') || emailDetail.toMail || ''
+    const parsedRecipients = await parseRecipients(recipientsStr)
+    
+    // 解析邮件内容
+    const rawContent = emailDetail.content?.content || emailDetail.content || ''
+    const formattedContent = formatEmailContent(rawContent)
+    
+    // 更新当前显示的邮件详情
+    selectedEmailDetail.value = {
+      ...selectedEmailDetail.value,
+      ...emailDetail,
+      content: formattedContent,
+      toMail: parsedRecipients,
+      priority: emailDetail.content?.priority,
+      requestReadReceipt: emailDetail.content?.requestReadReceipt,
+      attachments: emailDetail.attachments
+    }
+  }
+}
+
+// 暴露方法给父组件调用
+defineExpose({
+  updateEmailDetail
 })
 </script>

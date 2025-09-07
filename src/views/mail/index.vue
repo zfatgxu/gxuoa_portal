@@ -67,6 +67,7 @@
 
       <!-- 主内容区域 -->
       <MainContent 
+        ref="mainContentRef"
         :folderName="folderLabels[selectedFolder]" 
         :emails="allEmails[selectedFolder] || []" 
         :isDeletedFolder="selectedFolder==='deleted'"
@@ -78,6 +79,7 @@
         @toggle-star="handleToggleStar"
         @sync-mails="handleSyncMails"
         @view-email-detail="handleViewEmailDetail"
+        @get-email-detail="handleGetEmailDetail"
       />
     </div>
   </div>
@@ -105,6 +107,7 @@ import {
   type MailListItemVO,
   type MailStatsVO
 } from '@/api/system/mail/letter/index'
+import { getUserByIdCard } from '@/api/system/user/index'
 
 interface Email {
   id: number
@@ -132,6 +135,8 @@ const allEmails = reactive<Record<string, Email[]>>({
 })
 
 const loading = ref(false)
+const mainContentRef = ref<InstanceType<typeof MainContent> | null>(null)
+const userDetailsCache = ref<Record<string, any>>({}) // 用户详情缓存
 const mailStats = ref<MailStatsVO>({
   inboxCount: 0,
   sentCount: 0,
@@ -144,8 +149,110 @@ const mailStats = ref<MailStatsVO>({
 })
 
 
+// 通过身份证获取用户详情
+async function getUserDetailByIdCard(idCard: string): Promise<any> {
+  if (!idCard) return null
+  
+  // 检查缓存
+  if (userDetailsCache.value[idCard]) {
+    return userDetailsCache.value[idCard]
+  }
+  
+  try {
+    console.log(`🔍 通过身份证获取用户详情: ${idCard}`)
+    const userDetail = await getUserByIdCard(idCard)
+    console.log(`✅ 用户详情获取成功:`, userDetail)
+    
+    // 缓存用户详情
+    userDetailsCache.value[idCard] = userDetail
+    return userDetail
+  } catch (error: any) {
+    console.error(`❌ 获取用户详情失败:`, error)
+    return null
+  }
+}
+
+// 解析收件人信息，将身份证号转换为真实姓名
+async function parseRecipients(recipients: string): Promise<string> {
+  if (!recipients) return '无'
+  
+  // 分割收件人（可能是多个，用逗号分隔）
+  const recipientList = recipients.split(',').map(r => r.trim())
+  const parsedNames: string[] = []
+  
+  for (const recipient of recipientList) {
+    if (!recipient) continue
+    
+    // 判断是否为身份证号（18位数字）
+    if (/^\d{18}$/.test(recipient)) {
+      const userDetail = await getUserDetailByIdCard(recipient)
+      if (userDetail && userDetail.nickname) {
+        parsedNames.push(userDetail.nickname) // 只显示真实姓名
+      } else {
+        parsedNames.push(recipient) // 如果获取不到用户详情，显示原身份证号
+      }
+    } else {
+      // 不是身份证号，直接显示
+      parsedNames.push(recipient)
+    }
+  }
+  
+  return parsedNames.join(', ')
+}
+
+// 解析邮件内容，处理HTML标签和格式
+function parseEmailContent(content: string): string {
+  if (!content) return '无内容'
+  
+  // 创建一个临时的div元素来解析HTML
+  const temp = document.createElement('div')
+  temp.innerHTML = content
+  
+  // 获取纯文本内容
+  let textContent = temp.textContent || temp.innerText || ''
+  
+  // 清理多余的空白字符
+  textContent = textContent.replace(/\s+/g, ' ').trim()
+  
+  // 处理换行符，保持原有的段落结构
+  textContent = textContent.replace(/\n\s*\n/g, '\n\n')
+  
+  // 处理特殊字符
+  textContent = textContent
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+  
+  return textContent
+}
+
+// 格式化邮件内容，添加适当的换行和段落
+function formatEmailContent(content: string): string {
+  if (!content) return '无内容'
+  
+  // 解析HTML内容
+  const parsedContent = parseEmailContent(content)
+  
+  // 添加段落分隔
+  let formattedContent = parsedContent
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0)
+    .join('\n\n')
+  
+  // 确保内容不为空
+  if (!formattedContent.trim()) {
+    return '无内容'
+  }
+  
+  return formattedContent
+}
+
 // 转换后端邮件数据为前端格式
-function convertMailToEmail(mail: MailListItemVO): Email {
+async function convertMailToEmail(mail: MailListItemVO): Promise<Email> {
   const date = mail.sendTime
   const dateStr = new Date(date).toISOString().split('T')[0]
   const timeStr = new Date(date).toTimeString().slice(0, 5)
@@ -189,6 +296,12 @@ function convertMailToEmail(mail: MailListItemVO): Email {
     }
   }
   
+  // 解析收件人信息
+  const parsedToMail = await parseRecipients(mail.toUserNames || '')
+  
+  // 解析邮件内容
+  const formattedContent = formatEmailContent(mail.content || '')
+  
   return {
     id: mail.id,
     sender: mail.fromUserName,
@@ -200,8 +313,8 @@ function convertMailToEmail(mail: MailListItemVO): Email {
     isStarred: mail.isStarred,
     starredAt: mail.starredAt ? new Date(mail.starredAt).toISOString().split('T')[0] : undefined,
     fromMail: mail.fromUserName,
-    toMail: mail.toUserNames,
-    content: mail.content,
+    toMail: parsedToMail,
+    content: formattedContent,
     isRead: mail.isRead
   }
 }
@@ -244,7 +357,9 @@ async function loadFolderEmails(folder: string) {
     
     if (response && Array.isArray(response.list)) {
       console.log(`📋 ${folder}邮件列表长度:`, response.list.length)
-      allEmails[folder] = response.list.map(convertMailToEmail)
+      // 使用 Promise.all 处理异步转换
+      const convertedEmails = await Promise.all(response.list.map(convertMailToEmail))
+      allEmails[folder] = convertedEmails
       console.log(`✅ ${folder}邮件加载成功，转换后数量:`, allEmails[folder].length)
     } else {
       console.log(`⚠️ ${folder}邮件响应格式异常:`, response)
@@ -662,6 +777,39 @@ async function handleToggleStar(emailId: number) {
 async function handleViewEmailDetail(emailId: number) {
   console.log(`📧 开始查看邮件详情，邮件ID: ${emailId}`)
   
+  // 检查邮件是否已读，如果未读则标记为已读
+  const currentEmail = Object.values(allEmails).flat().find(email => email.id === emailId)
+  if (currentEmail && !currentEmail.isRead) {
+    console.log('📖 邮件未读，开始标记为已读...')
+    try {
+      await markAsRead({ ids: [emailId] })
+      
+      // 更新本地状态
+      Object.keys(allEmails).forEach(folderKey => {
+        const email = allEmails[folderKey].find(e => e.id === emailId)
+        if (email) {
+          email.isRead = true
+          console.log(`📧 邮件 ${emailId} 在文件夹 ${folderKey} 中标记为已读`)
+        }
+      })
+      
+      // 重新加载邮件统计
+      await loadMailStats()
+      
+      console.log('✅ 邮件标记为已读成功')
+    } catch (markError: any) {
+      console.error('❌ 标记邮件为已读失败:', markError)
+      // 即使标记失败，仍然显示邮件详情
+    }
+  } else {
+    console.log('📖 邮件已经是已读状态，无需标记')
+  }
+}
+
+// 处理获取邮件详情
+async function handleGetEmailDetail(emailId: number) {
+  console.log(`📧 开始获取邮件详情，邮件ID: ${emailId}`)
+  
   try {
     console.log('📡 调用邮件详情API...')
     const emailDetail = await getLetterDetail(emailId)
@@ -672,75 +820,12 @@ async function handleViewEmailDetail(emailId: number) {
       throw new Error('邮件详情数据为空')
     }
     
-    if (!emailDetail.content) {
-      throw new Error('邮件内容数据缺失')
+    // 将详细数据传递给子组件
+    if (mainContentRef.value) {
+      mainContentRef.value.updateEmailDetail(emailDetail)
     }
     
-    // 检查邮件是否已读，如果未读则标记为已读
-    const currentEmail = Object.values(allEmails).flat().find(email => email.id === emailId)
-    if (currentEmail && !currentEmail.isRead) {
-      console.log('📖 邮件未读，开始标记为已读...')
-      try {
-        await markAsRead({ ids: [emailId] })
-        
-        // 更新本地状态
-        Object.keys(allEmails).forEach(folderKey => {
-          const email = allEmails[folderKey].find(e => e.id === emailId)
-          if (email) {
-            email.isRead = true
-            console.log(`📧 邮件 ${emailId} 在文件夹 ${folderKey} 中标记为已读`)
-          }
-        })
-        
-        // 重新加载邮件统计
-        await loadMailStats()
-        
-        console.log('✅ 邮件标记为已读成功')
-      } catch (markError: any) {
-        console.error('❌ 标记邮件为已读失败:', markError)
-        // 即使标记失败，仍然显示邮件详情
-      }
-    } else {
-      console.log('📖 邮件已经是已读状态，无需标记')
-    }
-    
-    // 这里可以跳转到邮件详情页面或显示弹窗
-    // 暂时使用弹窗显示邮件详情
-    ElMessageBox.alert(
-      `
-        <div style="text-align: left;">
-          <h3>${emailDetail.content?.subject || '无主题'}</h3>
-          <p><strong>发件人:</strong> ${emailDetail.senders?.[0]?.senderIdCard || '未知'}</p>
-          <p><strong>收件人:</strong> ${emailDetail.recipients?.map(r => r.recipientIdCard).join(', ') || '无'}</p>
-          <p><strong>发送时间:</strong> ${emailDetail.content?.sendTime ? new Date(emailDetail.content.sendTime).toLocaleString() : '未知'}</p>
-          <p><strong>优先级:</strong> ${emailDetail.content?.priority === 1 ? '普通' : emailDetail.content?.priority === 2 ? '重要' : emailDetail.content?.priority === 3 ? '紧急' : '未知'}</p>
-          <p><strong>已读回执:</strong> ${emailDetail.content?.requestReadReceipt ? '是' : '否'}</p>
-          <hr>
-          <div style="margin-top: 20px;">
-            <strong>邮件内容:</strong>
-            <div style="border: 1px solid #ddd; padding: 10px; margin-top: 10px; background: #f9f9f9; white-space: pre-wrap; max-height: 300px; overflow-y: auto;">
-              ${emailDetail.content?.content || '无内容'}
-            </div>
-          </div>
-          ${emailDetail.attachments && emailDetail.attachments.length > 0 ? `
-            <div style="margin-top: 20px;">
-              <strong>附件:</strong>
-              <ul style="margin-top: 10px;">
-                ${emailDetail.attachments.map(att => `<li>${att.fileName} (${(att.fileSize / 1024).toFixed(2)} KB)</li>`).join('')}
-              </ul>
-            </div>
-          ` : ''}
-        </div>
-      `,
-      '邮件详情',
-      {
-        dangerouslyUseHTMLString: true,
-        confirmButtonText: '关闭',
-        customClass: 'email-detail-dialog'
-      }
-    )
-    
-    console.log('✅ 邮件详情显示成功')
+    console.log('✅ 邮件详情获取成功')
   } catch (error: any) {
     console.error('❌ 获取邮件详情失败:', error)
     console.error('🔍 邮件详情错误详情:', {
