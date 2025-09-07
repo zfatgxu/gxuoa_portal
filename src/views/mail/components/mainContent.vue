@@ -42,8 +42,11 @@
           <option value="star">星标邮件</option>
           <option value="unstar">取消星标</option>
         </select>
-        <select class="tool-select">
-          <option>移动...</option>
+        <select class="tool-select move-select" v-model="moveToValue" @change="handleMoveToChange">
+          <option value="" disabled selected style="display: none;">移动...</option>
+          <option v-for="folder in props.customFolders" :key="folder.id" :value="folder.id">
+            {{ folder.folderName }}
+          </option>
         </select>
       </div>
       <div class="toolbar-right">
@@ -185,13 +188,21 @@ const props = defineProps<{
     totalCount: number,
     totalUnreadCount: number,
     inboxUnreadCount: number
-  }
+  },
+  customFolders: Array<{
+    id: number,
+    folderName: string,
+    parentId: number,
+    mailCount: number,
+    children?: any[]
+  }>
 }>()
 
 const emit = defineEmits<{
   deleteEmails: [emailIds: number[]]
   permanentDeleteEmails: [emailIds: number[]]
   markEmails: [data: { action: string, emailIds: number[] }]
+  moveEmails: [data: { folderId: number, emailIds: number[] }]
   showMessage: [data: { type: string, message: string }]
   toggleStar: [emailId: number]
   syncMails: []
@@ -202,6 +213,7 @@ const emit = defineEmits<{
 // --- 全选逻辑 ---
 const selectedEmails = ref<(string|number)[]>([])
 const markAsValue = ref('')
+const moveToValue = ref('')
 
 // --- 邮件详情显示逻辑 ---
 const selectedEmailDetail = ref<Email | null>(null)
@@ -341,6 +353,23 @@ function handleMarkAsChange() {
       // 如果没有选中邮件，显示提示并重置选择
       emit('showMessage', { type: 'warning', message: '请先选择要标记的邮件' })
       markAsValue.value = '' // 重置选择
+    }
+  }
+}
+
+// 处理移动到文件夹操作
+function handleMoveToChange() {
+  if (moveToValue.value && moveToValue.value !== '') {
+    if (selectedEmails.value.length > 0) {
+      const emailIds = selectedEmails.value.map(id => Number(id))
+      const folderId = Number(moveToValue.value)
+      emit('moveEmails', { folderId, emailIds })
+      moveToValue.value = '' // 重置选择
+      selectedEmails.value = [] // 自动取消邮件选择
+    } else {
+      // 如果没有选中邮件，显示提示并重置选择
+      emit('showMessage', { type: 'warning', message: '请先选择要移动的邮件' })
+      moveToValue.value = '' // 重置选择
     }
   }
 }

@@ -55,26 +55,46 @@
     </span>
             <span class="folder-name">已删除</span><span class="folder-badge">{{ getDeletedCount() }}</span>
           </div>
-          <div class="folder-item">
-    <span class="folder-icon">
-      <!-- 文件夹SVG -->
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="2,18 18,10 2,2 5,10 2,18" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
-    </span>
+          <!-- 我的文件夹标题 -->
+          <div class="folder-item folder-title" @click="toggleMyFolders" @contextmenu.prevent="showFolderContextMenu($event)">
+            <span class="folder-icon">
+              <!-- 文件夹SVG -->
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="10" rx="2" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M2 6l6-4 4 4h6" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
+            </span>
             <span class="folder-name">我的文件夹</span>
+            <span class="expand-icon" :class="{ expanded: isMyFoldersExpanded }">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M3 4.5L6 7.5L9 4.5" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
           </div>
+          
+          <!-- 自定义文件夹列表 -->
+          <template v-if="isMyFoldersExpanded">
+            <div v-for="rootFolder in rootFolders" :key="rootFolder.id">
+              <FolderTreeItem 
+                :folder="rootFolder" 
+                :selected-folder-id="selectedFolderId || undefined"
+                :level="0"
+                @select-folder="selectFolder"
+              />
+            </div>
+          </template>
         </div>
       </div>
 
       <!-- 主内容区域 -->
       <MainContent 
         ref="mainContentRef"
-        :folderName="folderLabels[selectedFolder]" 
-        :emails="allEmails[selectedFolder] || []" 
+        :folderName="getCurrentFolderName()" 
+        :emails="getCurrentEmails()" 
         :isDeletedFolder="selectedFolder==='deleted'"
         :mailStats="mailStats"
+        :customFolders="customFolders"
         @delete-emails="handleDeleteEmails"
         @permanent-delete-emails="handlePermanentDeleteEmails"
         @mark-emails="handleMarkEmails"
+        @move-emails="handleMoveEmails"
         @show-message="handleShowMessage"
         @toggle-star="handleToggleStar"
         @sync-mails="handleSyncMails"
@@ -82,12 +102,20 @@
         @get-email-detail="handleGetEmailDetail"
       />
     </div>
+
+    <!-- 文件夹右键上下文菜单 -->
+    <div v-if="folderContextMenu.visible" class="context-menu" :style="{ left: folderContextMenu.x + 'px', top: folderContextMenu.y + 'px' }" @click.stop>
+      <div class="context-menu-item" @click="createNewFolder">
+        新建文件夹
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import MainContent from './components/mainContent.vue'
-import { ref, reactive, onMounted } from 'vue'
+import FolderTreeItem from './components/FolderTreeItem.vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import '@/views/mail/mail.css'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElLoading, ElMessageBox } from 'element-plus'
@@ -107,6 +135,14 @@ import {
   type MailListItemVO,
   type MailStatsVO
 } from '@/api/system/mail/letter/index'
+import { 
+  getFolderTree,
+  getFolderMails, 
+  createFolder,
+  moveMailToFolder,
+  type FolderRespVO,
+  type FolderCreateReqVO
+} from '@/api/system/mail/folder/index'
 import { getUserByIdCard } from '@/api/system/user/index'
 
 interface Email {
@@ -132,6 +168,23 @@ const allEmails = reactive<Record<string, Email[]>>({
   sent: [],
   drafts: [],
   deleted: []
+})
+
+// 文件夹数据状态管理
+const customFolders = ref<FolderRespVO[]>([])
+const folderEmails = reactive<Record<number, Email[]>>({})
+
+
+// 计算根文件夹（parentId为0的文件夹）
+const rootFolders = computed(() => {
+  return customFolders.value.filter(folder => folder.parentId === 0)
+})
+
+// 文件夹右键上下文菜单状态
+const folderContextMenu = ref({
+  visible: false,
+  x: 0,
+  y: 0
 })
 
 const loading = ref(false)
@@ -250,6 +303,7 @@ function formatEmailContent(content: string): string {
   
   return formattedContent
 }
+
 
 // 转换后端邮件数据为前端格式
 async function convertMailToEmail(mail: MailListItemVO): Promise<Email> {
@@ -428,6 +482,76 @@ async function loadMailStats() {
   }
 }
 
+// 加载自定义文件夹列表
+async function loadCustomFolders() {
+  try {
+    console.log('📁 开始加载自定义文件夹树形结构...')
+    const response = await getFolderTree()
+    console.log('📂 文件夹树形结构API响应:', response)
+    
+    if (response && Array.isArray(response)) {
+      // 将树形结构扁平化为数组，便于后续处理
+      const flattenFolders = (folders: FolderRespVO[]): FolderRespVO[] => {
+        const result: FolderRespVO[] = []
+        folders.forEach(folder => {
+          result.push(folder)
+          if (folder.children && folder.children.length > 0) {
+            result.push(...flattenFolders(folder.children))
+          }
+        })
+        return result
+      }
+      
+      customFolders.value = flattenFolders(response)
+      console.log('✅ 自定义文件夹加载成功，扁平化后数量:', customFolders.value.length)
+      console.log('📊 根文件夹数量:', rootFolders.value.length)
+    } else {
+      console.log('⚠️ 文件夹树形结构响应格式异常')
+      customFolders.value = []
+    }
+  } catch (error: any) {
+    console.error('❌ 加载自定义文件夹失败:', error)
+    console.error('🔍 文件夹错误详情:', {
+      message: error?.message,
+      response: error?.response,
+      status: error?.response?.status,
+      data: error?.response?.data
+    })
+    customFolders.value = []
+  }
+}
+
+// 加载指定文件夹的邮件
+async function loadFolderEmailsById(folderId: number) {
+  try {
+    console.log(`📥 开始加载文件夹 ${folderId} 的邮件...`)
+    const response = await getFolderMails(folderId, 1, 100)
+    console.log(`📊 文件夹 ${folderId} 邮件API响应:`, response)
+    
+    if (response && Array.isArray(response.list)) {
+      console.log(`📋 文件夹 ${folderId} 邮件列表长度:`, response.list.length)
+      // 直接使用convertMailToEmail函数，因为后端返回的就是MailListItemVO格式
+      const convertedEmails = await Promise.all(response.list.map(convertMailToEmail))
+      folderEmails[folderId] = convertedEmails
+      console.log(`✅ 文件夹 ${folderId} 邮件加载成功，转换后数量:`, folderEmails[folderId].length)
+    } else {
+      console.log(`⚠️ 文件夹 ${folderId} 邮件响应格式异常:`, response)
+      folderEmails[folderId] = []
+    }
+  } catch (error: any) {
+    console.error(`❌ 加载文件夹 ${folderId} 邮件失败:`, error)
+    console.error('🔍 错误详情:', {
+      message: error?.message,
+      response: error?.response,
+      status: error?.response?.status,
+      data: error?.response?.data
+    })
+    
+    ElMessage.error(`加载文件夹邮件失败: ${error?.response?.data?.msg || error?.message || '未知错误'}`)
+    folderEmails[folderId] = []
+  }
+}
+
 
 
 // 同步邮件方法（简化版）
@@ -456,26 +580,140 @@ const folderLabels: Record<string, string> = {
   starred: '星标邮件',
   sent: '已发送',
   drafts: '草稿箱',
-  deleted: '已删除'
+  deleted: '已删除',
+  custom: '自定义文件夹'
+}
+
+// 获取当前文件夹名称
+function getCurrentFolderName(): string {
+  if (selectedFolder.value === 'custom' && selectedFolderId.value) {
+    const folder = customFolders.value.find(f => f.id === selectedFolderId.value)
+    return folder ? folder.folderName : '未知文件夹'
+  }
+  return folderLabels[selectedFolder.value] || '未知文件夹'
+}
+
+// 获取当前文件夹的邮件
+function getCurrentEmails(): Email[] {
+  if (selectedFolder.value === 'custom' && selectedFolderId.value) {
+    return folderEmails[selectedFolderId.value] || []
+  }
+  return allEmails[selectedFolder.value] || []
+}
+
+// 显示文件夹右键上下文菜单
+function showFolderContextMenu(event: MouseEvent) {
+  event.preventDefault()
+  event.stopPropagation()
+  
+  folderContextMenu.value = {
+    visible: true,
+    x: event.clientX,
+    y: event.clientY
+  }
+  
+  // 点击其他地方隐藏菜单
+  setTimeout(() => {
+    document.addEventListener('click', hideFolderContextMenu, { once: true })
+  }, 0)
+}
+
+// 隐藏文件夹右键上下文菜单
+function hideFolderContextMenu() {
+  folderContextMenu.value.visible = false
+}
+
+// 新建文件夹
+async function createNewFolder() {
+  hideFolderContextMenu()
+  
+  try {
+    const { value: folderName } = await ElMessageBox.prompt('请输入文件夹名称', '新建文件夹', {
+      confirmButtonText: '创建',
+      cancelButtonText: '取消',
+      inputPattern: /^.{1,50}$/,
+      inputErrorMessage: '文件夹名称长度应在1-50个字符之间'
+    })
+    
+    if (folderName && folderName.trim()) {
+      console.log('📁 开始创建文件夹:', folderName.trim())
+      
+      // 显示加载状态
+      const loadingInstance = ElLoading.service({ text: '正在创建文件夹...' })
+      
+      try {
+        // 调用创建文件夹API，默认创建在根目录
+        const createData: FolderCreateReqVO = {
+          folderName: folderName.trim(),
+          parentId: 0, // 根目录
+          description: '' // 暂时不设置描述
+        }
+        
+        const folderId = await createFolder(createData)
+        console.log('✅ 文件夹创建成功，ID:', folderId)
+        
+        // 重新加载文件夹列表
+        await loadCustomFolders()
+        
+        ElMessage.success(`文件夹"${folderName.trim()}"创建成功`)
+        
+      } catch (error: any) {
+        console.error('❌ 创建文件夹失败:', error)
+        
+        // 根据错误类型显示不同的错误信息
+        let errorMsg = '创建文件夹失败'
+        if (error?.response?.data?.msg) {
+          errorMsg = error.response.data.msg
+        } else if (error?.message) {
+          errorMsg = error.message
+        }
+        
+        ElMessage.error(errorMsg)
+      } finally {
+        loadingInstance.close()
+      }
+    }
+  } catch (error: any) {
+    // 用户取消输入
+    if (error !== 'cancel') {
+      console.error('❌ 新建文件夹操作失败:', error)
+    }
+  }
 }
 
 const selectedFolder = ref('inbox')
-async function selectFolder(folder: string) {
+const selectedFolderId = ref<number | null>(null)
+const isMyFoldersExpanded = ref(false) // 我的文件夹展开状态，默认收起
+
+// 切换我的文件夹展开/收起状态
+function toggleMyFolders() {
+  isMyFoldersExpanded.value = !isMyFoldersExpanded.value
+  console.log(`📁 我的文件夹展开状态: ${isMyFoldersExpanded.value ? '展开' : '收起'}`)
+}
+
+async function selectFolder(folder: string | number) {
   console.log(`📁 切换文件夹: ${folder}`)
   console.log(`🔄 更新选中文件夹状态: ${selectedFolder.value} -> ${folder}`)
   
-  selectedFolder.value = folder
-  console.log(`📥 开始加载文件夹 ${folder} 的邮件...`)
+  // 重置文件夹ID
+  selectedFolderId.value = null
   
-  // 如果是发件箱，添加特殊处理
-  if (folder === 'sent') {
-    console.log('📤 正在加载发件箱，检查是否有已发送的邮件...')
+  if (typeof folder === 'string') {
+    // 系统文件夹
+    selectedFolder.value = folder
+    console.log(`📥 开始加载系统文件夹 ${folder} 的邮件...`)
+    await loadFolderEmails(folder)
+    console.log(`✅ 系统文件夹切换完成: ${folder}`)
+    console.log(`📊 当前文件夹邮件数量:`, allEmails[folder]?.length || 0)
+  } else {
+    // 自定义文件夹
+    selectedFolder.value = 'custom'
+    selectedFolderId.value = folder
+    console.log(`📥 开始加载自定义文件夹 ${folder} 的邮件...`)
+    await loadFolderEmailsById(folder)
+    console.log(`✅ 自定义文件夹切换完成: ${folder}`)
+    console.log(`📊 当前文件夹邮件数量:`, folderEmails[folder]?.length || 0)
   }
-  
-  await loadFolderEmails(folder)
-  
-  console.log(`✅ 文件夹切换完成: ${folder}`)
-  console.log(`📊 当前文件夹邮件数量:`, allEmails[folder]?.length || 0)
 }
 
 // 处理删除邮件
@@ -596,6 +834,70 @@ function handleShowMessage(data: { type: string, message: string }) {
     ElMessage.success(message)
   } else {
     ElMessage.info(message)
+  }
+}
+
+// 处理移动邮件操作
+async function handleMoveEmails(data: { folderId: number, emailIds: number[] }) {
+  const { folderId, emailIds } = data
+  console.log(`📁 开始移动邮件到文件夹 ${folderId}，邮件ID列表:`, emailIds)
+  console.log(`📁 当前文件夹: ${selectedFolder.value}`)
+  
+  try {
+    loading.value = true
+    
+    // 获取目标文件夹信息
+    const targetFolder = customFolders.value.find(f => f.id === folderId)
+    if (!targetFolder) {
+      throw new Error('目标文件夹不存在')
+    }
+    
+    console.log('📡 调用移动邮件API...')
+    // 调用移动邮件API
+    await moveMailToFolder({
+      letterIds: emailIds,
+      folderId: folderId,
+      mailType: 1 // 1-收件，2-发件，这里默认为收件
+    })
+    
+    console.log('🔄 从当前文件夹移除邮件...')
+    // 从当前文件夹移除邮件
+    const currentEmails = allEmails[selectedFolder.value]
+    if (currentEmails) {
+      emailIds.forEach(emailId => {
+        const emailIndex = currentEmails.findIndex(email => email.id === emailId)
+        if (emailIndex !== -1) {
+          console.log(`📁 从当前文件夹移除邮件: ${emailId}`)
+          currentEmails.splice(emailIndex, 1)
+        }
+      })
+    }
+    
+    // 重新加载目标文件夹的邮件（如果当前正在查看该文件夹）
+    if (selectedFolder.value === 'custom' && selectedFolderId.value === folderId) {
+      console.log('📥 重新加载目标文件夹邮件...')
+      await loadFolderEmailsById(folderId)
+    }
+    
+    console.log('📊 重新加载邮件统计...')
+    await loadMailStats()
+    
+    console.log(`✅ 成功移动 ${emailIds.length} 封邮件到文件夹"${targetFolder.folderName}"`)
+    ElMessage.success(`成功移动 ${emailIds.length} 封邮件到文件夹"${targetFolder.folderName}"`)
+    
+  } catch (error: any) {
+    console.error('❌ 移动邮件失败:', error)
+    console.error('🔍 移动错误详情:', {
+      message: error?.message,
+      response: error?.response,
+      status: error?.response?.status
+    })
+    
+    const errorMsg = error?.response?.data?.msg || error?.message || '移动邮件失败'
+    ElMessage.error(`移动邮件失败: ${errorMsg}`)
+  } finally {
+    loading.value = false
+    console.log('🏁 移动邮件流程结束，loading状态:', loading.value)
   }
 }
 
@@ -908,11 +1210,14 @@ onMounted(async () => {
     console.log('📊 第一步: 加载邮件统计信息...')
     await loadMailStats()
     
-    console.log('📥 第二步: 加载收件箱邮件...')
+    console.log('📁 第二步: 加载自定义文件夹列表...')
+    await loadCustomFolders()
+    
+    console.log('📥 第三步: 加载收件箱邮件...')
     await loadFolderEmails('inbox')
     
     // 测试发件箱加载
-    console.log('🧪 第三步: 测试发件箱加载...')
+    console.log('🧪 第四步: 测试发件箱加载...')
     await testSentMailLoading()
     
     console.log('✅ 邮件组件初始化完成')
@@ -932,4 +1237,5 @@ function goCompose() {
   console.log('✍️ 跳转到写信页面...')
   router.push('/mail/write')
 }
+
 </script>

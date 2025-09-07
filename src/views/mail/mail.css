@@ -213,6 +213,34 @@
     background-color: #f0f0f0;
 }
 
+.folder-item.folder-title {
+    font-weight: bold;
+    color: #666;
+    cursor: default;
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.folder-item.folder-title:hover {
+    background-color: transparent;
+}
+
+.folder-item.folder-title {
+    cursor: pointer;
+}
+
+.expand-icon {
+    margin-left: auto;
+    transition: transform 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+
+.expand-icon.expanded {
+    transform: rotate(180deg);
+}
+
 .folder-item.important {
     color: #fbbc04;
 }
@@ -339,6 +367,12 @@
 .tool-select:focus {
     outline: 1.5px solid #90caf9;
     border-color: #90caf9;
+}
+
+/* 移动下拉框样式，与标记为...保持一致 */
+.move-select {
+    width: 120px; /* 设置固定宽度，与标记为...下拉框保持一致 */
+    min-width: 120px;
 }
 
 .toolbar-right {
