@@ -207,7 +207,7 @@
           
           <div class="toolbar-group">
             <el-dropdown trigger="click" @command="changeFont">
-              <div class="tool-select">
+              <div class="tool-select" title="选择字体">
                 <span :style="{ fontFamily: getFontFamily(selectedFont) }">{{ selectedFont }}</span>
                 <el-icon><ArrowDown /></el-icon>
               </div>
