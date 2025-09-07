@@ -206,10 +206,24 @@
           </div>
           
           <div class="toolbar-group">
-            <div class="tool-select">
-              <span>默认字体</span>
-              <el-icon><ArrowDown /></el-icon>
-            </div>
+            <el-dropdown trigger="click" @command="changeFont">
+              <div class="tool-select">
+                <span :style="{ fontFamily: getFontFamily(selectedFont) }">{{ selectedFont }}</span>
+                <el-icon><ArrowDown /></el-icon>
+              </div>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item 
+                    v-for="font in fontOptions"
+                    :key="font.value"
+                    :command="font.value"
+                    :style="{ fontFamily: getFontFamily(font.value) }"
+                  >
+                    {{ font.label }}
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
             
             <div class="tool-select">
               <span>字号</span>
@@ -520,6 +534,15 @@ const formatStates = ref({
   italic: false,
   underline: false
 })
+
+// 字体选择状态
+const selectedFont = ref('宋体')
+const fontOptions = [
+  { value: '宋体', label: '宋体' },
+  { value: '黑体', label: '黑体' },
+  { value: '楷书', label: '楷书' },
+  { value: '幼圆', label: '幼圆' }
+]
 
 // 右键菜单状态
 const contextMenu = ref({
@@ -1422,6 +1445,58 @@ const applyListStyles = () => {
   })
 }
 
+// 获取字体族名称
+const getFontFamily = (fontName: string): string => {
+  const fontMap: { [key: string]: string } = {
+    '宋体': 'SimSun, "宋体", serif',
+    '黑体': 'SimHei, "黑体", sans-serif',
+    '楷书': 'KaiTi, "楷体", serif',
+    '幼圆': 'YouYuan, "幼圆", sans-serif'
+  }
+  return fontMap[fontName] || 'SimSun, "宋体", serif'
+}
+
+// 切换字体
+const changeFont = (fontName: string) => {
+  // 更新选中的字体
+  selectedFont.value = fontName
+  
+  const editor = document.querySelector('.editor-content') as HTMLElement
+  if (!editor) return
+  
+  // 确保编辑器获得焦点
+  editor.focus()
+  
+  // 获取当前选择
+  const selection = window.getSelection()
+  if (!selection || selection.rangeCount === 0) {
+    // 如果没有选择文本，设置整个编辑器的字体
+    editor.style.fontFamily = getFontFamily(fontName)
+    return
+  }
+  
+  const range = selection.getRangeAt(0)
+  const selectedText = range.toString()
+  
+  if (selectedText) {
+    // 如果有选中的文本，只对选中文本应用字体
+    const span = document.createElement('span')
+    span.style.fontFamily = getFontFamily(fontName)
+    span.textContent = selectedText
+    range.deleteContents()
+    range.insertNode(span)
+    
+    // 清除选择
+    selection.removeAllRanges()
+  } else {
+    // 如果没有选中文本，设置整个编辑器的字体
+    editor.style.fontFamily = getFontFamily(fontName)
+  }
+  
+  // 更新编辑器内容
+  handleEditorInput({ target: editor } as any)
+}
+
 // 文本格式化命令
 const execFormatCommand = (command: string) => {
   // 获取编辑器元素
@@ -1508,6 +1583,12 @@ onMounted(async () => {
       }
     }
   })
+  
+  // 设置编辑器默认字体
+  const editor = document.querySelector('.editor-content') as HTMLElement
+  if (editor) {
+    editor.style.fontFamily = getFontFamily(selectedFont.value)
+  }
   
   // 并发加载所有数据
   await loadAllData()
@@ -1649,6 +1730,25 @@ onMounted(async () => {
   margin-right: 5px;
 }
 
+.tool-select {
+  height: 33px;
+  padding: 0 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  background-color: #ffffff;
+  cursor: pointer;
+  font-size: 15px;
+  color: #222;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+}
+
+.tool-select:hover {
+  background-color: #f0f0f0;
+}
+
 .toolbar-right {
   display: flex;
   align-items: center;
@@ -1742,6 +1842,35 @@ onMounted(async () => {
   outline: none;
   color: #303133;
   font-size: 14px;
+  font-family: SimSun, "宋体", serif; /* 默认宋体 */
+}
+
+/* 字体选择器样式 */
+.font-select {
+  margin-right: 8px;
+}
+
+.font-select .el-input__inner {
+  font-size: 12px;
+  height: 28px;
+  line-height: 28px;
+}
+
+/* 字体样式定义 */
+.font-songti {
+  font-family: SimSun, "宋体", serif;
+}
+
+.font-heiti {
+  font-family: SimHei, "黑体", sans-serif;
+}
+
+.font-kaishu {
+  font-family: KaiTi, "楷体", serif;
+}
+
+.font-youyuan {
+  font-family: YouYuan, "幼圆", sans-serif;
 }
 
 
