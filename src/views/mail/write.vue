@@ -56,9 +56,9 @@
             </el-dropdown>
           </div>
           <div class="toolbar-right">
-            <span class="time" style="min-width: 180px; white-space: nowrap;">已于{{ currentTime }}保存至草稿</span>
-            <div class="tool-btn" @click="closeEditor">
-              <el-icon><Close /></el-icon>
+            <span class="time" style="min-width: 120px; white-space: nowrap;">已于{{ currentTime }}保存至草稿</span>
+            <div class="tool-btn" @click="saveDraftHandler">
+              <span>保存草稿</span>
             </div>
           </div>
         </div>
@@ -226,9 +226,6 @@
             </div>
             <div class="tool-btn" @click="execFormatCommand('underline')" title="下划线">
               <font-awesome-icon :icon="['fas', 'underline']" />
-            </div>
-            <div class="tool-btn">
-              <el-icon><Delete /></el-icon>
             </div>
             <div class="tool-btn">
               <el-icon><Edit /></el-icon>
@@ -451,7 +448,6 @@ import {
   Edit,
   Position,
   Files,
-  Delete,
   ArrowDown,
   Setting,
   Clock,
@@ -461,7 +457,6 @@ import {
   ArrowRightBold,
   ArrowLeftBold,
   View,
-  Close,
   Star
 } from '@element-plus/icons-vue'
 
@@ -1283,27 +1278,6 @@ const saveDraftHandler = async () => {
   }
 }
 
-// 关闭编辑器
-const closeEditor = async () => {
-  try {
-    await ElMessageBox.confirm('是否保存草稿？', '提示', {
-      confirmButtonText: '保存',
-      cancelButtonText: '不保存',
-      distinguishCancelAndClose: true,
-      closeOnClickModal: false
-    })
-    
-    // 保存草稿（不关闭标签页）
-    await saveDraftHandler()
-  } catch (action) {
-    if (action === 'cancel') {
-      // 不保存，直接关闭标签页并返回
-      const currentRoute = router.currentRoute.value
-      tagsViewStore.delView(currentRoute)
-      router.push('/mail')
-    }
-  }
-}
 
 
 
