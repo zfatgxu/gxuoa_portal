@@ -110,12 +110,11 @@ export const moveMailToFolder = async (data: MoveMailReqVO): Promise<boolean> =>
  * 从文件夹移除邮件
  * @param folderId 文件夹ID
  * @param letterIds 信件ID列表
- * @param mailType 邮件类型：1-收件，2-发件
  * @returns Promise<boolean>
  */
-export const removeMailFromFolder = async (folderId: number, letterIds: number[], mailType: number): Promise<boolean> => {
+export const removeMailFromFolder = async (folderId: number, letterIds: number[]): Promise<boolean> => {
   return await request.delete({ 
-    url: `/letter/folder/remove-mail?folderId=${folderId}&letterIds=${letterIds.join(',')}&mailType=${mailType}` 
+    url: `/letter/folder/remove-mail?folderId=${folderId}&letterIds=${letterIds.join(',')}` 
   })
 }
 
@@ -152,4 +151,38 @@ export const checkFolderName = async (folderName: string, excludeId?: number): P
  */
 export const getFolderMailCount = async (folderId: number): Promise<number> => {
   return await request.get({ url: `/letter/folder/mail-count?folderId=${folderId}` })
+}
+
+// ==================== 文件夹内邮件操作（基于收/发件关联） ====================
+
+/**
+ * 设置文件夹中选中邮件的已读/未读状态
+ * @param letterIds 信件ID列表
+ * @param isRead 是否已读
+ * @param mailType 邮件类型(1-收件,2-发件)，可选
+ */
+export const setFolderMailsReadState = async (
+  letterIds: number[],
+  isRead: boolean,
+  mailType?: number
+): Promise<boolean> => {
+  return await request.post({
+    url: '/letter/folder/mails/read-state',
+    params: { letterIds, mailType, isRead }
+  })
+}
+
+/**
+ * 切换文件夹中选中邮件的星标状态
+ * @param letterIds 信件ID列表
+ * @param mailType 邮件类型(1-收件,2-发件)，可选
+ */
+export const toggleFolderMailsStar = async (
+  letterIds: number[],
+  mailType?: number
+): Promise<boolean> => {
+  return await request.post({
+    url: '/letter/folder/mails/toggle-star',
+    params: { letterIds, mailType }
+  })
 }

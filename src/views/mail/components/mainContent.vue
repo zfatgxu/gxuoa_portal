@@ -154,6 +154,36 @@
       <div v-if="contextMenu.email && contextMenu.email.deletedAt" class="context-menu-item" @click="permanentDeleteEmail">
         彻底删除
       </div>
+      <div 
+        v-if="contextMenu.email && !isDeletedFolder && props.isCustomFolder && props.currentCustomFolderId"
+        class="context-menu-item"
+        @click="removeFromCurrentFolder">
+        从当前文件夹移除
+      </div>
+      <!-- 移动到... 悬浮子菜单 -->
+      <div 
+        class="context-menu-item"
+        style="position: relative;"
+        @mouseenter="contextMenu.showMoveSubmenu = true"
+        @mouseleave="contextMenu.showMoveSubmenu = false">
+        移动到...
+        <div
+          v-if="contextMenu.showMoveSubmenu"
+          class="context-menu context-submenu"
+          :style="{ left: '100%', top: '0px', position: 'absolute', zIndex: 2000 }"
+          @mouseenter.stop="contextMenu.showMoveSubmenu = true"
+          @mouseleave="contextMenu.showMoveSubmenu = false"
+          @click.stop>
+          <div
+            v-for="item in moveTargetFolders"
+            :key="item.id"
+            class="context-menu-item"
+            :style="{ paddingLeft: (8 + item.level * 12) + 'px' }"
+            @click="moveEmailToFolder(item.id)">
+            {{ item.folderName }}
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -185,6 +215,8 @@ const props = defineProps<{
   folderName: string, 
   emails: Array<Email>,
   isDeletedFolder: boolean,
+  isCustomFolder?: boolean,
+  currentCustomFolderId?: number,
   mailStats?: {
     totalCount: number,
     totalUnreadCount: number,
@@ -204,6 +236,7 @@ const emit = defineEmits<{
   permanentDeleteEmails: [emailIds: number[]]
   markEmails: [data: { action: string, emailIds: number[] }]
   moveEmails: [data: { folderId: number, emailIds: number[] }]
+  removeFromFolder: [data: { folderId: number, emailIds: number[] }]
   showMessage: [data: { type: string, message: string }]
   toggleStar: [emailId: number]
   syncMails: []
@@ -242,7 +275,8 @@ const contextMenu = ref({
   visible: false,
   x: 0,
   y: 0,
-  email: null as Email | null
+  email: null as Email | null,
+  showMoveSubmenu: false
 })
 
 // 显示上下文菜单
@@ -267,6 +301,7 @@ function showContextMenu(event: MouseEvent, email: Email) {
 function hideContextMenu() {
   contextMenu.value.visible = false
   contextMenu.value.email = null
+  contextMenu.value.showMoveSubmenu = false
 }
 
 // 标记为已读
@@ -297,6 +332,38 @@ function deleteEmail() {
 function permanentDeleteEmail() {
   if (contextMenu.value.email) {
     emit('permanentDeleteEmails', [contextMenu.value.email.id])
+    hideContextMenu()
+  }
+}
+
+// 从当前自定义文件夹中移除
+function removeFromCurrentFolder() {
+  if (contextMenu.value.email && props.currentCustomFolderId) {
+    emit('removeFromFolder', { folderId: Number(props.currentCustomFolderId), emailIds: [contextMenu.value.email.id] })
+    hideContextMenu()
+  }
+}
+
+// 扁平化“我的文件夹”用于子菜单展示
+const moveTargetFolders = computed(() => {
+  const build = (folders: any[], level = 0, acc: any[] = []) => {
+    folders.forEach((f) => {
+      acc.push({ ...f, level })
+      if (f.children && f.children.length) {
+        build(f.children, level + 1, acc)
+      }
+    })
+    return acc
+  }
+  // 自根开始构建
+  const roots = (props.customFolders || []).filter((f: any) => f.parentId === 0)
+  return build(roots)
+})
+
+// 右键菜单：移动当前邮件到指定文件夹
+function moveEmailToFolder(folderId: number) {
+  if (contextMenu.value.email) {
+    emit('moveEmails', { folderId, emailIds: [contextMenu.value.email.id] })
     hideContextMenu()
   }
 }

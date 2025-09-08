@@ -67,7 +67,6 @@ export interface LetterSenderRespVO {
   userId: number               // 用户ID
   userName: string             // 用户姓名
   senderIdCard: string         // 发件人身份证号
-  isDraft: boolean             // 是否为草稿(0-已发送,1-草稿)
   isRead: boolean              // 是否已读
   isDeleted: boolean           // 是否丢弃
   isStarred: boolean           // 是否标星
@@ -81,7 +80,6 @@ export interface LetterSenderRespVO {
 // 发件人状态更新请求VO - 对应后端 LetterSenderUpdateReqVO
 export interface LetterSenderUpdateReqVO {
   id: number                   // 记录ID
-  isDraft?: boolean            // 是否为草稿
   isRead?: boolean             // 是否已读
   isDeleted?: boolean          // 是否丢弃
   isStarred?: boolean          // 是否标星
@@ -91,7 +89,6 @@ export interface LetterSenderUpdateReqVO {
 export interface LetterSenderPageReqVO extends PageParam {
   letterId?: number            // 信件ID
   senderIdCard?: string        // 发件人身份证号
-  isDraft?: boolean            // 是否为草稿
   isRead?: boolean             // 是否已读
   isDeleted?: boolean          // 是否丢弃
   isStarred?: boolean          // 是否标星
@@ -132,7 +129,6 @@ export interface UserLetterStatusVO {
   isRead: boolean              // 是否已读
   isDeleted: boolean           // 是否丢弃
   isStarred: boolean           // 是否标星
-  isDraft: boolean             // 是否为草稿(仅发件人有效)
   readTime: string             // 阅读时间
   deletedTime: string          // 丢弃时间
 }
@@ -174,7 +170,6 @@ export interface MailListItemVO {
   subject: string               // 邮件主题
   content: string               // 邮件内容
   isRead: boolean               // 是否已读
-  isDraft: boolean              // 是否为草稿
   isStarred: boolean            // 是否星标
   starredAt: string             // 星标时间，
   deletedAt: string             // 删除时间
@@ -209,7 +204,6 @@ export interface LetterSendReqVO {
   recipientIdCards: string[]         // 收件人身份证号列表，必填
   ccIdCards?: string[]               // 抄送人身份证号列表，可选
   bccIdCards?: string[]              // 密送人身份证号列表，可选
-  isDraft?: boolean                  // 是否为草稿，可选
 }
 
 // 搜索信件请求VO

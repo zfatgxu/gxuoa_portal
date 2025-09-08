@@ -90,12 +90,15 @@
         :folderName="getCurrentFolderName()" 
         :emails="getCurrentEmails()" 
         :isDeletedFolder="selectedFolder==='deleted'"
+        :isCustomFolder="selectedFolder==='custom'"
+        :currentCustomFolderId="selectedFolderId || undefined"
         :mailStats="mailStats"
         :customFolders="customFolders"
         @delete-emails="handleDeleteEmails"
         @permanent-delete-emails="handlePermanentDeleteEmails"
         @mark-emails="handleMarkEmails"
         @move-emails="handleMoveEmails"
+        @remove-from-folder="handleRemoveFromFolder"
         @show-message="handleShowMessage"
         @toggle-star="handleToggleStar"
         @sync-mails="handleSyncMails"
@@ -110,6 +113,7 @@
       <div v-if="!folderContextMenu.folderId" class="context-menu-item" @click="createNewFolder">新建文件夹</div>
       <div v-if="folderContextMenu.folderId" class="context-menu-item" @click="confirmDeleteContextFolder">删除文件夹</div>
     </div>
+
   </div>
 </template>
 
@@ -128,24 +132,24 @@ import {
   getDeletedMails,
   moveToTrash,
   permanentDelete,
-  markAsRead,
-  markAsUnread,
-  toggleStar as toggleStarAPI,
   getMailStats,
   getLetterDetail,
   type MailListItemVO,
   type MailStatsVO
-} from '@/api/system/mail/letter/index'
+} from '@/api/system/mail/letter'
 import { 
   getFolderTree,
   getFolderMails, 
   createFolder,
   moveMailToFolder,
+  removeMailFromFolder,
   deleteFolder,
+  setFolderMailsReadState,
+  toggleFolderMailsStar,
   type FolderRespVO,
   type FolderCreateReqVO
-} from '@/api/system/mail/folder/index'
-import { getUserByIdCard } from '@/api/system/user/index'
+} from '@/api/system/mail/folder'
+import { getUserByIdCard } from '@/api/system/user'
 
 interface Email {
   id: number
@@ -1018,6 +1022,10 @@ async function handleMoveEmails(data: { folderId: number, emailIds: number[] }) 
       mailType: 1 // 1-收件，2-发件，这里默认为收件
     })
     
+    // 移动成功后刷新自定义文件夹树状态（名称、数量等）
+    console.log('🔄 刷新自定义文件夹树状态...')
+    await loadCustomFolders()
+
     console.log('🔄 处理本地状态更新...')
     
     // 根据源文件夹类型处理本地状态
@@ -1066,6 +1074,40 @@ async function handleMoveEmails(data: { folderId: number, emailIds: number[] }) 
   }
 }
 
+// 处理从当前自定义文件夹移除邮件
+async function handleRemoveFromFolder(data: { folderId: number, emailIds: number[] }) {
+  const { folderId, emailIds } = data
+  console.log(`📁 从自定义文件夹 ${folderId} 移除邮件，ID列表:`, emailIds)
+  try {
+    loading.value = true
+    await removeMailFromFolder(folderId, emailIds)
+
+    // 本地移除
+    const currentEmails = folderEmails[folderId]
+    if (currentEmails) {
+      emailIds.forEach(emailId => {
+        const emailIndex = currentEmails.findIndex(email => email.id === emailId)
+        if (emailIndex !== -1) {
+          console.log(`📁 从自定义文件夹 ${folderId} 本地移除邮件: ${emailId}`)
+          currentEmails.splice(emailIndex, 1)
+        }
+      })
+    }
+
+    // 刷新该自定义文件夹与统计、文件夹树
+    await loadFolderEmailsById(folderId)
+    await loadMailStats()
+    await loadCustomFolders()
+
+    ElMessage.success(`已从当前文件夹移除 ${emailIds.length} 封邮件`)
+  } catch (error: any) {
+    console.error('❌ 从文件夹移除失败:', error)
+    ElMessage.error('从文件夹移除失败')
+  } finally {
+    loading.value = false
+  }
+}
+
 // 辅助函数：更新所有文件夹中的邮件状态
 function updateEmailStatusInAllFolders(emailIds: number[], updateFn: (email: Email) => void) {
   console.log(`🔄 开始更新邮件状态，邮件ID列表:`, emailIds)
@@ -1109,7 +1151,7 @@ async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
     switch (action) {
       case 'read':
         console.log('📡 调用标记为已读API...')
-        await markAsRead({ ids: emailIds })
+        await setFolderMailsReadState(emailIds, true)
         successMessage = `成功标记 ${emailIds.length} 封邮件为已读`
         
         // 更新本地状态
@@ -1120,7 +1162,7 @@ async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
         
       case 'unread':
         console.log('📡 调用标记为未读API...')
-        await markAsUnread({ ids: emailIds })
+        await setFolderMailsReadState(emailIds, false)
         successMessage = `成功标记 ${emailIds.length} 封邮件为未读`
         
         // 更新本地状态
@@ -1131,7 +1173,7 @@ async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
         
       case 'star':
         console.log('📡 调用添加星标API...')
-        await toggleStarAPI({ ids: emailIds })
+        await toggleFolderMailsStar(emailIds)
         successMessage = `成功为 ${emailIds.length} 封邮件添加星标`
         
         // 更新本地状态
@@ -1147,7 +1189,7 @@ async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
         
       case 'unstar':
         console.log('📡 调用取消星标API...')
-        await toggleStarAPI({ ids: emailIds })
+        await toggleFolderMailsStar(emailIds)
         successMessage = `成功取消 ${emailIds.length} 封邮件的星标`
         
         // 更新本地状态
@@ -1200,7 +1242,7 @@ async function handleToggleStar(emailId: number) {
   
   try {
     console.log('📡 调用切换星标API...')
-    await toggleStarAPI({ ids: [emailId] })
+    await toggleFolderMailsStar([emailId])
     
     console.log('🔄 在所有文件夹中查找并更新邮件的星标状态...')
     
@@ -1288,7 +1330,7 @@ async function handleViewEmailDetail(emailId: number) {
   if (currentEmail && !currentEmail.isRead) {
     console.log('📖 邮件未读，开始标记为已读...')
     try {
-      await markAsRead({ ids: [emailId] })
+      await setFolderMailsReadState([emailId], true)
       
       // 更新本地状态 - 使用辅助函数更新所有文件夹中的邮件状态
       updateEmailStatusInAllFolders([emailId], (email) => {
