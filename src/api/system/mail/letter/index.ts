@@ -208,6 +208,7 @@ export interface LetterSendReqVO {
   requestReadReceipt?: boolean       // 是否请求已读回执，可选
   recipientIdCards: string[]         // 收件人身份证号列表，必填
   ccIdCards?: string[]               // 抄送人身份证号列表，可选
+  bccIdCards?: string[]              // 密送人身份证号列表，可选
   isDraft?: boolean                  // 是否为草稿，可选
 }
 

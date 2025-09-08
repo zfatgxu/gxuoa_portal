@@ -82,6 +82,8 @@
                 :loading="loading"
                 class="recipient-select"
                 @change="validateRecipients"
+                @focus="activeRecipientField = 'recipients'"
+                @click="activeRecipientField = 'recipients'"
               >
                 <el-option
                   v-for="item in userOptions"
@@ -97,8 +99,8 @@
               </el-select>
             </div>
             <div class="form-actions">
-              <span class="action-link" @click="showCc = !showCc">抄送</span>
-              <span class="action-link" @click="showBcc = !showBcc">密送</span>
+              <span class="action-link" @click="showCc = !showCc; if(showCc) activeRecipientField = 'cc'">抄送</span>
+              <span class="action-link" @click="showBcc = !showBcc; if(showBcc) activeRecipientField = 'bcc'">密送</span>
               <span>|</span>
               <span class="action-link">分别发送</span>
             </div>
@@ -121,6 +123,8 @@
                 :loading="loading"
                 class="recipient-select"
                 @change="validateCc"
+                @focus="activeRecipientField = 'cc'"
+                @click="activeRecipientField = 'cc'"
               >
                 <el-option
                   v-for="item in userOptions"
@@ -154,6 +158,8 @@
                 :loading="loading"
                 class="recipient-select"
                 @change="validateBcc"
+                @focus="activeRecipientField = 'bcc'"
+                @click="activeRecipientField = 'bcc'"
               >
                 <el-option
                   v-for="item in userOptions"
@@ -552,6 +558,7 @@ const showCc = ref(false)
 const showBcc = ref(false)
 const contactSearch = ref('')
 const loading = ref(false)
+const activeRecipientField = ref<'recipients' | 'cc' | 'bcc'>('recipients') // 当前激活的收件人字段
 
 // 格式按钮状态
 const formatStates = ref({
@@ -834,36 +841,42 @@ const remoteSearch = async (query: string) => {
   try {
     loading.value = true
     
+    // 如果输入为空或只有空格，不进行联想搜索
+    if (!query || !query.trim()) {
+      console.log('🔍 输入为空，清空联想选项')
+      userOptions.value = []
+      return
+    }
+    
     if (allUsers.value.length === 0) {
       // 如果还没有预加载用户列表，使用并发加载
       await loadAllData()
     }
     
-    // 基于预加载的用户列表进行过滤
-    let filteredUsers = allUsers.value
-    if (query) {
-      const searchTerm = query.toLowerCase().trim()
-      
-      // 如果搜索词太短，不进行过滤
-      if (searchTerm.length < 1) {
-        filteredUsers = allUsers.value.slice(0, 20) // 显示前20个用户
-      } else {
-        filteredUsers = allUsers.value.filter(user => {
-          // 只支持姓名前缀匹配
-          return user.nickname && user.nickname.toLowerCase().startsWith(searchTerm)
-        })
-        
-        // 按姓名排序
-        filteredUsers.sort((a, b) => {
-          const aName = (a.nickname || '').toLowerCase()
-          const bName = (b.nickname || '').toLowerCase()
-          
-          return aName.localeCompare(bName)
-        })
-      }
-      
-      console.log(`🔍 过滤后找到 ${filteredUsers.length} 个匹配用户`)
+    const searchTerm = query.toLowerCase().trim()
+    
+    // 如果搜索词太短，不进行过滤
+    if (searchTerm.length < 1) {
+      console.log('🔍 搜索词太短，清空联想选项')
+      userOptions.value = []
+      return
     }
+    
+    // 基于预加载的用户列表进行过滤
+    const filteredUsers = allUsers.value.filter(user => {
+      // 只支持姓名前缀匹配
+      return user.nickname && user.nickname.toLowerCase().startsWith(searchTerm)
+    })
+    
+    // 按姓名排序
+    filteredUsers.sort((a, b) => {
+      const aName = (a.nickname || '').toLowerCase()
+      const bName = (b.nickname || '').toLowerCase()
+      
+      return aName.localeCompare(bName)
+    })
+    
+    console.log(`🔍 过滤后找到 ${filteredUsers.length} 个匹配用户`)
     
     // 转换为前端需要的格式，显示部门名称
     userOptions.value = filteredUsers.slice(0, 50).map((user: any) => ({
@@ -925,18 +938,58 @@ const formatLastSendTime = (timeStr: string): string => {
 
 // 添加最近联系人为收件人
 const addRecentRecipient = (contact: any) => {
-  if (contact.name && !mailForm.value.recipients.includes(contact.name)) {
-    mailForm.value.recipients.push(contact.name)
-    ElMessage.success(`已添加收件人: ${contact.name}`)
+  if (!contact.name) return
+  
+  // 根据当前激活的字段决定添加到哪个列表
+  switch (activeRecipientField.value) {
+    case 'cc':
+      if (!mailForm.value.cc.includes(contact.name)) {
+        mailForm.value.cc.push(contact.name)
+        ElMessage.success(`已添加抄送人: ${contact.name}`)
+      }
+      break
+    case 'bcc':
+      if (!mailForm.value.bcc.includes(contact.name)) {
+        mailForm.value.bcc.push(contact.name)
+        ElMessage.success(`已添加密送人: ${contact.name}`)
+      }
+      break
+    case 'recipients':
+    default:
+      if (!mailForm.value.recipients.includes(contact.name)) {
+        mailForm.value.recipients.push(contact.name)
+        ElMessage.success(`已添加收件人: ${contact.name}`)
+      }
+      break
   }
 }
 
 // 添加星标联系人为收件人
 const addStarredRecipient = (contact: LetterContactStarRespVO) => {
   const displayName = starredContactDisplayNames.value.get(contact.id)
-  if (displayName && !mailForm.value.recipients.includes(displayName)) {
-    mailForm.value.recipients.push(displayName)
-    ElMessage.success(`已添加收件人: ${displayName}`)
+  if (!displayName) return
+  
+  // 根据当前激活的字段决定添加到哪个列表
+  switch (activeRecipientField.value) {
+    case 'cc':
+      if (!mailForm.value.cc.includes(displayName)) {
+        mailForm.value.cc.push(displayName)
+        ElMessage.success(`已添加抄送人: ${displayName}`)
+      }
+      break
+    case 'bcc':
+      if (!mailForm.value.bcc.includes(displayName)) {
+        mailForm.value.bcc.push(displayName)
+        ElMessage.success(`已添加密送人: ${displayName}`)
+      }
+      break
+    case 'recipients':
+    default:
+      if (!mailForm.value.recipients.includes(displayName)) {
+        mailForm.value.recipients.push(displayName)
+        ElMessage.success(`已添加收件人: ${displayName}`)
+      }
+      break
   }
 }
 
@@ -1342,11 +1395,15 @@ const doSendMail = async () => {
     // 处理抄送人：转换为身份证号
     const processedCc = mailForm.value.cc.length > 0 ? await processRecipients(mailForm.value.cc) : []
     
+    // 处理密送人：转换为身份证号
+    const processedBcc = mailForm.value.bcc.length > 0 ? await processRecipients(mailForm.value.bcc) : []
+    
     const sendData: LetterSendReqVO = {
       subject: mailForm.value.subject || '(无主题)',
       content: editorContent,
       recipientIdCards: processedRecipients, // 收件人身份证号列表
       ccIdCards: processedCc.length > 0 ? processedCc : undefined, // 抄送人身份证号列表
+      bccIdCards: processedBcc.length > 0 ? processedBcc : undefined, // 密送人身份证号列表
       priority: 1, // 默认普通优先级
       isDraft: false, // 不是草稿
       requestReadReceipt: false // 默认不请求已读回执
@@ -1403,11 +1460,15 @@ const saveDraftHandler = async () => {
     // 处理抄送人：转换为身份证号
     const processedCc = mailForm.value.cc.length > 0 ? await processRecipients(mailForm.value.cc) : []
     
+    // 处理密送人：转换为身份证号
+    const processedBcc = mailForm.value.bcc.length > 0 ? await processRecipients(mailForm.value.bcc) : []
+
     const draftData: LetterSendReqVO = {
       subject: mailForm.value.subject,
       content: editorContent,
       recipientIdCards: processedRecipients.length > 0 ? processedRecipients : [], // 收件人身份证号列表（草稿可以为空）
       ccIdCards: processedCc.length > 0 ? processedCc : undefined, // 抄送人身份证号列表
+      bccIdCards: processedBcc.length > 0 ? processedBcc : undefined, // 密送人身份证号列表
       priority: 1,
       isDraft: true, // 是草稿
       requestReadReceipt: false
