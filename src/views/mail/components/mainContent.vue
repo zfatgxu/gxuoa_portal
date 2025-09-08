@@ -44,6 +44,7 @@
         </select>
         <select class="tool-select move-select" v-model="moveToValue" @change="handleMoveToChange">
           <option value="" disabled selected style="display: none;">移动...</option>
+          <!-- 自定义文件夹选项 -->
           <option v-for="folder in props.customFolders" :key="folder.id" :value="folder.id">
             {{ folder.folderName }}
           </option>

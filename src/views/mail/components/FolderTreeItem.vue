@@ -5,6 +5,7 @@
       :class="{active: selectedFolderId === folder.id}"
       :style="{ paddingLeft: (level * 20 + 16) + 'px' }"
       @click="handleSelectFolder"
+      @contextmenu.prevent="emitContextMenu"
     >
       <span class="folder-icon">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -24,6 +25,7 @@
       :selected-folder-id="selectedFolderId"
       :level="level + 1"
       @select-folder="$emit('select-folder', $event)"
+      @context-menu="$emit('context-menu', $event)"
     />
   </div>
 </template>
@@ -46,11 +48,18 @@ const props = withDefaults(defineProps<Props>(), {
 // 定义emits
 const emit = defineEmits<{
   'select-folder': [folderId: number]
+  'context-menu': [payload: { x: number, y: number, folderId: number }]
 }>()
 
 // 处理文件夹选择
 const handleSelectFolder = () => {
   emit('select-folder', props.folder.id)
+}
+
+// 上报右键菜单请求给父组件
+const emitContextMenu = (event: MouseEvent) => {
+  event.stopPropagation()
+  emit('context-menu', { x: event.clientX, y: event.clientY, folderId: props.folder.id })
 }
 </script>
 

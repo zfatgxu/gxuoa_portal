@@ -77,6 +77,7 @@
                 :selected-folder-id="selectedFolderId || undefined"
                 :level="0"
                 @select-folder="selectFolder"
+                @context-menu="onFolderContextMenu"
               />
             </div>
           </template>
@@ -100,14 +101,14 @@
         @sync-mails="handleSyncMails"
         @view-email-detail="handleViewEmailDetail"
         @get-email-detail="handleGetEmailDetail"
+        @delete-folder="handleDeleteFolder"
       />
     </div>
 
-    <!-- 文件夹右键上下文菜单 -->
+    <!-- 文件夹右键上下文菜单（全局唯一） -->
     <div v-if="folderContextMenu.visible" class="context-menu" :style="{ left: folderContextMenu.x + 'px', top: folderContextMenu.y + 'px' }" @click.stop>
-      <div class="context-menu-item" @click="createNewFolder">
-        新建文件夹
-      </div>
+      <div v-if="!folderContextMenu.folderId" class="context-menu-item" @click="createNewFolder">新建文件夹</div>
+      <div v-if="folderContextMenu.folderId" class="context-menu-item" @click="confirmDeleteContextFolder">删除文件夹</div>
     </div>
   </div>
 </template>
@@ -140,6 +141,7 @@ import {
   getFolderMails, 
   createFolder,
   moveMailToFolder,
+  deleteFolder,
   type FolderRespVO,
   type FolderCreateReqVO
 } from '@/api/system/mail/folder/index'
@@ -184,7 +186,8 @@ const rootFolders = computed(() => {
 const folderContextMenu = ref({
   visible: false,
   x: 0,
-  y: 0
+  y: 0,
+  folderId: null as number | null
 })
 
 const loading = ref(false)
@@ -561,7 +564,16 @@ async function handleSyncMails() {
     const loadingInstance = ElLoading.service({ text: '正在同步邮件...' })
     
     console.log('🔄 重新加载当前文件夹邮件...')
-    await loadFolderEmails(selectedFolder.value)
+    // 根据当前选中的文件夹类型选择正确的加载方法
+    if (selectedFolder.value === 'custom' && selectedFolderId.value) {
+      // 自定义文件夹
+      console.log(`📁 重新加载自定义文件夹 ${selectedFolderId.value} 的邮件...`)
+      await loadFolderEmailsById(selectedFolderId.value)
+    } else {
+      // 系统文件夹
+      console.log(`📁 重新加载系统文件夹 ${selectedFolder.value} 的邮件...`)
+      await loadFolderEmails(selectedFolder.value)
+    }
     
     console.log('📊 重新加载邮件统计...')
     await loadMailStats()
@@ -606,10 +618,12 @@ function showFolderContextMenu(event: MouseEvent) {
   event.preventDefault()
   event.stopPropagation()
   
+  // 打开顶层菜单（不绑定具体文件夹）
   folderContextMenu.value = {
     visible: true,
     x: event.clientX,
-    y: event.clientY
+    y: event.clientY,
+    folderId: null
   }
   
   // 点击其他地方隐藏菜单
@@ -618,9 +632,24 @@ function showFolderContextMenu(event: MouseEvent) {
   }, 0)
 }
 
+// 来自子项的右键事件：全局唯一——先关闭再打开
+function onFolderContextMenu(payload: { x: number, y: number, folderId: number }) {
+  hideFolderContextMenu()
+  folderContextMenu.value = {
+    visible: true,
+    x: payload.x,
+    y: payload.y,
+    folderId: payload.folderId
+  }
+  setTimeout(() => {
+    document.addEventListener('click', hideFolderContextMenu, { once: true })
+  }, 0)
+}
+
 // 隐藏文件夹右键上下文菜单
 function hideFolderContextMenu() {
   folderContextMenu.value.visible = false
+  folderContextMenu.value.folderId = null
 }
 
 // 新建文件夹
@@ -681,6 +710,94 @@ async function createNewFolder() {
   }
 }
 
+// 删除文件夹
+async function handleDeleteFolder(folderId: number) {
+  console.log(`🗑️ 开始删除文件夹，ID: ${folderId}`)
+  
+  try {
+    // 获取文件夹信息
+    const folder = customFolders.value.find(f => f.id === folderId)
+    if (!folder) {
+      throw new Error('文件夹不存在')
+    }
+
+    // 如果文件夹内仍有邮件，禁止删除并提示
+    if ((folder.mailCount || 0) > 0) {
+      ElMessage.warning('该文件夹内仍有邮件，无法删除')
+      return
+    }
+    
+    // 显示确认对话框（简化，无额外提示）
+    await ElMessageBox.confirm(
+      `确定要删除文件夹"${folder.folderName}"吗？`,
+      '删除文件夹',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+    
+    // 显示加载状态
+    const loadingInstance = ElLoading.service({ text: '正在删除文件夹...' })
+    
+    try {
+      console.log('📡 调用删除文件夹API...')
+      await deleteFolder(folderId)
+      
+      console.log('✅ 文件夹删除成功')
+      
+      // 如果当前正在查看被删除的文件夹，切换到收件箱
+      if (selectedFolder.value === 'custom' && selectedFolderId.value === folderId) {
+        console.log('🔄 切换到收件箱...')
+        await selectFolder('inbox')
+      }
+      
+      // 重新加载文件夹列表
+      console.log('📁 重新加载文件夹列表...')
+      await loadCustomFolders()
+      
+      // 重新加载邮件统计
+      console.log('📊 重新加载邮件统计...')
+      await loadMailStats()
+      
+      ElMessage.success(`文件夹"${folder.folderName}"删除成功`)
+      
+    } catch (error: any) {
+      console.error('❌ 删除文件夹失败:', error)
+      console.error('🔍 删除错误详情:', {
+        message: error?.message,
+        response: error?.response,
+        status: error?.response?.status
+      })
+      
+      const errorMsg = error?.response?.data?.msg || error?.message || '删除文件夹失败'
+      ElMessage.error(`删除文件夹失败: ${errorMsg}`)
+    } finally {
+      loadingInstance.close()
+    }
+    
+  } catch (error: any) {
+    if (error === 'cancel') {
+      console.log('🚫 用户取消了删除文件夹操作')
+      return
+    }
+    
+    console.error('❌ 删除文件夹操作失败:', error)
+    ElMessage.error('删除文件夹失败')
+  }
+}
+
+// 顶层菜单中的“删除文件夹”动作
+async function confirmDeleteContextFolder() {
+  if (folderContextMenu.value.folderId) {
+    const id = folderContextMenu.value.folderId
+    hideFolderContextMenu()
+    await handleDeleteFolder(id)
+  }
+}
+
 const selectedFolder = ref('inbox')
 const selectedFolderId = ref<number | null>(null)
 const isMyFoldersExpanded = ref(false) // 我的文件夹展开状态，默认收起
@@ -727,14 +844,33 @@ async function handleDeleteEmails(emailIds: number[]) {
     await moveToTrash({ ids: emailIds })
     
     console.log('🔄 从当前文件夹移除邮件...')
-    const currentEmails = allEmails[selectedFolder.value]
-    emailIds.forEach(emailId => {
-      const emailIndex = currentEmails.findIndex(email => email.id === emailId)
-      if (emailIndex !== -1) {
-        console.log(`🗑️ 移除邮件: ${emailId}`)
-        currentEmails.splice(emailIndex, 1)
+    
+    // 根据当前文件夹类型选择正确的邮件列表
+    if (selectedFolder.value === 'custom' && selectedFolderId.value) {
+      // 自定义文件夹
+      const currentEmails = folderEmails[selectedFolderId.value]
+      if (currentEmails) {
+        emailIds.forEach(emailId => {
+          const emailIndex = currentEmails.findIndex(email => email.id === emailId)
+          if (emailIndex !== -1) {
+            console.log(`🗑️ 从自定义文件夹 ${selectedFolderId.value} 移除邮件: ${emailId}`)
+            currentEmails.splice(emailIndex, 1)
+          }
+        })
       }
-    })
+    } else {
+      // 系统文件夹
+      const currentEmails = allEmails[selectedFolder.value]
+      if (currentEmails) {
+        emailIds.forEach(emailId => {
+          const emailIndex = currentEmails.findIndex(email => email.id === emailId)
+          if (emailIndex !== -1) {
+            console.log(`🗑️ 从系统文件夹 ${selectedFolder.value} 移除邮件: ${emailId}`)
+            currentEmails.splice(emailIndex, 1)
+          }
+        })
+      }
+    }
     
     // 重新加载已删除文件夹（如果需要）
     if (selectedFolder.value !== 'deleted') {
@@ -784,14 +920,33 @@ async function handlePermanentDeleteEmails(emailIds: number[]) {
     await permanentDelete({ ids: emailIds })
     
     console.log('🔄 从当前文件夹移除邮件...')
-    const currentEmails = allEmails[selectedFolder.value]
-    emailIds.forEach(emailId => {
-      const emailIndex = currentEmails.findIndex(email => email.id === emailId)
-      if (emailIndex !== -1) {
-        console.log(`💀 彻底移除邮件: ${emailId}`)
-        currentEmails.splice(emailIndex, 1)
+    
+    // 根据当前文件夹类型选择正确的邮件列表
+    if (selectedFolder.value === 'custom' && selectedFolderId.value) {
+      // 自定义文件夹
+      const currentEmails = folderEmails[selectedFolderId.value]
+      if (currentEmails) {
+        emailIds.forEach(emailId => {
+          const emailIndex = currentEmails.findIndex(email => email.id === emailId)
+          if (emailIndex !== -1) {
+            console.log(`💀 从自定义文件夹 ${selectedFolderId.value} 彻底移除邮件: ${emailId}`)
+            currentEmails.splice(emailIndex, 1)
+          }
+        })
       }
-    })
+    } else {
+      // 系统文件夹
+      const currentEmails = allEmails[selectedFolder.value]
+      if (currentEmails) {
+        emailIds.forEach(emailId => {
+          const emailIndex = currentEmails.findIndex(email => email.id === emailId)
+          if (emailIndex !== -1) {
+            console.log(`💀 从系统文件夹 ${selectedFolder.value} 彻底移除邮件: ${emailId}`)
+            currentEmails.splice(emailIndex, 1)
+          }
+        })
+      }
+    }
     
     // 重新加载已删除文件夹（如果需要）
     if (selectedFolder.value !== 'deleted') {
@@ -837,6 +992,7 @@ function handleShowMessage(data: { type: string, message: string }) {
   }
 }
 
+
 // 处理移动邮件操作
 async function handleMoveEmails(data: { folderId: number, emailIds: number[] }) {
   const { folderId, emailIds } = data
@@ -846,11 +1002,13 @@ async function handleMoveEmails(data: { folderId: number, emailIds: number[] }) 
   try {
     loading.value = true
     
-    // 获取目标文件夹信息
+    // 获取目标文件夹信息（现在只支持自定义文件夹）
     const targetFolder = customFolders.value.find(f => f.id === folderId)
     if (!targetFolder) {
       throw new Error('目标文件夹不存在')
     }
+    const targetFolderName = targetFolder.folderName
+    console.log(`📁 目标为自定义文件夹: ${targetFolderName}`)
     
     console.log('📡 调用移动邮件API...')
     // 调用移动邮件API
@@ -860,30 +1018,37 @@ async function handleMoveEmails(data: { folderId: number, emailIds: number[] }) 
       mailType: 1 // 1-收件，2-发件，这里默认为收件
     })
     
-    console.log('🔄 从当前文件夹移除邮件...')
-    // 从当前文件夹移除邮件
-    const currentEmails = allEmails[selectedFolder.value]
-    if (currentEmails) {
-      emailIds.forEach(emailId => {
-        const emailIndex = currentEmails.findIndex(email => email.id === emailId)
-        if (emailIndex !== -1) {
-          console.log(`📁 从当前文件夹移除邮件: ${emailId}`)
-          currentEmails.splice(emailIndex, 1)
-        }
-      })
+    console.log('🔄 处理本地状态更新...')
+    
+    // 根据源文件夹类型处理本地状态
+    if (selectedFolder.value === 'custom' && selectedFolderId.value) {
+      // 自定义文件夹 → 自定义文件夹：真正移动（移除）
+      const currentEmails = folderEmails[selectedFolderId.value]
+      if (currentEmails) {
+        emailIds.forEach(emailId => {
+          const emailIndex = currentEmails.findIndex(email => email.id === emailId)
+          if (emailIndex !== -1) {
+            console.log(`📁 从自定义文件夹 ${selectedFolderId.value} 移除邮件: ${emailId}`)
+            currentEmails.splice(emailIndex, 1)
+          }
+        })
+      }
+    } else {
+      // 系统文件夹 → 自定义文件夹：复制操作（不移除）
+      console.log(`📋 系统文件夹到自定义文件夹为复制操作，不移除原邮件`)
     }
     
     // 重新加载目标文件夹的邮件（如果当前正在查看该文件夹）
     if (selectedFolder.value === 'custom' && selectedFolderId.value === folderId) {
-      console.log('📥 重新加载目标文件夹邮件...')
+      console.log('📥 重新加载目标自定义文件夹邮件...')
       await loadFolderEmailsById(folderId)
     }
     
     console.log('📊 重新加载邮件统计...')
     await loadMailStats()
     
-    console.log(`✅ 成功移动 ${emailIds.length} 封邮件到文件夹"${targetFolder.folderName}"`)
-    ElMessage.success(`成功移动 ${emailIds.length} 封邮件到文件夹"${targetFolder.folderName}"`)
+    console.log(`✅ 成功移动 ${emailIds.length} 封邮件到文件夹"${targetFolderName}"`)
+    ElMessage.success(`成功移动 ${emailIds.length} 封邮件到文件夹"${targetFolderName}"`)
     
   } catch (error: any) {
     console.error('❌ 移动邮件失败:', error)
@@ -899,6 +1064,36 @@ async function handleMoveEmails(data: { folderId: number, emailIds: number[] }) 
     loading.value = false
     console.log('🏁 移动邮件流程结束，loading状态:', loading.value)
   }
+}
+
+// 辅助函数：更新所有文件夹中的邮件状态
+function updateEmailStatusInAllFolders(emailIds: number[], updateFn: (email: Email) => void) {
+  console.log(`🔄 开始更新邮件状态，邮件ID列表:`, emailIds)
+  
+  // 更新系统文件夹中的邮件状态
+  emailIds.forEach(emailId => {
+    console.log(`📧 处理邮件ID: ${emailId}`)
+    Object.keys(allEmails).forEach(folderKey => {
+      const email = allEmails[folderKey].find(e => e.id === emailId)
+      if (email) {
+        console.log(`📁 在系统文件夹 ${folderKey} 中找到邮件 ${emailId}，更新状态`)
+        updateFn(email)
+      }
+    })
+  })
+  
+  // 更新自定义文件夹中的邮件状态
+  emailIds.forEach(emailId => {
+    Object.keys(folderEmails).forEach(folderId => {
+      const email = folderEmails[folderId].find(e => e.id === emailId)
+      if (email) {
+        console.log(`📁 在自定义文件夹 ${folderId} 中找到邮件 ${emailId}，更新状态`)
+        updateFn(email)
+      }
+    })
+  })
+  
+  console.log(`✅ 邮件状态更新完成`)
 }
 
 // 处理标记邮件操作
@@ -918,13 +1113,8 @@ async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
         successMessage = `成功标记 ${emailIds.length} 封邮件为已读`
         
         // 更新本地状态
-        emailIds.forEach(emailId => {
-          Object.keys(allEmails).forEach(folderKey => {
-            const email = allEmails[folderKey].find(e => e.id === emailId)
-            if (email) {
-              email.isRead = true
-            }
-          })
+        updateEmailStatusInAllFolders(emailIds, (email) => {
+          email.isRead = true
         })
         break
         
@@ -934,13 +1124,8 @@ async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
         successMessage = `成功标记 ${emailIds.length} 封邮件为未读`
         
         // 更新本地状态
-        emailIds.forEach(emailId => {
-          Object.keys(allEmails).forEach(folderKey => {
-            const email = allEmails[folderKey].find(e => e.id === emailId)
-            if (email) {
-              email.isRead = false
-            }
-          })
+        updateEmailStatusInAllFolders(emailIds, (email) => {
+          email.isRead = false
         })
         break
         
@@ -951,14 +1136,9 @@ async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
         
         // 更新本地状态
         const today = new Date().toISOString().split('T')[0]
-        emailIds.forEach(emailId => {
-          Object.keys(allEmails).forEach(folderKey => {
-            const email = allEmails[folderKey].find(e => e.id === emailId)
-            if (email) {
-              email.isStarred = true
-              email.starredAt = today
-            }
-          })
+        updateEmailStatusInAllFolders(emailIds, (email) => {
+          email.isStarred = true
+          email.starredAt = today
         })
         
         // 重新加载星标文件夹
@@ -971,22 +1151,17 @@ async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
         successMessage = `成功取消 ${emailIds.length} 封邮件的星标`
         
         // 更新本地状态
+        updateEmailStatusInAllFolders(emailIds, (email) => {
+          email.isStarred = false
+          email.starredAt = undefined
+        })
+        
+        // 从星标文件夹中移除邮件
         emailIds.forEach(emailId => {
-          Object.keys(allEmails).forEach(folderKey => {
-            const email = allEmails[folderKey].find(e => e.id === emailId)
-            if (email) {
-              email.isStarred = false
-              email.starredAt = undefined
-              
-              // 从星标文件夹中移除
-              if (folderKey === 'starred') {
-                const starredIndex = allEmails.starred.findIndex(e => e.id === emailId)
-                if (starredIndex !== -1) {
-                  allEmails.starred.splice(starredIndex, 1)
-                }
-              }
-            }
-          })
+          const starredIndex = allEmails.starred.findIndex(e => e.id === emailId)
+          if (starredIndex !== -1) {
+            allEmails.starred.splice(starredIndex, 1)
+          }
         })
         
         // 重新加载星标文件夹
@@ -1028,13 +1203,15 @@ async function handleToggleStar(emailId: number) {
     await toggleStarAPI({ ids: [emailId] })
     
     console.log('🔄 在所有文件夹中查找并更新邮件的星标状态...')
+    
+    // 更新系统文件夹中的邮件状态
     Object.keys(allEmails).forEach(folderKey => {
       const email = allEmails[folderKey].find(e => e.id === emailId)
       if (email) {
         const oldStatus = email.isStarred
         email.isStarred = !email.isStarred
         
-        console.log(`📧 邮件 ${emailId} 在文件夹 ${folderKey} 中，星标状态: ${oldStatus} -> ${email.isStarred}`)
+        console.log(`📧 邮件 ${emailId} 在系统文件夹 ${folderKey} 中，星标状态: ${oldStatus} -> ${email.isStarred}`)
         
         const today = new Date().toISOString().split('T')[0]
         if (email.isStarred) {
@@ -1052,6 +1229,26 @@ async function handleToggleStar(emailId: number) {
               allEmails.starred.splice(starredIndex, 1)
             }
           }
+        }
+      }
+    })
+    
+    // 更新自定义文件夹中的邮件状态
+    Object.keys(folderEmails).forEach(folderId => {
+      const email = folderEmails[folderId].find(e => e.id === emailId)
+      if (email) {
+        const oldStatus = email.isStarred
+        email.isStarred = !email.isStarred
+        
+        console.log(`📧 邮件 ${emailId} 在自定义文件夹 ${folderId} 中，星标状态: ${oldStatus} -> ${email.isStarred}`)
+        
+        const today = new Date().toISOString().split('T')[0]
+        if (email.isStarred) {
+          email.starredAt = today
+          console.log(`⭐ 设置星标时间: ${today}`)
+        } else {
+          email.starredAt = undefined
+          console.log(`❌ 清除星标时间`)
         }
       }
     })
@@ -1080,19 +1277,23 @@ async function handleViewEmailDetail(emailId: number) {
   console.log(`📧 开始查看邮件详情，邮件ID: ${emailId}`)
   
   // 检查邮件是否已读，如果未读则标记为已读
-  const currentEmail = Object.values(allEmails).flat().find(email => email.id === emailId)
+  // 首先在系统文件夹中查找
+  let currentEmail = Object.values(allEmails).flat().find(email => email.id === emailId)
+  
+  // 如果在系统文件夹中没找到，在自定义文件夹中查找
+  if (!currentEmail) {
+    currentEmail = Object.values(folderEmails).flat().find(email => email.id === emailId)
+  }
+  
   if (currentEmail && !currentEmail.isRead) {
     console.log('📖 邮件未读，开始标记为已读...')
     try {
       await markAsRead({ ids: [emailId] })
       
-      // 更新本地状态
-      Object.keys(allEmails).forEach(folderKey => {
-        const email = allEmails[folderKey].find(e => e.id === emailId)
-        if (email) {
-          email.isRead = true
-          console.log(`📧 邮件 ${emailId} 在文件夹 ${folderKey} 中标记为已读`)
-        }
+      // 更新本地状态 - 使用辅助函数更新所有文件夹中的邮件状态
+      updateEmailStatusInAllFolders([emailId], (email) => {
+        email.isRead = true
+        console.log(`📧 邮件 ${emailId} 标记为已读`)
       })
       
       // 重新加载邮件统计
@@ -1201,6 +1402,7 @@ async function testSentMailLoading() {
   }
 }
 
+
 // 组件挂载时初始化数据
 onMounted(async () => {
   console.log('🚀 邮件组件开始挂载...')
@@ -1221,6 +1423,7 @@ onMounted(async () => {
     await testSentMailLoading()
     
     console.log('✅ 邮件组件初始化完成')
+    console.log('📁 自定义文件夹右键菜单功能已启用')
   } catch (error: any) {
     console.error('❌ 邮件组件初始化失败:', error)
     console.error('🔍 初始化错误详情:', {

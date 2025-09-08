@@ -312,7 +312,7 @@
           @keyup="updateFormatStates"
           @keydown="updateFormatStates"
           @focus="updateFormatStates"
-          @blur="updateFormatStates"
+          @blur="() => { formatStates.bold = false; formatStates.italic = false; formatStates.underline = false; }"
           @selectionchange="updateFormatStates"
           data-placeholder="请输入正文" 
           style="flex: 1; padding: 20px; background-color: #ffffff; min-height: 300px; outline: none; border-radius: 0 0 4px 4px;"
@@ -1176,16 +1176,19 @@ const validateBcc = () => {
 // 更新格式按钮状态
 const updateFormatStates = () => {
   try {
-    // 确保编辑器有焦点
+    // 只有在编辑器有焦点时才更新格式状态
     const editor = document.querySelector('.editor-content') as HTMLElement
-    if (editor && document.activeElement !== editor) {
-      editor.focus()
+    if (editor && document.activeElement === editor) {
+      // 更新格式状态
+      formatStates.value.bold = document.queryCommandState('bold')
+      formatStates.value.italic = document.queryCommandState('italic')
+      formatStates.value.underline = document.queryCommandState('underline')
+    } else {
+      // 如果编辑器没有焦点，重置格式状态
+      formatStates.value.bold = false
+      formatStates.value.italic = false
+      formatStates.value.underline = false
     }
-    
-    // 更新格式状态
-    formatStates.value.bold = document.queryCommandState('bold')
-    formatStates.value.italic = document.queryCommandState('italic')
-    formatStates.value.underline = document.queryCommandState('underline')
   } catch (error) {
     console.error('更新格式状态失败:', error)
   }
@@ -1716,7 +1719,8 @@ onMounted(async () => {
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0)
       const editor = document.querySelector('.editor-content')
-      if (editor && editor.contains(range.commonAncestorContainer)) {
+      // 只有当编辑器有焦点且选择在编辑器内时才更新格式状态
+      if (editor && editor.contains(range.commonAncestorContainer) && document.activeElement === editor) {
         updateFormatStates()
       }
     }
