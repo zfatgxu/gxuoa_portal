@@ -489,7 +489,7 @@ export const permanentDelete = async (data: { ids: number[] }): Promise<boolean>
 // ==================== 垃圾箱标记功能API ====================
 
 /**
- * 标记信件为垃圾箱
+ * 标记为垃圾邮件
  * @param data 信件ID列表
  * @returns Promise<boolean>
  */
@@ -498,7 +498,7 @@ export const markAsTrash = async (data: { ids: number[] }): Promise<boolean> => 
 }
 
 /**
- * 取消垃圾箱标记
+ * 取消垃圾邮件标记
  * @param data 信件ID列表
  * @returns Promise<boolean>
  */

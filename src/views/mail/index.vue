@@ -153,6 +153,8 @@ import {
   permanentDelete,
   getMailStats,
   getLetterDetail,
+  markAsTrash,
+  restoreFromTrashFlag,
   type MailListItemVO,
   type MailStatsVO
 } from '@/api/system/mail/letter'
@@ -1315,6 +1317,104 @@ async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
         
         // 重新加载星标文件夹
         await loadFolderEmails('starred')
+        break
+        
+      case 'spam':
+        console.log('📡 调用标记为垃圾邮件API...')
+        await markAsTrash({ ids: emailIds })
+        successMessage = `成功将 ${emailIds.length} 封邮件标记为垃圾邮件`
+        
+        // 从当前文件夹移除邮件
+        if (selectedFolder.value === 'custom' && selectedFolderId.value) {
+          // 自定义文件夹
+          const currentEmails = folderEmails[selectedFolderId.value]
+          if (currentEmails) {
+            emailIds.forEach(emailId => {
+              const emailIndex = currentEmails.findIndex(email => email.id === emailId)
+              if (emailIndex !== -1) {
+                currentEmails.splice(emailIndex, 1)
+              }
+            })
+          }
+        } else {
+          // 系统文件夹
+          const currentEmails = allEmails[selectedFolder.value]
+          if (currentEmails) {
+            emailIds.forEach(emailId => {
+              const emailIndex = currentEmails.findIndex(email => email.id === emailId)
+              if (emailIndex !== -1) {
+                currentEmails.splice(emailIndex, 1)
+              }
+            })
+          }
+        }
+        
+        // 重新加载相关文件夹和统计信息
+        console.log('🔄 重新加载垃圾箱文件夹...')
+        await loadFolderEmails('trash')
+        
+        // 如果当前不在垃圾箱，重新加载当前文件夹
+        if (selectedFolder.value !== 'trash') {
+          console.log(`🔄 重新加载当前文件夹 ${selectedFolder.value}...`)
+          if (selectedFolder.value === 'custom' && selectedFolderId.value) {
+            await loadFolderEmailsById(selectedFolderId.value)
+          } else {
+            await loadFolderEmails(selectedFolder.value)
+          }
+        }
+        
+        // 重新加载自定义文件夹树（更新邮件数量）
+        console.log('🔄 重新加载自定义文件夹树...')
+        await loadCustomFolders()
+        break
+        
+      case 'unspam':
+        console.log('📡 调用取消垃圾邮件标记API...')
+        await restoreFromTrashFlag({ ids: emailIds })
+        successMessage = `成功取消 ${emailIds.length} 封邮件的垃圾邮件标记`
+        
+        // 从当前文件夹移除邮件
+        if (selectedFolder.value === 'custom' && selectedFolderId.value) {
+          // 自定义文件夹
+          const currentEmails = folderEmails[selectedFolderId.value]
+          if (currentEmails) {
+            emailIds.forEach(emailId => {
+              const emailIndex = currentEmails.findIndex(email => email.id === emailId)
+              if (emailIndex !== -1) {
+                currentEmails.splice(emailIndex, 1)
+              }
+            })
+          }
+        } else {
+          // 系统文件夹
+          const currentEmails = allEmails[selectedFolder.value]
+          if (currentEmails) {
+            emailIds.forEach(emailId => {
+              const emailIndex = currentEmails.findIndex(email => email.id === emailId)
+              if (emailIndex !== -1) {
+                currentEmails.splice(emailIndex, 1)
+              }
+            })
+          }
+        }
+        
+        // 重新加载相关文件夹和统计信息
+        console.log('🔄 重新加载收件箱文件夹...')
+        await loadFolderEmails('inbox')
+        
+        // 如果当前不在收件箱，重新加载当前文件夹
+        if (selectedFolder.value !== 'inbox') {
+          console.log(`🔄 重新加载当前文件夹 ${selectedFolder.value}...`)
+          if (selectedFolder.value === 'custom' && selectedFolderId.value) {
+            await loadFolderEmailsById(selectedFolderId.value)
+          } else {
+            await loadFolderEmails(selectedFolder.value)
+          }
+        }
+        
+        // 重新加载自定义文件夹树（更新邮件数量）
+        console.log('🔄 重新加载自定义文件夹树...')
+        await loadCustomFolders()
         break
         
       default:

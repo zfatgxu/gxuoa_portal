@@ -24,16 +24,19 @@
           {{ folderName }}
         </span>
         <button class="tool-btn" @click="deleteSelectedEmails" :disabled="selectedEmails.length === 0">
-          {{ isDeletedFolder ? '彻底删除' : '删除' }}
-        </button>
-        <button class="tool-btn" @click="permanentDeleteSelectedEmails" :disabled="selectedEmails.length === 0">
-          彻底删除
+          {{ (isDeletedFolder || isTrashFolder) ? '彻底删除' : '删除' }}
         </button>
         <button class="tool-btn">
           转发
         </button>
+        <button v-if="folderName === '收件箱'" class="tool-btn" @click="markAsSpam">
+          这是垃圾邮件
+        </button>
+        <button v-if="isTrashFolder" class="tool-btn" @click="markAsSpam">
+          这不是垃圾邮件
+        </button>
         <button class="tool-btn" @click="markAllAsRead">
-          全部标记为已读
+          全部已读
         </button>
         <select class="tool-select" v-model="markAsValue" @change="handleMarkAsChange">
           <option value="" disabled selected style="display: none;">标记为...</option>
@@ -154,6 +157,13 @@
       <div v-if="contextMenu.email && contextMenu.email.deletedAt" class="context-menu-item" @click="permanentDeleteEmail">
         彻底删除
       </div>
+      <!-- 垃圾邮件相关选项 -->
+      <div v-if="contextMenu.email && folderName === '收件箱'" class="context-menu-item" @click="markAsSpamFromContext">
+        这是垃圾邮件
+      </div>
+      <div v-if="contextMenu.email && isTrashFolder" class="context-menu-item" @click="markAsSpamFromContext">
+        这不是垃圾邮件
+      </div>
       <div 
         v-if="contextMenu.email && !isDeletedFolder && props.isCustomFolder && props.currentCustomFolderId"
         class="context-menu-item"
@@ -215,6 +225,7 @@ const props = defineProps<{
   folderName: string, 
   emails: Array<Email>,
   isDeletedFolder: boolean,
+  isTrashFolder?: boolean,
   isCustomFolder?: boolean,
   currentCustomFolderId?: number,
   mailStats?: {
@@ -336,6 +347,15 @@ function permanentDeleteEmail() {
   }
 }
 
+// 从右键菜单标记为垃圾邮件/取消垃圾邮件标记
+function markAsSpamFromContext() {
+  if (contextMenu.value.email) {
+    const action = props.isTrashFolder ? 'unspam' : 'spam'
+    emit('markEmails', { action, emailIds: [contextMenu.value.email.id] })
+    hideContextMenu()
+  }
+}
+
 // 从当前自定义文件夹中移除
 function removeFromCurrentFolder() {
   if (contextMenu.value.email && props.currentCustomFolderId) {
@@ -395,19 +415,17 @@ const emailCountText = computed(() => {
 function deleteSelectedEmails() {
   if (selectedEmails.value.length > 0) {
     const emailIds = selectedEmails.value.map(id => Number(id))
-    emit('deleteEmails', emailIds)
+    if (props.isDeletedFolder || props.isTrashFolder) {
+      // 在已删除文件夹或垃圾箱中，执行彻底删除
+      emit('permanentDeleteEmails', emailIds)
+    } else {
+      // 在其他文件夹中，执行普通删除
+      emit('deleteEmails', emailIds)
+    }
     selectedEmails.value = []
   }
 }
 
-// 彻底删除选中的邮件
-function permanentDeleteSelectedEmails() {
-  if (selectedEmails.value.length > 0) {
-    const emailIds = selectedEmails.value.map(id => Number(id))
-    emit('permanentDeleteEmails', emailIds)
-    selectedEmails.value = []
-  }
-}
 
 // 处理标记为操作
 function handleMarkAsChange() {
@@ -439,6 +457,19 @@ function handleMoveToChange() {
       emit('showMessage', { type: 'warning', message: '请先选择要移动的邮件' })
       moveToValue.value = '' // 重置选择
     }
+  }
+}
+
+// 标记为垃圾邮件/取消垃圾邮件标记
+function markAsSpam() {
+  if (selectedEmails.value.length > 0) {
+    const emailIds = selectedEmails.value.map(id => Number(id))
+    const action = props.isTrashFolder ? 'unspam' : 'spam'
+    emit('markEmails', { action, emailIds })
+    selectedEmails.value = [] // 自动取消邮件选择
+  } else {
+    const message = props.isTrashFolder ? '请先选择要取消垃圾邮件标记的邮件' : '请先选择要标记为垃圾邮件的邮件'
+    emit('showMessage', { type: 'warning', message })
   }
 }
 
