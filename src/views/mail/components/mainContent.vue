@@ -151,10 +151,10 @@
       <div v-if="contextMenu.email && contextMenu.email.isRead" class="context-menu-item" @click="markAsUnread">
         标记为未读
       </div>
-      <div v-if="contextMenu.email && !contextMenu.email.deletedAt" class="context-menu-item" @click="deleteEmail">
+      <div v-if="contextMenu.email && !contextMenu.email.deletedAt && !isTrashFolder" class="context-menu-item" @click="deleteEmail">
         删除
       </div>
-      <div v-if="contextMenu.email && contextMenu.email.deletedAt" class="context-menu-item" @click="permanentDeleteEmail">
+      <div v-if="contextMenu.email && (contextMenu.email.deletedAt || isTrashFolder)" class="context-menu-item" @click="permanentDeleteEmail">
         彻底删除
       </div>
       <!-- 垃圾邮件相关选项 -->
