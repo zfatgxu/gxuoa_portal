@@ -55,32 +55,48 @@
     </span>
             <span class="folder-name">已删除</span><span class="folder-badge">{{ getDeletedCount() }}</span>
           </div>
+          <!-- 垃圾箱 -->
+          <div class="folder-item" :class="{active: selectedFolder==='trash'}" @click="selectFolder('trash')">
+    <span class="folder-icon">
+      <!-- 垃圾箱SVG -->
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="12" rx="3" stroke="#ff9800" stroke-width="1.5" fill="none"/><rect x="8" y="10" width="4" height="4" rx="1" stroke="#ff9800" stroke-width="1.2" fill="none"/></svg>
+    </span>
+            <span class="folder-name">垃圾箱</span><span class="folder-badge">{{ getTrashCount() }}</span>
+          </div>
           <!-- 我的文件夹标题 -->
           <div class="folder-item folder-title" @click="toggleMyFolders" @contextmenu.prevent="showFolderContextMenu($event)">
+            <span class="expand-icon" :class="{ expanded: isMyFoldersExpanded }" style="margin-right: 8px;">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" :style="{ transform: isMyFoldersExpanded ? 'rotate(180deg)' : 'rotate(270deg)', transition: 'transform 0.15s ease' }">
+                <path d="M3 4.5L6 7.5L9 4.5" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
             <span class="folder-icon">
               <!-- 文件夹SVG -->
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="10" rx="2" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M2 6l6-4 4 4h6" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
             </span>
             <span class="folder-name">我的文件夹</span>
-            <span class="expand-icon" :class="{ expanded: isMyFoldersExpanded }">
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d="M3 4.5L6 7.5L9 4.5" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <span style="flex: 1 1 auto;"></span>
+            <button class="add-folder-btn" @click.stop="createNewFolder" title="新建文件夹" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border:none;background:transparent;cursor:pointer;padding:0;">
+              <svg width="14" height="14" viewBox="0 0 14 14" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7 1v12M1 7h12" stroke="#666" stroke-width="1.5" stroke-linecap="round"/>
               </svg>
-            </span>
+            </button>
           </div>
           
           <!-- 自定义文件夹列表 -->
-          <template v-if="isMyFoldersExpanded">
-            <div v-for="rootFolder in rootFolders" :key="rootFolder.id">
-              <FolderTreeItem 
-                :folder="rootFolder" 
-                :selected-folder-id="selectedFolderId || undefined"
-                :level="0"
-                @select-folder="selectFolder"
-                @context-menu="onFolderContextMenu"
-              />
+          <transition name="folder-expand" appear>
+            <div v-if="isMyFoldersExpanded" class="folder-list-container">
+              <div v-for="rootFolder in rootFolders" :key="rootFolder.id">
+                <FolderTreeItem 
+                  :folder="rootFolder" 
+                  :selected-folder-id="selectedFolderId || undefined"
+                  :level="0"
+                  @select-folder="selectFolder"
+                  @context-menu="onFolderContextMenu"
+                />
+              </div>
             </div>
-          </template>
+          </transition>
         </div>
       </div>
 
@@ -90,6 +106,7 @@
         :folderName="getCurrentFolderName()" 
         :emails="getCurrentEmails()" 
         :isDeletedFolder="selectedFolder==='deleted'"
+        :isTrashFolder="selectedFolder==='trash'"
         :isCustomFolder="selectedFolder==='custom'"
         :currentCustomFolderId="selectedFolderId || undefined"
         :mailStats="mailStats"
@@ -131,6 +148,7 @@ import {
   getDraftMails, 
   getStarredMails,
   getDeletedMails,
+  getTrashMails,
   moveToTrash,
   permanentDelete,
   getMailStats,
@@ -168,6 +186,8 @@ interface Email {
   toMail?: string
   content?: string
   isRead?: boolean
+  isTrash?: boolean
+  trashTime?: string
 }
 
 // 邮件数据状态管理
@@ -176,7 +196,8 @@ const allEmails = reactive<Record<string, Email[]>>({
   starred: [],
   sent: [],
   drafts: [],
-  deleted: []
+  deleted: [],
+  trash: []
 })
 
 // 文件夹数据状态管理
@@ -206,6 +227,7 @@ const mailStats = ref<MailStatsVO>({
   draftsCount: 0,  // 修正为 draftsCount
   starredCount: 0,
   deletedCount: 0,
+  trashCount: 0,
   totalUnreadCount: 0,
   totalCount: 0,
   inboxUnreadCount: 0
@@ -379,7 +401,9 @@ async function convertMailToEmail(mail: MailListItemVO): Promise<Email> {
     fromMail: mail.fromUserName,
     toMail: parsedToMail,
     content: formattedContent,
-    isRead: mail.isRead
+    isRead: mail.isRead,
+    isTrash: mail.isTrash || false,
+    trashTime: mail.trashTime ? new Date(mail.trashTime).toISOString().split('T')[0] : undefined
   }
 }
 
@@ -411,6 +435,10 @@ async function loadFolderEmails(folder: string) {
       case 'deleted':
         console.log('🗑️ 调用已删除邮件API...')
         response = await getDeletedMails({ pageNo: 1, pageSize: 100 })
+        break
+      case 'trash':
+        console.log('🗑️ 调用垃圾箱邮件API...')
+        response = await getTrashMails({ pageNo: 1, pageSize: 100 })
         break
       default:
         console.log(`❌ 未知文件夹类型: ${folder}`)
@@ -600,6 +628,7 @@ const folderLabels: Record<string, string> = {
   sent: '已发送',
   drafts: '草稿箱',
   deleted: '已删除',
+  trash: '垃圾箱',
   custom: '自定义文件夹'
 }
 
@@ -1491,6 +1520,12 @@ function getInboxCount(): number {
 function getSentCount(): number {
   const count = mailStats.value.sentCount || allEmails.sent?.length || 0
   console.log(`📤 已发送数量: ${count} (统计: ${mailStats.value.sentCount}, 本地: ${allEmails.sent?.length})`)
+  return count
+}
+
+function getTrashCount(): number {
+  const count = mailStats.value.trashCount || allEmails.trash?.length || 0
+  console.log(`🗑️ 垃圾箱数量: ${count} (统计: ${mailStats.value.trashCount}, 本地: ${allEmails.trash?.length})`)
   return count
 }
 

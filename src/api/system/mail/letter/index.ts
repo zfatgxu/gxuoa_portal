@@ -140,6 +140,8 @@ export interface LetterDetailRespVO {
   recipients: LetterRecipientRespVO[] // 收件人信息列表
   attachments: MailAttachmentRespVO[] // 附件信息列表
   userStatus: UserLetterStatusVO      // 当前用户状态
+  isTrash: boolean                    // 是否在垃圾箱
+  trashTime: string                   // 移入垃圾箱时间
 }
 
 // ==================== 邮件附件相关VO ====================
@@ -171,6 +173,8 @@ export interface MailListItemVO {
   content: string               // 邮件内容
   isRead: boolean               // 是否已读
   isStarred: boolean            // 是否星标
+  isTrash: boolean              // 是否在垃圾箱
+  trashTime: string             // 移入垃圾箱时间
   starredAt: string             // 星标时间，
   deletedAt: string             // 删除时间
   sendTime: string              // 发送时间
@@ -188,6 +192,7 @@ export interface MailStatsVO {
   draftsCount: number                // 草稿箱邮件数量
   starredCount: number               // 星标邮件数量
   deletedCount: number               // 已删除邮件数量
+  trashCount: number                 // 垃圾箱邮件数量
   totalUnreadCount: number           // 总未读邮件数量
   totalCount: number                 // 总邮件数量
 }
@@ -385,6 +390,15 @@ export const getUnreadMails = async (params: { pageNo: number; pageSize: number 
   return await request.get({url: '/letter/mail/unread', params})
 }
 
+/**
+ * 获取垃圾箱邮件
+ * @param params 分页参数
+ * @returns Promise<{list: MailListItemVO[], total: number}>
+ */
+export const getTrashMails = async (params: { pageNo: number; pageSize: number }): Promise<{list: MailListItemVO[], total: number}> => {
+  return await request.get({url: '/letter/mail/trash', params})
+}
+
 
 
 /**
@@ -470,4 +484,24 @@ export const restoreFromTrash = async (data: { ids: number[] }): Promise<boolean
  */
 export const permanentDelete = async (data: { ids: number[] }): Promise<boolean> => {
   return await request.delete({url: '/letter/permanent-delete', data})
+}
+
+// ==================== 垃圾箱标记功能API ====================
+
+/**
+ * 标记信件为垃圾箱
+ * @param data 信件ID列表
+ * @returns Promise<boolean>
+ */
+export const markAsTrash = async (data: { ids: number[] }): Promise<boolean> => {
+  return await request.put({url: '/letter/mark-trash', data})
+}
+
+/**
+ * 取消垃圾箱标记
+ * @param data 信件ID列表
+ * @returns Promise<boolean>
+ */
+export const restoreFromTrashFlag = async (data: { ids: number[] }): Promise<boolean> => {
+  return await request.put({url: '/letter/restore-trash-flag', data})
 }
