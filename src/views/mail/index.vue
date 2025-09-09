@@ -34,19 +34,19 @@
     </span>
             <span class="folder-name">星标邮件</span><span class="folder-badge">{{ getStarredCount() }}</span>
           </div>
-          <div class="folder-item" :class="{active: selectedFolder==='drafts'}" @click="selectFolder('drafts')">
-    <span class="folder-icon">
-      <!-- 文件夹SVG -->
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="10" rx="2" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M2 6l6-4 4 4h6" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
-    </span>
-            <span class="folder-name">草稿箱</span><span class="folder-badge">{{ getDraftCount() }}</span>
-          </div>
           <div class="folder-item" :class="{active: selectedFolder==='sent'}" @click="selectFolder('sent')">
     <span class="folder-icon">
       <!-- 纸飞机SVG -->
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><polygon points="2,18 18,10 2,2 5,10 2,18" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
     </span>
             <span class="folder-name">已发送</span><span class="folder-badge">{{ getSentCount() }}</span>
+          </div>
+          <div class="folder-item" :class="{active: selectedFolder==='drafts'}" @click="selectFolder('drafts')">
+    <span class="folder-icon">
+      <!-- 文件夹SVG -->
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="6" width="16" height="10" rx="2" stroke="#ff9800" stroke-width="1.5" fill="none"/><path d="M2 6l6-4 4 4h6" stroke="#ff9800" stroke-width="1.5" fill="none"/></svg>
+    </span>
+            <span class="folder-name">草稿箱</span><span class="folder-badge">{{ getDraftCount() }}</span>
           </div>
           <div class="folder-item" :class="{active: selectedFolder==='deleted'}" @click="selectFolder('deleted')">
     <span class="folder-icon">
