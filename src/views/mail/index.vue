@@ -1624,8 +1624,8 @@ function getSentCount(): number {
 }
 
 function getTrashCount(): number {
-  const count = mailStats.value.trashCount || allEmails.trash?.length || 0
-  console.log(`🗑️ 垃圾箱数量: ${count} (统计: ${mailStats.value.trashCount}, 本地: ${allEmails.trash?.length})`)
+  const count = mailStats.value.trashCount || 0
+  console.log(`🗑️ 垃圾箱数量: ${count} (统计: ${mailStats.value.trashCount})`)
   return count
 }
 
