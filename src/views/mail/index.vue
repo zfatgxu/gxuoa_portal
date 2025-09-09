@@ -111,6 +111,7 @@
     <!-- 文件夹右键上下文菜单（全局唯一） -->
     <div v-if="folderContextMenu.visible" class="context-menu" :style="{ left: folderContextMenu.x + 'px', top: folderContextMenu.y + 'px' }" @click.stop>
       <div v-if="!folderContextMenu.folderId" class="context-menu-item" @click="createNewFolder">新建文件夹</div>
+      <div v-if="folderContextMenu.folderId" class="context-menu-item" @click="renameFolder">重命名</div>
       <div v-if="folderContextMenu.folderId" class="context-menu-item" @click="confirmDeleteContextFolder">删除文件夹</div>
     </div>
 
@@ -141,13 +142,15 @@ import {
   getFolderTree,
   getFolderMails, 
   createFolder,
+  updateFolder,
   moveMailToFolder,
   removeMailFromFolder,
   deleteFolder,
   setFolderMailsReadState,
   toggleFolderMailsStar,
   type FolderRespVO,
-  type FolderCreateReqVO
+  type FolderCreateReqVO,
+  type FolderUpdateReqVO
 } from '@/api/system/mail/folder'
 import { getUserByIdCard } from '@/api/system/user'
 
@@ -370,7 +373,7 @@ async function convertMailToEmail(mail: MailListItemVO): Promise<Email> {
     time: displayTime,
     date: dateStr,
     deletedAt: mail.deletedAt ? new Date(mail.deletedAt).toISOString().split('T')[0] : undefined,
-    isDraft: mail.isDraft,
+    isDraft: (mail as any).isDraft || false,
     isStarred: mail.isStarred,
     starredAt: mail.starredAt ? new Date(mail.starredAt).toISOString().split('T')[0] : undefined,
     fromMail: mail.fromUserName,
@@ -793,12 +796,87 @@ async function handleDeleteFolder(folderId: number) {
   }
 }
 
-// 顶层菜单中的“删除文件夹”动作
+// 顶层菜单中的"删除文件夹"动作
 async function confirmDeleteContextFolder() {
   if (folderContextMenu.value.folderId) {
     const id = folderContextMenu.value.folderId
     hideFolderContextMenu()
     await handleDeleteFolder(id)
+  }
+}
+
+// 重命名文件夹
+async function renameFolder() {
+  if (!folderContextMenu.value.folderId) {
+    return
+  }
+  
+  const folderId = folderContextMenu.value.folderId
+  hideFolderContextMenu()
+  
+  try {
+    // 获取当前文件夹信息
+    const folder = customFolders.value.find(f => f.id === folderId)
+    if (!folder) {
+      ElMessage.error('文件夹不存在')
+      return
+    }
+    
+    const { value: newFolderName } = await ElMessageBox.prompt('请输入新的文件夹名称', '重命名文件夹', {
+      confirmButtonText: '重命名',
+      cancelButtonText: '取消',
+      inputValue: folder.folderName,
+      inputPattern: /^.{1,50}$/,
+      inputErrorMessage: '文件夹名称长度应在1-50个字符之间'
+    })
+    
+    if (newFolderName && newFolderName.trim() && newFolderName.trim() !== folder.folderName) {
+      console.log(`📁 开始重命名文件夹: ${folder.folderName} -> ${newFolderName.trim()}`)
+      
+      // 显示加载状态
+      const loadingInstance = ElLoading.service({ text: '正在重命名文件夹...' })
+      
+      try {
+        // 调用更新文件夹API
+        const updateData: FolderUpdateReqVO = {
+          id: folderId,
+          folderName: newFolderName.trim(),
+          parentId: folder.parentId,
+          sortOrder: folder.sortOrder,
+          description: folder.description
+        }
+        
+        await updateFolder(updateData)
+        console.log('✅ 文件夹重命名成功')
+        
+        // 重新加载文件夹列表
+        await loadCustomFolders()
+        
+        ElMessage.success(`文件夹重命名为"${newFolderName.trim()}"成功`)
+        
+      } catch (error: any) {
+        console.error('❌ 重命名文件夹失败:', error)
+        
+        // 根据错误类型显示不同的错误信息
+        let errorMsg = '重命名文件夹失败'
+        if (error?.response?.data?.msg) {
+          errorMsg = error.response.data.msg
+        } else if (error?.message) {
+          errorMsg = error.message
+        }
+        
+        ElMessage.error(errorMsg)
+      } finally {
+        loadingInstance.close()
+      }
+    } else if (newFolderName && newFolderName.trim() === folder.folderName) {
+      ElMessage.info('文件夹名称未发生变化')
+    }
+  } catch (error: any) {
+    // 用户取消输入
+    if (error !== 'cancel') {
+      console.error('❌ 重命名文件夹操作失败:', error)
+    }
   }
 }
 
