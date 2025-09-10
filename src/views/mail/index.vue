@@ -113,6 +113,7 @@
         :customFolders="customFolders"
         @delete-emails="handleDeleteEmails"
         @permanent-delete-emails="handlePermanentDeleteEmails"
+        @restore-emails="handleRestoreEmails"
         @mark-emails="handleMarkEmails"
         @move-emails="handleMoveEmails"
         @remove-from-folder="handleRemoveFromFolder"
@@ -154,6 +155,7 @@ import {
   getMailStats,
   getLetterDetail,
   markAsTrash,
+  restoreFromTrash,
   restoreFromTrashFlag,
   type MailListItemVO,
   type MailStatsVO
@@ -1007,6 +1009,53 @@ async function handleDeleteEmails(emailIds: number[]) {
   } finally {
     loading.value = false
     console.log('🏁 删除邮件流程结束，loading状态:', loading.value)
+  }
+}
+
+// 处理恢复邮件
+async function handleRestoreEmails(emailIds: number[]) {
+  console.log(`🔄 开始恢复邮件，ID列表:`, emailIds)
+  console.log(`📁 当前文件夹: ${selectedFolder.value}`)
+  
+  try {
+    loading.value = true
+    console.log('📡 调用恢复邮件API...')
+    await restoreFromTrash({ ids: emailIds })
+    
+    console.log('🔄 从当前文件夹移除邮件...')
+    
+    // 从已删除文件夹中移除邮件
+    const currentEmails = allEmails.deleted
+    if (currentEmails) {
+      emailIds.forEach(emailId => {
+        const emailIndex = currentEmails.findIndex(email => email.id === emailId)
+        if (emailIndex !== -1) {
+          console.log(`🔄 从已删除文件夹移除邮件: ${emailId}`)
+          currentEmails.splice(emailIndex, 1)
+        }
+      })
+    }
+    
+    // 重新加载收件箱（恢复的邮件会回到收件箱）
+    console.log('📥 重新加载收件箱...')
+    await loadFolderEmails('inbox')
+    
+    console.log('📊 重新加载邮件统计...')
+    await loadMailStats()
+    
+    console.log(`✅ 成功恢复 ${emailIds.length} 封邮件`)
+    ElMessage.success(`成功恢复 ${emailIds.length} 封邮件`)
+  } catch (error: any) {
+    console.error('❌ 恢复邮件失败:', error)
+    console.error('🔍 恢复错误详情:', {
+      message: error?.message,
+      response: error?.response,
+      status: error?.response?.status
+    })
+    ElMessage.error('恢复邮件失败')
+  } finally {
+    loading.value = false
+    console.log('🏁 恢复邮件流程结束，loading状态:', loading.value)
   }
 }
 

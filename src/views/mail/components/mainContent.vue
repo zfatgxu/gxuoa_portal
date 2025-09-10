@@ -35,6 +35,9 @@
         <button v-if="isTrashFolder" class="tool-btn" @click="markAsSpam">
           这不是垃圾邮件
         </button>
+        <button v-if="isDeletedFolder" class="tool-btn" @click="restoreSelectedEmails" :disabled="selectedEmails.length === 0">
+          恢复
+        </button>
         <button class="tool-btn" @click="markAllAsRead">
           全部已读
         </button>
@@ -45,7 +48,7 @@
           <option value="star">星标邮件</option>
           <option value="unstar">取消星标</option>
         </select>
-        <select class="tool-select move-select" v-model="moveToValue" @change="handleMoveToChange">
+        <select v-if="!isDeletedFolder && !isTrashFolder" class="tool-select move-select" v-model="moveToValue" @change="handleMoveToChange">
           <option value="" disabled selected style="display: none;">移动...</option>
           <!-- 自定义文件夹选项 -->
           <option v-for="folder in props.customFolders" :key="folder.id" :value="folder.id">
@@ -69,7 +72,7 @@
           </div>
         <div v-for="email in group.emails" :key="email.id" class="email-item" :class="{draft: email.isDraft, deleted: email.deletedAt, unread: !email.isRead}" @click="viewEmailDetail(email.id)" @contextmenu.prevent="showContextMenu($event, email)">
           <input type="checkbox" class="email-checkbox" v-model="selectedEmails" :value="email.id" @click.stop />
-          <span class="email-icon">{{ email.isDraft ? '📝' : email.deletedAt ? '🗑️' : '📁' }}</span>
+          <span class="email-icon">✉️</span>
           <span class="sender">{{ email.sender }}</span>
           <span class="subject">
             {{ email.subject }}
@@ -157,6 +160,9 @@
       <div v-if="contextMenu.email && (contextMenu.email.deletedAt || isTrashFolder)" class="context-menu-item" @click="permanentDeleteEmail">
         彻底删除
       </div>
+      <div v-if="contextMenu.email && isDeletedFolder" class="context-menu-item" @click="restoreEmail">
+        恢复
+      </div>
       <!-- 垃圾邮件相关选项 -->
       <div v-if="contextMenu.email && folderName === '收件箱'" class="context-menu-item" @click="markAsSpamFromContext">
         这是垃圾邮件
@@ -172,6 +178,7 @@
       </div>
       <!-- 移动到... 悬浮子菜单 -->
       <div 
+        v-if="!isDeletedFolder && !isTrashFolder"
         class="context-menu-item"
         style="position: relative;"
         @mouseenter="contextMenu.showMoveSubmenu = true"
@@ -245,6 +252,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   deleteEmails: [emailIds: number[]]
   permanentDeleteEmails: [emailIds: number[]]
+  restoreEmails: [emailIds: number[]]
   markEmails: [data: { action: string, emailIds: number[] }]
   moveEmails: [data: { folderId: number, emailIds: number[] }]
   removeFromFolder: [data: { folderId: number, emailIds: number[] }]
@@ -364,6 +372,14 @@ function removeFromCurrentFolder() {
   }
 }
 
+// 恢复邮件
+function restoreEmail() {
+  if (contextMenu.value.email) {
+    emit('restoreEmails', [contextMenu.value.email.id])
+    hideContextMenu()
+  }
+}
+
 // 扁平化“我的文件夹”用于子菜单展示
 const moveTargetFolders = computed(() => {
   const build = (folders: any[], level = 0, acc: any[] = []) => {
@@ -423,6 +439,17 @@ function deleteSelectedEmails() {
       emit('deleteEmails', emailIds)
     }
     selectedEmails.value = []
+  }
+}
+
+// 恢复选中的邮件
+function restoreSelectedEmails() {
+  if (selectedEmails.value.length > 0) {
+    const emailIds = selectedEmails.value.map(id => Number(id))
+    emit('restoreEmails', emailIds)
+    selectedEmails.value = []
+  } else {
+    emit('showMessage', { type: 'warning', message: '请先选择要恢复的邮件' })
   }
 }
 
