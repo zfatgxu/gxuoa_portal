@@ -135,7 +135,7 @@
 
 /* 左侧边栏 */
 .sidebar {
-    width: 180px;
+    width: 200px;
     background: transparent;
     display: flex;
     flex-direction: column;
@@ -220,6 +220,9 @@
     margin-top: 8px;
     padding-top: 12px;
     border-top: 1px solid #e0e0e0;
+    flex-wrap: nowrap; /* 保证同一行显示 */
+    white-space: nowrap;
+    position: relative; /* 供展开图标绝对定位 */
 }
 
 .folder-item.folder-title:hover {
@@ -231,10 +234,15 @@
 }
 
 .expand-icon {
-    margin-left: auto;
     transition: transform 0.2s ease;
     display: flex;
     align-items: center;
+}
+
+/* 让“我的文件夹”的展开图标占据左侧边距，不挤压文字与图标，使其与系统文件夹对齐 */
+.folder-item.folder-title .expand-icon {
+    position: absolute;
+    left: -8px; /* 紧贴文件夹图标左侧 */
 }
 
 .expand-icon.expanded {
@@ -255,6 +263,13 @@
 .folder-name {
     flex: 1;
     font-size: 13px;
+    white-space: nowrap;
+}
+
+/* 统一侧边栏所有邮箱名称样式与“我的文件夹”一致 */
+.folder-item .folder-name {
+    color: #666;
+    font-weight: bold;
 }
 
 .folder-badge {
@@ -835,7 +850,7 @@
 /* 响应式设计 */
 @media (max-width: 768px) {
     .sidebar {
-        width: 140px;
+        width: 160px;
     }
 
     .search-input {

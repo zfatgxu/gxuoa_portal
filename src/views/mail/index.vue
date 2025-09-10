@@ -683,6 +683,8 @@ function onFolderContextMenu(payload: { x: number, y: number, folderId: number }
   }
   setTimeout(() => {
     document.addEventListener('click', hideFolderContextMenu, { once: true })
+    // 滚轮滚动时隐藏文件夹右键菜单（一次性）
+    document.addEventListener('wheel', hideFolderContextMenu, { once: true })
   }, 0)
 }
 
@@ -993,11 +995,8 @@ async function handleDeleteEmails(emailIds: number[]) {
       await loadFolderEmails('deleted')
     }
     
-    // 如果是自定义文件夹，重新加载自定义文件夹列表以更新邮件数量
-    if (selectedFolder.value === 'custom' && selectedFolderId.value) {
-      console.log('📁 重新加载自定义文件夹列表...')
-      await loadCustomFolders()
-    }
+    console.log('📁 重新加载自定义文件夹列表以更新邮件数量...')
+    await loadCustomFolders()
     
     console.log('📊 重新加载邮件统计...')
     await loadMailStats()
@@ -1122,11 +1121,8 @@ async function handlePermanentDeleteEmails(emailIds: number[]) {
       await loadFolderEmails('deleted')
     }
     
-    // 如果是自定义文件夹，重新加载自定义文件夹列表以更新邮件数量
-    if (selectedFolder.value === 'custom' && selectedFolderId.value) {
-      console.log('📁 重新加载自定义文件夹列表...')
-      await loadCustomFolders()
-    }
+    console.log('📁 重新加载自定义文件夹列表以更新邮件数量...')
+    await loadCustomFolders()
     
     console.log('📊 重新加载邮件统计...')
     await loadMailStats()
@@ -1655,37 +1651,37 @@ async function handleGetEmailDetail(emailId: number) {
 
 // 获取各文件夹邮件数量（从统计数据获取）
 function getDraftCount(): number {
-  const count = mailStats.value.draftsCount || allEmails.drafts?.length || 0
+  const count = (mailStats.value.draftsCount ?? allEmails.drafts?.length ?? 0)
   console.log(`📝 草稿箱数量: ${count} (统计: ${mailStats.value.draftsCount}, 本地: ${allEmails.drafts?.length})`)
   return count
 }
 
 function getDeletedCount(): number {
-  const count = mailStats.value.deletedCount || allEmails.deleted?.length || 0
+  const count = (mailStats.value.deletedCount ?? allEmails.deleted?.length ?? 0)
   console.log(`🗑️ 已删除数量: ${count} (统计: ${mailStats.value.deletedCount}, 本地: ${allEmails.deleted?.length})`)
   return count
 }
 
 function getStarredCount(): number {
-  const count = mailStats.value.starredCount || allEmails.starred?.length || 0
+  const count = (mailStats.value.starredCount ?? allEmails.starred?.length ?? 0)
   console.log(`⭐ 星标数量: ${count} (统计: ${mailStats.value.starredCount}, 本地: ${allEmails.starred?.length})`)
   return count
 }
 
 function getInboxCount(): number {
-  const count = mailStats.value.inboxCount || allEmails.inbox?.length || 0
+  const count = (mailStats.value.inboxCount ?? allEmails.inbox?.length ?? 0)
   console.log(`📥 收件箱数量: ${count} (统计: ${mailStats.value.inboxCount}, 本地: ${allEmails.inbox?.length})`)
   return count
 }
 
 function getSentCount(): number {
-  const count = mailStats.value.sentCount || allEmails.sent?.length || 0
+  const count = (mailStats.value.sentCount ?? allEmails.sent?.length ?? 0)
   console.log(`📤 已发送数量: ${count} (统计: ${mailStats.value.sentCount}, 本地: ${allEmails.sent?.length})`)
   return count
 }
 
 function getTrashCount(): number {
-  const count = mailStats.value.trashCount || 0
+  const count = (mailStats.value.trashCount ?? 0)
   console.log(`🗑️ 垃圾箱数量: ${count} (统计: ${mailStats.value.trashCount})`)
   return count
 }

@@ -313,6 +313,8 @@ function showContextMenu(event: MouseEvent, email: Email) {
   // 点击其他地方隐藏菜单
   setTimeout(() => {
     document.addEventListener('click', hideContextMenu, { once: true })
+    // 滚轮滚动时隐藏菜单（一次性）
+    document.addEventListener('wheel', hideContextMenu, { once: true })
   }, 0)
 }
 

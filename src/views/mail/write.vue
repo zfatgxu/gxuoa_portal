@@ -1016,11 +1016,14 @@ const showContextMenu = (event: MouseEvent, contact: any, type: 'recent' | 'star
         contextMenu.value.visible = false
       }
       document.removeEventListener('click', closeMenu)
+      document.removeEventListener('wheel', closeMenu)
     }
     
     // 延迟添加事件监听器，避免立即触发
     setTimeout(() => {
       document.addEventListener('click', closeMenu)
+      // 鼠标滚轮滚动时关闭菜单
+      document.addEventListener('wheel', closeMenu)
     }, 100)
   })
 }
