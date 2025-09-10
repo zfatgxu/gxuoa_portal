@@ -117,7 +117,7 @@
         </div>
         <div class="detail-content">
           <div class="content-label">邮件内容:</div>
-          <div class="content-body" v-html="formatContentForDisplay(selectedEmailDetail.content || '')">
+          <div class="content-body" v-html="selectedEmailDetail.content || ''">
           </div>
         </div>
         <div v-if="selectedEmailDetail.attachments && selectedEmailDetail.attachments.length > 0" class="detail-attachments">
@@ -749,15 +749,14 @@ async function updateEmailDetail(emailDetail: any) {
     const recipientsStr = emailDetail.recipients?.map((r: any) => r.recipientIdCard).join(', ') || emailDetail.toMail || ''
     const parsedRecipients = await parseRecipients(recipientsStr)
     
-    // 解析邮件内容
+    // 使用原始 HTML 内容（来自后端/编辑器的 HTML）
     const rawContent = emailDetail.content?.content || emailDetail.content || ''
-    const formattedContent = formatEmailContent(rawContent)
     
     // 更新当前显示的邮件详情
     selectedEmailDetail.value = {
       ...selectedEmailDetail.value,
       ...emailDetail,
-      content: formattedContent,
+      content: rawContent,
       toMail: parsedRecipients,
       priority: emailDetail.content?.priority,
       requestReadReceipt: emailDetail.content?.requestReadReceipt,

@@ -92,8 +92,15 @@
                   :value="item.value"
                 >
                   <div class="user-option">
-                    <el-avatar :size="24" :src="item.avatar">{{ item.label?.substring(0, 1) || '?' }}</el-avatar>
-                    <span>{{ item.label }}</span>
+                    <el-avatar :size="24" :src="item.avatar">{{ item.name?.substring(0, 1) || '?' }}</el-avatar>
+                    <div class="user-info">
+                      <div class="user-name">{{ item.name }}</div>
+                      <div class="user-details">
+                        <span v-if="item.deptName" class="dept-info">{{ item.deptName }}</span>
+                        <span v-if="item.workId" class="work-id">工号: {{ item.workId }}</span>
+                        <span v-if="item.email" class="email-info">{{ item.email }}</span>
+                      </div>
+                    </div>
                   </div>
                 </el-option>
               </el-select>
@@ -133,8 +140,15 @@
                   :value="item.value"
                 >
                   <div class="user-option">
-                    <el-avatar :size="24" :src="item.avatar">{{ item.label?.substring(0, 1) || '?' }}</el-avatar>
-                    <span>{{ item.label }}</span>
+                    <el-avatar :size="24" :src="item.avatar">{{ item.name?.substring(0, 1) || '?' }}</el-avatar>
+                    <div class="user-info">
+                      <div class="user-name">{{ item.name }}</div>
+                      <div class="user-details">
+                        <span v-if="item.deptName" class="dept-info">{{ item.deptName }}</span>
+                        <span v-if="item.workId" class="work-id">工号: {{ item.workId }}</span>
+                        <span v-if="item.email" class="email-info">{{ item.email }}</span>
+                      </div>
+                    </div>
                   </div>
                 </el-option>
               </el-select>
@@ -168,8 +182,15 @@
                   :value="item.value"
                 >
                   <div class="user-option">
-                    <el-avatar :size="24" :src="item.avatar">{{ item.label?.substring(0, 1) || '?' }}</el-avatar>
-                    <span>{{ item.label }}</span>
+                    <el-avatar :size="24" :src="item.avatar">{{ item.name?.substring(0, 1) || '?' }}</el-avatar>
+                    <div class="user-info">
+                      <div class="user-name">{{ item.name }}</div>
+                      <div class="user-details">
+                        <span v-if="item.deptName" class="dept-info">{{ item.deptName }}</span>
+                        <span v-if="item.workId" class="work-id">工号: {{ item.workId }}</span>
+                        <span v-if="item.email" class="email-info">{{ item.email }}</span>
+                      </div>
+                    </div>
                   </div>
                 </el-option>
               </el-select>
@@ -185,138 +206,14 @@
           </div>
         </div>
         
-        <!-- 编辑器工具栏 -->
-        <div class="editor-toolbar" style="background-color: #f5faff; border-bottom: 1px solid #e0e0e0; padding: 10px 20px;">
-          <div class="toolbar-group">
-            <div class="tool-btn">
-              <el-icon><ArrowLeftBold /></el-icon>
-            </div>
-            <div class="tool-btn">
-              <el-icon><ArrowRightBold /></el-icon>
-            </div>
-            <div class="tool-btn">
-              <el-icon><PictureFilled /></el-icon>
-            </div>
-            <div class="tool-btn">
-              <el-icon><Link /></el-icon>
-            </div>
-            <div class="tool-btn">
-              <el-icon><Document /></el-icon>
-            </div>
-            <div class="tool-btn">
-              <el-icon><Clock /></el-icon>
-            </div>
-            <div class="tool-btn">
-              <el-icon><Avatar /></el-icon>
-            </div>
-          </div>
-          
-          <div class="toolbar-group">
-            <el-dropdown trigger="click" @command="changeFont">
-              <div class="tool-select" title="选择字体">
-                <span :style="{ fontFamily: getFontFamily(selectedFont) }">{{ selectedFont }}</span>
-                <el-icon><ArrowDown /></el-icon>
-              </div>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item 
-                    v-for="font in fontOptions"
-                    :key="font.value"
-                    :command="font.value"
-                    :style="{ fontFamily: getFontFamily(font.value) }"
-                  >
-                    {{ font.label }}
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-            
-            <el-dropdown trigger="click" @command="changeFontSize">
-              <div class="tool-select" title="选择字号">
-                <span>{{ selectedFontSize }}</span>
-                <el-icon><ArrowDown /></el-icon>
-              </div>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item 
-                    v-for="size in fontSizeOptions"
-                    :key="size.value"
-                    :command="size.value"
-                    :style="{ fontSize: size.size }"
-                  >
-                    {{ size.label }}
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-          </div>
-          
-          <div class="toolbar-group">
-            <div 
-              class="tool-btn" 
-              :class="{ 'active': formatStates.bold }"
-              @click="execFormatCommand('bold')" 
-              title="加粗"
-            >
-              <font-awesome-icon :icon="['fas', 'bold']" />
-            </div>
-            <div 
-              class="tool-btn" 
-              :class="{ 'active': formatStates.italic }"
-              @click="execFormatCommand('italic')" 
-              title="斜体"
-            >
-              <font-awesome-icon :icon="['fas', 'italic']" />
-            </div>
-            <div 
-              class="tool-btn" 
-              :class="{ 'active': formatStates.underline }"
-              @click="execFormatCommand('underline')" 
-              title="下划线"
-            >
-              <font-awesome-icon :icon="['fas', 'underline']" />
-            </div>
-            <div class="tool-btn">
-              <el-icon><Edit /></el-icon>
-            </div>
-          </div>
-          
-          <div class="toolbar-group">
-            <div class="tool-btn" @click="execFormatCommand('insertUnorderedList')" title="无序列表">
-              <font-awesome-icon :icon="['fas', 'list-ul']" />
-            </div>
-            <div class="tool-btn" @click="execFormatCommand('insertOrderedList')" title="有序列表">
-              <font-awesome-icon :icon="['fas', 'list-ol']" />
-            </div>
-            <div class="tool-btn" @click="execFormatCommand('justifyLeft')" title="左对齐">
-              <font-awesome-icon :icon="['fas', 'align-left']" />
-            </div>
-            <div class="tool-btn" @click="execFormatCommand('justifyCenter')" title="居中对齐">
-              <font-awesome-icon :icon="['fas', 'align-center']" />
-            </div>
-            <div class="tool-btn" @click="execFormatCommand('justifyRight')" title="右对齐">
-              <font-awesome-icon :icon="['fas', 'align-right']" />
-            </div>
-            <div class="tool-btn" @click="execFormatCommand('justifyFull')" title="两端对齐">
-              <font-awesome-icon :icon="['fas', 'align-justify']" />
-            </div>
-          </div>
-        </div>
-        
-        <!-- 编辑器内容区 -->
-        <div 
-          class="editor-content" 
-          contenteditable="true" 
-          @input="handleEditorInput" 
-          @mouseup="updateFormatStates"
-          @keyup="updateFormatStates"
-          @keydown="updateFormatStates"
-          @focus="updateFormatStates"
-          @blur="() => { formatStates.bold = false; formatStates.italic = false; formatStates.underline = false; }"
-          @selectionchange="updateFormatStates"
-          data-placeholder="请输入正文" 
-          style="flex: 1; padding: 20px; background-color: #ffffff; min-height: 300px; outline: none; border-radius: 0 0 4px 4px;"
-        >
+        <!-- TextEditor 富文本编辑器 -->
+        <div class="text-editor-container" style="flex: 1; padding: 20px; background-color: #ffffff;">
+          <TextEditor
+            v-model="mailForm.content"
+            :height="'400px'"
+            @change="handleEditorChange"
+            @created="handleEditorCreated"
+          />
         </div>
         
         <!-- 隐藏的文件输入 -->
@@ -471,6 +368,7 @@ import {useRouter} from 'vue-router'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {useUserStore} from '@/store/modules/user'
 import {useTagsViewStore} from '@/store/modules/tagsView'
+import TextEditor from '@/views/mail/components/TextEditor.vue'
 import {
   createLetterContactStar,
   deleteLetterContactStar,
@@ -488,49 +386,17 @@ import {getAccessToken} from '@/utils/auth'
 import '@/views/mail/mail.css'
 import topImage from '@/views/mail/image/top.png'
 
-// 导入Font Awesome组件和图标
-import {FontAwesomeIcon} from '@fortawesome/vue-fontawesome'
-import {library} from '@fortawesome/fontawesome-svg-core'
-import {
-  faAlignCenter,
-  faAlignJustify,
-  faAlignLeft,
-  faAlignRight,
-  faBold,
-  faItalic,
-  faListOl,
-  faListUl,
-  faUnderline
-} from '@fortawesome/free-solid-svg-icons'
+// 移除 Font Awesome 导入，使用 wangEditor 内置图标
 import {
   ArrowDown,
-  ArrowLeftBold,
-  ArrowRightBold,
-  Avatar,
-  Clock,
-  Document,
-  Edit,
   Files,
-  Link,
-  PictureFilled,
   Position,
   Setting,
   Star,
   View
 } from '@element-plus/icons-vue'
 
-// 添加图标到库
-library.add(
-  faAlignLeft,
-  faAlignCenter,
-  faAlignRight,
-  faAlignJustify,
-  faListUl,
-  faListOl,
-  faBold,
-  faItalic,
-  faUnderline
-)
+// 移除 Font Awesome 库添加代码
 
 
 const router = useRouter()
@@ -560,31 +426,10 @@ const contactSearch = ref('')
 const loading = ref(false)
 const activeRecipientField = ref<'recipients' | 'cc' | 'bcc'>('recipients') // 当前激活的收件人字段
 
-// 格式按钮状态
-const formatStates = ref({
-  bold: false,
-  italic: false,
-  underline: false
-})
+// 移除格式按钮状态，使用 wangEditor 内置状态管理
 
-// 字体选择状态
-const selectedFont = ref('宋体')
-const fontOptions = [
-  { value: '宋体', label: '宋体' },
-  { value: '黑体', label: '黑体' },
-  { value: '楷书', label: '楷书' },
-  { value: '幼圆', label: '幼圆' }
-]
-
-// 字号选择状态
-const selectedFontSize = ref('中')
-const fontSizeOptions = [
-  { value: '小', label: '小', size: '12px' },
-  { value: '中', label: '中', size: '14px' },
-  { value: '大', label: '大', size: '16px' },
-  { value: '较大', label: '较大', size: '18px' },
-  { value: '最大', label: '最大', size: '20px' }
-]
+// TextEditor 相关状态
+const editorInstance = ref<any>(null)
 
 // 右键菜单状态
 const contextMenu = ref({
@@ -864,8 +709,14 @@ const remoteSearch = async (query: string) => {
     
     // 基于预加载的用户列表进行过滤
     const filteredUsers = allUsers.value.filter(user => {
-      // 只支持姓名前缀匹配
-      return user.nickname && user.nickname.toLowerCase().startsWith(searchTerm)
+      // 姓名使用模糊匹配，工号和邮箱使用前缀匹配
+      const nickname = (user.nickname || '').toLowerCase()
+      const workId = (user.workId || '').toLowerCase()
+      const email = (user.email || '').toLowerCase()
+      
+      return nickname.includes(searchTerm) || 
+             workId.startsWith(searchTerm) || 
+             email.startsWith(searchTerm)
     })
     
     // 按姓名排序
@@ -878,15 +729,30 @@ const remoteSearch = async (query: string) => {
     
     console.log(`🔍 过滤后找到 ${filteredUsers.length} 个匹配用户`)
     
-    // 转换为前端需要的格式，显示部门名称
-    userOptions.value = filteredUsers.slice(0, 50).map((user: any) => ({
-      value: user.id.toString(), // 使用用户ID作为值
-      label: `${user.nickname || '未知用户'} <${user.deptNames ? user.deptNames.join(', ') : ''}>`, // 显示格式：姓名 <部门名称>
-      avatar: user.avatar || '',
-      name: user.nickname || '未知用户',
-      userId: user.id,
-      deptName: user.deptNames ? user.deptNames.join(', ') : '' // 使用部门名称
-    }))
+    // 转换为前端需要的格式，显示部门名称、工号和邮箱
+    userOptions.value = filteredUsers.slice(0, 50).map((user: any) => {
+      const nickname = user.nickname || '未知用户'
+      const deptName = user.deptNames ? user.deptNames.join(', ') : ''
+      const workId = user.workId || ''
+      const email = user.email || ''
+      
+      // 构建显示标签，包含姓名、部门、工号和邮箱信息
+      let label = nickname
+      if (deptName) label += ` <${deptName}>`
+      if (workId) label += ` <工号:${workId}>`
+      if (email) label += ` <${email}>`
+      
+      return {
+        value: user.id.toString(), // 使用用户ID作为值
+        label: label, // 显示格式：姓名 <部门名称> <工号:xxx> <邮箱>
+        avatar: user.avatar || '',
+        name: nickname,
+        userId: user.id,
+        deptName: deptName,
+        workId: workId,
+        email: email
+      }
+    })
     
     console.log('🔄 更新用户选项列表:', userOptions.value)
   } catch (error: unknown) {
@@ -1175,40 +1041,21 @@ const validateBcc = () => {
   console.log('密送人验证通过:', mailForm.value.bcc)
 }
 
-
-// 更新格式按钮状态
-const updateFormatStates = () => {
-  try {
-    // 只有在编辑器有焦点时才更新格式状态
-    const editor = document.querySelector('.editor-content') as HTMLElement
-    if (editor && document.activeElement === editor) {
-      // 更新格式状态
-      formatStates.value.bold = document.queryCommandState('bold')
-      formatStates.value.italic = document.queryCommandState('italic')
-      formatStates.value.underline = document.queryCommandState('underline')
-    } else {
-      // 如果编辑器没有焦点，重置格式状态
-      formatStates.value.bold = false
-      formatStates.value.italic = false
-      formatStates.value.underline = false
-    }
-  } catch (error) {
-    console.error('更新格式状态失败:', error)
-  }
+// TextEditor 相关方法
+// 编辑器创建完成回调
+const handleEditorCreated = (editor: any) => {
+  editorInstance.value = editor
+  console.log('TextEditor 创建完成:', editor)
 }
 
-// 处理编辑器输入
-const handleEditorInput = (e: Event) => {
-  const target = e.target as HTMLElement
-  // 使用textContent获取纯文本，或者使用innerHTML但需要进行XSS过滤
-  mailForm.value.content = target.innerHTML
-  
-  // 应用列表样式
-  applyListStyles()
-  
-  // 更新格式按钮状态
-  updateFormatStates()
+// 编辑器内容变化回调
+const handleEditorChange = (editor: any) => {
+  // 内容变化时的处理逻辑
+  console.log('编辑器内容变化:', editor.getHtml())
 }
+
+
+// 移除自定义编辑器相关方法，使用 wangEditor 内置功能
 
 // 触发文件选择
 const triggerFileUpload = () => {
@@ -1246,9 +1093,8 @@ const resetForm = () => {
   }
   
   // 重置编辑器内容
-  const editorContent = document.querySelector('.editor-content')
-  if (editorContent) {
-    editorContent.innerHTML = ''
+  if (editorInstance.value) {
+    editorInstance.value.clear()
   }
   
   // 隐藏抄送和密送
@@ -1344,39 +1190,7 @@ const processRecipients = async (recipients: string[]): Promise<string[]> => {
   return processedIdCards
 }
 
-// 确保所有样式以内联方式保存
-const ensureInlineStyles = () => {
-  const editor = document.querySelector('.editor-content') as HTMLElement
-  if (!editor) return
-  
-  // 应用列表样式
-  applyListStyles()
-  
-  // 确保所有格式化元素都有内联样式
-  const strongElements = editor.querySelectorAll('strong')
-  strongElements.forEach(el => {
-    const element = el as HTMLElement
-    if (!element.style.fontWeight) {
-      element.style.fontWeight = 'bold'
-    }
-  })
-  
-  const emElements = editor.querySelectorAll('em')
-  emElements.forEach(el => {
-    const element = el as HTMLElement
-    if (!element.style.fontStyle) {
-      element.style.fontStyle = 'italic'
-    }
-  })
-  
-  const uElements = editor.querySelectorAll('u')
-  uElements.forEach(el => {
-    const element = el as HTMLElement
-    if (!element.style.textDecoration) {
-      element.style.textDecoration = 'underline'
-    }
-  })
-}
+// 移除自定义样式处理，使用 wangEditor 内置样式管理
 
 // 执行发送邮件
 const doSendMail = async () => {
@@ -1389,11 +1203,8 @@ const doSendMail = async () => {
       return
     }
     
-    // 确保所有样式以内联方式保存
-    ensureInlineStyles()
-    
-    // 获取编辑器实际内容
-    const editorContent = document.querySelector('.editor-content')?.innerHTML || ''
+    // 获取编辑器内容
+    const editorContent = editorInstance.value?.getHtml() || mailForm.value.content
     
     // 处理收件人：转换为身份证号
     const processedRecipients = await processRecipients(mailForm.value.recipients)
@@ -1411,7 +1222,6 @@ const doSendMail = async () => {
       ccIdCards: processedCc.length > 0 ? processedCc : undefined, // 抄送人身份证号列表
       bccIdCards: processedBcc.length > 0 ? processedBcc : undefined, // 密送人身份证号列表
       priority: 1, // 默认普通优先级
-      isDraft: false, // 不是草稿
       requestReadReceipt: false // 默认不请求已读回执
     }
     
@@ -1454,11 +1264,8 @@ const doSendMail = async () => {
 // 保存草稿 - 修复类型错误
 const saveDraftHandler = async () => {
   try {
-    // 确保所有样式以内联方式保存
-    ensureInlineStyles()
-    
-    // 获取编辑器实际内容
-    const editorContent = document.querySelector('.editor-content')?.innerHTML || ''
+    // 获取编辑器内容
+    const editorContent = editorInstance.value?.getHtml() || mailForm.value.content
     
     // 处理收件人：转换为身份证号
     const processedRecipients = await processRecipients(mailForm.value.recipients)
@@ -1476,7 +1283,6 @@ const saveDraftHandler = async () => {
       ccIdCards: processedCc.length > 0 ? processedCc : undefined, // 抄送人身份证号列表
       bccIdCards: processedBcc.length > 0 ? processedBcc : undefined, // 密送人身份证号列表
       priority: 1,
-      isDraft: true, // 是草稿
       requestReadReceipt: false
     }
     
@@ -1492,250 +1298,9 @@ const saveDraftHandler = async () => {
   }
 }
 
-// 应用列表样式 - 确保所有样式以内联方式保存
-const applyListStyles = () => {
-  const editor = document.querySelector('.editor-content') as HTMLElement
-  if (!editor) return
-  
-  // 统一处理所有列表元素
-  const allLists = editor.querySelectorAll('ol, ul')
-  
-  allLists.forEach(list => {
-    const listElement = list as HTMLElement
-    
-    // 使用 cssText 确保样式被完整保存到HTML中
-    listElement.style.cssText = 'margin: 0; padding-left: 30px; list-style-position: outside;'
-    
-    // 为有序列表设置样式类型
-    if (list.tagName.toLowerCase() === 'ol') {
-      listElement.style.listStyleType = 'decimal'
-    } else {
-      listElement.style.listStyleType = 'disc'
-    }
-    
-    // 应用列表项样式
-    const listItems = list.querySelectorAll('li')
-    listItems.forEach(li => {
-      const liElement = li as HTMLElement
-      // 使用 cssText 确保样式被完整保存
-      liElement.style.cssText = 'margin: 4px 0; padding-left: 8px; line-height: 1.5;'
-    })
-  })
-  
-  // 处理段落样式
-  const paragraphs = editor.querySelectorAll('p')
-  paragraphs.forEach(p => {
-    const pElement = p as HTMLElement
-    // 确保段落样式也被保存
-    if (!pElement.style.margin) {
-      pElement.style.margin = '8px 0'
-    }
-    if (!pElement.style.lineHeight) {
-      pElement.style.lineHeight = '1.5'
-    }
-  })
-}
-
-// 获取字体族名称
-const getFontFamily = (fontName: string): string => {
-  const fontMap: { [key: string]: string } = {
-    '宋体': 'SimSun, "宋体", serif',
-    '黑体': 'SimHei, "黑体", sans-serif',
-    '楷书': 'KaiTi, "楷体", serif',
-    '幼圆': 'YouYuan, "幼圆", sans-serif'
-  }
-  return fontMap[fontName] || 'SimSun, "宋体", serif'
-}
-
-// 获取字号大小
-const getFontSize = (sizeName: string): string => {
-  const sizeMap: { [key: string]: string } = {
-    '小': '12px',
-    '中': '14px',
-    '大': '16px',
-    '较大': '18px',
-    '最大': '20px'
-  }
-  return sizeMap[sizeName] || '14px'
-}
-
-// 切换字体
-const changeFont = (fontName: string) => {
-  // 更新选中的字体
-  selectedFont.value = fontName
-  
-  const editor = document.querySelector('.editor-content') as HTMLElement
-  if (!editor) return
-  
-  // 确保编辑器获得焦点
-  editor.focus()
-  
-  // 获取当前选择
-  const selection = window.getSelection()
-  if (!selection || selection.rangeCount === 0) {
-    // 如果没有选择文本，设置整个编辑器的字体
-    editor.style.fontFamily = getFontFamily(fontName)
-    return
-  }
-  
-  const range = selection.getRangeAt(0)
-  const selectedText = range.toString()
-  
-  if (selectedText) {
-    // 如果有选中的文本，只对选中文本应用字体
-    const span = document.createElement('span')
-    span.style.fontFamily = getFontFamily(fontName)
-    span.textContent = selectedText
-    range.deleteContents()
-    range.insertNode(span)
-    
-    // 清除选择
-    selection.removeAllRanges()
-  } else {
-    // 如果没有选中文本，设置整个编辑器的字体
-    editor.style.fontFamily = getFontFamily(fontName)
-  }
-  
-  // 更新编辑器内容
-  handleEditorInput({ target: editor } as any)
-}
-
-// 切换字号
-const changeFontSize = (sizeName: string) => {
-  // 更新选中的字号
-  selectedFontSize.value = sizeName
-  
-  const editor = document.querySelector('.editor-content') as HTMLElement
-  if (!editor) return
-  
-  // 确保编辑器获得焦点
-  editor.focus()
-  
-  // 获取当前选择
-  const selection = window.getSelection()
-  if (!selection || selection.rangeCount === 0) {
-    // 如果没有选择文本，设置整个编辑器的字号
-    editor.style.fontSize = getFontSize(sizeName)
-    return
-  }
-  
-  const range = selection.getRangeAt(0)
-  const selectedText = range.toString()
-  
-  if (selectedText) {
-    // 如果有选中的文本，只对选中文本应用字号
-    const span = document.createElement('span')
-    span.style.fontSize = getFontSize(sizeName)
-    span.textContent = selectedText
-    range.deleteContents()
-    range.insertNode(span)
-    
-    // 清除选择
-    selection.removeAllRanges()
-  } else {
-    // 如果没有选中文本，设置整个编辑器的字号
-    editor.style.fontSize = getFontSize(sizeName)
-  }
-  
-  // 更新编辑器内容
-  handleEditorInput({ target: editor } as any)
-}
-
-// 文本格式化命令
-const execFormatCommand = (command: string) => {
-  // 获取编辑器元素
-  const editor = document.querySelector('.editor-content') as HTMLElement
-  if (!editor) {
-    return
-  }
-  
-  // 确保编辑器获得焦点
-  editor.focus()
-  
-  // 获取当前选择
-  const selection = window.getSelection()
-  if (!selection || selection.rangeCount === 0) {
-    return
-  }
-  
-  // 使用现代方法处理格式化
-  try {
-    // 执行格式化命令
-    const success = document.execCommand(command, false, '')
-    
-    // 如果 execCommand 失败，尝试使用 Selection API
-    if (!success) {
-      const range = selection.getRangeAt(0)
-      const selectedText = range.toString()
-      
-      if (selectedText) {
-        // 创建格式化元素
-        let formatElement: HTMLElement
-        switch (command) {
-          case 'bold':
-            formatElement = document.createElement('strong')
-            formatElement.style.fontWeight = 'bold'
-            break
-          case 'italic':
-            formatElement = document.createElement('em')
-            formatElement.style.fontStyle = 'italic'
-            break
-          case 'underline':
-            formatElement = document.createElement('u')
-            formatElement.style.textDecoration = 'underline'
-            break
-          default:
-            return
-        }
-        
-        // 应用格式化
-        formatElement.textContent = selectedText
-        range.deleteContents()
-        range.insertNode(formatElement)
-        
-        // 清除选择
-        selection.removeAllRanges()
-      }
-    }
-    
-    // 如果是列表命令，直接应用样式
-    if (command === 'insertOrderedList' || command === 'insertUnorderedList') {
-      setTimeout(() => {
-        applyListStyles()
-      }, 50)
-    }
-    
-    // 格式应用完成后，延迟更新状态确保DOM已更新
-    setTimeout(() => {
-      updateFormatStates()
-    }, 100)
-    
-  } catch (error) {
-    console.error('格式化命令执行失败:', error)
-  }
-}
+// 移除所有自定义编辑器相关方法，使用 wangEditor 内置功能
 
 onMounted(async () => {
-  // 添加全局选择变化监听器
-  document.addEventListener('selectionchange', () => {
-    const selection = window.getSelection()
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0)
-      const editor = document.querySelector('.editor-content')
-      // 只有当编辑器有焦点且选择在编辑器内时才更新格式状态
-      if (editor && editor.contains(range.commonAncestorContainer) && document.activeElement === editor) {
-        updateFormatStates()
-      }
-    }
-  })
-  
-  // 设置编辑器默认字体和字号
-  const editor = document.querySelector('.editor-content') as HTMLElement
-  if (editor) {
-    editor.style.fontFamily = getFontFamily(selectedFont.value)
-    editor.style.fontSize = getFontSize(selectedFontSize.value)
-  }
-  
   // 并发加载所有数据
   await loadAllData()
 })
@@ -1958,131 +1523,79 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 4px 0;
 }
 
-/* 编辑器工具栏 */
-.editor-toolbar {
-  padding: 8px 15px;
-  border-bottom: 1px solid #e0e0e0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  background-color: #f5faff;
-  align-items: center;
-}
-
-.toolbar-group {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  margin-right: 10px;
-  flex-wrap: wrap;
-}
-
-/* 编辑器内容区 */
-.editor-content {
+.user-info {
   flex: 1;
-  padding: 15px 20px;
-  overflow-y: auto;
-  min-height: 250px;
-  outline: none;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.user-name {
+  font-weight: 500;
   color: #303133;
   font-size: 14px;
-  font-family: SimSun, "宋体", serif; /* 默认宋体 */
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
-/* 字体选择器样式 */
-.font-select {
-  margin-right: 8px;
-}
-
-.font-select .el-input__inner {
+.user-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   font-size: 12px;
-  height: 28px;
-  line-height: 28px;
+  color: #909399;
+  line-height: 1.2;
 }
 
-/* 字体样式定义 */
-.font-songti {
+.dept-info {
+  color: #909399;
+  white-space: nowrap;
+}
+
+.work-id {
+  color: #909399;
+  white-space: nowrap;
+}
+
+.email-info {
+  color: #909399;
+  white-space: nowrap;
+}
+
+/* TextEditor 容器样式 */
+.text-editor-container {
+  flex: 1;
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 0 0 4px 4px;
+}
+
+
+/* 移除自定义编辑器相关样式，使用 wangEditor 内置样式 */
+
+/* 自定义 wangEditor 样式以匹配现有设计 */
+.text-editor-container :deep(.w-e-toolbar) {
+  background-color: #f5faff;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.text-editor-container :deep(.w-e-text-container) {
+  background-color: #ffffff;
+}
+
+.text-editor-container :deep(.w-e-text) {
+  padding: 20px;
   font-family: SimSun, "宋体", serif;
-}
-
-.font-heiti {
-  font-family: SimHei, "黑体", sans-serif;
-}
-
-.font-kaishu {
-  font-family: KaiTi, "楷体", serif;
-}
-
-.font-youyuan {
-  font-family: YouYuan, "幼圆", sans-serif;
-}
-
-/* 字号样式定义 */
-.font-size-small {
-  font-size: 12px;
-}
-
-.font-size-medium {
   font-size: 14px;
-}
-
-.font-size-large {
-  font-size: 16px;
-}
-
-.font-size-larger {
-  font-size: 18px;
-}
-
-.font-size-largest {
-  font-size: 20px;
-}
-
-
-/* 列表样式 */
-.mail-container .editor-content ol,
-.mail-container .editor-content ul {
-  margin: 0 !important;
-  padding-left: 30px !important;
-  list-style-position: outside !important;
-}
-
-.mail-container .editor-content ol {
-  list-style-type: decimal !important;
-}
-
-.mail-container .editor-content ul {
-  list-style-type: disc !important;
-}
-
-.mail-container .editor-content ol li,
-.mail-container .editor-content ul li {
-  margin: 4px 0 !important;
-  padding-left: 8px !important;
-  line-height: 1.5 !important;
-}
-
-/* 嵌套列表样式 */
-.mail-container .editor-content ol ol,
-.mail-container .editor-content ul ul,
-.mail-container .editor-content ol ul,
-.mail-container .editor-content ul ol {
-  padding-left: 20px !important;
-}
-
-/* 段落样式 */
-.mail-container .editor-content p {
-  margin: 8px 0 !important;
-  line-height: 1.5 !important;
-}
-
-/* 编辑器placeholder样式 */
-.editor-content:empty:before {
-  content: attr(data-placeholder);
-  color: #c0c4cc;
-  pointer-events: none;
+  line-height: 1.5;
+  color: #303133;
 }
 
 /* 发件人信息 */
