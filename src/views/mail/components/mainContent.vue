@@ -45,7 +45,7 @@
           <option value="" disabled selected style="display: none;">标记为...</option>
           <option value="read">已读邮件</option>
           <option value="unread">未读邮件</option>
-          <option value="star">星标邮件</option>
+          <option v-if="folderName !== '星标邮件'" value="star">星标邮件</option>
           <option value="unstar">取消星标</option>
         </select>
         <select v-if="!isDeletedFolder && !isTrashFolder" class="tool-select move-select" v-model="moveToValue" @change="handleMoveToChange">
