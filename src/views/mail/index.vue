@@ -993,6 +993,12 @@ async function handleDeleteEmails(emailIds: number[]) {
       await loadFolderEmails('deleted')
     }
     
+    // 如果是自定义文件夹，重新加载自定义文件夹列表以更新邮件数量
+    if (selectedFolder.value === 'custom' && selectedFolderId.value) {
+      console.log('📁 重新加载自定义文件夹列表...')
+      await loadCustomFolders()
+    }
+    
     console.log('📊 重新加载邮件统计...')
     await loadMailStats()
     
@@ -1114,6 +1120,12 @@ async function handlePermanentDeleteEmails(emailIds: number[]) {
     if (selectedFolder.value !== 'deleted') {
       console.log('📥 重新加载已删除文件夹...')
       await loadFolderEmails('deleted')
+    }
+    
+    // 如果是自定义文件夹，重新加载自定义文件夹列表以更新邮件数量
+    if (selectedFolder.value === 'custom' && selectedFolderId.value) {
+      console.log('📁 重新加载自定义文件夹列表...')
+      await loadCustomFolders()
     }
     
     console.log('📊 重新加载邮件统计...')
