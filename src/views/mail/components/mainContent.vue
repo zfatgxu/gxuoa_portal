@@ -1,6 +1,6 @@
 <template>
   <div class="main-content">
-    <div class="header">
+    <div class="header" v-show="!selectedEmailDetail">
       <div class="header-left">
         <img class="header-image" :src="topImage" alt="header" />
       </div>
@@ -19,11 +19,12 @@
     <!-- 工具栏 -->
     <div class="toolbar">
       <div class="toolbar-left">
-        <input type="checkbox" v-model="allSelected" class="select-all-checkbox" title="全选/取消全选" />
-        <span class="toolbar-inbox-label">
+        <button class="tool-btn" v-if="selectedEmailDetail" @click="closeEmailDetail">← 返回</button>
+        <input type="checkbox" v-model="allSelected" class="select-all-checkbox" title="全选/取消全选" v-show="!selectedEmailDetail" />
+        <span class="toolbar-inbox-label" v-show="!selectedEmailDetail">
           {{ folderName }}
         </span>
-        <button class="tool-btn" @click="deleteSelectedEmails" :disabled="selectedEmails.length === 0">
+        <button class="tool-btn" @click="deleteSelectedEmails" :disabled="!hasOperationTarget">
           {{ (isDeletedFolder || isTrashFolder) ? '彻底删除' : '删除' }}
         </button>
         <button class="tool-btn">
@@ -35,16 +36,16 @@
         <button v-if="isTrashFolder" class="tool-btn" @click="markAsSpam">
           这不是垃圾邮件
         </button>
-        <button v-if="isDeletedFolder" class="tool-btn" @click="restoreSelectedEmails" :disabled="selectedEmails.length === 0">
+        <button v-if="isDeletedFolder" class="tool-btn" @click="restoreSelectedEmails" :disabled="!hasOperationTarget">
           恢复
         </button>
-        <button class="tool-btn" @click="markAllAsRead">
+        <button class="tool-btn" @click="markAllAsRead" v-show="!selectedEmailDetail && folderName !== '草稿箱'">
           全部已读
         </button>
         <select class="tool-select" v-model="markAsValue" @change="handleMarkAsChange">
           <option value="" disabled selected style="display: none;">标记为...</option>
-          <option value="read">已读邮件</option>
-          <option value="unread">未读邮件</option>
+          <option v-if="folderName !== '草稿箱'" value="read">已读邮件</option>
+          <option v-if="folderName !== '草稿箱'" value="unread">未读邮件</option>
           <option v-if="folderName !== '星标邮件'" value="star">星标邮件</option>
           <option value="unstar">取消星标</option>
         </select>
@@ -70,10 +71,17 @@
           <div class="group-label-bar">
             <span class="group-label">{{ group.label }}({{ group.emails.length }}封)</span>
           </div>
-        <div v-for="email in group.emails" :key="email.id" class="email-item" :class="{draft: email.isDraft, deleted: email.deletedAt, unread: !email.isRead}" @click="viewEmailDetail(email.id)" @contextmenu.prevent="showContextMenu($event, email)">
+        <div v-for="email in group.emails" :key="email.id" class="email-item" :class="{draft: email.isDraft, deleted: email.deletedAt, unread: folderName !== '草稿箱' && !email.isRead}" @click="viewEmailDetail(email.id)" @contextmenu.prevent="showContextMenu($event, email)">
           <input type="checkbox" class="email-checkbox" v-model="selectedEmails" :value="email.id" @click.stop />
           <span class="email-icon">✉️</span>
-          <span class="sender">{{ email.sender }}</span>
+          <span class="sender">
+            <template v-if="folderName === '已发送' || folderName === '草稿箱'">
+              {{ formatRecipientsForList(email) }}
+            </template>
+            <template v-else>
+              {{ email.sender }}
+            </template>
+          </span>
           <span class="subject">
             {{ email.subject }}
             <span v-if="email.content" class="email-content"> - {{ stripHtml(email.content) }}</span>
@@ -90,7 +98,6 @@
       <!-- 邮件详情显示区域 -->
       <div v-else class="email-detail-panel">
         <div class="detail-header">
-          <button class="back-btn" @click="closeEmailDetail">← 返回</button>
           <h3 class="detail-title">{{ selectedEmailDetail.subject || '无主题' }}</h3>
         </div>
         <div class="detail-meta">
@@ -148,10 +155,10 @@
     <!-- 右键上下文菜单 -->
     <div v-if="contextMenu.visible" class="context-menu" :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }" @click.stop>
       <!-- 根据邮件状态显示不同的菜单选项 -->
-      <div v-if="contextMenu.email && !contextMenu.email.isRead" class="context-menu-item" @click="markAsRead">
+      <div v-if="contextMenu.email && folderName !== '草稿箱' && !contextMenu.email.isRead" class="context-menu-item" @click="markAsRead">
         标记为已读
       </div>
-      <div v-if="contextMenu.email && contextMenu.email.isRead" class="context-menu-item" @click="markAsUnread">
+      <div v-if="contextMenu.email && folderName !== '草稿箱' && contextMenu.email.isRead" class="context-menu-item" @click="markAsUnread">
         标记为未读
       </div>
       <div v-if="contextMenu.email && !contextMenu.email.deletedAt && !isTrashFolder" class="context-menu-item" @click="deleteEmail">
@@ -226,6 +233,7 @@ interface Email {
   priority?: number // 新增：优先级字段
   requestReadReceipt?: boolean // 新增：已读回执字段
   attachments?: Array<{id: number, fileName: string, fileSize: number}> // 新增：附件字段
+  isSelfSent?: boolean
 }
 
 const props = defineProps<{ 
@@ -268,6 +276,9 @@ const selectedEmails = ref<(string|number)[]>([])
 const markAsValue = ref('')
 const moveToValue = ref('')
 
+// 统一判断当前是否有可操作目标：优先取详情中的当前邮件，否则取多选
+const hasOperationTarget = computed(() => !!selectedEmailDetail.value || selectedEmails.value.length > 0)
+
 // --- 邮件详情显示逻辑 ---
 const selectedEmailDetail = ref<Email | null>(null)
 const userDetailsCache = ref<Record<string, any>>({}) // 用户详情缓存
@@ -287,6 +298,8 @@ const allSelected = computed({
 // When the list of emails changes (e.g., folder switch), reset the selection
 watch(() => props.emails, () => {
   selectedEmails.value = []
+  // 切换邮箱/文件夹后，直接退出详情页
+  selectedEmailDetail.value = null
 })
 
 // --- 右键上下文菜单逻辑 ---
@@ -431,75 +444,85 @@ const emailCountText = computed(() => {
 
 // 删除选中的邮件
 function deleteSelectedEmails() {
-  if (selectedEmails.value.length > 0) {
-    const emailIds = selectedEmails.value.map(id => Number(id))
-    if (props.isDeletedFolder || props.isTrashFolder) {
-      // 在已删除文件夹或垃圾箱中，执行彻底删除
-      emit('permanentDeleteEmails', emailIds)
-    } else {
-      // 在其他文件夹中，执行普通删除
-      emit('deleteEmails', emailIds)
-    }
-    selectedEmails.value = []
+  const ids: number[] = selectedEmailDetail.value
+    ? [Number(selectedEmailDetail.value.id)]
+    : selectedEmails.value.map(id => Number(id))
+  if (ids.length === 0) return
+  if (props.isDeletedFolder || props.isTrashFolder) {
+    emit('permanentDeleteEmails', ids)
+  } else {
+    emit('deleteEmails', ids)
   }
+  // 若是详情页操作，返回列表视图
+  if (selectedEmailDetail.value) {
+    selectedEmailDetail.value = null
+  }
+  selectedEmails.value = []
 }
 
 // 恢复选中的邮件
 function restoreSelectedEmails() {
-  if (selectedEmails.value.length > 0) {
-    const emailIds = selectedEmails.value.map(id => Number(id))
-    emit('restoreEmails', emailIds)
-    selectedEmails.value = []
-  } else {
+  const ids: number[] = selectedEmailDetail.value
+    ? [Number(selectedEmailDetail.value.id)]
+    : selectedEmails.value.map(id => Number(id))
+  if (ids.length === 0) {
     emit('showMessage', { type: 'warning', message: '请先选择要恢复的邮件' })
+    return
   }
+  emit('restoreEmails', ids)
+  if (selectedEmailDetail.value) {
+    selectedEmailDetail.value = null
+  }
+  selectedEmails.value = []
 }
 
 
 // 处理标记为操作
 function handleMarkAsChange() {
   if (markAsValue.value && markAsValue.value !== '') {
-    if (selectedEmails.value.length > 0) {
-      const emailIds = selectedEmails.value.map(id => Number(id))
-      emit('markEmails', { action: markAsValue.value, emailIds })
-      markAsValue.value = '' // 重置选择
-      selectedEmails.value = [] // 自动取消邮件选择
+    const ids: number[] = selectedEmailDetail.value
+      ? [Number(selectedEmailDetail.value.id)]
+      : selectedEmails.value.map(id => Number(id))
+    if (ids.length > 0) {
+      emit('markEmails', { action: markAsValue.value, emailIds: ids })
     } else {
-      // 如果没有选中邮件，显示提示并重置选择
       emit('showMessage', { type: 'warning', message: '请先选择要标记的邮件' })
-      markAsValue.value = '' // 重置选择
     }
+    markAsValue.value = ''
+    selectedEmails.value = []
   }
 }
 
 // 处理移动到文件夹操作
 function handleMoveToChange() {
   if (moveToValue.value && moveToValue.value !== '') {
-    if (selectedEmails.value.length > 0) {
-      const emailIds = selectedEmails.value.map(id => Number(id))
-      const folderId = Number(moveToValue.value)
-      emit('moveEmails', { folderId, emailIds })
-      moveToValue.value = '' // 重置选择
-      selectedEmails.value = [] // 自动取消邮件选择
+    const ids: number[] = selectedEmailDetail.value
+      ? [Number(selectedEmailDetail.value.id)]
+      : selectedEmails.value.map(id => Number(id))
+    const folderId = Number(moveToValue.value)
+    if (ids.length > 0) {
+      emit('moveEmails', { folderId, emailIds: ids })
     } else {
-      // 如果没有选中邮件，显示提示并重置选择
       emit('showMessage', { type: 'warning', message: '请先选择要移动的邮件' })
-      moveToValue.value = '' // 重置选择
     }
+    moveToValue.value = ''
+    selectedEmails.value = []
   }
 }
 
 // 标记为垃圾邮件/取消垃圾邮件标记
 function markAsSpam() {
-  if (selectedEmails.value.length > 0) {
-    const emailIds = selectedEmails.value.map(id => Number(id))
+  const ids: number[] = selectedEmailDetail.value
+    ? [Number(selectedEmailDetail.value.id)]
+    : selectedEmails.value.map(id => Number(id))
+  if (ids.length > 0) {
     const action = props.isTrashFolder ? 'unspam' : 'spam'
-    emit('markEmails', { action, emailIds })
-    selectedEmails.value = [] // 自动取消邮件选择
+    emit('markEmails', { action, emailIds: ids })
   } else {
     const message = props.isTrashFolder ? '请先选择要取消垃圾邮件标记的邮件' : '请先选择要标记为垃圾邮件的邮件'
     emit('showMessage', { type: 'warning', message })
   }
+  selectedEmails.value = []
 }
 
 // 全部标记为已读
@@ -643,7 +666,7 @@ async function getUserDetailByIdCard(idCard: string): Promise<any> {
 
 // 解析收件人信息，将身份证号转换为真实姓名
 async function parseRecipients(recipients: string): Promise<string> {
-  if (!recipients) return '无'
+  if (!recipients) return ''
   
   // 分割收件人（可能是多个，用逗号分隔）
   const recipientList = recipients.split(',').map(r => r.trim())
@@ -679,6 +702,16 @@ function stripHtml(html: string): string {
   const text = temp.textContent || temp.innerText || ''
   // 清理多余的空白字符
   return text.replace(/\s+/g, ' ').trim()
+}
+
+// 列表展示用：在已发送/草稿箱显示收件人，草稿无收件人显示占位
+function formatRecipientsForList(email: Email): string {
+  // toMail 可能是逗号分隔的字符串，这里用中文顿号“、”连接
+  const recipients = (email.toMail || '').split(',').map(s => s.trim()).filter(Boolean)
+  if (recipients.length === 0) {
+    return '（收件人未填写）'
+  }
+  return recipients.join('、')
 }
 
 // 日期分组辅助
@@ -767,6 +800,7 @@ async function updateEmailDetail(emailDetail: any) {
 
 // 暴露方法给父组件调用
 defineExpose({
-  updateEmailDetail
+  updateEmailDetail,
+  closeEmailDetail
 })
 </script>

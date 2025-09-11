@@ -364,7 +364,7 @@
 
 <script setup lang="ts">
 import {computed, nextTick, onMounted, ref} from 'vue'
-import {useRouter} from 'vue-router'
+import {useRoute, useRouter} from 'vue-router'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {useUserStore} from '@/store/modules/user'
 import {useTagsViewStore} from '@/store/modules/tagsView'
@@ -378,9 +378,9 @@ import {
   type LetterContactStarRespVO,
   type LetterSendReqVO,
   type MailListItemVO,
-  saveDraft,
   sendLetter
 } from '@/api/system/mail/letter/index'
+import { getDraft, createDraft, updateDraft, type LetterDraftRespVO, type LetterDraftCreateReqVO, type LetterDraftUpdateReqVO } from '@/api/system/mail/draft'
 import {getSimpleUserList, getUserByIdCard} from '@/api/system/user'
 import {getAccessToken} from '@/utils/auth'
 import '@/views/mail/mail.css'
@@ -400,6 +400,7 @@ import {
 
 
 const router = useRouter()
+const route = useRoute()
 const tagsViewStore = useTagsViewStore()
 
 // 表单数据
@@ -430,6 +431,7 @@ const activeRecipientField = ref<'recipients' | 'cc' | 'bcc'>('recipients') // �
 
 // TextEditor 相关状态
 const editorInstance = ref<any>(null)
+const editorReady = ref(false)
 
 // 右键菜单状态
 const contextMenu = ref({
@@ -491,6 +493,9 @@ const currentTime = computed(() => {
   return `${hours}:${minutes}`
 })
 
+
+// 当前草稿ID（用于判断创建还是更新）
+const currentDraftId = ref<number | null>(null)
 
 // 预加载用户列表
 const allUsers = ref<any[]>([])
@@ -1045,7 +1050,18 @@ const validateBcc = () => {
 // 编辑器创建完成回调
 const handleEditorCreated = (editor: any) => {
   editorInstance.value = editor
+  editorReady.value = true
   console.log('TextEditor 创建完成:', editor)
+  // 若已有内容，延迟注入到编辑器，避免 Slate DOM 映射错误
+  if (mailForm.value.content) {
+    nextTick(() => {
+      try {
+        editorInstance.value?.setHtml?.(mailForm.value.content)
+      } catch (e) {
+        console.warn('延迟设置编辑器内容失败:', e)
+      }
+    })
+  }
 }
 
 // 编辑器内容变化回调
@@ -1261,7 +1277,7 @@ const doSendMail = async () => {
   }
 }
 
-// 保存草稿 - 修复类型错误
+// 保存草稿：存在则更新，否则创建
 const saveDraftHandler = async () => {
   try {
     // 获取编辑器内容
@@ -1276,21 +1292,40 @@ const saveDraftHandler = async () => {
     // 处理密送人：转换为身份证号
     const processedBcc = mailForm.value.bcc.length > 0 ? await processRecipients(mailForm.value.bcc) : []
 
-    const draftData: LetterSendReqVO = {
-      subject: mailForm.value.subject,
-      content: editorContent,
-      recipientIdCards: processedRecipients.length > 0 ? processedRecipients : [], // 收件人身份证号列表（草稿可以为空）
-      ccIdCards: processedCc.length > 0 ? processedCc : undefined, // 抄送人身份证号列表
-      bccIdCards: processedBcc.length > 0 ? processedBcc : undefined, // 密送人身份证号列表
+    // 组装 recipients 数组
+    const recipients: { recipientIdCard: string; recipientType: number }[] = []
+    processedRecipients.forEach(idCard => recipients.push({ recipientIdCard: idCard, recipientType: 1 }))
+    processedCc.forEach(idCard => recipients.push({ recipientIdCard: idCard, recipientType: 2 }))
+    processedBcc.forEach(idCard => recipients.push({ recipientIdCard: idCard, recipientType: 3 }))
+
+    const baseDraftData: LetterDraftCreateReqVO = {
+      subject: mailForm.value.subject || '',
+      content: editorContent || '',
       priority: 1,
-      requestReadReceipt: false
+      requestReadReceipt: false,
+      draftStatus: 1,
+      scheduledSendTime: null,
+      isStarred: false,
+      recipients
     }
-    
-    console.log('保存草稿数据:', draftData)
+
+    console.log('保存草稿数据(create/update):', baseDraftData)
     console.log('📝 草稿HTML内容预览:', editorContent)
-    
-    await saveDraft(draftData)
-    ElMessage.success('草稿保存成功')
+
+    if (currentDraftId.value) {
+      const updateData: LetterDraftUpdateReqVO = { id: currentDraftId.value, ...baseDraftData }
+      const ok = await updateDraft(updateData)
+      if (ok) {
+        ElMessage.success('草稿已更新')
+      } else {
+        ElMessage.warning('草稿未更新')
+      }
+    } else {
+      const newId = await createDraft(baseDraftData)
+      currentDraftId.value = newId
+      // 保持当前界面状态，不进行路由跳转或刷新
+      ElMessage.success('草稿已创建并保存')
+    }
   } catch (error: any) {
     console.error('保存草稿失败:', error)
     const errorMsg = error?.response?.data?.message || error?.message || '网络错误，请稍后重试'
@@ -1303,6 +1338,51 @@ const saveDraftHandler = async () => {
 onMounted(async () => {
   // 并发加载所有数据
   await loadAllData()
+  // 如果带有 draftId，则加载草稿内容
+  const draftIdParam = route.query.draftId
+  if (draftIdParam) {
+    const draftId = Number(draftIdParam)
+    if (!Number.isNaN(draftId)) {
+      try {
+        const draft: LetterDraftRespVO = await getDraft(draftId)
+        currentDraftId.value = draft.id
+        // 填充主题与正文
+        mailForm.value.subject = draft.subject || ''
+        mailForm.value.content = draft.content || ''
+        // 如果编辑器已创建，同步到编辑器（延迟到 nextTick，避免 DOM 尚未就绪）
+        if (editorReady.value && editorInstance.value && mailForm.value.content) {
+          await nextTick()
+          try {
+            editorInstance.value.setHtml(mailForm.value.content)
+          } catch (e) {
+            console.warn('设置编辑器内容失败:', e)
+          }
+        }
+        // 收件人/抄送/密送：后端提供身份证号与可选名称，这里优先显示名称，缺失则显示身份证号
+        const toList: string[] = []
+        const ccList: string[] = []
+        const bccList: string[] = []
+        if (Array.isArray(draft.recipients)) {
+          draft.recipients.forEach(r => {
+            const display = r.recipientName || r.recipientIdCard
+            if (r.recipientType === 1) toList.push(display)
+            else if (r.recipientType === 2) ccList.push(display)
+            else if (r.recipientType === 3) bccList.push(display)
+          })
+        }
+        mailForm.value.recipients = toList
+        mailForm.value.cc = ccList
+        mailForm.value.bcc = bccList
+        // 如果有抄送/密送数据，则展开对应区域
+        showCc.value = ccList.length > 0
+        showBcc.value = bccList.length > 0
+        ElMessage.success('已加载草稿')
+      } catch (error: any) {
+        console.error('加载草稿失败:', error)
+        ElMessage.error(error?.response?.data?.message || error?.message || '加载草稿失败')
+      }
+    }
+  }
 })
 </script>
 

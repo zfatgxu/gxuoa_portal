@@ -175,6 +175,7 @@ import {
   type FolderUpdateReqVO
 } from '@/api/system/mail/folder'
 import { getUserByIdCard } from '@/api/system/user'
+import { useUserStoreWithOut } from '@/store/modules/user'
 
 interface Email {
   id: number
@@ -192,6 +193,7 @@ interface Email {
   isRead?: boolean
   isTrash?: boolean
   trashTime?: string
+  isSelfSent?: boolean
 }
 
 // 邮件数据状态管理
@@ -392,6 +394,13 @@ async function convertMailToEmail(mail: MailListItemVO): Promise<Email> {
   // 解析邮件内容
   const formattedContent = formatEmailContent(mail.content || '')
   
+  // 识别是否自己发送：使用身份证号判断
+  const userStore = useUserStoreWithOut()
+  const currentUser = userStore.getUser
+  const currentIdCard = (currentUser as any)?.idCard || ''
+  const fromUserIdCard = (mail as any).fromUserIdCard || (mail as any).fromIdCard || ''
+  const isSelfSent = fromUserIdCard && currentIdCard && fromUserIdCard === currentIdCard
+
   return {
     id: mail.id,
     sender: mail.fromUserName,
@@ -407,7 +416,8 @@ async function convertMailToEmail(mail: MailListItemVO): Promise<Email> {
     content: formattedContent,
     isRead: mail.isRead,
     isTrash: mail.isTrash || false,
-    trashTime: mail.trashTime ? new Date(mail.trashTime).toISOString().split('T')[0] : undefined
+    trashTime: mail.trashTime ? new Date(mail.trashTime).toISOString().split('T')[0] : undefined,
+    isSelfSent
   }
 }
 
@@ -418,6 +428,7 @@ async function loadFolderEmails(folder: string) {
     console.log(`📥 开始加载${folder}邮件...`)
     
     let response
+    let requestStartMs = 0
     
     switch (folder) {
       case 'inbox':
@@ -429,8 +440,12 @@ async function loadFolderEmails(folder: string) {
         response = await getSentMails({ pageNo: 1, pageSize: 100 })
         break
       case 'drafts':
-        console.log('📝 调用草稿箱API...')
-        response = await getDraftMails({ pageNo: 1, pageSize: 100 })
+        const draftParams = { pageNo: 1, pageSize: 100 }
+        requestStartMs = typeof performance !== 'undefined' ? performance.now() : Date.now()
+        console.log('📝 调用草稿箱API，参数:', draftParams)
+        response = await getDraftMails(draftParams)
+        const durationMs = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - requestStartMs
+        console.log(`📝 草稿箱API返回，耗时: ${Math.round(durationMs)}ms`)
         break
       case 'starred':
         console.log('⭐ 调用星标邮件API...')
@@ -453,10 +468,18 @@ async function loadFolderEmails(folder: string) {
     
     if (response && Array.isArray(response.list)) {
       console.log(`📋 ${folder}邮件列表长度:`, response.list.length)
+      if (folder === 'drafts') {
+        try {
+          console.table((response.list || []).slice(0, 5).map((item: any) => ({ id: item.id, subject: item.subject, sendTime: item.sendTime, isDraft: (item as any).isDraft })))
+        } catch (_) {}
+      }
       // 使用 Promise.all 处理异步转换
       const convertedEmails = await Promise.all(response.list.map(convertMailToEmail))
       allEmails[folder] = convertedEmails
       console.log(`✅ ${folder}邮件加载成功，转换后数量:`, allEmails[folder].length)
+      if (folder === 'drafts' && allEmails[folder].length > 0) {
+        console.log('📝 草稿箱第一封转换后邮件示例:', allEmails[folder][0])
+      }
     } else {
       console.log(`⚠️ ${folder}邮件响应格式异常:`, response)
       allEmails[folder] = []
@@ -931,6 +954,11 @@ async function selectFolder(folder: string | number) {
   
   // 重置文件夹ID
   selectedFolderId.value = null
+
+  // 若当前在邮件详情界面，切换邮箱时直接退出详情视图
+  if (mainContentRef.value && typeof (mainContentRef.value as any).closeEmailDetail === 'function') {
+    ;(mainContentRef.value as any).closeEmailDetail()
+  }
   
   if (typeof folder === 'string') {
     // 系统文件夹
@@ -1581,6 +1609,13 @@ async function handleToggleStar(emailId: number) {
 // 处理查看邮件详情
 async function handleViewEmailDetail(emailId: number) {
   console.log(`📧 开始查看邮件详情，邮件ID: ${emailId}`)
+  
+  // 草稿箱点击直接跳转到写信界面，而不是查看详情
+  if (selectedFolder.value === 'drafts') {
+    console.log('📝 当前为草稿箱，跳转到写信界面')
+    await router.push({ path: '/mail/write', query: { draftId: String(emailId) } })
+    return
+  }
   
   // 检查邮件是否已读，如果未读则标记为已读
   // 首先在系统文件夹中查找
