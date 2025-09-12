@@ -333,11 +333,6 @@
           </div>
         </div>
         
-        <!-- 发件人信息 -->
-        <div class="sender-info">
-          <span>发件人：</span>
-          <span>{{ currentUser }}</span>
-        </div>
       </div>
       
       <!-- 右侧联系人列表 -->
@@ -1963,14 +1958,6 @@ onMounted(async () => {
   color: #303133;
 }
 
-/* 发件人信息 */
-.sender-info {
-  padding: 10px 15px;
-  border-top: 1px solid #e0e0e0;
-  font-size: 14px;
-  color: #606266;
-  background-color: #f8f9fa;
-}
 
 
 /* 联系人列表 */
