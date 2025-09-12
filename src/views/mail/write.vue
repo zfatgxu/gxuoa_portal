@@ -9,15 +9,6 @@
         <img class="header-image" :src="topImage" alt="header" />
       </div>
       <div class="header-right">
-        <div class="header-search">
-    <span class="search-icon">
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-        <circle cx="7" cy="7" r="6" stroke="#bdbdbd" stroke-width="1.5" fill="none"/>
-        <path d="M12 12l-2.5-2.5" stroke="#bdbdbd" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-    </span>
-          <input class="search-input" type="text" placeholder="搜索" />
-        </div>
       </div>
     </div>
         <!-- 工具栏 -->
