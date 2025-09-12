@@ -18,10 +18,6 @@
               <el-icon><Position /></el-icon>
               <span>{{ sending ? '发送中...' : '发送' }}</span>
             </div>
-            <div class="tool-btn">
-              <el-icon><View /></el-icon>
-              <span>预览</span>
-            </div>
             <div class="tool-btn" @click="triggerFileUpload">
               <el-icon><Files /></el-icon>
               <span>附件</span>
