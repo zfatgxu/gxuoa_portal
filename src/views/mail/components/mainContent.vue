@@ -44,8 +44,8 @@
         </button>
         <select class="tool-select" v-model="markAsValue" @change="handleMarkAsChange">
           <option value="" disabled selected style="display: none;">标记为...</option>
-          <option v-if="folderName !== '草稿箱'" value="read">已读邮件</option>
-          <option v-if="folderName !== '草稿箱'" value="unread">未读邮件</option>
+          <option v-if="folderName !== '草稿箱' && !selectedEmailDetail" value="read">已读邮件</option>
+          <option v-if="folderName !== '草稿箱' && !selectedEmailDetail" value="unread">未读邮件</option>
           <option v-if="folderName !== '星标邮件'" value="star">星标邮件</option>
           <option value="unstar">取消星标</option>
         </select>
@@ -58,8 +58,8 @@
         </select>
       </div>
       <div class="toolbar-right">
-        <span class="email-count">{{ emailCountText }} ⬇</span>
-        <span class="refresh-icon" @click="$emit('syncMails')" style="cursor: pointer" title="同步邮件">🔄</span>
+        <span v-show="!selectedEmailDetail" class="email-count">{{ emailCountText }} ⬇</span>
+        <span v-show="!selectedEmailDetail" class="refresh-icon" @click="$emit('syncMails')" style="cursor: pointer" title="同步邮件">🔄</span>
       </div>
     </div>
 
@@ -97,48 +97,94 @@
 
       <!-- 邮件详情显示区域 -->
       <div v-else class="email-detail-panel">
-        <div class="detail-header">
+        <!-- 主题区域 -->
+        <div class="detail-title-section">
           <h3 class="detail-title">{{ selectedEmailDetail.subject || '无主题' }}</h3>
         </div>
-        <div class="detail-meta">
-          <div class="meta-row">
-            <span class="meta-label">发件人:</span>
-            <span class="meta-value">{{ selectedEmailDetail.sender || '未知' }}</span>
+        
+        <!-- 发件人信息区域 -->
+        <div class="detail-header">
+          <div class="sender-avatar">
+            <img 
+              v-if="senderAvatar && !avatarLoading" 
+              :src="senderAvatar" 
+              :alt="selectedEmailDetail.sender || '发件人'"
+              class="avatar-img"
+              @error="handleAvatarError"
+            />
+            <div v-else class="avatar-placeholder" :class="{ 'loading': avatarLoading }">
+              {{ getAvatarText(selectedEmailDetail.sender) }}
+            </div>
           </div>
-          <div class="meta-row">
-            <span class="meta-label">收件人:</span>
-            <span class="meta-value">{{ selectedEmailDetail.toMail || '无' }}</span>
-          </div>
-          <div class="meta-row">
-            <span class="meta-label">发送时间:</span>
-            <span class="meta-value">{{ selectedEmailDetail.time || '未知' }}</span>
-          </div>
-          <div class="meta-row">
-            <span class="meta-label">优先级:</span>
-            <span class="meta-value">{{ getPriorityText(selectedEmailDetail.priority) }}</span>
-          </div>
-          <div class="meta-row">
-            <span class="meta-label">已读回执:</span>
-            <span class="meta-value">{{ selectedEmailDetail.requestReadReceipt ? '是' : '否' }}</span>
+          <div class="header-content">
+            <div class="sender-info">
+              <span class="sender-name">{{ selectedEmailDetail.sender || '未知' }}</span>
+            </div>
+            <div class="sender-meta">
+              <div class="meta-item">
+                <span class="meta-label">收件人</span>
+                <span class="meta-value">{{ selectedEmailDetail.toMail || '无' }}</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">时间</span>
+                <span class="meta-value">{{ formatDisplayTime(selectedEmailDetail.originalSendTime) || '未知' }}</span>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="detail-content">
-          <div class="content-label">邮件内容:</div>
-          <div class="content-body" v-html="selectedEmailDetail.content || ''">
-          </div>
-        </div>
+        
+        <!-- 附件列表区域 - 显示在正文上方 -->
         <div v-if="selectedEmailDetail.attachments && selectedEmailDetail.attachments.length > 0" class="detail-attachments">
-          <div class="attachments-label">附件:</div>
-          <ul class="attachments-list">
-            <li v-for="att in selectedEmailDetail.attachments" :key="att.id" class="attachment-item">
-              {{ att.fileName }} ({{ formatFileSize(att.fileSize) }})
-            </li>
-          </ul>
+          <div class="attachments-list">
+            <div 
+              v-for="att in selectedEmailDetail.attachments" 
+              :key="att.id" 
+              class="attachment-item"
+            >
+              <div class="attachment-info">
+                <div class="attachment-name">{{ att.fileName }}</div>
+                <div class="attachment-actions">
+                  <button 
+                    class="download-btn" 
+                    @click="downloadAttachmentFile(att)"
+                    :disabled="downloadingAttachments.includes(att.id)"
+                    :title="`下载 ${att.fileName}`"
+                  >
+                    <svg v-if="!downloadingAttachments.includes(att.id)" width="16" height="16" viewBox="0 0 20 20" fill="none">
+                      <path d="M3 17v3a2 2 0 002 2h10a2 2 0 002-2v-3M8 12l4 4 4-4M12 16V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <div v-else class="download-spinner"></div>
+                  </button>
+                </div>
+              </div>
+              <div class="attachment-details">
+                <span class="file-size">{{ formatFileSize(att.fileSize) }}</span>
+                <span v-if="att.fileExtension" class="file-type">{{ att.fileExtension.toUpperCase() }}</span>
+                <span v-if="att.isTemp" class="temp-badge">临时</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 附件加载状态提示 -->
+        <div v-if="isLoadingAttachments" class="attachments-loading">
+          <div class="loading-spinner"></div>
+          <span>正在加载附件...</span>
+        </div>
+        
+        <!-- 邮件正文内容区域 -->
+        <div class="detail-content">
+          <div v-if="!selectedEmailDetail.content" class="content-loading">
+            <div class="loading-spinner"></div>
+            <span>正在加载邮件内容...</span>
+          </div>
+          <div v-else class="content-body" v-html="selectedEmailDetail.content">
+          </div>
         </div>
       </div>
     </div>
     <!-- 分页 -->
-    <div class="pagination">
+    <div v-if="!selectedEmailDetail" class="pagination">
       <div class="pagination-numbers">
       <button v-for="n in totalPages" :key="n" class="page-btn" :class="{active: n===currentPage}" @click="currentPage=n">{{ n }}</button>
       <span v-if="totalPages > 7" class="dots">...</span>
@@ -216,6 +262,8 @@
 import { ref, watch, computed } from 'vue'
 import topImage from '@/views/mail/image/top.png'
 import { getUserByIdCard } from '@/api/system/user/index'
+import { downloadAttachment, formatFileSize as apiFormatFileSize, getFileExtension } from '@/api/system/mail/letter'
+import { ElMessage } from 'element-plus'
 
 interface Email {
   id: number
@@ -232,7 +280,20 @@ interface Email {
   toMail?: string // 新增：收件人字段
   priority?: number // 新增：优先级字段
   requestReadReceipt?: boolean // 新增：已读回执字段
-  attachments?: Array<{id: number, fileName: string, fileSize: number}> // 新增：附件字段
+  originalSendTime?: string // 新增：原始发送时间字段
+  attachments?: Array<{
+    id: number, 
+    fileName: string, 
+    fileSize: number, 
+    fileType: string,
+    fileExtension: string,
+    uploadUserIdCard: string,
+    uploadTime: string,
+    downloadCount: number,
+    isTemp: boolean,
+    tempExpireTime?: string,
+    createTime: string
+  }> // 新增：附件字段
   isSelfSent?: boolean
 }
 
@@ -276,12 +337,19 @@ const selectedEmails = ref<(string|number)[]>([])
 const markAsValue = ref('')
 const moveToValue = ref('')
 
+// --- 附件下载相关 ---
+const downloadingAttachments = ref<number[]>([]) // 正在下载的附件ID列表
+const isLoadingAttachments = ref<boolean>(false) // 是否正在加载附件
+
 // 统一判断当前是否有可操作目标：优先取详情中的当前邮件，否则取多选
 const hasOperationTarget = computed(() => !!selectedEmailDetail.value || selectedEmails.value.length > 0)
 
 // --- 邮件详情显示逻辑 ---
 const selectedEmailDetail = ref<Email | null>(null)
+const senderAvatar = ref<string>('')
+const avatarLoading = ref<boolean>(false) // 头像加载状态
 const userDetailsCache = ref<Record<string, any>>({}) // 用户详情缓存
+const updateTimeout = ref<NodeJS.Timeout | null>(null) // 防抖定时器
 const allSelected = computed({
   get() {
     return props.emails.length > 0 && selectedEmails.value.length === props.emails.length
@@ -320,7 +388,8 @@ function showContextMenu(event: MouseEvent, email: Email) {
     visible: true,
     x: event.clientX,
     y: event.clientY,
-    email: email
+    email: email,
+    showMoveSubmenu: false
   }
   
   // 点击其他地方隐藏菜单
@@ -547,17 +616,38 @@ function viewEmailDetail(emailId: number) {
   // 先查找本地邮件数据
   const localEmail = props.emails.find(email => email.id === emailId)
   if (localEmail) {
-    selectedEmailDetail.value = localEmail
+    // 创建一个临时的邮件详情对象，使用本地时间数据避免闪动
+    selectedEmailDetail.value = {
+      ...localEmail,
+      content: '', // 先清空content，等待详细数据
+      originalSendTime: localEmail.time, // 使用本地时间数据作为初始值
+      toMail: localEmail.toMail || '无', // 使用本地收件人数据
+      attachments: [], // 初始化为空数组，避免undefined
+      priority: undefined, // 初始化为undefined
+      requestReadReceipt: undefined // 初始化为undefined
+    }
+    
+    // 重置头像状态，避免闪动
+    senderAvatar.value = ''
+    avatarLoading.value = false
   }
   
-  // 通知父组件获取详细数据
+  // 通知父组件获取详细数据（会优先使用缓存）
   emit('getEmailDetail', emailId)
   emit('viewEmailDetail', emailId)
 }
 
 // 关闭邮件详情
 function closeEmailDetail() {
+  // 清理防抖定时器
+  if (updateTimeout.value) {
+    clearTimeout(updateTimeout.value)
+    updateTimeout.value = null
+  }
+  
   selectedEmailDetail.value = null
+  senderAvatar.value = ''
+  avatarLoading.value = false
 }
 
 // 获取优先级文本
@@ -577,6 +667,172 @@ function formatFileSize(bytes: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+// 下载附件
+async function downloadAttachmentFile(attachment: any) {
+  if (downloadingAttachments.value.includes(attachment.id)) {
+    return // 防止重复下载
+  }
+  
+  try {
+    // 添加到下载列表
+    downloadingAttachments.value.push(attachment.id)
+    
+    console.log(`📥 开始下载附件: ${attachment.fileName}`)
+    
+    // 检查是否为临时文件
+    if (attachment.isTemp) {
+      console.log(`⚠️ 附件为临时文件，过期时间: ${attachment.tempExpireTime}`)
+    }
+    
+    // 调用下载API
+    const blob = await downloadAttachment(attachment.id)
+    
+    // 创建下载链接
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = attachment.fileName
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+    
+    console.log(`✅ 附件下载成功: ${attachment.fileName}`)
+    ElMessage.success(`附件 "${attachment.fileName}" 下载成功`)
+    
+  } catch (error: any) {
+    console.error(`❌ 附件下载失败: ${attachment.fileName}`, error)
+    
+    // 根据错误类型显示不同的错误信息
+    let errorMsg = '下载失败'
+    if (error?.response?.status === 404) {
+      errorMsg = '附件不存在'
+    } else if (error?.response?.status === 403) {
+      errorMsg = '无权限访问该附件'
+    } else if (error?.response?.data?.msg) {
+      errorMsg = error.response.data.msg
+    } else if (error?.message) {
+      errorMsg = error.message
+    }
+    
+    ElMessage.error(`下载失败: ${errorMsg}`)
+  } finally {
+    // 从下载列表中移除
+    const index = downloadingAttachments.value.indexOf(attachment.id)
+    if (index > -1) {
+      downloadingAttachments.value.splice(index, 1)
+    }
+  }
+}
+
+// 格式化显示时间
+function formatDisplayTime(timeStr?: string): string {
+  if (!timeStr) return '未知时间'
+  
+  try {
+    // 尝试解析时间字符串（通常是ISO格式或标准日期格式）
+    const date = new Date(timeStr)
+    if (isNaN(date.getTime())) {
+      console.warn('时间解析失败:', timeStr)
+      return timeStr || '未知时间' // 如果解析失败，返回原字符串或默认值
+    }
+    
+    // 格式化为 yyyy年m月d日 hh:mm
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1 // getMonth() 返回 0-11
+    const day = date.getDate()
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    
+    return `${year}年${month}月${day}日 ${hours}:${minutes}`
+  } catch (error) {
+    console.error('时间格式化失败:', error, '原始时间:', timeStr)
+    return timeStr || '未知时间' // 出错时返回原字符串或默认值
+  }
+}
+
+// 获取头像文本（用于默认头像显示）
+function getAvatarText(senderName?: string): string {
+  if (!senderName) return '?'
+  return senderName.charAt(0).toUpperCase()
+}
+
+// 处理头像加载错误
+function handleAvatarError() {
+  senderAvatar.value = ''
+}
+
+// 通过身份证获取用户详情
+async function getUserDetailByIdCard(idCard: string): Promise<any> {
+  if (!idCard) return null
+  
+  // 检查缓存
+  if (userDetailsCache.value[idCard]) {
+    return userDetailsCache.value[idCard]
+  }
+  
+  try {
+    console.log(`🔍 通过身份证获取用户详情: ${idCard}`)
+    const userDetail = await getUserByIdCard(idCard)
+    console.log(`✅ 用户详情获取成功:`, userDetail)
+    
+    // 缓存用户详情
+    userDetailsCache.value[idCard] = userDetail
+    return userDetail
+  } catch (error: any) {
+    console.error(`❌ 获取用户详情失败:`, error)
+    return null
+  }
+}
+
+// 加载发件人头像
+async function loadSenderAvatar(emailDetail: any) {
+  // 如果已经有头像了，不需要重新加载
+  if (senderAvatar.value) {
+    return
+  }
+  
+  try {
+    // 设置加载状态
+    avatarLoading.value = true
+    
+    // 尝试从邮件详情中获取发件人身份证号
+    let senderIdCard = ''
+    
+    // 从senders数组中获取发件人信息
+    if (emailDetail.senders && emailDetail.senders.length > 0) {
+      senderIdCard = emailDetail.senders[0].senderIdCard
+    }
+    
+    // 如果从senders中获取不到，尝试从其他字段获取
+    if (!senderIdCard) {
+      senderIdCard = emailDetail.fromUserIdCard || emailDetail.fromIdCard || ''
+    }
+    
+    if (senderIdCard) {
+      console.log(`🖼️ 开始加载发件人头像，身份证号: ${senderIdCard}`)
+      const userDetail = await getUserDetailByIdCard(senderIdCard)
+      
+      if (userDetail && userDetail.avatar) {
+        senderAvatar.value = userDetail.avatar
+        console.log(`✅ 发件人头像加载成功: ${userDetail.avatar}`)
+      } else {
+        console.log(`⚠️ 发件人没有头像或获取失败`)
+        senderAvatar.value = ''
+      }
+    } else {
+      console.log(`⚠️ 无法获取发件人身份证号`)
+      senderAvatar.value = ''
+    }
+  } catch (error: any) {
+    console.error(`❌ 加载发件人头像失败:`, error)
+    senderAvatar.value = ''
+  } finally {
+    // 清除加载状态
+    avatarLoading.value = false
+  }
 }
 
 // 解析邮件内容，处理HTML标签和格式
@@ -641,55 +897,47 @@ function formatContentForDisplay(content: string): string {
     .replace(/\s{2,}/g, ' ') // 合并多个空格
 }
 
-// 通过身份证获取用户详情
-async function getUserDetailByIdCard(idCard: string): Promise<any> {
-  if (!idCard) return null
-  
-  // 检查缓存
-  if (userDetailsCache.value[idCard]) {
-    return userDetailsCache.value[idCard]
-  }
-  
-  try {
-    console.log(`🔍 通过身份证获取用户详情: ${idCard}`)
-    const userDetail = await getUserByIdCard(idCard)
-    console.log(`✅ 用户详情获取成功:`, userDetail)
-    
-    // 缓存用户详情
-    userDetailsCache.value[idCard] = userDetail
-    return userDetail
-  } catch (error: any) {
-    console.error(`❌ 获取用户详情失败:`, error)
-    return null
-  }
-}
-
 // 解析收件人信息，将身份证号转换为真实姓名
 async function parseRecipients(recipients: string): Promise<string> {
   if (!recipients) return ''
   
   // 分割收件人（可能是多个，用逗号分隔）
   const recipientList = recipients.split(',').map(r => r.trim())
-  const parsedNames: string[] = []
   
-  for (const recipient of recipientList) {
-    if (!recipient) continue
+  // 分离身份证号和其他类型的收件人
+  const idCardRecipients: string[] = []
+  const otherRecipients: string[] = []
+  
+  recipientList.forEach(recipient => {
+    if (!recipient) return
     
-    // 判断是否为身份证号（18位数字）
     if (/^\d{18}$/.test(recipient)) {
-      const userDetail = await getUserDetailByIdCard(recipient)
-      if (userDetail && userDetail.nickname) {
-        parsedNames.push(userDetail.nickname) // 只显示真实姓名
-      } else {
-        parsedNames.push(recipient) // 如果获取不到用户详情，显示原身份证号
-      }
+      idCardRecipients.push(recipient)
     } else {
-      // 不是身份证号，直接显示
-      parsedNames.push(recipient)
+      otherRecipients.push(recipient)
     }
-  }
+  })
   
-  return parsedNames.join(', ')
+  // 并行查询所有身份证号对应的用户详情
+  const userDetailPromises = idCardRecipients.map(async (idCard) => {
+    try {
+      const userDetail = await getUserDetailByIdCard(idCard)
+      return userDetail && userDetail.nickname ? userDetail.nickname : null
+    } catch (error) {
+      console.error(`获取用户详情失败: ${idCard}`, error)
+      return null
+    }
+  })
+  
+  // 等待所有用户详情查询完成
+  const parsedIdCardNames = await Promise.all(userDetailPromises)
+  
+  // 只保留成功获取到姓名的结果
+  const validNames = parsedIdCardNames.filter(name => name !== null)
+  
+  // 合并结果
+  const allNames = [...otherRecipients, ...validNames]
+  return allNames.join(', ')
 }
 
 // 去除HTML标签，只保留纯文本
@@ -778,23 +1026,79 @@ watch([() => props.emails, pageSize], () => {
 // 接收父组件传递的详细邮件数据
 async function updateEmailDetail(emailDetail: any) {
   if (emailDetail && selectedEmailDetail.value) {
-    // 解析收件人信息
-    const recipientsStr = emailDetail.recipients?.map((r: any) => r.recipientIdCard).join(', ') || emailDetail.toMail || ''
-    const parsedRecipients = await parseRecipients(recipientsStr)
+    // 清除之前的防抖定时器
+    if (updateTimeout.value) {
+      clearTimeout(updateTimeout.value)
+    }
+    
+    // 先更新基础数据，避免闪动
+    const currentDetail = selectedEmailDetail.value
     
     // 使用原始 HTML 内容（来自后端/编辑器的 HTML）
     const rawContent = emailDetail.content?.content || emailDetail.content || ''
     
-    // 更新当前显示的邮件详情
+    // 获取原始发送时间用于格式化，优先使用详细数据中的时间
+    const originalSendTime = emailDetail.content?.sendTime || emailDetail.sendTime || currentDetail.originalSendTime
+    
+    // 检查是否有附件需要加载
+    const hasAttachments = emailDetail.attachments && emailDetail.attachments.length > 0
+    if (hasAttachments && !currentDetail.attachments?.length) {
+      isLoadingAttachments.value = true
+    }
+    
+    // 立即更新基础数据，保持显示稳定
     selectedEmailDetail.value = {
-      ...selectedEmailDetail.value,
+      ...currentDetail,
       ...emailDetail,
       content: rawContent,
-      toMail: parsedRecipients,
       priority: emailDetail.content?.priority,
       requestReadReceipt: emailDetail.content?.requestReadReceipt,
-      attachments: emailDetail.attachments
+      attachments: emailDetail.attachments || [],
+      originalSendTime: originalSendTime
     }
+    
+    // 如果附件已加载完成，隐藏加载状态
+    if (hasAttachments) {
+      isLoadingAttachments.value = false
+    }
+    
+    // 使用防抖机制处理收件人信息解析
+    updateTimeout.value = setTimeout(async () => {
+      const recipientsStr = emailDetail.recipients?.map((r: any) => r.recipientIdCard).join(', ') || emailDetail.toMail || ''
+      if (recipientsStr && recipientsStr !== currentDetail.toMail) {
+        try {
+          const parsedRecipients = await parseRecipients(recipientsStr)
+          if (parsedRecipients && parsedRecipients !== currentDetail.toMail && selectedEmailDetail.value) {
+            selectedEmailDetail.value.toMail = parsedRecipients
+          }
+        } catch (error) {
+          console.error('解析收件人信息失败:', error)
+          // 保持原有值，不更新
+        }
+      }
+    }, 100) // 100ms防抖延迟
+    
+     // 异步获取发件人真实姓名
+     if (emailDetail.senders && emailDetail.senders.length > 0) {
+       const sender = emailDetail.senders[0]
+       const senderIdCard = sender.senderIdCard
+       
+       if (senderIdCard) {
+         try {
+           // 调用 getUserByIdCard API 获取发件人真实姓名
+           const userDetail = await getUserDetailByIdCard(senderIdCard)
+           if (userDetail && userDetail.nickname && selectedEmailDetail.value) {
+             selectedEmailDetail.value.sender = userDetail.nickname
+             console.log(`✅ 通过身份证号获取发件人姓名成功: ${userDetail.nickname}`)
+           }
+         } catch (error) {
+           console.error('❌ 获取发件人姓名失败:', error)
+         }
+       }
+     }
+     
+     // 异步加载发件人头像
+     loadSenderAvatar(emailDetail)
   }
 }
 

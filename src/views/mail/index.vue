@@ -157,6 +157,7 @@ import {
   markAsTrash,
   restoreFromTrash,
   restoreFromTrashFlag,
+  getLetterAttachments,
   type MailListItemVO,
   type MailStatsVO
 } from '@/api/system/mail/letter'
@@ -227,6 +228,7 @@ const folderContextMenu = ref({
 const loading = ref(false)
 const mainContentRef = ref<InstanceType<typeof MainContent> | null>(null)
 const userDetailsCache = ref<Record<string, any>>({}) // 用户详情缓存
+const emailDetailsCache = ref<Record<number, any>>({}) // 邮件详情缓存
 const mailStats = ref<MailStatsVO>({
   inboxCount: 0,
   sentCount: 0,
@@ -388,7 +390,7 @@ async function convertMailToEmail(mail: MailListItemVO): Promise<Email> {
     }
   }
   
-  // 解析收件人信息
+  // 解析neng 信息
   const parsedToMail = await parseRecipients(mail.toUserNames || '')
   
   // 解析邮件内容
@@ -976,6 +978,10 @@ async function selectFolder(folder: string | number) {
     console.log(`✅ 自定义文件夹切换完成: ${folder}`)
     console.log(`📊 当前文件夹邮件数量:`, folderEmails[folder]?.length || 0)
   }
+  
+  // 预加载当前分页的邮件详情
+  console.log('🔄 开始预加载邮件详情...')
+  preloadCurrentPageEmailDetails()
 }
 
 // 处理删除邮件
@@ -1650,18 +1656,101 @@ async function handleViewEmailDetail(emailId: number) {
   }
 }
 
+// 预加载当前分页的邮件详情
+async function preloadCurrentPageEmailDetails() {
+  try {
+    console.log('🔄 开始预加载当前分页邮件详情...')
+    
+    // 获取当前显示的邮件列表
+    const currentEmails = getCurrentEmails()
+    if (!currentEmails || currentEmails.length === 0) {
+      console.log('📭 当前没有邮件，跳过预加载')
+      return
+    }
+    
+    // 获取当前分页的邮件（假设每页15封邮件）
+    const pageSize = 15
+    const currentPage = 1 // 这里可以根据实际分页逻辑调整
+    const startIndex = (currentPage - 1) * pageSize
+    const endIndex = startIndex + pageSize
+    const pageEmails = currentEmails.slice(startIndex, endIndex)
+    
+    console.log(`📋 预加载第${currentPage}页邮件，共${pageEmails.length}封`)
+    
+    // 并发预加载邮件详情
+    const preloadPromises = pageEmails.map(async (email) => {
+      // 检查缓存中是否已有详情
+      if (emailDetailsCache.value[email.id]) {
+        console.log(`✅ 邮件 ${email.id} 详情已在缓存中`)
+        return
+      }
+      
+      try {
+        console.log(`📡 预加载邮件详情: ${email.id}`)
+        const emailDetail = await getLetterDetail(email.id)
+        
+        if (emailDetail) {
+          // 缓存邮件详情
+          emailDetailsCache.value[email.id] = emailDetail
+          console.log(`✅ 邮件 ${email.id} 详情预加载成功`)
+        }
+      } catch (error: any) {
+        console.error(`❌ 预加载邮件 ${email.id} 详情失败:`, error)
+        // 预加载失败不影响用户体验，继续处理其他邮件
+      }
+    })
+    
+    // 等待所有预加载完成
+    await Promise.allSettled(preloadPromises)
+    console.log('✅ 当前分页邮件详情预加载完成')
+    
+  } catch (error: any) {
+    console.error('❌ 预加载邮件详情失败:', error)
+    // 预加载失败不影响主要功能
+  }
+}
+
 // 处理获取邮件详情
 async function handleGetEmailDetail(emailId: number) {
   console.log(`📧 开始获取邮件详情，邮件ID: ${emailId}`)
   
   try {
-    console.log('📡 调用邮件详情API...')
-    const emailDetail = await getLetterDetail(emailId)
-    console.log('📊 邮件详情API响应:', emailDetail)
+    let emailDetail: any = null
+    
+    // 优先从缓存中获取
+    if (emailDetailsCache.value[emailId]) {
+      console.log('📋 从缓存中获取邮件详情')
+      emailDetail = emailDetailsCache.value[emailId]
+    } else {
+      console.log('📡 调用邮件详情API...')
+      emailDetail = await getLetterDetail(emailId)
+      console.log('📊 邮件详情API响应:', emailDetail)
+      
+      // 缓存邮件详情
+      if (emailDetail) {
+        emailDetailsCache.value[emailId] = emailDetail
+        console.log('💾 邮件详情已缓存')
+      }
+    }
     
     // 验证返回的数据结构
     if (!emailDetail) {
       throw new Error('邮件详情数据为空')
+    }
+    
+    // 获取邮件附件列表
+    console.log('📎 开始获取邮件附件列表...')
+    try {
+      const attachments = await getLetterAttachments(emailId)
+      console.log('📎 邮件附件API响应:', attachments)
+      
+      // 将附件信息添加到邮件详情中
+      emailDetail.attachments = attachments || []
+      console.log(`✅ 成功获取 ${attachments?.length || 0} 个附件`)
+    } catch (attachmentError: any) {
+      console.error('❌ 获取邮件附件失败:', attachmentError)
+      // 附件获取失败不影响邮件详情显示，设置为空数组
+      emailDetail.attachments = []
     }
     
     // 将详细数据传递给子组件

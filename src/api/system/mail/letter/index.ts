@@ -160,6 +160,37 @@ export interface MailAttachmentRespVO {
   createTime: string           // 创建时间
 }
 
+// 附件信息响应VO - 对应后端 AttachmentInfoRespVO
+export interface AttachmentInfoRespVO {
+  id: number                   // 附件ID
+  fileName: string             // 原始文件名
+  fileSize: number             // 文件大小(字节)
+  fileType: string             // 文件类型(MIME类型)
+  fileExtension: string        // 文件扩展名
+  uploadUserIdCard: string     // 上传用户身份证号
+  uploadTime: string           // 上传时间
+  downloadCount: number        // 下载次数
+  isTemp: boolean              // 是否临时文件
+  tempExpireTime?: string      // 临时文件过期时间
+  createTime: string           // 创建时间
+}
+
+// 批量删除附件请求VO
+export interface BatchDeleteAttachmentReqVO {
+  attachmentIds: number[]      // 附件ID列表
+}
+
+// 临时附件转正式附件请求VO
+export interface ConvertToFormalReqVO {
+  attachmentIds: number[]      // 附件ID列表
+}
+
+// 附件统计信息响应VO
+export interface AttachmentStatsRespVO {
+  totalCount: number           // 附件总数量
+  totalSize: number            // 附件总大小(字节)
+}
+
 
 
 // 邮件列表项接口
@@ -209,6 +240,7 @@ export interface LetterSendReqVO {
   recipientIdCards: string[]         // 收件人身份证号列表，必填
   ccIdCards?: string[]               // 抄送人身份证号列表，可选
   bccIdCards?: string[]              // 密送人身份证号列表，可选
+  attachmentIds?: number[]           // 附件ID列表，可选
 }
 
 // 搜索信件请求VO
@@ -504,4 +536,315 @@ export const markAsTrash = async (data: { ids: number[] }): Promise<boolean> => 
  */
 export const restoreFromTrashFlag = async (data: { ids: number[] }): Promise<boolean> => {
   return await request.put({url: '/letter/restore-trash-flag', data})
+}
+
+// ==================== 邮件附件相关API ====================
+
+/**
+ * 单文件上传
+ * @param file 上传的文件
+ * @returns Promise<number> 返回附件ID
+ */
+export const uploadAttachment = async (file: File): Promise<number> => {
+  const formData = new FormData()
+  formData.append('file', file)
+  return await request.post({url: '/letter/attachment/upload', data: formData, headers: {'Content-Type': 'multipart/form-data'}})
+}
+
+/**
+ * 批量文件上传
+ * @param files 上传的文件列表
+ * @returns Promise<number[]> 返回附件ID列表
+ */
+export const uploadAttachmentsBatch = async (files: File[]): Promise<number[]> => {
+  const formData = new FormData()
+  files.forEach(file => {
+    formData.append('files', file)
+  })
+  return await request.post({url: '/letter/attachment/upload-batch', data: formData, headers: {'Content-Type': 'multipart/form-data'}})
+}
+
+/**
+ * 下载附件
+ * @param attachmentId 附件ID
+ * @returns Promise<Blob> 返回文件二进制内容
+ */
+export const downloadAttachment = async (attachmentId: number): Promise<Blob> => {
+  return await request.get({url: `/letter/attachment/download/${attachmentId}`, responseType: 'blob'})
+}
+
+/**
+ * 获取附件信息
+ * @param attachmentId 附件ID
+ * @returns Promise<AttachmentInfoRespVO>
+ */
+export const getAttachmentInfo = async (attachmentId: number): Promise<AttachmentInfoRespVO> => {
+  return await request.get({url: `/letter/attachment/info/${attachmentId}`})
+}
+
+/**
+ * 获取指定邮件的附件列表
+ * @param letterId 邮件ID
+ * @returns Promise<AttachmentInfoRespVO[]>
+ */
+export const getLetterAttachments = async (letterId: number): Promise<AttachmentInfoRespVO[]> => {
+  return await request.get({url: `/letter/attachment/letter/${letterId}`})
+}
+
+/**
+ * 获取用户附件统计信息
+ * @returns Promise<AttachmentStatsRespVO>
+ */
+export const getAttachmentStats = async (): Promise<AttachmentStatsRespVO> => {
+  const data = await request.get({url: '/letter/attachment/stats'})
+  return {
+    totalCount: data[0],
+    totalSize: data[1]
+  }
+}
+
+/**
+ * 删除附件
+ * @param attachmentId 附件ID
+ * @returns Promise<boolean>
+ */
+export const deleteAttachment = async (attachmentId: number): Promise<boolean> => {
+  return await request.delete({url: `/letter/attachment/${attachmentId}`})
+}
+
+/**
+ * 批量删除附件
+ * @param data 批量删除请求参数
+ * @returns Promise<boolean>
+ */
+export const batchDeleteAttachments = async (data: BatchDeleteAttachmentReqVO): Promise<boolean> => {
+  return await request.delete({url: '/letter/attachment/batch', data})
+}
+
+/**
+ * 将临时附件转为正式附件
+ * @param data 转换请求参数
+ * @returns Promise<boolean>
+ */
+export const convertToFormalAttachments = async (data: ConvertToFormalReqVO): Promise<boolean> => {
+  return await request.put({url: '/letter/attachment/convert-to-formal', data})
+}
+
+/**
+ * 清理过期临时附件（管理员权限）
+ * @returns Promise<boolean>
+ */
+export const cleanExpiredAttachments = async (): Promise<boolean> => {
+  return await request.post({url: '/letter/attachment/clean-expired'})
+}
+
+// ==================== 文件上传下载工具函数 ====================
+
+/**
+ * 文件大小格式化工具
+ * @param bytes 文件大小（字节）
+ * @returns 格式化后的文件大小字符串
+ */
+export const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 B'
+  
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+}
+
+/**
+ * 下载文件到本地
+ * @param attachmentId 附件ID
+ * @param fileName 文件名（可选，如果不提供会从响应头获取）
+ * @returns Promise<void>
+ */
+export const downloadFileToLocal = async (attachmentId: number, fileName?: string): Promise<void> => {
+  try {
+    const blob = await downloadAttachment(attachmentId)
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileName || '附件'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    window.URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('文件下载失败:', error)
+    throw new Error('文件下载失败')
+  }
+}
+
+/**
+ * 文件上传进度回调类型
+ */
+export type UploadProgressCallback = (progress: number) => void
+
+/**
+ * 带进度条的文件上传
+ * @param file 上传的文件
+ * @param onProgress 进度回调函数
+ * @returns Promise<number> 返回附件ID
+ */
+export const uploadAttachmentWithProgress = async (
+  file: File, 
+  onProgress?: UploadProgressCallback
+): Promise<number> => {
+  const formData = new FormData()
+  formData.append('file', file)
+  
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    
+    // 监听上传进度
+    if (onProgress) {
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const progress = Math.round((event.loaded / event.total) * 100)
+          onProgress(progress)
+        }
+      })
+    }
+    
+    // 监听请求完成
+    xhr.addEventListener('load', () => {
+      if (xhr.status === 200) {
+        try {
+          const response = JSON.parse(xhr.responseText)
+          if (response.code === 0) {
+            resolve(response.data)
+          } else {
+            reject(new Error(response.msg || '上传失败'))
+          }
+        } catch (error) {
+          reject(new Error('响应解析失败'))
+        }
+      } else {
+        reject(new Error(`上传失败，状态码: ${xhr.status}`))
+      }
+    })
+    
+    // 监听请求错误
+    xhr.addEventListener('error', () => {
+      reject(new Error('网络错误'))
+    })
+    
+    // 发送请求
+    xhr.open('POST', '/letter/attachment/upload')
+    xhr.send(formData)
+  })
+}
+
+/**
+ * 批量文件上传（带进度）
+ * @param files 文件列表
+ * @param onProgress 进度回调函数
+ * @returns Promise<number[]> 返回附件ID列表
+ */
+export const uploadAttachmentsBatchWithProgress = async (
+  files: File[],
+  onProgress?: (completed: number, total: number) => void
+): Promise<number[]> => {
+  const results: number[] = []
+  let completed = 0
+  
+  for (const file of files) {
+    try {
+      const attachmentId = await uploadAttachment(file)
+      results.push(attachmentId)
+      completed++
+      if (onProgress) {
+        onProgress(completed, files.length)
+      }
+    } catch (error) {
+      console.error(`文件 ${file.name} 上传失败:`, error)
+      // 可以选择继续上传其他文件或者抛出错误
+      throw error
+    }
+  }
+  
+  return results
+}
+
+/**
+ * 验证文件类型
+ * @param file 文件对象
+ * @param allowedTypes 允许的文件类型数组
+ * @returns 是否允许该文件类型
+ */
+export const validateFileType = (file: File, allowedTypes: string[]): boolean => {
+  return allowedTypes.includes(file.type) || allowedTypes.some(type => file.name.toLowerCase().endsWith(type.toLowerCase()))
+}
+
+/**
+ * 验证文件大小
+ * @param file 文件对象
+ * @param maxSize 最大文件大小（字节）
+ * @returns 是否在允许的大小范围内
+ */
+export const validateFileSize = (file: File, maxSize: number = 1024 * 1024 * 1024): boolean => {
+  return file.size <= maxSize
+}
+
+/**
+ * 获取文件扩展名
+ * @param fileName 文件名
+ * @returns 文件扩展名（不包含点号）
+ */
+export const getFileExtension = (fileName: string): string => {
+  return fileName.split('.').pop()?.toLowerCase() || ''
+}
+
+/**
+ * 根据文件扩展名获取文件类型图标
+ * @param fileName 文件名
+ * @returns 文件类型图标类名
+ */
+export const getFileTypeIcon = (fileName: string): string => {
+  const extension = getFileExtension(fileName)
+  
+  const iconMap: Record<string, string> = {
+    // 文档类型
+    'pdf': 'file-pdf',
+    'doc': 'file-word',
+    'docx': 'file-word',
+    'xls': 'file-excel',
+    'xlsx': 'file-excel',
+    'ppt': 'file-powerpoint',
+    'pptx': 'file-powerpoint',
+    'txt': 'file-text',
+    
+    // 图片类型
+    'jpg': 'file-image',
+    'jpeg': 'file-image',
+    'png': 'file-image',
+    'gif': 'file-image',
+    'bmp': 'file-image',
+    'svg': 'file-image',
+    
+    // 压缩文件
+    'zip': 'file-zip',
+    'rar': 'file-zip',
+    '7z': 'file-zip',
+    'tar': 'file-zip',
+    'gz': 'file-zip',
+    
+    // 视频文件
+    'mp4': 'file-video',
+    'avi': 'file-video',
+    'mov': 'file-video',
+    'wmv': 'file-video',
+    'flv': 'file-video',
+    
+    // 音频文件
+    'mp3': 'file-audio',
+    'wav': 'file-audio',
+    'flac': 'file-audio',
+    'aac': 'file-audio',
+  }
+  
+  return iconMap[extension] || 'file'
 }

@@ -23,9 +23,9 @@
         <!-- 工具栏 -->
         <div class="toolbar">
           <div class="toolbar-left">
-            <div class="tool-btn primary" @click="sendMailHandler">
+            <div class="tool-btn primary" :class="{ 'disabled': sending }" @click="sendMailHandler">
               <el-icon><Position /></el-icon>
-              <span>发送</span>
+              <span>{{ sending ? '发送中...' : '发送' }}</span>
             </div>
             <div class="tool-btn">
               <el-icon><View /></el-icon>
@@ -221,14 +221,115 @@
         />
         
         <!-- 附件列表 -->
-        <div v-if="mailForm.attachments.length > 0" class="attachments-list" style="padding: 10px 20px; border-top: 1px solid #e0e0e0;">
-          <div class="attachment-item" v-for="(file, index) in mailForm.attachments" :key="index" style="display: inline-flex; align-items: center; margin-right: 10px; margin-bottom: 5px; padding: 6px 10px; background: #f0f0f0; border-radius: 6px; font-size: 12px;">
-            <el-icon style="margin-right: 5px; color: #409eff;"><Files /></el-icon>
-            <div style="display: flex; flex-direction: column;">
-              <span>{{ file.name }}</span>
-              <span style="color: #666; font-size: 10px;">{{ formatFileSize(file.size) }}</span>
+        <div v-if="attachmentList.length > 0 || mailForm.attachments.length > 0" class="attachments-section" style="padding: 15px 20px; border-top: 1px solid #e0e0e0; background-color: #fafafa; max-height: 300px; overflow-y: auto;">
+          <div class="attachments-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div class="attachments-title" style="font-size: 14px; font-weight: 500; color: #303133;">
+              <el-icon style="margin-right: 5px; color: #409eff;"><Files /></el-icon>
+              附件 ({{ attachmentList.length + mailForm.attachments.length }})
             </div>
-            <span @click="removeAttachment(index)" style="margin-left: 8px; cursor: pointer; color: #f56c6c; font-weight: bold;" title="删除附件">&times;</span>
+            <div class="attachments-actions" style="display: flex; gap: 8px;">
+              <el-button 
+                v-if="attachmentList.length > 0" 
+                size="small" 
+                type="danger" 
+                plain
+                @click="batchRemoveAttachments(attachmentList.map(a => a.id))"
+              >
+                清空所有
+              </el-button>
+            </div>
+          </div>
+          
+          <!-- 已上传的附件 -->
+          <div v-if="attachmentList.length > 0" class="uploaded-attachments" style="margin-bottom: 10px;">
+            <div 
+              v-for="(attachment, index) in attachmentList" 
+              :key="attachment.id"
+              class="attachment-item uploaded"
+              style="display: flex; flex-direction: column; align-items: flex-start; padding: 12px; background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 8px; transition: all 0.2s; min-height: 60px;"
+            >
+              <div class="attachment-info" style="flex: 1; min-width: 0; width: 100%; display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+                <div class="attachment-name" style="font-size: 14px; font-weight: 500; color: #303133; flex: 1; min-width: 0; word-break: break-word; line-height: 1.4;">
+                  {{ attachment.fileName }}
+                </div>
+                <div class="attachment-actions" style="flex-shrink: 0; margin-top: 2px; display: flex; gap: 5px;">
+                  <el-button 
+                    size="small" 
+                    type="primary" 
+                    plain
+                    @click="downloadAttachmentFile(attachment)"
+                    title="下载"
+                  >
+                    <el-icon><Download /></el-icon>
+                  </el-button>
+                  <el-button 
+                    size="small" 
+                    type="danger" 
+                    plain
+                    @click="removeUploadedAttachment(attachment.id, index)"
+                    title="删除"
+                  >
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </div>
+              </div>
+               <div class="attachment-details" style="display: flex; gap: 12px; font-size: 12px; color: #909399; width: 100%; margin-top: 4px;">
+                 <span class="file-size" style="color: #606266;">{{ formatFileSize(attachment.fileSize) }}</span>
+                 <span v-if="attachment.fileExtension" class="file-type">{{ attachment.fileExtension.toUpperCase() }}</span>
+                 <span v-if="attachment.downloadCount > 0">下载 {{ attachment.downloadCount }} 次</span>
+               </div>
+            </div>
+          </div>
+          
+          <!-- 本地文件（未上传） -->
+          <div v-if="mailForm.attachments.length > 0" class="local-attachments" style="margin-bottom: 10px;">
+            <div 
+              v-for="(file, index) in mailForm.attachments" 
+              :key="index"
+              class="attachment-item local"
+              style="display: flex; flex-direction: column; align-items: flex-start; padding: 12px; background: #fff7e6; border: 1px solid #ffd591; border-radius: 8px; margin-bottom: 8px; min-height: 60px;"
+            >
+              <div class="attachment-info" style="flex: 1; min-width: 0; width: 100%; display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+                <div class="attachment-name" style="font-size: 14px; font-weight: 500; color: #303133; flex: 1; min-width: 0; word-break: break-word; line-height: 1.4;">
+                  {{ file.name }}
+                </div>
+                <div class="attachment-actions" style="flex-shrink: 0; margin-top: 2px;">
+                  <el-button 
+                    size="small" 
+                    type="danger" 
+                    plain
+                    @click="removeAttachment(index)"
+                    title="删除"
+                  >
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </div>
+              </div>
+              <div class="attachment-details" style="display: flex; gap: 12px; font-size: 12px; color: #909399; width: 100%; margin-top: 4px;">
+                <span class="file-size" style="color: #606266;">{{ formatFileSize(file.size) }}</span>
+                <span v-if="getFileExtension(file.name)" class="file-type">{{ getFileExtension(file.name).toUpperCase() }}</span>
+                <span style="color: #fa8c16; background: #fff3cd; padding: 2px 6px; border-radius: 4px; font-weight: 500; font-size: 11px;">待上传</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 上传进度 -->
+          <div v-if="uploading" class="upload-progress" style="margin-top: 10px;">
+            <el-progress 
+              :percentage="uploadProgress" 
+              :show-text="true"
+              :stroke-width="6"
+              status="success"
+            />
+            <div style="text-align: center; font-size: 12px; color: #909399; margin-top: 5px;">
+              正在上传附件...
+            </div>
+          </div>
+          
+          <!-- 附件统计信息 -->
+          <div v-if="(attachmentList.length + mailForm.attachments.length) > 0" class="attachment-stats" style="margin-top: 10px; padding: 8px 12px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 4px; font-size: 12px; color: #0369a1;">
+            <el-icon style="margin-right: 5px;"><InfoFilled /></el-icon>
+            当前邮件 {{ attachmentList.length + mailForm.attachments.length }} 个附件，大小 {{ formatCurrentAttachmentSize() }}
           </div>
         </div>
         
@@ -373,7 +474,25 @@ import {
   type LetterContactStarRespVO,
   type LetterSendReqVO,
   type MailListItemVO,
-  sendLetter
+  sendLetter,
+  // 附件相关API
+  uploadAttachment,
+  uploadAttachmentsBatch,
+  uploadAttachmentWithProgress,
+  uploadAttachmentsBatchWithProgress,
+  downloadFileToLocal,
+  deleteAttachment,
+  batchDeleteAttachments,
+  getAttachmentInfo,
+  formatFileSize,
+  validateFileType,
+  validateFileSize,
+  getFileExtension,
+  getFileTypeIcon,
+  type AttachmentInfoRespVO,
+  type BatchDeleteAttachmentReqVO,
+  type ConvertToFormalReqVO,
+  type UploadProgressCallback
 } from '@/api/system/mail/letter/index'
 import { getDraft, createDraft, updateDraft, type LetterDraftRespVO, type LetterDraftCreateReqVO, type LetterDraftUpdateReqVO } from '@/api/system/mail/draft'
 import {getSimpleUserList, getUserByIdCard} from '@/api/system/user'
@@ -384,7 +503,10 @@ import topImage from '@/views/mail/image/top.png'
 // 移除 Font Awesome 导入，使用 wangEditor 内置图标
 import {
   ArrowDown,
+  Delete,
+  Download,
   Files,
+  InfoFilled,
   Position,
   Setting,
   Star,
@@ -406,13 +528,15 @@ const mailForm = ref<{
   subject: string
   content: string
   attachments: File[]
+  attachmentIds: number[] // 已上传的附件ID列表
 }>({
   recipients: [],
   cc: [],
   bcc: [],
   subject: '',
   content: '',
-  attachments: []
+  attachments: [],
+  attachmentIds: []
 })
 
 // UI状态
@@ -421,6 +545,13 @@ const showBcc = ref(false)
 const contactSearch = ref('')
 const loading = ref(false)
 const activeRecipientField = ref<'recipients' | 'cc' | 'bcc'>('recipients') // 当前激活的收件人字段
+const sending = ref(false) // 发送状态，防止重复发送
+
+// 附件相关状态
+const uploading = ref(false)
+const uploadProgress = ref(0)
+const attachmentList = ref<AttachmentInfoRespVO[]>([]) // 已上传的附件信息列表
+const tempAttachmentList = ref<AttachmentInfoRespVO[]>([]) // 临时附件列表
 
 // 移除格式按钮状态，使用 wangEditor 内置状态管理
 
@@ -1085,11 +1216,78 @@ const formatFileSize = (bytes: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
-// 删除附件
+// 计算当前邮件的附件总大小
+const formatCurrentAttachmentSize = (): string => {
+  let totalSize = 0
+  
+  // 计算已上传附件的大小
+  attachmentList.value.forEach(attachment => {
+    totalSize += attachment.fileSize || 0
+  })
+  
+  // 计算本地文件的大小
+  mailForm.value.attachments.forEach(file => {
+    totalSize += file.size
+  })
+  
+  return formatFileSize(totalSize)
+}
+
+// 删除附件（从本地文件列表）
 const removeAttachment = (index: number) => {
   const fileName = mailForm.value.attachments[index].name
   mailForm.value.attachments.splice(index, 1)
   ElMessage.success(`已删除附件: ${fileName}`)
+}
+
+// 删除已上传的附件
+const removeUploadedAttachment = async (attachmentId: number, index: number) => {
+  try {
+    await deleteAttachment(attachmentId)
+    
+    // 从表单中移除附件ID
+    const idIndex = mailForm.value.attachmentIds.indexOf(attachmentId)
+    if (idIndex > -1) {
+      mailForm.value.attachmentIds.splice(idIndex, 1)
+    }
+    
+    // 从附件列表中移除
+    attachmentList.value.splice(index, 1)
+    
+    ElMessage.success('附件删除成功')
+  } catch (error: any) {
+    console.error('删除附件失败:', error)
+    ElMessage.error(`删除失败: ${error.message || '网络错误'}`)
+  }
+}
+
+// 下载附件
+const downloadAttachmentFile = async (attachment: AttachmentInfoRespVO) => {
+  try {
+    await downloadFileToLocal(attachment.id, attachment.fileName)
+    ElMessage.success('下载开始')
+  } catch (error: any) {
+    console.error('下载附件失败:', error)
+    ElMessage.error(`下载失败: ${error.message || '网络错误'}`)
+  }
+}
+
+// 批量删除附件
+const batchRemoveAttachments = async (attachmentIds: number[]) => {
+  try {
+    await batchDeleteAttachments({ attachmentIds })
+    
+    // 从表单中移除附件ID
+    mailForm.value.attachmentIds = mailForm.value.attachmentIds.filter(id => !attachmentIds.includes(id))
+    
+    // 从附件列表中移除
+    attachmentList.value = attachmentList.value.filter(attachment => !attachmentIds.includes(attachment.id))
+    
+    ElMessage.success(`成功删除 ${attachmentIds.length} 个附件`)
+  } catch (error: any) {
+    console.error('批量删除附件失败:', error)
+    ElMessage.error(`删除失败: ${error.message || '网络错误'}`)
+  }
 }
 
 // 重置表单
@@ -1100,7 +1298,8 @@ const resetForm = () => {
     bcc: [],
     subject: '',
     content: '',
-    attachments: []
+    attachments: [],
+    attachmentIds: []
   }
   
   // 重置编辑器内容
@@ -1108,29 +1307,154 @@ const resetForm = () => {
     editorInstance.value.clear()
   }
   
+  // 重置附件相关状态
+  attachmentList.value = []
+  tempAttachmentList.value = []
+  uploading.value = false
+  uploadProgress.value = 0
+  
+  // 重置发送状态
+  sending.value = false
+  
   // 隐藏抄送和密送
   showCc.value = false
   showBcc.value = false
 }
 
 // 处理文件上传
-const handleFileUpload = (files: FileList | null) => {
-  if (files) {
-    const newFiles = Array.from(files)
-    // 验证文件大小（限制每个文件最大25MB）
-    const oversizedFiles = newFiles.filter(file => file.size > 25 * 1024 * 1024)
-    if (oversizedFiles.length > 0) {
-      ElMessage.warning(`文件 ${oversizedFiles.map(f => f.name).join(', ')} 超过25MB限制`)
+const handleFileUpload = async (files: FileList | null) => {
+  if (!files || files.length === 0) return
+  
+  const newFiles = Array.from(files)
+  
+  try {
+    // 验证文件
+    const validationResult = validateFiles(newFiles)
+    if (!validationResult.valid) {
+      ElMessage.error(validationResult.message)
       return
     }
     
-    mailForm.value.attachments = [...mailForm.value.attachments, ...newFiles]
-    ElMessage.success(`成功添加 ${newFiles.length} 个附件`)
+    uploading.value = true
+    uploadProgress.value = 0
+    
+    // 使用批量上传API
+    const attachmentIds = await uploadAttachmentsBatchWithProgress(
+      newFiles,
+      (completed, total) => {
+        uploadProgress.value = Math.round((completed / total) * 100)
+      }
+    )
+    
+    // 添加到表单的附件ID列表
+    console.log('📎 上传前 attachmentIds:', mailForm.value.attachmentIds)
+    console.log('📎 新上传的 attachmentIds:', attachmentIds)
+    mailForm.value.attachmentIds.push(...attachmentIds)
+    console.log('📎 上传后 attachmentIds:', mailForm.value.attachmentIds)
+    
+    // 获取上传后的附件信息
+    await loadAttachmentInfo(attachmentIds)
+    
+    ElMessage.success(`成功上传 ${newFiles.length} 个附件`)
+    
+  } catch (error: any) {
+    console.error('文件上传失败:', error)
+    ElMessage.error(`上传失败: ${error.message || '网络错误'}`)
+  } finally {
+    uploading.value = false
+    uploadProgress.value = 0
+  }
+}
+
+// 验证文件
+const validateFiles = (files: File[]) => {
+  const maxSize = 1024 * 1024 * 1024 // 1GB
+  const allowedTypes = [
+    // 文档类型
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'text/plain',
+    // 图片类型
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/bmp',
+    'image/svg+xml',
+    // 压缩文件
+    'application/zip',
+    'application/x-rar-compressed',
+    'application/x-7z-compressed',
+    // 视频文件
+    'video/mp4',
+    'video/avi',
+    'video/quicktime',
+    'video/x-ms-wmv',
+    'video/x-flv',
+    // 音频文件
+    'audio/mpeg',
+    'audio/wav',
+    'audio/flac',
+    'audio/aac'
+  ]
+  
+  for (const file of files) {
+    // 检查文件大小
+    if (!validateFileSize(file, maxSize)) {
+      return {
+        valid: false,
+        message: `文件 ${file.name} 超过1GB大小限制`
+      }
+    }
+    
+    // 检查文件类型（可选，因为后端支持所有类型）
+    // if (!validateFileType(file, allowedTypes)) {
+    //   return {
+    //     valid: false,
+    //     message: `文件 ${file.name} 类型不支持`
+    //   }
+    // }
+  }
+  
+  return { valid: true, message: '' }
+}
+
+// 加载附件信息
+const loadAttachmentInfo = async (attachmentIds: number[]) => {
+  try {
+    for (const id of attachmentIds) {
+      const info = await getAttachmentInfo(id)
+      attachmentList.value.push(info)
+    }
+  } catch (error) {
+    console.error('加载附件信息失败:', error)
+  }
+}
+
+
+// 加载临时附件列表
+const loadTempAttachments = async () => {
+  try {
+    // 临时附件列表功能已被移除，设置为空数组
+    tempAttachmentList.value = []
+    console.log('临时附件列表功能已禁用')
+  } catch (error) {
+    console.error('加载临时附件失败:', error)
   }
 }
 
 // 发送邮件
 const sendMailHandler = async () => {
+  // 防止重复发送
+  if (sending.value) {
+    ElMessage.warning('正在发送中，请稍候...')
+    return
+  }
+  
   if (!mailForm.value.recipients.length) {
     ElMessage.warning('请选择收件人')
     return
@@ -1206,6 +1530,7 @@ const processRecipients = async (recipients: string[]): Promise<string[]> => {
 // 执行发送邮件
 const doSendMail = async () => {
   try {
+    sending.value = true
     loading.value = true
     
     // 验证必填字段
@@ -1226,6 +1551,17 @@ const doSendMail = async () => {
     // 处理密送人：转换为身份证号
     const processedBcc = mailForm.value.bcc.length > 0 ? await processRecipients(mailForm.value.bcc) : []
     
+    // 注意：不再手动调用 convertToFormalAttachments API
+    // 后端在发送邮件时会自动处理附件转换
+    console.log('🔄 代码已更新 - 不再调用 convertToFormalAttachments API')
+    if (mailForm.value.attachmentIds.length > 0) {
+      console.log('📎 邮件包含附件，将由后端自动处理:')
+      console.log('📎 附件ID列表:', mailForm.value.attachmentIds)
+      console.log('📎 附件数量:', mailForm.value.attachmentIds.length)
+    } else {
+      console.log('📎 邮件不包含附件')
+    }
+    
     const sendData: LetterSendReqVO = {
       subject: mailForm.value.subject || '(无主题)',
       content: editorContent,
@@ -1233,11 +1569,16 @@ const doSendMail = async () => {
       ccIdCards: processedCc.length > 0 ? processedCc : undefined, // 抄送人身份证号列表
       bccIdCards: processedBcc.length > 0 ? processedBcc : undefined, // 密送人身份证号列表
       priority: 1, // 默认普通优先级
-      requestReadReceipt: false // 默认不请求已读回执
+      requestReadReceipt: false, // 默认不请求已读回执
+      attachmentIds: mailForm.value.attachmentIds.length > 0 ? mailForm.value.attachmentIds : undefined // 附件ID列表
     }
     
     console.log('发送邮件数据:', sendData)
     console.log('📧 邮件HTML内容预览:', editorContent)
+    console.log('📎 发送时的附件ID列表:', mailForm.value.attachmentIds)
+    console.log('📎 发送时的附件ID数量:', mailForm.value.attachmentIds.length)
+    console.log('📎 当前显示的附件列表:', attachmentList.value)
+    console.log('📎 当前显示的附件数量:', attachmentList.value.length)
     
     // 检查用户登录状态
     const currentToken = getAccessToken()
@@ -1268,6 +1609,7 @@ const doSendMail = async () => {
     const errorMsg = error?.response?.data?.message || error?.message || '网络错误，请稍后重试'
     ElMessage.error(`发送失败: ${errorMsg}`)
   } finally {
+    sending.value = false
     loading.value = false
   }
 }
@@ -1306,6 +1648,7 @@ const saveDraftHandler = async () => {
 
     console.log('保存草稿数据(create/update):', baseDraftData)
     console.log('📝 草稿HTML内容预览:', editorContent)
+    console.log('📎 草稿附件ID列表:', mailForm.value.attachmentIds)
 
     if (currentDraftId.value) {
       const updateData: LetterDraftUpdateReqVO = { id: currentDraftId.value, ...baseDraftData }
@@ -1321,6 +1664,9 @@ const saveDraftHandler = async () => {
       // 保持当前界面状态，不进行路由跳转或刷新
       ElMessage.success('草稿已创建并保存')
     }
+    
+    // 注意：草稿保存时，附件保持临时状态，不进行转换
+    // 只有在发送邮件时才会将临时附件转为正式附件
   } catch (error: any) {
     console.error('保存草稿失败:', error)
     const errorMsg = error?.response?.data?.message || error?.message || '网络错误，请稍后重试'
@@ -1331,8 +1677,48 @@ const saveDraftHandler = async () => {
 // 移除所有自定义编辑器相关方法，使用 wangEditor 内置功能
 
 onMounted(async () => {
+  console.log('🚀 页面初始化开始')
+  console.log('📎 初始化时 attachmentIds:', mailForm.value.attachmentIds)
+  console.log('📎 初始化时 attachmentList:', attachmentList.value)
+  
+  // 强制重置附件相关状态，确保页面初始化时是干净的状态
+  console.log('🔄 开始强制重置附件状态...')
+  console.log('📎 重置前 attachmentIds:', mailForm.value.attachmentIds)
+  console.log('📎 重置前 attachmentList:', attachmentList.value)
+  
+  // 完全重置表单状态
+  mailForm.value = {
+    recipients: [],
+    cc: [],
+    bcc: [],
+    subject: '',
+    content: '',
+    attachments: [],
+    attachmentIds: []
+  }
+  
+  // 重置附件列表
+  attachmentList.value = []
+  tempAttachmentList.value = []
+  
+  console.log('🔄 强制重置后的状态:')
+  console.log('📎 重置后 attachmentIds:', mailForm.value.attachmentIds)
+  console.log('📎 重置后 attachmentList:', attachmentList.value)
+  
   // 并发加载所有数据
   await loadAllData()
+  
+  // 加载附件相关数据
+  await Promise.all([
+    loadTempAttachments()
+  ])
+  
+  // 检查路由参数中是否有附件ID
+  console.log('🔍 检查路由参数:', route.query)
+  if (route.query.attachmentIds) {
+    console.log('⚠️ 发现路由参数中的附件ID:', route.query.attachmentIds)
+  }
+  
   // 如果带有 draftId，则加载草稿内容
   const draftIdParam = route.query.draftId
   if (draftIdParam) {
@@ -1371,6 +1757,19 @@ onMounted(async () => {
         // 如果有抄送/密送数据，则展开对应区域
         showCc.value = ccList.length > 0
         showBcc.value = bccList.length > 0
+        
+        // 加载草稿的附件信息（如果有的话）
+        // 注意：这里需要根据实际的草稿API来加载附件信息
+        // 目前假设草稿可能包含附件ID列表
+        console.log('📝 草稿数据:', draft)
+        console.log('📎 草稿中的 attachmentIds:', draft.attachmentIds)
+        if (draft.attachmentIds && Array.isArray(draft.attachmentIds)) {
+          console.log('📎 设置草稿附件ID前:', mailForm.value.attachmentIds)
+          mailForm.value.attachmentIds = draft.attachmentIds
+          console.log('📎 设置草稿附件ID后:', mailForm.value.attachmentIds)
+          await loadAttachmentInfo(draft.attachmentIds)
+        }
+        
         ElMessage.success('已加载草稿')
       } catch (error: any) {
         console.error('加载草稿失败:', error)
@@ -1510,6 +1909,19 @@ onMounted(async () => {
 
 .tool-btn.primary:hover {
   background-color: #3367d6;
+}
+
+.tool-btn.disabled {
+  background-color: #c0c4cc !important;
+  border-color: #c0c4cc !important;
+  color: #a8abb2 !important;
+  cursor: not-allowed !important;
+}
+
+.tool-btn.disabled:hover {
+  background-color: #c0c4cc !important;
+  border-color: #c0c4cc !important;
+  color: #a8abb2 !important;
 }
 
 .tool-btn .el-icon {
@@ -1858,5 +2270,47 @@ onMounted(async () => {
 .context-menu-item .el-icon {
   margin-right: 8px;
   font-size: 16px;
+}
+
+/* 附件区域滚动条样式 */
+.attachments-section::-webkit-scrollbar {
+  width: 6px;
+}
+
+.attachments-section::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.attachments-section::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.attachments-section::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 附件网格布局 */
+.uploaded-attachments,
+.local-attachments {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .uploaded-attachments,
+  .local-attachments {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .uploaded-attachments,
+  .local-attachments {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
