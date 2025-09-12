@@ -252,15 +252,12 @@ async function getUserDetailByIdCard(idCard: string): Promise<any> {
   }
   
   try {
-    console.log(`🔍 通过身份证获取用户详情: ${idCard}`)
     const userDetail = await getUserByIdCard(idCard)
-    console.log(`✅ 用户详情获取成功:`, userDetail)
-    
     // 缓存用户详情
     userDetailsCache.value[idCard] = userDetail
     return userDetail
   } catch (error: any) {
-    console.error(`❌ 获取用户详情失败:`, error)
+    console.error('获取用户详情失败:', error)
     return null
   }
 }
@@ -427,75 +424,41 @@ async function convertMailToEmail(mail: MailListItemVO): Promise<Email> {
 async function loadFolderEmails(folder: string) {
   try {
     loading.value = true
-    console.log(`📥 开始加载${folder}邮件...`)
     
     let response
-    let requestStartMs = 0
     
     switch (folder) {
       case 'inbox':
-        console.log('📨 调用收件箱API...')
         response = await getInboxMails({ pageNo: 1, pageSize: 100 })
         break
       case 'sent':
-        console.log('📤 调用发件箱API...')
         response = await getSentMails({ pageNo: 1, pageSize: 100 })
         break
       case 'drafts':
-        const draftParams = { pageNo: 1, pageSize: 100 }
-        requestStartMs = typeof performance !== 'undefined' ? performance.now() : Date.now()
-        console.log('📝 调用草稿箱API，参数:', draftParams)
-        response = await getDraftMails(draftParams)
-        const durationMs = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - requestStartMs
-        console.log(`📝 草稿箱API返回，耗时: ${Math.round(durationMs)}ms`)
+        response = await getDraftMails({ pageNo: 1, pageSize: 100 })
         break
       case 'starred':
-        console.log('⭐ 调用星标邮件API...')
         response = await getStarredMails({ pageNo: 1, pageSize: 100 })
         break
       case 'deleted':
-        console.log('🗑️ 调用已删除邮件API...')
         response = await getDeletedMails({ pageNo: 1, pageSize: 100 })
         break
       case 'trash':
-        console.log('🗑️ 调用垃圾箱邮件API...')
         response = await getTrashMails({ pageNo: 1, pageSize: 100 })
         break
       default:
-        console.log(`❌ 未知文件夹类型: ${folder}`)
         return
     }
     
-    console.log(`📊 ${folder}邮件API响应:`, response)
-    
     if (response && Array.isArray(response.list)) {
-      console.log(`📋 ${folder}邮件列表长度:`, response.list.length)
-      if (folder === 'drafts') {
-        try {
-          console.table((response.list || []).slice(0, 5).map((item: any) => ({ id: item.id, subject: item.subject, sendTime: item.sendTime, isDraft: (item as any).isDraft })))
-        } catch (_) {}
-      }
-      // 使用 Promise.all 处理异步转换
       const convertedEmails = await Promise.all(response.list.map(convertMailToEmail))
       allEmails[folder] = convertedEmails
-      console.log(`✅ ${folder}邮件加载成功，转换后数量:`, allEmails[folder].length)
-      if (folder === 'drafts' && allEmails[folder].length > 0) {
-        console.log('📝 草稿箱第一封转换后邮件示例:', allEmails[folder][0])
-      }
     } else {
-      console.log(`⚠️ ${folder}邮件响应格式异常:`, response)
       allEmails[folder] = []
     }
   } catch (error: any) {
-    console.error(`❌ 加载${folder}邮件失败:`, error)
-    console.error('🔍 错误详情:', {
-      message: error?.message,
-      response: error?.response,
-      status: error?.response?.status,
-      data: error?.response?.data
-    })
+    console.error(`加载${folder}邮件失败:`, error)
     
-    // 根据错误类型显示不同的错误信息
     let errorMsg = '未知错误'
     if (error?.response?.status === 401) {
       errorMsg = '用户未登录，请重新登录'
@@ -510,51 +473,28 @@ async function loadFolderEmails(folder: string) {
     }
     
     ElMessage.error(`加载${folderLabels[folder] || folder}失败: ${errorMsg}`)
-    
-    // 确保在错误情况下也清空对应文件夹的数据
     allEmails[folder] = []
   } finally {
     loading.value = false
-    console.log(`🏁 ${folder}邮件加载流程结束`)
   }
 }
 
 // 加载邮件统计信息
 async function loadMailStats() {
   try {
-    console.log('📊 开始加载邮件统计信息...')
     const response = await getMailStats()
-    console.log('📈 邮件统计API响应:', response)
-    
     if (response) {
       mailStats.value = response
-      console.log('✅ 邮件统计加载成功:', {
-        inboxCount: response.inboxCount,
-        sentCount: response.sentCount,
-        draftsCount: response.draftsCount,
-        starredCount: response.starredCount,
-        deletedCount: response.deletedCount
-      })
-    } else {
-      console.log('⚠️ 邮件统计响应为空')
     }
   } catch (error: any) {
-    console.error('❌ 加载邮件统计失败:', error)
-    console.error('🔍 统计错误详情:', {
-      message: error?.message,
-      response: error?.response,
-      status: error?.response?.status,
-      data: error?.response?.data
-    })
+    console.error('加载邮件统计失败:', error)
   }
 }
 
 // 加载自定义文件夹列表
 async function loadCustomFolders() {
   try {
-    console.log('📁 开始加载自定义文件夹树形结构...')
     const response = await getFolderTree()
-    console.log('📂 文件夹树形结构API响应:', response)
     
     if (response && Array.isArray(response)) {
       // 将树形结构扁平化为数组，便于后续处理
@@ -570,20 +510,11 @@ async function loadCustomFolders() {
       }
       
       customFolders.value = flattenFolders(response)
-      console.log('✅ 自定义文件夹加载成功，扁平化后数量:', customFolders.value.length)
-      console.log('📊 根文件夹数量:', rootFolders.value.length)
     } else {
-      console.log('⚠️ 文件夹树形结构响应格式异常')
       customFolders.value = []
     }
   } catch (error: any) {
-    console.error('❌ 加载自定义文件夹失败:', error)
-    console.error('🔍 文件夹错误详情:', {
-      message: error?.message,
-      response: error?.response,
-      status: error?.response?.status,
-      data: error?.response?.data
-    })
+    console.error('加载自定义文件夹失败:', error)
     customFolders.value = []
   }
 }
@@ -591,29 +522,16 @@ async function loadCustomFolders() {
 // 加载指定文件夹的邮件
 async function loadFolderEmailsById(folderId: number) {
   try {
-    console.log(`📥 开始加载文件夹 ${folderId} 的邮件...`)
     const response = await getFolderMails(folderId, 1, 100)
-    console.log(`📊 文件夹 ${folderId} 邮件API响应:`, response)
     
     if (response && Array.isArray(response.list)) {
-      console.log(`📋 文件夹 ${folderId} 邮件列表长度:`, response.list.length)
-      // 直接使用convertMailToEmail函数，因为后端返回的就是MailListItemVO格式
       const convertedEmails = await Promise.all(response.list.map(convertMailToEmail))
       folderEmails[folderId] = convertedEmails
-      console.log(`✅ 文件夹 ${folderId} 邮件加载成功，转换后数量:`, folderEmails[folderId].length)
     } else {
-      console.log(`⚠️ 文件夹 ${folderId} 邮件响应格式异常:`, response)
       folderEmails[folderId] = []
     }
   } catch (error: any) {
-    console.error(`❌ 加载文件夹 ${folderId} 邮件失败:`, error)
-    console.error('🔍 错误详情:', {
-      message: error?.message,
-      response: error?.response,
-      status: error?.response?.status,
-      data: error?.response?.data
-    })
-    
+    console.error(`加载文件夹 ${folderId} 邮件失败:`, error)
     ElMessage.error(`加载文件夹邮件失败: ${error?.response?.data?.msg || error?.message || '未知错误'}`)
     folderEmails[folderId] = []
   }
@@ -621,32 +539,23 @@ async function loadFolderEmailsById(folderId: number) {
 
 
 
-// 同步邮件方法（简化版）
+// 同步邮件方法
 async function handleSyncMails() {
-  console.log('🔄 同步邮件')
   try {
     const loadingInstance = ElLoading.service({ text: '正在同步邮件...' })
     
-    console.log('🔄 重新加载当前文件夹邮件...')
     // 根据当前选中的文件夹类型选择正确的加载方法
     if (selectedFolder.value === 'custom' && selectedFolderId.value) {
-      // 自定义文件夹
-      console.log(`📁 重新加载自定义文件夹 ${selectedFolderId.value} 的邮件...`)
       await loadFolderEmailsById(selectedFolderId.value)
     } else {
-      // 系统文件夹
-      console.log(`📁 重新加载系统文件夹 ${selectedFolder.value} 的邮件...`)
       await loadFolderEmails(selectedFolder.value)
     }
     
-    console.log('📊 重新加载邮件统计...')
     await loadMailStats()
-    
-    console.log('✅ 邮件同步完成')
     ElMessage.success('邮件同步成功')
     loadingInstance.close()
   } catch (error: any) {
-    console.error('❌ 同步邮件失败:', error)
+    console.error('同步邮件失败:', error)
     ElMessage.error('同步邮件失败')
   }
 }
@@ -732,8 +641,6 @@ async function createNewFolder() {
     })
     
     if (folderName && folderName.trim()) {
-      console.log('📁 开始创建文件夹:', folderName.trim())
-      
       // 显示加载状态
       const loadingInstance = ElLoading.service({ text: '正在创建文件夹...' })
       
@@ -745,8 +652,7 @@ async function createNewFolder() {
           description: '' // 暂时不设置描述
         }
         
-        const folderId = await createFolder(createData)
-        console.log('✅ 文件夹创建成功，ID:', folderId)
+        await createFolder(createData)
         
         // 重新加载文件夹列表
         await loadCustomFolders()
@@ -779,8 +685,6 @@ async function createNewFolder() {
 
 // 删除文件夹
 async function handleDeleteFolder(folderId: number) {
-  console.log(`🗑️ 开始删除文件夹，ID: ${folderId}`)
-  
   try {
     // 获取文件夹信息
     const folder = customFolders.value.find(f => f.id === folderId)
@@ -794,7 +698,7 @@ async function handleDeleteFolder(folderId: number) {
       return
     }
     
-    // 显示确认对话框（简化，无额外提示）
+    // 显示确认对话框
     await ElMessageBox.confirm(
       `确定要删除文件夹"${folder.folderName}"吗？`,
       '删除文件夹',
@@ -810,34 +714,23 @@ async function handleDeleteFolder(folderId: number) {
     const loadingInstance = ElLoading.service({ text: '正在删除文件夹...' })
     
     try {
-      console.log('📡 调用删除文件夹API...')
       await deleteFolder(folderId)
-      
-      console.log('✅ 文件夹删除成功')
       
       // 如果当前正在查看被删除的文件夹，切换到收件箱
       if (selectedFolder.value === 'custom' && selectedFolderId.value === folderId) {
-        console.log('🔄 切换到收件箱...')
         await selectFolder('inbox')
       }
       
       // 重新加载文件夹列表
-      console.log('📁 重新加载文件夹列表...')
       await loadCustomFolders()
       
       // 重新加载邮件统计
-      console.log('📊 重新加载邮件统计...')
       await loadMailStats()
       
       ElMessage.success(`文件夹"${folder.folderName}"删除成功`)
       
     } catch (error: any) {
-      console.error('❌ 删除文件夹失败:', error)
-      console.error('🔍 删除错误详情:', {
-        message: error?.message,
-        response: error?.response,
-        status: error?.response?.status
-      })
+      console.error('删除文件夹失败:', error)
       
       const errorMsg = error?.response?.data?.msg || error?.message || '删除文件夹失败'
       ElMessage.error(`删除文件夹失败: ${errorMsg}`)
@@ -847,11 +740,10 @@ async function handleDeleteFolder(folderId: number) {
     
   } catch (error: any) {
     if (error === 'cancel') {
-      console.log('🚫 用户取消了删除文件夹操作')
       return
     }
     
-    console.error('❌ 删除文件夹操作失败:', error)
+    console.error('删除文件夹操作失败:', error)
     ElMessage.error('删除文件夹失败')
   }
 }
@@ -891,8 +783,6 @@ async function renameFolder() {
     })
     
     if (newFolderName && newFolderName.trim() && newFolderName.trim() !== folder.folderName) {
-      console.log(`📁 开始重命名文件夹: ${folder.folderName} -> ${newFolderName.trim()}`)
-      
       // 显示加载状态
       const loadingInstance = ElLoading.service({ text: '正在重命名文件夹...' })
       
@@ -907,7 +797,6 @@ async function renameFolder() {
         }
         
         await updateFolder(updateData)
-        console.log('✅ 文件夹重命名成功')
         
         // 重新加载文件夹列表
         await loadCustomFolders()
@@ -947,13 +836,9 @@ const isMyFoldersExpanded = ref(false) // 我的文件夹展开状态，默认�
 // 切换我的文件夹展开/收起状态
 function toggleMyFolders() {
   isMyFoldersExpanded.value = !isMyFoldersExpanded.value
-  console.log(`📁 我的文件夹展开状态: ${isMyFoldersExpanded.value ? '展开' : '收起'}`)
 }
 
 async function selectFolder(folder: string | number) {
-  console.log(`📁 切换文件夹: ${folder}`)
-  console.log(`🔄 更新选中文件夹状态: ${selectedFolder.value} -> ${folder}`)
-  
   // 重置文件夹ID
   selectedFolderId.value = null
 
@@ -965,36 +850,23 @@ async function selectFolder(folder: string | number) {
   if (typeof folder === 'string') {
     // 系统文件夹
     selectedFolder.value = folder
-    console.log(`📥 开始加载系统文件夹 ${folder} 的邮件...`)
     await loadFolderEmails(folder)
-    console.log(`✅ 系统文件夹切换完成: ${folder}`)
-    console.log(`📊 当前文件夹邮件数量:`, allEmails[folder]?.length || 0)
   } else {
     // 自定义文件夹
     selectedFolder.value = 'custom'
     selectedFolderId.value = folder
-    console.log(`📥 开始加载自定义文件夹 ${folder} 的邮件...`)
     await loadFolderEmailsById(folder)
-    console.log(`✅ 自定义文件夹切换完成: ${folder}`)
-    console.log(`📊 当前文件夹邮件数量:`, folderEmails[folder]?.length || 0)
   }
   
   // 预加载当前分页的邮件详情
-  console.log('🔄 开始预加载邮件详情...')
   preloadCurrentPageEmailDetails()
 }
 
 // 处理删除邮件
 async function handleDeleteEmails(emailIds: number[]) {
-  console.log(`🗑️ 开始删除邮件，ID列表:`, emailIds)
-  console.log(`📁 当前文件夹: ${selectedFolder.value}`)
-  
   try {
     loading.value = true
-    console.log('📡 调用删除邮件API...')
     await moveToTrash({ ids: emailIds })
-    
-    console.log('🔄 从当前文件夹移除邮件...')
     
     // 根据当前文件夹类型选择正确的邮件列表
     if (selectedFolder.value === 'custom' && selectedFolderId.value) {
@@ -1004,7 +876,6 @@ async function handleDeleteEmails(emailIds: number[]) {
         emailIds.forEach(emailId => {
           const emailIndex = currentEmails.findIndex(email => email.id === emailId)
           if (emailIndex !== -1) {
-            console.log(`🗑️ 从自定义文件夹 ${selectedFolderId.value} 移除邮件: ${emailId}`)
             currentEmails.splice(emailIndex, 1)
           }
         })
@@ -1016,7 +887,6 @@ async function handleDeleteEmails(emailIds: number[]) {
         emailIds.forEach(emailId => {
           const emailIndex = currentEmails.findIndex(email => email.id === emailId)
           if (emailIndex !== -1) {
-            console.log(`🗑️ 从系统文件夹 ${selectedFolder.value} 移除邮件: ${emailId}`)
             currentEmails.splice(emailIndex, 1)
           }
         })
@@ -1025,43 +895,26 @@ async function handleDeleteEmails(emailIds: number[]) {
     
     // 重新加载已删除文件夹（如果需要）
     if (selectedFolder.value !== 'deleted') {
-      console.log('📥 重新加载已删除文件夹...')
       await loadFolderEmails('deleted')
     }
     
-    console.log('📁 重新加载自定义文件夹列表以更新邮件数量...')
     await loadCustomFolders()
-    
-    console.log('📊 重新加载邮件统计...')
     await loadMailStats()
     
-    console.log(`✅ 成功删除 ${emailIds.length} 封邮件`)
     ElMessage.success(`成功删除 ${emailIds.length} 封邮件`)
   } catch (error: any) {
-    console.error('❌ 删除邮件失败:', error)
-    console.error('🔍 删除错误详情:', {
-      message: error?.message,
-      response: error?.response,
-      status: error?.response?.status
-    })
+    console.error('删除邮件失败:', error)
     ElMessage.error('删除邮件失败')
   } finally {
     loading.value = false
-    console.log('🏁 删除邮件流程结束，loading状态:', loading.value)
   }
 }
 
 // 处理恢复邮件
 async function handleRestoreEmails(emailIds: number[]) {
-  console.log(`🔄 开始恢复邮件，ID列表:`, emailIds)
-  console.log(`📁 当前文件夹: ${selectedFolder.value}`)
-  
   try {
     loading.value = true
-    console.log('📡 调用恢复邮件API...')
     await restoreFromTrash({ ids: emailIds })
-    
-    console.log('🔄 从当前文件夹移除邮件...')
     
     // 从已删除文件夹中移除邮件
     const currentEmails = allEmails.deleted
@@ -1069,40 +922,26 @@ async function handleRestoreEmails(emailIds: number[]) {
       emailIds.forEach(emailId => {
         const emailIndex = currentEmails.findIndex(email => email.id === emailId)
         if (emailIndex !== -1) {
-          console.log(`🔄 从已删除文件夹移除邮件: ${emailId}`)
           currentEmails.splice(emailIndex, 1)
         }
       })
     }
     
     // 重新加载收件箱（恢复的邮件会回到收件箱）
-    console.log('📥 重新加载收件箱...')
     await loadFolderEmails('inbox')
-    
-    console.log('📊 重新加载邮件统计...')
     await loadMailStats()
     
-    console.log(`✅ 成功恢复 ${emailIds.length} 封邮件`)
     ElMessage.success(`成功恢复 ${emailIds.length} 封邮件`)
   } catch (error: any) {
-    console.error('❌ 恢复邮件失败:', error)
-    console.error('🔍 恢复错误详情:', {
-      message: error?.message,
-      response: error?.response,
-      status: error?.response?.status
-    })
+    console.error('恢复邮件失败:', error)
     ElMessage.error('恢复邮件失败')
   } finally {
     loading.value = false
-    console.log('🏁 恢复邮件流程结束，loading状态:', loading.value)
   }
 }
 
 // 处理彻底删除邮件
 async function handlePermanentDeleteEmails(emailIds: number[]) {
-  console.log(`💀 开始彻底删除邮件，ID列表:`, emailIds)
-  console.log(`📁 当前文件夹: ${selectedFolder.value}`)
-  
   try {
     // 显示确认对话框
     await ElMessageBox.confirm(
@@ -1117,10 +956,7 @@ async function handlePermanentDeleteEmails(emailIds: number[]) {
     )
     
     loading.value = true
-    console.log('📡 调用彻底删除邮件API...')
     await permanentDelete({ ids: emailIds })
-    
-    console.log('🔄 从当前文件夹移除邮件...')
     
     // 根据当前文件夹类型选择正确的邮件列表
     if (selectedFolder.value === 'custom' && selectedFolderId.value) {
@@ -1130,7 +966,6 @@ async function handlePermanentDeleteEmails(emailIds: number[]) {
         emailIds.forEach(emailId => {
           const emailIndex = currentEmails.findIndex(email => email.id === emailId)
           if (emailIndex !== -1) {
-            console.log(`💀 从自定义文件夹 ${selectedFolderId.value} 彻底移除邮件: ${emailId}`)
             currentEmails.splice(emailIndex, 1)
           }
         })
@@ -1142,7 +977,6 @@ async function handlePermanentDeleteEmails(emailIds: number[]) {
         emailIds.forEach(emailId => {
           const emailIndex = currentEmails.findIndex(email => email.id === emailId)
           if (emailIndex !== -1) {
-            console.log(`💀 从系统文件夹 ${selectedFolder.value} 彻底移除邮件: ${emailId}`)
             currentEmails.splice(emailIndex, 1)
           }
         })
@@ -1151,34 +985,22 @@ async function handlePermanentDeleteEmails(emailIds: number[]) {
     
     // 重新加载已删除文件夹（如果需要）
     if (selectedFolder.value !== 'deleted') {
-      console.log('📥 重新加载已删除文件夹...')
       await loadFolderEmails('deleted')
     }
     
-    console.log('📁 重新加载自定义文件夹列表以更新邮件数量...')
     await loadCustomFolders()
-    
-    console.log('📊 重新加载邮件统计...')
     await loadMailStats()
     
-    console.log(`✅ 成功彻底删除 ${emailIds.length} 封邮件`)
     ElMessage.success(`成功彻底删除 ${emailIds.length} 封邮件`)
   } catch (error: any) {
     if (error === 'cancel') {
-      console.log('🚫 用户取消了彻底删除操作')
       return
     }
     
-    console.error('❌ 彻底删除邮件失败:', error)
-    console.error('🔍 彻底删除错误详情:', {
-      message: error?.message,
-      response: error?.response,
-      status: error?.response?.status
-    })
+    console.error('彻底删除邮件失败:', error)
     ElMessage.error('彻底删除邮件失败')
   } finally {
     loading.value = false
-    console.log('🏁 彻底删除邮件流程结束，loading状态:', loading.value)
   }
 }
 
@@ -1200,8 +1022,6 @@ function handleShowMessage(data: { type: string, message: string }) {
 // 处理移动邮件操作
 async function handleMoveEmails(data: { folderId: number, emailIds: number[] }) {
   const { folderId, emailIds } = data
-  console.log(`📁 开始移动邮件到文件夹 ${folderId}，邮件ID列表:`, emailIds)
-  console.log(`📁 当前文件夹: ${selectedFolder.value}`)
   
   try {
     loading.value = true
@@ -1212,9 +1032,7 @@ async function handleMoveEmails(data: { folderId: number, emailIds: number[] }) 
       throw new Error('目标文件夹不存在')
     }
     const targetFolderName = targetFolder.folderName
-    console.log(`📁 目标为自定义文件夹: ${targetFolderName}`)
     
-    console.log('📡 调用移动邮件API...')
     // 调用移动邮件API
     await moveMailToFolder({
       letterIds: emailIds,
@@ -1223,10 +1041,7 @@ async function handleMoveEmails(data: { folderId: number, emailIds: number[] }) 
     })
     
     // 移动成功后刷新自定义文件夹树状态（名称、数量等）
-    console.log('🔄 刷新自定义文件夹树状态...')
     await loadCustomFolders()
-
-    console.log('🔄 处理本地状态更新...')
     
     // 根据源文件夹类型处理本地状态
     if (selectedFolder.value === 'custom' && selectedFolderId.value) {
@@ -1236,48 +1051,35 @@ async function handleMoveEmails(data: { folderId: number, emailIds: number[] }) 
         emailIds.forEach(emailId => {
           const emailIndex = currentEmails.findIndex(email => email.id === emailId)
           if (emailIndex !== -1) {
-            console.log(`📁 从自定义文件夹 ${selectedFolderId.value} 移除邮件: ${emailId}`)
             currentEmails.splice(emailIndex, 1)
           }
         })
       }
-    } else {
-      // 系统文件夹 → 自定义文件夹：复制操作（不移除）
-      console.log(`📋 系统文件夹到自定义文件夹为复制操作，不移除原邮件`)
     }
     
     // 重新加载目标文件夹的邮件（如果当前正在查看该文件夹）
     if (selectedFolder.value === 'custom' && selectedFolderId.value === folderId) {
-      console.log('📥 重新加载目标自定义文件夹邮件...')
       await loadFolderEmailsById(folderId)
     }
     
-    console.log('📊 重新加载邮件统计...')
     await loadMailStats()
     
-    console.log(`✅ 成功移动 ${emailIds.length} 封邮件到文件夹"${targetFolderName}"`)
     ElMessage.success(`成功移动 ${emailIds.length} 封邮件到文件夹"${targetFolderName}"`)
     
   } catch (error: any) {
-    console.error('❌ 移动邮件失败:', error)
-    console.error('🔍 移动错误详情:', {
-      message: error?.message,
-      response: error?.response,
-      status: error?.response?.status
-    })
+    console.error('移动邮件失败:', error)
     
     const errorMsg = error?.response?.data?.msg || error?.message || '移动邮件失败'
     ElMessage.error(`移动邮件失败: ${errorMsg}`)
   } finally {
     loading.value = false
-    console.log('🏁 移动邮件流程结束，loading状态:', loading.value)
   }
 }
 
 // 处理从当前自定义文件夹移除邮件
 async function handleRemoveFromFolder(data: { folderId: number, emailIds: number[] }) {
   const { folderId, emailIds } = data
-  console.log(`📁 从自定义文件夹 ${folderId} 移除邮件，ID列表:`, emailIds)
+  
   try {
     loading.value = true
     await removeMailFromFolder(folderId, emailIds)
@@ -1288,7 +1090,6 @@ async function handleRemoveFromFolder(data: { folderId: number, emailIds: number
       emailIds.forEach(emailId => {
         const emailIndex = currentEmails.findIndex(email => email.id === emailId)
         if (emailIndex !== -1) {
-          console.log(`📁 从自定义文件夹 ${folderId} 本地移除邮件: ${emailId}`)
           currentEmails.splice(emailIndex, 1)
         }
       })
@@ -1301,7 +1102,7 @@ async function handleRemoveFromFolder(data: { folderId: number, emailIds: number
 
     ElMessage.success(`已从当前文件夹移除 ${emailIds.length} 封邮件`)
   } catch (error: any) {
-    console.error('❌ 从文件夹移除失败:', error)
+    console.error('从文件夹移除失败:', error)
     ElMessage.error('从文件夹移除失败')
   } finally {
     loading.value = false
@@ -1310,15 +1111,11 @@ async function handleRemoveFromFolder(data: { folderId: number, emailIds: number
 
 // 辅助函数：更新所有文件夹中的邮件状态
 function updateEmailStatusInAllFolders(emailIds: number[], updateFn: (email: Email) => void) {
-  console.log(`🔄 开始更新邮件状态，邮件ID列表:`, emailIds)
-  
   // 更新系统文件夹中的邮件状态
   emailIds.forEach(emailId => {
-    console.log(`📧 处理邮件ID: ${emailId}`)
     Object.keys(allEmails).forEach(folderKey => {
       const email = allEmails[folderKey].find(e => e.id === emailId)
       if (email) {
-        console.log(`📁 在系统文件夹 ${folderKey} 中找到邮件 ${emailId}，更新状态`)
         updateFn(email)
       }
     })
@@ -1329,20 +1126,15 @@ function updateEmailStatusInAllFolders(emailIds: number[], updateFn: (email: Ema
     Object.keys(folderEmails).forEach(folderId => {
       const email = folderEmails[folderId].find(e => e.id === emailId)
       if (email) {
-        console.log(`📁 在自定义文件夹 ${folderId} 中找到邮件 ${emailId}，更新状态`)
         updateFn(email)
       }
     })
   })
-  
-  console.log(`✅ 邮件状态更新完成`)
 }
 
 // 处理标记邮件操作
 async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
   const { action, emailIds } = data
-  console.log(`🏷️ 开始标记邮件操作: ${action}，ID列表:`, emailIds)
-  console.log(`📁 当前文件夹: ${selectedFolder.value}`)
   
   try {
     loading.value = true
@@ -1350,7 +1142,6 @@ async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
     
     switch (action) {
       case 'read':
-        console.log('📡 调用标记为已读API...')
         await setFolderMailsReadState(emailIds, true)
         successMessage = `成功标记 ${emailIds.length} 封邮件为已读`
         
@@ -1361,7 +1152,6 @@ async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
         break
         
       case 'unread':
-        console.log('📡 调用标记为未读API...')
         await setFolderMailsReadState(emailIds, false)
         successMessage = `成功标记 ${emailIds.length} 封邮件为未读`
         
@@ -1372,7 +1162,6 @@ async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
         break
         
       case 'star':
-        console.log('📡 调用添加星标API...')
         await toggleFolderMailsStar(emailIds)
         successMessage = `成功为 ${emailIds.length} 封邮件添加星标`
         
@@ -1388,7 +1177,6 @@ async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
         break
         
       case 'unstar':
-        console.log('📡 调用取消星标API...')
         await toggleFolderMailsStar(emailIds)
         successMessage = `成功取消 ${emailIds.length} 封邮件的星标`
         
@@ -1411,7 +1199,6 @@ async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
         break
         
       case 'spam':
-        console.log('📡 调用标记为垃圾邮件API...')
         await markAsTrash({ ids: emailIds })
         successMessage = `成功将 ${emailIds.length} 封邮件标记为垃圾邮件`
         
@@ -1441,12 +1228,10 @@ async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
         }
         
         // 重新加载相关文件夹和统计信息
-        console.log('🔄 重新加载垃圾箱文件夹...')
         await loadFolderEmails('trash')
         
         // 如果当前不在垃圾箱，重新加载当前文件夹
         if (selectedFolder.value !== 'trash') {
-          console.log(`🔄 重新加载当前文件夹 ${selectedFolder.value}...`)
           if (selectedFolder.value === 'custom' && selectedFolderId.value) {
             await loadFolderEmailsById(selectedFolderId.value)
           } else {
@@ -1455,12 +1240,10 @@ async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
         }
         
         // 重新加载自定义文件夹树（更新邮件数量）
-        console.log('🔄 重新加载自定义文件夹树...')
         await loadCustomFolders()
         break
         
       case 'unspam':
-        console.log('📡 调用取消垃圾邮件标记API...')
         await restoreFromTrashFlag({ ids: emailIds })
         successMessage = `成功取消 ${emailIds.length} 封邮件的垃圾邮件标记`
         
@@ -1490,12 +1273,10 @@ async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
         }
         
         // 重新加载相关文件夹和统计信息
-        console.log('🔄 重新加载收件箱文件夹...')
         await loadFolderEmails('inbox')
         
         // 如果当前不在收件箱，重新加载当前文件夹
         if (selectedFolder.value !== 'inbox') {
-          console.log(`🔄 重新加载当前文件夹 ${selectedFolder.value}...`)
           if (selectedFolder.value === 'custom' && selectedFolderId.value) {
             await loadFolderEmailsById(selectedFolderId.value)
           } else {
@@ -1504,68 +1285,46 @@ async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
         }
         
         // 重新加载自定义文件夹树（更新邮件数量）
-        console.log('🔄 重新加载自定义文件夹树...')
         await loadCustomFolders()
         break
         
       default:
-        console.error(`❌ 未知的标记操作: ${action}`)
         ElMessage.error('未知的标记操作')
         return
     }
     
-    console.log('📊 重新加载邮件统计...')
     await loadMailStats()
-    
-    console.log(`✅ ${successMessage}`)
     ElMessage.success(successMessage)
     
   } catch (error: any) {
-    console.error('❌ 标记邮件失败:', error)
-    console.error('🔍 标记错误详情:', {
-      message: error?.message,
-      response: error?.response,
-      status: error?.response?.status
-    })
+    console.error('标记邮件失败:', error)
     ElMessage.error('标记邮件失败')
   } finally {
     loading.value = false
-    console.log('🏁 标记邮件流程结束，loading状态:', loading.value)
   }
 }
 
 // 处理星标切换
 async function handleToggleStar(emailId: number) {
-  console.log(`⭐ 开始切换邮件星标状态: ${emailId}`)
-  
   try {
-    console.log('📡 调用切换星标API...')
     await toggleFolderMailsStar([emailId])
-    
-    console.log('🔄 在所有文件夹中查找并更新邮件的星标状态...')
     
     // 更新系统文件夹中的邮件状态
     Object.keys(allEmails).forEach(folderKey => {
       const email = allEmails[folderKey].find(e => e.id === emailId)
       if (email) {
-        const oldStatus = email.isStarred
         email.isStarred = !email.isStarred
-        
-        console.log(`📧 邮件 ${emailId} 在系统文件夹 ${folderKey} 中，星标状态: ${oldStatus} -> ${email.isStarred}`)
         
         const today = new Date().toISOString().split('T')[0]
         if (email.isStarred) {
           email.starredAt = today
-          console.log(`⭐ 设置星标时间: ${today}`)
         } else {
           email.starredAt = undefined
-          console.log(`❌ 清除星标时间`)
           
           // 从星标文件夹中移除
           if (folderKey === 'starred') {
             const starredIndex = allEmails.starred.findIndex(e => e.id === emailId)
             if (starredIndex !== -1) {
-              console.log(`🗑️ 从星标文件夹移除邮件: ${emailId}`)
               allEmails.starred.splice(starredIndex, 1)
             }
           }
@@ -1577,48 +1336,30 @@ async function handleToggleStar(emailId: number) {
     Object.keys(folderEmails).forEach(folderId => {
       const email = folderEmails[folderId].find(e => e.id === emailId)
       if (email) {
-        const oldStatus = email.isStarred
         email.isStarred = !email.isStarred
-        
-        console.log(`📧 邮件 ${emailId} 在自定义文件夹 ${folderId} 中，星标状态: ${oldStatus} -> ${email.isStarred}`)
         
         const today = new Date().toISOString().split('T')[0]
         if (email.isStarred) {
           email.starredAt = today
-          console.log(`⭐ 设置星标时间: ${today}`)
         } else {
           email.starredAt = undefined
-          console.log(`❌ 清除星标时间`)
         }
       }
     })
     
-    console.log('📥 重新加载星标文件夹...')
     await loadFolderEmails('starred')
-    
-    console.log('📊 重新加载邮件统计...')
     await loadMailStats()
     
-    console.log('✅ 星标切换完成')
-    
   } catch (error: any) {
-    console.error('❌ 切换星标失败:', error)
-    console.error('🔍 星标切换错误详情:', {
-      message: error?.message,
-      response: error?.response,
-      status: error?.response?.status
-    })
+    console.error('切换星标失败:', error)
     ElMessage.error('操作失败')
   }
 }
 
 // 处理查看邮件详情
 async function handleViewEmailDetail(emailId: number) {
-  console.log(`📧 开始查看邮件详情，邮件ID: ${emailId}`)
-  
   // 草稿箱点击直接跳转到写信界面，而不是查看详情
   if (selectedFolder.value === 'drafts') {
-    console.log('📝 当前为草稿箱，跳转到写信界面')
     await router.push({ path: '/mail/write', query: { draftId: String(emailId) } })
     return
   }
@@ -1633,38 +1374,30 @@ async function handleViewEmailDetail(emailId: number) {
   }
   
   if (currentEmail && !currentEmail.isRead) {
-    console.log('📖 邮件未读，开始标记为已读...')
     try {
       await setFolderMailsReadState([emailId], true)
       
       // 更新本地状态 - 使用辅助函数更新所有文件夹中的邮件状态
       updateEmailStatusInAllFolders([emailId], (email) => {
         email.isRead = true
-        console.log(`📧 邮件 ${emailId} 标记为已读`)
       })
       
       // 重新加载邮件统计
       await loadMailStats()
       
-      console.log('✅ 邮件标记为已读成功')
     } catch (markError: any) {
-      console.error('❌ 标记邮件为已读失败:', markError)
+      console.error('标记邮件为已读失败:', markError)
       // 即使标记失败，仍然显示邮件详情
     }
-  } else {
-    console.log('📖 邮件已经是已读状态，无需标记')
   }
 }
 
 // 预加载当前分页的邮件详情
 async function preloadCurrentPageEmailDetails() {
   try {
-    console.log('🔄 开始预加载当前分页邮件详情...')
-    
     // 获取当前显示的邮件列表
     const currentEmails = getCurrentEmails()
     if (!currentEmails || currentEmails.length === 0) {
-      console.log('📭 当前没有邮件，跳过预加载')
       return
     }
     
@@ -1675,61 +1408,47 @@ async function preloadCurrentPageEmailDetails() {
     const endIndex = startIndex + pageSize
     const pageEmails = currentEmails.slice(startIndex, endIndex)
     
-    console.log(`📋 预加载第${currentPage}页邮件，共${pageEmails.length}封`)
-    
     // 并发预加载邮件详情
     const preloadPromises = pageEmails.map(async (email) => {
       // 检查缓存中是否已有详情
       if (emailDetailsCache.value[email.id]) {
-        console.log(`✅ 邮件 ${email.id} 详情已在缓存中`)
         return
       }
       
       try {
-        console.log(`📡 预加载邮件详情: ${email.id}`)
         const emailDetail = await getLetterDetail(email.id)
         
         if (emailDetail) {
           // 缓存邮件详情
           emailDetailsCache.value[email.id] = emailDetail
-          console.log(`✅ 邮件 ${email.id} 详情预加载成功`)
         }
       } catch (error: any) {
-        console.error(`❌ 预加载邮件 ${email.id} 详情失败:`, error)
         // 预加载失败不影响用户体验，继续处理其他邮件
       }
     })
     
     // 等待所有预加载完成
     await Promise.allSettled(preloadPromises)
-    console.log('✅ 当前分页邮件详情预加载完成')
     
   } catch (error: any) {
-    console.error('❌ 预加载邮件详情失败:', error)
     // 预加载失败不影响主要功能
   }
 }
 
 // 处理获取邮件详情
 async function handleGetEmailDetail(emailId: number) {
-  console.log(`📧 开始获取邮件详情，邮件ID: ${emailId}`)
-  
   try {
     let emailDetail: any = null
     
     // 优先从缓存中获取
     if (emailDetailsCache.value[emailId]) {
-      console.log('📋 从缓存中获取邮件详情')
       emailDetail = emailDetailsCache.value[emailId]
     } else {
-      console.log('📡 调用邮件详情API...')
       emailDetail = await getLetterDetail(emailId)
-      console.log('📊 邮件详情API响应:', emailDetail)
       
       // 缓存邮件详情
       if (emailDetail) {
         emailDetailsCache.value[emailId] = emailDetail
-        console.log('💾 邮件详情已缓存')
       }
     }
     
@@ -1739,16 +1458,13 @@ async function handleGetEmailDetail(emailId: number) {
     }
     
     // 获取邮件附件列表
-    console.log('📎 开始获取邮件附件列表...')
     try {
       const attachments = await getLetterAttachments(emailId)
-      console.log('📎 邮件附件API响应:', attachments)
       
       // 将附件信息添加到邮件详情中
       emailDetail.attachments = attachments || []
-      console.log(`✅ 成功获取 ${attachments?.length || 0} 个附件`)
     } catch (attachmentError: any) {
-      console.error('❌ 获取邮件附件失败:', attachmentError)
+      console.error('获取邮件附件失败:', attachmentError)
       // 附件获取失败不影响邮件详情显示，设置为空数组
       emailDetail.attachments = []
     }
@@ -1758,15 +1474,8 @@ async function handleGetEmailDetail(emailId: number) {
       mainContentRef.value.updateEmailDetail(emailDetail)
     }
     
-    console.log('✅ 邮件详情获取成功')
   } catch (error: any) {
-    console.error('❌ 获取邮件详情失败:', error)
-    console.error('🔍 邮件详情错误详情:', {
-      message: error?.message,
-      response: error?.response,
-      status: error?.response?.status,
-      data: error?.response?.data
-    })
+    console.error('获取邮件详情失败:', error)
     
     const errorMsg = error?.response?.data?.message || error?.message || '获取邮件详情失败'
     ElMessage.error(`查看邮件详情失败: ${errorMsg}`)
@@ -1775,105 +1484,43 @@ async function handleGetEmailDetail(emailId: number) {
 
 // 获取各文件夹邮件数量（从统计数据获取）
 function getDraftCount(): number {
-  const count = (mailStats.value.draftsCount ?? allEmails.drafts?.length ?? 0)
-  console.log(`📝 草稿箱数量: ${count} (统计: ${mailStats.value.draftsCount}, 本地: ${allEmails.drafts?.length})`)
-  return count
+  return (mailStats.value.draftsCount ?? allEmails.drafts?.length ?? 0)
 }
 
 function getDeletedCount(): number {
-  const count = (mailStats.value.deletedCount ?? allEmails.deleted?.length ?? 0)
-  console.log(`🗑️ 已删除数量: ${count} (统计: ${mailStats.value.deletedCount}, 本地: ${allEmails.deleted?.length})`)
-  return count
+  return (mailStats.value.deletedCount ?? allEmails.deleted?.length ?? 0)
 }
 
 function getStarredCount(): number {
-  const count = (mailStats.value.starredCount ?? allEmails.starred?.length ?? 0)
-  console.log(`⭐ 星标数量: ${count} (统计: ${mailStats.value.starredCount}, 本地: ${allEmails.starred?.length})`)
-  return count
+  return (mailStats.value.starredCount ?? allEmails.starred?.length ?? 0)
 }
 
 function getInboxCount(): number {
-  const count = (mailStats.value.inboxCount ?? allEmails.inbox?.length ?? 0)
-  console.log(`📥 收件箱数量: ${count} (统计: ${mailStats.value.inboxCount}, 本地: ${allEmails.inbox?.length})`)
-  return count
+  return (mailStats.value.inboxCount ?? allEmails.inbox?.length ?? 0)
 }
 
 function getSentCount(): number {
-  const count = (mailStats.value.sentCount ?? allEmails.sent?.length ?? 0)
-  console.log(`📤 已发送数量: ${count} (统计: ${mailStats.value.sentCount}, 本地: ${allEmails.sent?.length})`)
-  return count
+  return (mailStats.value.sentCount ?? allEmails.sent?.length ?? 0)
 }
 
 function getTrashCount(): number {
-  const count = (mailStats.value.trashCount ?? 0)
-  console.log(`🗑️ 垃圾箱数量: ${count} (统计: ${mailStats.value.trashCount})`)
-  return count
+  return (mailStats.value.trashCount ?? 0)
 }
-
-
-// 测试发件箱加载的调试函数
-async function testSentMailLoading() {
-  console.log('🧪 开始测试发件箱加载...')
-  try {
-    console.log('📤 直接调用发件箱API...')
-    const response = await getSentMails({ pageNo: 1, pageSize: 100 })
-    console.log('📊 发件箱API直接响应:', response)
-    
-    if (response && Array.isArray(response.list)) {
-      console.log('✅ 发件箱API调用成功，邮件数量:', response.list.length)
-      if (response.list.length > 0) {
-        console.log('📧 第一封邮件示例:', response.list[0])
-      }
-    } else {
-      console.log('⚠️ 发件箱API响应格式异常')
-    }
-  } catch (error: any) {
-    console.error('❌ 发件箱API测试失败:', error)
-    console.error('🔍 测试错误详情:', {
-      message: error?.message,
-      response: error?.response,
-      status: error?.response?.status,
-      data: error?.response?.data
-    })
-  }
-}
-
 
 // 组件挂载时初始化数据
 onMounted(async () => {
-  console.log('🚀 邮件组件开始挂载...')
-  console.log('📅 当前时间:', new Date().toISOString())
-  
   try {
-    console.log('📊 第一步: 加载邮件统计信息...')
     await loadMailStats()
-    
-    console.log('📁 第二步: 加载自定义文件夹列表...')
     await loadCustomFolders()
-    
-    console.log('📥 第三步: 加载收件箱邮件...')
     await loadFolderEmails('inbox')
-    
-    // 测试发件箱加载
-    console.log('🧪 第四步: 测试发件箱加载...')
-    await testSentMailLoading()
-    
-    console.log('✅ 邮件组件初始化完成')
-    console.log('📁 自定义文件夹右键菜单功能已启用')
   } catch (error: any) {
-    console.error('❌ 邮件组件初始化失败:', error)
-    console.error('🔍 初始化错误详情:', {
-      message: error?.message,
-      response: error?.response,
-      status: error?.response?.status
-    })
+    console.error('邮件组件初始化失败:', error)
   }
 })
 
 
 const router = useRouter()
 function goCompose() {
-  console.log('✍️ 跳转到写信页面...')
   router.push('/mail/write')
 }
 

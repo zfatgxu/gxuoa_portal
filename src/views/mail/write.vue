@@ -476,23 +476,15 @@ import {
   type MailListItemVO,
   sendLetter,
   // 附件相关API
-  uploadAttachment,
-  uploadAttachmentsBatch,
-  uploadAttachmentWithProgress,
   uploadAttachmentsBatchWithProgress,
   downloadFileToLocal,
   deleteAttachment,
   batchDeleteAttachments,
   getAttachmentInfo,
   formatFileSize,
-  validateFileType,
   validateFileSize,
   getFileExtension,
-  getFileTypeIcon,
-  type AttachmentInfoRespVO,
-  type BatchDeleteAttachmentReqVO,
-  type ConvertToFormalReqVO,
-  type UploadProgressCallback
+  type AttachmentInfoRespVO
 } from '@/api/system/mail/letter/index'
 import { getDraft, createDraft, updateDraft, type LetterDraftRespVO, type LetterDraftCreateReqVO, type LetterDraftUpdateReqVO } from '@/api/system/mail/draft'
 import {getSimpleUserList, getUserByIdCard} from '@/api/system/user'
@@ -500,7 +492,6 @@ import {getAccessToken} from '@/utils/auth'
 import '@/views/mail/mail.css'
 import topImage from '@/views/mail/image/top.png'
 
-// 移除 Font Awesome 导入，使用 wangEditor 内置图标
 import {
   ArrowDown,
   Delete,
@@ -512,8 +503,6 @@ import {
   Star,
   View
 } from '@element-plus/icons-vue'
-
-// 移除 Font Awesome 库添加代码
 
 
 const router = useRouter()
@@ -552,8 +541,6 @@ const uploading = ref(false)
 const uploadProgress = ref(0)
 const attachmentList = ref<AttachmentInfoRespVO[]>([]) // 已上传的附件信息列表
 const tempAttachmentList = ref<AttachmentInfoRespVO[]>([]) // 临时附件列表
-
-// 移除格式按钮状态，使用 wangEditor 内置状态管理
 
 // TextEditor 相关状态
 const editorInstance = ref<any>(null)
@@ -1197,8 +1184,6 @@ const handleEditorChange = (editor: any) => {
 }
 
 
-// 移除自定义编辑器相关方法，使用 wangEditor 内置功能
-
 // 触发文件选择
 const triggerFileUpload = () => {
   const fileInput = document.getElementById('file-input') as HTMLInputElement
@@ -1369,38 +1354,6 @@ const handleFileUpload = async (files: FileList | null) => {
 // 验证文件
 const validateFiles = (files: File[]) => {
   const maxSize = 1024 * 1024 * 1024 // 1GB
-  const allowedTypes = [
-    // 文档类型
-    'application/pdf',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.ms-excel',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-powerpoint',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'text/plain',
-    // 图片类型
-    'image/jpeg',
-    'image/png',
-    'image/gif',
-    'image/bmp',
-    'image/svg+xml',
-    // 压缩文件
-    'application/zip',
-    'application/x-rar-compressed',
-    'application/x-7z-compressed',
-    // 视频文件
-    'video/mp4',
-    'video/avi',
-    'video/quicktime',
-    'video/x-ms-wmv',
-    'video/x-flv',
-    // 音频文件
-    'audio/mpeg',
-    'audio/wav',
-    'audio/flac',
-    'audio/aac'
-  ]
   
   for (const file of files) {
     // 检查文件大小
@@ -1410,14 +1363,6 @@ const validateFiles = (files: File[]) => {
         message: `文件 ${file.name} 超过1GB大小限制`
       }
     }
-    
-    // 检查文件类型（可选，因为后端支持所有类型）
-    // if (!validateFileType(file, allowedTypes)) {
-    //   return {
-    //     valid: false,
-    //     message: `文件 ${file.name} 类型不支持`
-    //   }
-    // }
   }
   
   return { valid: true, message: '' }
@@ -1525,8 +1470,6 @@ const processRecipients = async (recipients: string[]): Promise<string[]> => {
   return processedIdCards
 }
 
-// 移除自定义样式处理，使用 wangEditor 内置样式管理
-
 // 执行发送邮件
 const doSendMail = async () => {
   try {
@@ -1551,9 +1494,7 @@ const doSendMail = async () => {
     // 处理密送人：转换为身份证号
     const processedBcc = mailForm.value.bcc.length > 0 ? await processRecipients(mailForm.value.bcc) : []
     
-    // 注意：不再手动调用 convertToFormalAttachments API
     // 后端在发送邮件时会自动处理附件转换
-    console.log('🔄 代码已更新 - 不再调用 convertToFormalAttachments API')
     if (mailForm.value.attachmentIds.length > 0) {
       console.log('📎 邮件包含附件，将由后端自动处理:')
       console.log('📎 附件ID列表:', mailForm.value.attachmentIds)
@@ -1665,16 +1606,13 @@ const saveDraftHandler = async () => {
       ElMessage.success('草稿已创建并保存')
     }
     
-    // 注意：草稿保存时，附件保持临时状态，不进行转换
-    // 只有在发送邮件时才会将临时附件转为正式附件
+    // 草稿保存时，附件保持临时状态，不进行转换
   } catch (error: any) {
     console.error('保存草稿失败:', error)
     const errorMsg = error?.response?.data?.message || error?.message || '网络错误，请稍后重试'
     ElMessage.error(`保存失败: ${errorMsg}`)
   }
 }
-
-// 移除所有自定义编辑器相关方法，使用 wangEditor 内置功能
 
 onMounted(async () => {
   console.log('🚀 页面初始化开始')
@@ -1759,8 +1697,6 @@ onMounted(async () => {
         showBcc.value = bccList.length > 0
         
         // 加载草稿的附件信息（如果有的话）
-        // 注意：这里需要根据实际的草稿API来加载附件信息
-        // 目前假设草稿可能包含附件ID列表
         console.log('📝 草稿数据:', draft)
         console.log('📎 草稿中的 attachmentIds:', draft.attachmentIds)
         if (draft.attachmentIds && Array.isArray(draft.attachmentIds)) {
@@ -1794,44 +1730,6 @@ onMounted(async () => {
 }
 
 
-/* 顶部标题栏 */
-.mail-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 20px;
-  height: 50px;
-  border-bottom: 1px solid #e6e6e6;
-  background-color: #fff;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-}
-
-.mail-logo {
-  display: flex;
-  align-items: center;
-}
-
-.logo-icon {
-  width: 30px;
-  height: 30px;
-  background-color: #4e73df;
-  color: white;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 8px;
-}
-
-.logo-text {
-  font-size: 18px;
-  font-weight: bold;
-  color: #4e73df;
-}
-
-.search-box {
-  width: 240px;
-}
 
 /* 主体布局 */
 .content-wrapper {
@@ -1928,24 +1826,6 @@ onMounted(async () => {
   margin-right: 5px;
 }
 
-.tool-select {
-  height: 33px;
-  padding: 0 16px;
-  border: 1px solid #e0e0e0;
-  border-radius: 12px;
-  background-color: #ffffff;
-  cursor: pointer;
-  font-size: 15px;
-  color: #222;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  box-sizing: border-box;
-}
-
-.tool-select:hover {
-  background-color: #f0f0f0;
-}
 
 .toolbar-right {
   display: flex;
@@ -2065,8 +1945,6 @@ onMounted(async () => {
 }
 
 
-/* 移除自定义编辑器相关样式，使用 wangEditor 内置样式 */
-
 /* 自定义 wangEditor 样式以匹配现有设计 */
 .text-editor-container :deep(.w-e-toolbar) {
   background-color: #f5faff;
@@ -2094,11 +1972,6 @@ onMounted(async () => {
   background-color: #f8f9fa;
 }
 
-.sender-name {
-  color: #409eff;
-  margin-left: 5px;
-  cursor: pointer;
-}
 
 /* 联系人列表 */
 .contact-list {
@@ -2141,29 +2014,6 @@ onMounted(async () => {
   margin-bottom: 2px;
 }
 
-.group-header {
-  padding: 8px 12px;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  background-color: #f5f7fa;
-  font-size: 14px;
-  color: #606266;
-  border-radius: 4px;
-  margin: 2px 4px;
-}
-
-.group-header .el-icon {
-  margin-right: 5px;
-  font-size: 12px;
-  color: #909399;
-}
-
-.group-header .count {
-  margin-left: 5px;
-  font-size: 12px;
-  color: #909399;
-}
 
 .group-contacts {
   padding: 2px 0;
@@ -2198,10 +2048,6 @@ onMounted(async () => {
   color: #303133;
 }
 
-.contact-email {
-  font-size: 12px;
-  color: #909399;
-}
 
 /* 星标联系人特殊样式 */
 .folder-badge {
