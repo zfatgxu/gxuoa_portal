@@ -35,11 +35,6 @@
               <el-icon><Files /></el-icon>
               <span>附件</span>
             </div>
-
-            <div class="tool-btn">
-              <el-icon><Files /></el-icon>
-              <span>超大附件</span>
-            </div>
             <el-dropdown trigger="click">
               <div class="tool-btn">
                 <el-icon><Setting /></el-icon>
