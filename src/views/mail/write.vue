@@ -314,9 +314,19 @@
           </div>
           
           <!-- 附件统计信息 -->
-          <div v-if="(attachmentList.length + mailForm.attachments.length) > 0" class="attachment-stats" style="margin-top: 10px; padding: 8px 12px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 4px; font-size: 12px; color: #0369a1;">
+          <div v-if="(attachmentList.length + mailForm.attachments.length) > 0" class="attachment-stats" :style="getAttachmentStatsStyle()">
             <el-icon style="margin-right: 5px;"><InfoFilled /></el-icon>
-            当前邮件 {{ attachmentList.length + mailForm.attachments.length }} 个附件，大小 {{ formatCurrentAttachmentSize() }}
+            <div class="stats-content">
+              <div class="stats-main">
+                当前邮件 {{ attachmentList.length + mailForm.attachments.length }} 个附件，大小 {{ formatCurrentAttachmentSize() }}
+              </div>
+              <div class="stats-limit">
+                限制：单个文件 ≤ 50MB，总大小 ≤ 100MB
+              </div>
+              <div v-if="isAttachmentSizeWarning()" class="stats-warning">
+                ⚠️ 附件总大小接近限制，建议减少附件数量
+              </div>
+            </div>
           </div>
         </div>
         
@@ -463,8 +473,6 @@ import {
   deleteAttachment,
   batchDeleteAttachments,
   getAttachmentInfo,
-  formatFileSize,
-  validateFileSize,
   getFileExtension,
   type AttachmentInfoRespVO
 } from '@/api/system/mail/letter/index'
@@ -482,8 +490,7 @@ import {
   InfoFilled,
   Position,
   Setting,
-  Star,
-  View
+  Star
 } from '@element-plus/icons-vue'
 
 
@@ -553,7 +560,6 @@ const starredContactDisplayNames = ref<Map<number, string>>(new Map())
 
 // 当前用户信息
 const userStore = useUserStore();
-const currentUser = computed(() => userStore.getUser.nickname || '未登录用户');
 
 // 过滤后的最近联系人（基于搜索关键词）
 const filteredRecentContacts = computed(() => {
@@ -1200,6 +1206,73 @@ const formatCurrentAttachmentSize = (): string => {
   return formatFileSize(totalSize)
 }
 
+// 获取当前附件总大小（字节）
+const getCurrentAttachmentSizeBytes = (): number => {
+  let totalSize = 0
+  
+  // 计算已上传附件的大小
+  attachmentList.value.forEach(attachment => {
+    totalSize += attachment.fileSize || 0
+  })
+  
+  // 计算本地文件的大小
+  mailForm.value.attachments.forEach(file => {
+    totalSize += file.size
+  })
+  
+  return totalSize
+}
+
+// 检查是否显示附件大小警告
+const isAttachmentSizeWarning = (): boolean => {
+  const currentSize = getCurrentAttachmentSizeBytes()
+  const totalMaxSize = 100 * 1024 * 1024 // 100MB
+  const warningThreshold = totalMaxSize * 0.8 // 80%时显示警告
+  
+  return currentSize > warningThreshold
+}
+
+// 获取附件统计信息的样式
+const getAttachmentStatsStyle = () => {
+  const currentSize = getCurrentAttachmentSizeBytes()
+  const totalMaxSize = 100 * 1024 * 1024 // 100MB
+  
+  if (currentSize > totalMaxSize) {
+    // 超过限制，显示错误样式
+    return {
+      marginTop: '10px',
+      padding: '8px 12px',
+      background: '#fef2f2',
+      border: '1px solid #fecaca',
+      borderRadius: '4px',
+      fontSize: '12px',
+      color: '#dc2626'
+    }
+  } else if (isAttachmentSizeWarning()) {
+    // 接近限制，显示警告样式
+    return {
+      marginTop: '10px',
+      padding: '8px 12px',
+      background: '#fffbeb',
+      border: '1px solid #fed7aa',
+      borderRadius: '4px',
+      fontSize: '12px',
+      color: '#d97706'
+    }
+  } else {
+    // 正常状态
+    return {
+      marginTop: '10px',
+      padding: '8px 12px',
+      background: '#f0f9ff',
+      border: '1px solid #bae6fd',
+      borderRadius: '4px',
+      fontSize: '12px',
+      color: '#0369a1'
+    }
+  }
+}
+
 // 删除附件（从本地文件列表）
 const removeAttachment = (index: number) => {
   const fileName = mailForm.value.attachments[index].name
@@ -1335,15 +1408,41 @@ const handleFileUpload = async (files: FileList | null) => {
 
 // 验证文件
 const validateFiles = (files: File[]) => {
-  const maxSize = 1024 * 1024 * 1024 // 1GB
+  const singleFileMaxSize = 50 * 1024 * 1024 // 50MB
+  const totalMaxSize = 100 * 1024 * 1024 // 100MB
   
+  // 计算当前已上传附件的大小
+  let currentTotalSize = 0
+  attachmentList.value.forEach(attachment => {
+    currentTotalSize += attachment.fileSize || 0
+  })
+  
+  // 计算当前本地文件的大小
+  mailForm.value.attachments.forEach(file => {
+    currentTotalSize += file.size
+  })
+  
+  // 计算新文件的总大小
+  let newFilesTotalSize = 0
   for (const file of files) {
-    // 检查文件大小
-    if (!validateFileSize(file, maxSize)) {
+    newFilesTotalSize += file.size
+  }
+  
+  // 检查单个文件大小限制
+  for (const file of files) {
+    if (file.size > singleFileMaxSize) {
       return {
         valid: false,
-        message: `文件 ${file.name} 超过1GB大小限制`
+        message: `文件 "${file.name}" 超过单个文件50MB大小限制（当前大小：${formatFileSize(file.size)}）`
       }
+    }
+  }
+  
+  // 检查总附件大小限制
+  if (currentTotalSize + newFilesTotalSize > totalMaxSize) {
+    return {
+      valid: false,
+      message: `附件总大小超过100MB限制。当前已使用：${formatFileSize(currentTotalSize)}，新增：${formatFileSize(newFilesTotalSize)}，总计：${formatFileSize(currentTotalSize + newFilesTotalSize)}`
     }
   }
   
@@ -1461,6 +1560,14 @@ const doSendMail = async () => {
     // 验证必填字段
     if (!mailForm.value.recipients.length) {
       ElMessage.warning('请选择收件人')
+      return
+    }
+    
+    // 验证附件大小限制
+    const currentSize = getCurrentAttachmentSizeBytes()
+    const totalMaxSize = 100 * 1024 * 1024 // 100MB
+    if (currentSize > totalMaxSize) {
+      ElMessage.error(`附件总大小超过100MB限制，当前大小：${formatCurrentAttachmentSize()}`)
       return
     }
     
@@ -1680,12 +1787,14 @@ onMounted(async () => {
         
         // 加载草稿的附件信息（如果有的话）
         console.log('📝 草稿数据:', draft)
-        console.log('📎 草稿中的 attachmentIds:', draft.attachmentIds)
-        if (draft.attachmentIds && Array.isArray(draft.attachmentIds)) {
+        // 注意：草稿类型中可能没有 attachmentIds 字段，需要根据实际API调整
+        const draftAttachmentIds = (draft as any).attachmentIds
+        console.log('📎 草稿中的 attachmentIds:', draftAttachmentIds)
+        if (draftAttachmentIds && Array.isArray(draftAttachmentIds)) {
           console.log('📎 设置草稿附件ID前:', mailForm.value.attachmentIds)
-          mailForm.value.attachmentIds = draft.attachmentIds
+          mailForm.value.attachmentIds = draftAttachmentIds
           console.log('📎 设置草稿附件ID后:', mailForm.value.attachmentIds)
-          await loadAttachmentInfo(draft.attachmentIds)
+          await loadAttachmentInfo(draftAttachmentIds)
         }
         
         ElMessage.success('已加载草稿')
@@ -2109,6 +2218,38 @@ onMounted(async () => {
 
 .attachments-section::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* 附件统计信息样式 */
+.attachment-stats {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.stats-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stats-main {
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.stats-limit {
+  font-size: 11px;
+  opacity: 0.8;
+  line-height: 1.3;
+}
+
+.stats-warning {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
+  margin-top: 2px;
 }
 
 /* 附件网格布局 */
