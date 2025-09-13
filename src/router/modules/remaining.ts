@@ -1030,7 +1030,29 @@ const remainingRouter: AppRouteRecordRaw[] = [
       activeMenu: '/document/presentation-view'
     }
   },
-  
+  {
+    path: '/mail',
+    component: Layout,
+    name: 'Mail',
+    meta: {
+      hidden: true
+    },
+    children: [
+      {
+        path: 'write',
+        component: () => import('@/views/mail/write.vue'),
+        name: 'MailWrite',
+        meta: {
+          title: '写邮件',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: 'ep:edit',
+          activeMenu: '/mail'
+        }
+      }
+    ]
+  }
 
 ]
 
