@@ -168,7 +168,7 @@
                   </div>
                 </div>
                 <div class="attachment-details">
-                  <span class="file-size">{{ formatFileSize(att.fileSize) }}</span>
+                  <span class="file-size">{{ formatFileSizeFromString(att.fileSize) }}</span>
                   <span v-if="att.fileExtension" class="file-type">{{ att.fileExtension.toUpperCase() }}</span>
                   <span v-if="att.isTemp" class="temp-badge">临时</span>
                 </div>
@@ -273,7 +273,7 @@
 import { ref, watch, computed } from 'vue'
 import topImage from '@/views/mail/image/top.png'
 import { getUserByIdCard } from '@/api/system/user'
-import { downloadAttachment } from '@/api/system/mail/attachment'
+import { downloadAttachment, formatFileSizeFromString } from '@/api/system/mail/attachment'
 import { ElMessage } from 'element-plus'
 
 interface Email {
@@ -296,7 +296,7 @@ interface Email {
   attachments?: Array<{
     id: number, 
     fileName: string, 
-    fileSize: number, 
+    fileSize: string, 
     fileType: string,
     fileExtension: string,
     uploadUserIdCard: string,
@@ -634,13 +634,6 @@ function closeEmailDetail() {
 
 
 // 工具函数
-function formatFileSize(bytes: number): string {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
 
 async function downloadAttachmentFile(attachment: any) {
   if (downloadingAttachments.value.includes(attachment.id)) {

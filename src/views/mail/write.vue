@@ -18,10 +18,6 @@
               <el-icon><Position /></el-icon>
               <span>{{ sending ? '发送中...' : '发送' }}</span>
             </div>
-            <div class="tool-btn" @click="triggerFileUpload">
-              <el-icon><Files /></el-icon>
-              <span>附件</span>
-            </div>
             <el-dropdown trigger="click">
               <div class="tool-btn">
                 <el-icon><Setting /></el-icon>
@@ -271,15 +267,6 @@
                 <div class="attachment-actions" style="flex-shrink: 0; margin-top: 2px; display: flex; gap: 5px;">
                   <el-button 
                     size="small" 
-                    type="primary" 
-                    plain
-                    @click="previewAttachment(attachment)"
-                    title="预览"
-                  >
-                    <el-icon><View /></el-icon>
-                  </el-button>
-                  <el-button 
-                    size="small" 
                     type="success" 
                     plain
                     @click="downloadAttachmentFile(attachment)"
@@ -299,7 +286,7 @@
                 </div>
               </div>
                <div class="attachment-details" style="display: flex; gap: 12px; font-size: 12px; color: #909399; width: 100%; margin-top: 4px;">
-                 <span class="file-size" style="color: #606266;">{{ attachment.fileSize }}</span>
+                 <span class="file-size" style="color: #606266;">{{ formatFileSizeFromString(attachment.fileSize) }}</span>
                  <span v-if="getFileExtension(attachment.fileName)" class="file-type">{{ getFileExtension(attachment.fileName).toUpperCase() }}</span>
                  <!-- 下载次数暂时不显示，因为新API中没有这个字段 -->
                </div>
@@ -514,6 +501,7 @@ import {
   downloadAttachment,
   validateFileBeforeUpload,
   formatFileSize,
+  formatFileSizeFromString,
   getFileExtension,
   type LetterAttachmentRespVO,
   FILE_TYPE
@@ -534,8 +522,7 @@ import {
   Position,
   Setting,
   Star,
-  UploadFilled,
-  View
+  UploadFilled
 } from '@element-plus/icons-vue'
 
 
@@ -1226,24 +1213,10 @@ const getCurrentAttachmentSizeBytes = (): number => {
     // 将字符串格式的文件大小转换为字节数
     const sizeStr = attachment.fileSize
     if (sizeStr) {
-      const sizeMatch = sizeStr.match(/(\d+(?:\.\d+)?)\s*(B|KB|MB|GB)/i)
-      if (sizeMatch) {
-        const size = parseFloat(sizeMatch[1])
-        const unit = sizeMatch[2].toUpperCase()
-        switch (unit) {
-          case 'B':
-            totalSize += size
-            break
-          case 'KB':
-            totalSize += size * 1024
-            break
-          case 'MB':
-            totalSize += size * 1024 * 1024
-            break
-          case 'GB':
-            totalSize += size * 1024 * 1024 * 1024
-            break
-        }
+      // 解析为字节数
+      const bytes = parseInt(sizeStr, 10)
+      if (!isNaN(bytes)) {
+        totalSize += bytes
       }
     }
   })
@@ -1339,33 +1312,6 @@ const removeUploadedAttachment = async (attachmentId: number, index: number) => 
   }
 }
 
-// 预览附件
-const previewAttachment = (attachment: LetterAttachmentRespVO) => {
-  try {
-    // 检查文件类型，决定预览方式
-    const fileExtension = getFileExtension(attachment.fileName).toLowerCase()
-    
-    // 图片文件直接在新窗口打开
-    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg'].includes(fileExtension)) {
-      window.open(attachment.fileUrl, '_blank')
-      return
-    }
-    
-    // 文档文件使用KKFileView预览（如果配置了的话）
-    if (['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'].includes(fileExtension)) {
-      // 这里可以集成KKFileView或其他文档预览服务
-      // 暂时使用新窗口打开
-      window.open(attachment.fileUrl, '_blank')
-      return
-    }
-    
-    // 其他文件类型提示用户下载
-    ElMessage.info('该文件类型不支持预览，请下载后查看')
-  } catch (error: any) {
-    console.error('预览附件失败:', error)
-    ElMessage.error(`预览失败: ${error.message || '网络错误'}`)
-  }
-}
 
 // 下载附件
 const downloadAttachmentFile = async (attachment: LetterAttachmentRespVO) => {

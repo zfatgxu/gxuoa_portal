@@ -152,6 +152,24 @@ export const formatFileSize = (bytes: number): string => {
 }
 
 /**
+ * 将后端返回的字节数字符串转换为合适的单位显示
+ * @param sizeStr 后端返回的文件大小字符串（字节数）
+ * @returns 格式化后的文件大小字符串
+ */
+export const formatFileSizeFromString = (sizeStr: string): string => {
+  if (!sizeStr) return '0 B'
+  
+  // 解析为数字（字节数）
+  const bytes = parseInt(sizeStr, 10)
+  if (isNaN(bytes)) {
+    console.warn('无法解析文件大小:', sizeStr)
+    return '未知大小'
+  }
+  
+  return formatFileSize(bytes)
+}
+
+/**
  * 下载附件
  * @param attachmentId 附件ID
  * @param fileName 文件名（可选）
