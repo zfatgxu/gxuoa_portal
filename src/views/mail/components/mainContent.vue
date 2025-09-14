@@ -97,88 +97,99 @@
 
       <!-- 邮件详情显示区域 -->
       <div v-else class="email-detail-panel">
-        <!-- 主题区域 -->
-        <div class="detail-title-section">
-          <h3 class="detail-title">{{ selectedEmailDetail.subject || '无主题' }}</h3>
-        </div>
-        
-        <!-- 发件人信息区域 -->
-        <div class="detail-header">
-          <div class="sender-avatar">
-            <img 
-              v-if="senderAvatar && !avatarLoading" 
-              :src="senderAvatar" 
-              :alt="selectedEmailDetail.sender || '发件人'"
-              class="avatar-img"
-              @error="handleAvatarError"
-            />
-            <div v-else class="avatar-placeholder" :class="{ 'loading': avatarLoading }">
-              {{ getAvatarText(selectedEmailDetail.sender) }}
-            </div>
-          </div>
-          <div class="header-content">
-            <div class="sender-info">
-              <span class="sender-name">{{ selectedEmailDetail.sender || '未知' }}</span>
-            </div>
-            <div class="sender-meta">
-              <div class="meta-item">
-                <span class="meta-label">收件人</span>
-                <span class="meta-value">{{ selectedEmailDetail.toMail || '无' }}</span>
-              </div>
-              <div class="meta-item">
-                <span class="meta-label">时间</span>
-                <span class="meta-value">{{ formatDisplayTime(selectedEmailDetail.originalSendTime) || '未知' }}</span>
-              </div>
-            </div>
+        <!-- 加载状态显示 -->
+        <div v-if="selectedEmailDetail.isLoading" class="email-detail-loading">
+          <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <span>正在加载邮件详情...</span>
           </div>
         </div>
         
-        <!-- 附件列表区域 - 显示在正文上方 -->
-        <div v-if="selectedEmailDetail.attachments && selectedEmailDetail.attachments.length > 0" class="detail-attachments">
-          <div class="attachments-list">
-            <div 
-              v-for="att in selectedEmailDetail.attachments" 
-              :key="att.id" 
-              class="attachment-item"
-            >
-              <div class="attachment-info">
-                <div class="attachment-name">{{ att.fileName }}</div>
-                <div class="attachment-actions">
-                  <button 
-                    class="download-btn" 
-                    @click="downloadAttachmentFile(att)"
-                    :disabled="downloadingAttachments.includes(att.id)"
-                    :title="`下载 ${att.fileName}`"
-                  >
-                    <svg v-if="!downloadingAttachments.includes(att.id)" width="16" height="16" viewBox="0 0 20 20" fill="none">
-                      <path d="M3 17v3a2 2 0 002 2h10a2 2 0 002-2v-3M8 12l4 4 4-4M12 16V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <div v-else class="download-spinner"></div>
-                  </button>
+        <!-- 邮件详情内容 -->
+        <div v-else>
+          <!-- 主题区域 -->
+          <div class="detail-title-section">
+            <h3 class="detail-title">{{ selectedEmailDetail.subject || '无主题' }}</h3>
+          </div>
+          
+          <!-- 发件人信息区域 -->
+          <div class="detail-header">
+            <div class="sender-avatar">
+              <img 
+                v-if="senderAvatar && !avatarLoading" 
+                :src="senderAvatar" 
+                :alt="selectedEmailDetail.sender || '发件人'"
+                class="avatar-img"
+                @error="handleAvatarError"
+              />
+              <div v-else class="avatar-placeholder" :class="{ 'loading': avatarLoading }">
+                {{ getAvatarText(selectedEmailDetail.sender) }}
+              </div>
+            </div>
+            <div class="header-content">
+              <div class="sender-info">
+                <span class="sender-name">{{ selectedEmailDetail.sender || '未知' }}</span>
+              </div>
+              <div class="sender-meta">
+                <div class="meta-item">
+                  <span class="meta-label">收件人</span>
+                  <span class="meta-value">{{ selectedEmailDetail.toMail || '无' }}</span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">时间</span>
+                  <span class="meta-value">{{ formatDisplayTime(selectedEmailDetail.originalSendTime) || '未知' }}</span>
                 </div>
               </div>
-              <div class="attachment-details">
-                <span class="file-size">{{ formatFileSize(att.fileSize) }}</span>
-                <span v-if="att.fileExtension" class="file-type">{{ att.fileExtension.toUpperCase() }}</span>
-                <span v-if="att.isTemp" class="temp-badge">临时</span>
+            </div>
+          </div>
+          
+          <!-- 附件列表区域 - 显示在正文上方 -->
+          <div v-if="selectedEmailDetail.attachments && selectedEmailDetail.attachments.length > 0" class="detail-attachments">
+            <div class="attachments-list">
+              <div 
+                v-for="att in selectedEmailDetail.attachments" 
+                :key="att.id" 
+                class="attachment-item"
+              >
+                <div class="attachment-info">
+                  <div class="attachment-name">{{ att.fileName }}</div>
+                  <div class="attachment-actions">
+                    <button 
+                      class="download-btn" 
+                      @click="downloadAttachmentFile(att)"
+                      :disabled="downloadingAttachments.includes(att.id)"
+                      :title="`下载 ${att.fileName}`"
+                    >
+                      <svg v-if="!downloadingAttachments.includes(att.id)" width="16" height="16" viewBox="0 0 20 20" fill="none">
+                        <path d="M3 17v3a2 2 0 002 2h10a2 2 0 002-2v-3M8 12l4 4 4-4M12 16V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                      <div v-else class="download-spinner"></div>
+                    </button>
+                  </div>
+                </div>
+                <div class="attachment-details">
+                  <span class="file-size">{{ formatFileSize(att.fileSize) }}</span>
+                  <span v-if="att.fileExtension" class="file-type">{{ att.fileExtension.toUpperCase() }}</span>
+                  <span v-if="att.isTemp" class="temp-badge">临时</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        
-        <!-- 附件加载状态提示 -->
-        <div v-if="isLoadingAttachments" class="attachments-loading">
-          <div class="loading-spinner"></div>
-          <span>正在加载附件...</span>
-        </div>
-        
-        <!-- 邮件正文内容区域 -->
-        <div class="detail-content">
-          <div v-if="!selectedEmailDetail.content" class="content-loading">
+          
+          <!-- 附件加载状态提示 -->
+          <div v-if="isLoadingAttachments" class="attachments-loading">
             <div class="loading-spinner"></div>
-            <span>正在加载邮件内容...</span>
+            <span>正在加载附件...</span>
           </div>
-          <div v-else class="content-body" v-html="selectedEmailDetail.content">
+          
+          <!-- 邮件正文内容区域 -->
+          <div class="detail-content">
+            <div v-if="!selectedEmailDetail.content" class="content-loading">
+              <div class="loading-spinner"></div>
+              <span>正在加载邮件内容...</span>
+            </div>
+            <div v-else class="content-body" v-html="selectedEmailDetail.content">
+            </div>
           </div>
         </div>
       </div>
@@ -261,8 +272,8 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import topImage from '@/views/mail/image/top.png'
-import { getUserByIdCard } from '@/api/system/user/index'
-import { downloadAttachment } from '@/api/system/mail/letter'
+import { getUserByIdCard } from '@/api/system/user'
+import { downloadAttachment } from '@/api/system/mail/attachment'
 import { ElMessage } from 'element-plus'
 
 interface Email {
@@ -281,6 +292,7 @@ interface Email {
   priority?: number // 新增：优先级字段
   requestReadReceipt?: boolean // 新增：已读回执字段
   originalSendTime?: string // 新增：原始发送时间字段
+  isLoading?: boolean // 新增：加载状态字段
   attachments?: Array<{
     id: number, 
     fileName: string, 
@@ -589,6 +601,7 @@ function toggleStar(emailId: number) {
 function viewEmailDetail(emailId: number) {
   const localEmail = props.emails.find(email => email.id === emailId)
   if (localEmail) {
+    // 设置加载状态，不立即显示详情
     selectedEmailDetail.value = {
       ...localEmail,
       content: '',
@@ -596,7 +609,8 @@ function viewEmailDetail(emailId: number) {
       toMail: localEmail.toMail || '无',
       attachments: [],
       priority: undefined,
-      requestReadReceipt: undefined
+      requestReadReceipt: undefined,
+      isLoading: true // 添加加载状态标识
     }
     
     senderAvatar.value = ''
@@ -636,16 +650,7 @@ async function downloadAttachmentFile(attachment: any) {
   try {
     downloadingAttachments.value.push(attachment.id)
     
-    const blob = await downloadAttachment(attachment.id)
-    
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = attachment.fileName
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    window.URL.revokeObjectURL(url)
+    await downloadAttachment(attachment.id, attachment.fileName)
     
     ElMessage.success(`附件 "${attachment.fileName}" 下载成功`)
     
@@ -878,6 +883,19 @@ async function updateEmailDetail(emailDetail: any) {
       isLoadingAttachments.value = true
     }
     
+    // 先解析收件人信息，确保数据完整
+    let parsedToMail = currentDetail.toMail || '无'
+    const recipientsStr = emailDetail.recipients?.map((r: any) => r.recipientIdCard).join(', ') || emailDetail.toMail || ''
+    if (recipientsStr && recipientsStr !== currentDetail.toMail) {
+      try {
+        parsedToMail = await parseRecipients(recipientsStr)
+      } catch (error) {
+        // 保持原有值，不更新
+        parsedToMail = currentDetail.toMail || '无'
+      }
+    }
+    
+    // 数据准备完成后，一次性更新所有信息，移除加载状态
     selectedEmailDetail.value = {
       ...currentDetail,
       ...emailDetail,
@@ -885,26 +903,14 @@ async function updateEmailDetail(emailDetail: any) {
       priority: emailDetail.content?.priority,
       requestReadReceipt: emailDetail.content?.requestReadReceipt,
       attachments: emailDetail.attachments || [],
-      originalSendTime: originalSendTime
+      originalSendTime: originalSendTime,
+      toMail: parsedToMail,
+      isLoading: false // 移除加载状态
     }
     
     if (hasAttachments) {
       isLoadingAttachments.value = false
     }
-    
-    updateTimeout.value = setTimeout(async () => {
-      const recipientsStr = emailDetail.recipients?.map((r: any) => r.recipientIdCard).join(', ') || emailDetail.toMail || ''
-      if (recipientsStr && recipientsStr !== currentDetail.toMail) {
-        try {
-          const parsedRecipients = await parseRecipients(recipientsStr)
-          if (parsedRecipients && parsedRecipients !== currentDetail.toMail && selectedEmailDetail.value) {
-            selectedEmailDetail.value.toMail = parsedRecipients
-          }
-        } catch (error) {
-          // 保持原有值，不更新
-        }
-      }
-    }, 100)
     
     if (emailDetail.senders && emailDetail.senders.length > 0) {
       const sender = emailDetail.senders[0]

@@ -3,47 +3,42 @@ import type { PageParam } from '@/api/supervision'
 
 // ==================== 邮件附件相关VO ====================
 
+// 文件类型常量
+export const FILE_TYPE = {
+  LETTER_CONTENT: 1,  // 邮件内容附件
+  LETTER_DRAFT: 2     // 草稿附件
+} as const
+
+
 // 邮件附件保存请求VO - 对应后端 LetterAttachmentSaveReqVO
 export interface LetterAttachmentSaveReqVO {
-  id?: number                   // 附件ID（更新时必填）
-  letterId?: number             // 邮件ID
-  draftId?: number              // 草稿ID
-  fileName: string              // 文件名
-  fileSize: number              // 文件大小
-  fileType: number              // 文件类型
-  fileUrl: string               // 文件URL
-  uploadUserIdCard: string      // 上传用户身份证号
-  isTemp?: boolean              // 是否临时文件
-  tempExpireTime?: string       // 临时文件过期时间
+  id?: number                   // 附件ID（更新时必需）
+  fileName: string              // 原始文件名（必需）
+  fileUrl: string               // 文件URL（必需）
+  fileSize: string              // 文件大小（必需）
+  fileType: number              // 文件类型（必需）
+  uploadUserIdCard: string      // 上传用户身份证号（必需）
 }
 
 // 邮件附件响应VO - 对应后端 LetterAttachmentRespVO
 export interface LetterAttachmentRespVO {
   id: number                    // 附件ID
-  letterId?: number             // 邮件ID
-  draftId?: number              // 草稿ID
-  fileName: string              // 文件名
-  fileSize: number              // 文件大小
-  fileType: number              // 文件类型
-  fileUrl: string               // 文件URL
+  fileName: string              // 原始文件名
+  fileUrl: string               // 文件URL(MinIO存储地址)
+  fileSize: string              // 文件大小，如"1024KB"
+  fileType: number              // 文件类型：1-邮件内容附件，2-草稿附件
   uploadUserIdCard: string      // 上传用户身份证号
-  uploadTime: string            // 上传时间
-  downloadCount: number         // 下载次数
-  isTemp: boolean               // 是否临时文件
-  tempExpireTime?: string       // 临时文件过期时间
-  createTime: string            // 创建时间
-  updateTime: string            // 更新时间
-  tenantId: number              // 租户编号
+  createTime: string            // 创建时间，格式：2024-01-01 10:00:00
 }
 
 // 邮件附件分页查询请求VO - 对应后端 LetterAttachmentPageReqVO
 export interface LetterAttachmentPageReqVO extends PageParam {
-  letterId?: number             // 邮件ID
-  draftId?: number              // 草稿ID
-  fileName?: string             // 文件名
-  fileType?: number             // 文件类型
-  uploadUserIdCard?: string     // 上传用户身份证号
-  isTemp?: boolean              // 是否临时文件
+  pageNo?: number               // 页码，默认1
+  pageSize?: number             // 每页大小，默认10
+  fileName?: string             // 文件名筛选
+  fileType?: number             // 文件类型筛选
+  uploadUserIdCard?: string     // 上传用户身份证号筛选
+  createTime?: string[]         // 创建时间范围，格式：["2024-01-01 00:00:00", "2024-01-31 23:59:59"]
 }
 
 // ==================== 邮件附件管理API ====================
@@ -51,19 +46,21 @@ export interface LetterAttachmentPageReqVO extends PageParam {
 /**
  * 上传邮件附件
  * @param file 文件对象
- * @param fileType 文件类型
- * @param fileUrl 文件URL
+ * @param fileType 文件类型：1-邮件内容附件，2-草稿附件
+ * @param fileUrl 文件路径（可选）
  * @returns Promise<number> 返回附件ID
  */
 export const uploadLetterAttachment = async (
   file: File,
   fileType: number,
-  fileUrl: string
+  fileUrl?: string
 ): Promise<number> => {
   const formData = new FormData()
   formData.append('file', file)
   formData.append('fileType', fileType.toString())
-  formData.append('fileUrl', fileUrl)
+  if (fileUrl) {
+    formData.append('fileUrl', fileUrl)
+  }
   
   return await request.post({
     url: '/letter/attachment/upload',
@@ -136,6 +133,7 @@ export const getLetterAttachmentPage = async (
   return await request.get({ url: '/letter/attachment/page', params })
 }
 
+
 // ==================== 工具函数 ====================
 
 /**
@@ -154,15 +152,15 @@ export const formatFileSize = (bytes: number): string => {
 }
 
 /**
- * 下载附件到本地
+ * 下载附件
  * @param attachmentId 附件ID
  * @param fileName 文件名（可选）
  * @returns Promise<void>
  */
-export const downloadAttachmentToLocal = async (attachmentId: number, fileName?: string): Promise<void> => {
+export const downloadAttachment = async (attachmentId: number, fileName?: string): Promise<void> => {
   try {
     const response = await request.get({
-      url: `/letter/attachment/download/${attachmentId}`,
+      url: `/letter/attachment/download?id=${attachmentId}`,
       responseType: 'blob'
     })
     
@@ -182,83 +180,29 @@ export const downloadAttachmentToLocal = async (attachmentId: number, fileName?:
 }
 
 /**
- * 验证文件类型
+ * 文件上传前验证
  * @param file 文件对象
- * @param allowedTypes 允许的文件类型数组
- * @returns 是否允许该文件类型
+ * @returns 验证结果
  */
-export const validateFileType = (file: File, allowedTypes: string[]): boolean => {
-  return allowedTypes.includes(file.type) || allowedTypes.some(type => 
-    file.name.toLowerCase().endsWith(type.toLowerCase())
-  )
-}
-
-/**
- * 验证文件大小
- * @param file 文件对象
- * @param maxSize 最大文件大小（字节）
- * @returns 是否在允许的大小范围内
- */
-export const validateFileSize = (file: File, maxSize: number = 1024 * 1024 * 1024): boolean => {
-  return file.size <= maxSize
+export const validateFileBeforeUpload = (file: File): { valid: boolean; message?: string } => {
+  if (!file) {
+    return { valid: false, message: '请选择文件' }
+  }
+  
+  if (file.size > 50 * 1024 * 1024) {
+    return { valid: false, message: '文件大小不能超过50MB' }
+  }
+  
+  return { valid: true }
 }
 
 /**
  * 获取文件扩展名
  * @param fileName 文件名
- * @returns 文件扩展名（不包含点号）
+ * @returns 文件扩展名
  */
 export const getFileExtension = (fileName: string): string => {
-  return fileName.split('.').pop()?.toLowerCase() || ''
-}
-
-/**
- * 根据文件扩展名获取文件类型图标
- * @param fileName 文件名
- * @returns 文件类型图标类名
- */
-export const getFileTypeIcon = (fileName: string): string => {
-  const extension = getFileExtension(fileName)
-  
-  const iconMap: Record<string, string> = {
-    // 文档类型
-    'pdf': 'file-pdf',
-    'doc': 'file-word',
-    'docx': 'file-word',
-    'xls': 'file-excel',
-    'xlsx': 'file-excel',
-    'ppt': 'file-powerpoint',
-    'pptx': 'file-powerpoint',
-    'txt': 'file-text',
-    
-    // 图片类型
-    'jpg': 'file-image',
-    'jpeg': 'file-image',
-    'png': 'file-image',
-    'gif': 'file-image',
-    'bmp': 'file-image',
-    'svg': 'file-image',
-    
-    // 压缩文件
-    'zip': 'file-zip',
-    'rar': 'file-zip',
-    '7z': 'file-zip',
-    'tar': 'file-zip',
-    'gz': 'file-zip',
-    
-    // 视频文件
-    'mp4': 'file-video',
-    'avi': 'file-video',
-    'mov': 'file-video',
-    'wmv': 'file-video',
-    'flv': 'file-video',
-    
-    // 音频文件
-    'mp3': 'file-audio',
-    'wav': 'file-audio',
-    'flac': 'file-audio',
-    'aac': 'file-audio',
-  }
-  
-  return iconMap[extension] || 'file'
+  if (!fileName) return ''
+  const lastDotIndex = fileName.lastIndexOf('.')
+  return lastDotIndex !== -1 ? fileName.substring(lastDotIndex + 1).toLowerCase() : ''
 }

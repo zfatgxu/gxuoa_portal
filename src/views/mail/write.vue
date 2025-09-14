@@ -63,7 +63,7 @@
                 :remote-method="remoteSearch"
                 :loading="loading"
                 class="recipient-select"
-                @change="validateRecipients"
+                @change="() => validateRecipients('recipients')"
                 @focus="activeRecipientField = 'recipients'"
                 @click="activeRecipientField = 'recipients'"
               >
@@ -111,7 +111,7 @@
                 :remote-method="remoteSearch"
                 :loading="loading"
                 class="recipient-select"
-                @change="validateCc"
+                @change="() => validateRecipients('cc')"
                 @focus="activeRecipientField = 'cc'"
                 @click="activeRecipientField = 'cc'"
               >
@@ -153,7 +153,7 @@
                 :remote-method="remoteSearch"
                 :loading="loading"
                 class="recipient-select"
-                @change="validateBcc"
+                @change="() => validateRecipients('bcc')"
                 @focus="activeRecipientField = 'bcc'"
                 @click="activeRecipientField = 'bcc'"
               >
@@ -193,7 +193,6 @@
           <TextEditor
             v-model="mailForm.content"
             :height="'400px'"
-            @change="handleEditorChange"
             @created="handleEditorCreated"
           />
         </div>
@@ -204,9 +203,30 @@
           type="file" 
           multiple 
           style="display: none" 
+          accept=".jpg,.png,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.7z,.mp4,.avi,.mov,.mp3,.wav"
           @change="(e: Event) => handleFileUpload(((e.target as HTMLInputElement).files))"
         />
         
+        <!-- 拖拽上传区域 -->
+        <div 
+          v-if="!attachmentList.length && !mailForm.attachments.length"
+          class="drag-upload-area"
+          :class="{ 'drag-over': isDragOver }"
+          @dragover.prevent="handleDragOver"
+          @dragleave.prevent="handleDragLeave"
+          @drop.prevent="handleDrop"
+          @click="triggerFileUpload"
+        >
+          <div class="drag-upload-content">
+            <el-icon class="upload-icon"><UploadFilled /></el-icon>
+            <div class="upload-text">
+              <div class="upload-main-text">点击或拖拽文件到此处上传</div>
+              <div class="upload-tip-text">支持 doc、docx、pdf、xls、xlsx、ppt、pptx、jpg、jpeg、png、txt、zip、rar 等格式</div>
+              <div class="upload-limit-text">单个文件不超过50MB，总大小不超过100MB</div>
+            </div>
+          </div>
+        </div>
+
         <!-- 附件列表 -->
         <div v-if="attachmentList.length > 0 || mailForm.attachments.length > 0" class="attachments-section" style="padding: 15px 20px; border-top: 1px solid #e0e0e0; background-color: #fafafa; max-height: 300px; overflow-y: auto;">
           <div class="attachments-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -215,6 +235,15 @@
               附件 ({{ attachmentList.length + mailForm.attachments.length }})
             </div>
             <div class="attachments-actions" style="display: flex; gap: 8px;">
+              <el-button 
+                size="small" 
+                type="primary" 
+                plain
+                @click="triggerFileUpload"
+              >
+                <el-icon><Plus /></el-icon>
+                添加附件
+              </el-button>
               <el-button 
                 v-if="attachmentList.length > 0" 
                 size="small" 
@@ -244,6 +273,15 @@
                     size="small" 
                     type="primary" 
                     plain
+                    @click="previewAttachment(attachment)"
+                    title="预览"
+                  >
+                    <el-icon><View /></el-icon>
+                  </el-button>
+                  <el-button 
+                    size="small" 
+                    type="success" 
+                    plain
                     @click="downloadAttachmentFile(attachment)"
                     title="下载"
                   >
@@ -261,9 +299,9 @@
                 </div>
               </div>
                <div class="attachment-details" style="display: flex; gap: 12px; font-size: 12px; color: #909399; width: 100%; margin-top: 4px;">
-                 <span class="file-size" style="color: #606266;">{{ formatFileSize(attachment.fileSize) }}</span>
-                 <span v-if="attachment.fileExtension" class="file-type">{{ attachment.fileExtension.toUpperCase() }}</span>
-                 <span v-if="attachment.downloadCount > 0">下载 {{ attachment.downloadCount }} 次</span>
+                 <span class="file-size" style="color: #606266;">{{ attachment.fileSize }}</span>
+                 <span v-if="getFileExtension(attachment.fileName)" class="file-type">{{ getFileExtension(attachment.fileName).toUpperCase() }}</span>
+                 <!-- 下载次数暂时不显示，因为新API中没有这个字段 -->
                </div>
             </div>
           </div>
@@ -355,7 +393,7 @@
           <div class="contact-group" style="margin-bottom: 10px;">
             <div 
               class="folder-item" 
-              @click="toggleRecentContactsExpand"
+              @click="() => toggleContactsExpand('recent')"
               style="display: flex; align-items: center; padding: 6px 4px; cursor: pointer; font-size: 12px; color: #333; border-radius: 2px; margin-bottom: 2px;"
             >
               <span class="folder-icon">
@@ -395,7 +433,7 @@
           <div class="contact-group" style="margin-bottom: 10px;">
             <div 
               class="folder-item" 
-              @click="toggleStarredContactsExpand"
+              @click="() => toggleContactsExpand('starred')"
               style="display: flex; align-items: center; padding: 6px 4px; cursor: pointer; font-size: 12px; color: #333; border-radius: 2px; margin-bottom: 2px;"
             >
               <span class="folder-icon">
@@ -466,16 +504,20 @@ import {
   type LetterContactStarRespVO,
   type LetterSendReqVO,
   type MailListItemVO,
-  sendLetter,
-  // 附件相关API
-  uploadAttachmentsBatchWithProgress,
-  downloadFileToLocal,
-  deleteAttachment,
-  batchDeleteAttachments,
-  getAttachmentInfo,
-  getFileExtension,
-  type AttachmentInfoRespVO
+  sendLetter
 } from '@/api/system/mail/letter/index'
+import {
+  // 邮件附件相关API
+  uploadLetterAttachment,
+  deleteLetterAttachment,
+  getLetterAttachment,
+  downloadAttachment,
+  validateFileBeforeUpload,
+  formatFileSize,
+  getFileExtension,
+  type LetterAttachmentRespVO,
+  FILE_TYPE
+} from '@/api/system/mail/attachment/index'
 import { getDraft, createDraft, updateDraft, type LetterDraftRespVO, type LetterDraftCreateReqVO, type LetterDraftUpdateReqVO } from '@/api/system/mail/draft'
 import {getSimpleUserList, getUserByIdCard} from '@/api/system/user'
 import {getAccessToken} from '@/utils/auth'
@@ -488,9 +530,12 @@ import {
   Download,
   Files,
   InfoFilled,
+  Plus,
   Position,
   Setting,
-  Star
+  Star,
+  UploadFilled,
+  View
 } from '@element-plus/icons-vue'
 
 
@@ -528,8 +573,9 @@ const sending = ref(false) // 发送状态，防止重复发送
 // 附件相关状态
 const uploading = ref(false)
 const uploadProgress = ref(0)
-const attachmentList = ref<AttachmentInfoRespVO[]>([]) // 已上传的附件信息列表
-const tempAttachmentList = ref<AttachmentInfoRespVO[]>([]) // 临时附件列表
+const attachmentList = ref<LetterAttachmentRespVO[]>([]) // 已上传的附件信息列表
+const tempAttachmentList = ref<LetterAttachmentRespVO[]>([]) // 临时附件列表
+const isDragOver = ref(false) // 拖拽状态
 
 // TextEditor 相关状态
 const editorInstance = ref<any>(null)
@@ -876,14 +922,13 @@ const remoteSearch = async (query: string) => {
   }
 }
 
-// 切换最近联系人展开状态
-const toggleRecentContactsExpand = () => {
-  recentContactsExpanded.value = !recentContactsExpanded.value
-}
-
-// 切换星标联系人展开状态
-const toggleStarredContactsExpand = () => {
-  starredContactsExpanded.value = !starredContactsExpanded.value
+// 切换联系人展开状态
+const toggleContactsExpand = (type: 'recent' | 'starred') => {
+  if (type === 'recent') {
+    recentContactsExpanded.value = !recentContactsExpanded.value
+  } else {
+    starredContactsExpanded.value = !starredContactsExpanded.value
+  }
 }
 
 // 格式化最后发送时间
@@ -908,60 +953,46 @@ const formatLastSendTime = (timeStr: string): string => {
   }
 }
 
-// 添加最近联系人为收件人
-const addRecentRecipient = (contact: any) => {
-  if (!contact.name) return
+// 添加联系人为收件人
+const addRecipient = (name: string) => {
+  if (!name) return
   
   // 根据当前激活的字段决定添加到哪个列表
   switch (activeRecipientField.value) {
     case 'cc':
-      if (!mailForm.value.cc.includes(contact.name)) {
-        mailForm.value.cc.push(contact.name)
-        ElMessage.success(`已添加抄送人: ${contact.name}`)
+      if (!mailForm.value.cc.includes(name)) {
+        mailForm.value.cc.push(name)
+        ElMessage.success(`已添加抄送人: ${name}`)
       }
       break
     case 'bcc':
-      if (!mailForm.value.bcc.includes(contact.name)) {
-        mailForm.value.bcc.push(contact.name)
-        ElMessage.success(`已添加密送人: ${contact.name}`)
+      if (!mailForm.value.bcc.includes(name)) {
+        mailForm.value.bcc.push(name)
+        ElMessage.success(`已添加密送人: ${name}`)
       }
       break
     case 'recipients':
     default:
-      if (!mailForm.value.recipients.includes(contact.name)) {
-        mailForm.value.recipients.push(contact.name)
-        ElMessage.success(`已添加收件人: ${contact.name}`)
+      if (!mailForm.value.recipients.includes(name)) {
+        mailForm.value.recipients.push(name)
+        ElMessage.success(`已添加收件人: ${name}`)
       }
       break
+  }
+}
+
+// 添加最近联系人为收件人
+const addRecentRecipient = (contact: any) => {
+  if (contact.name) {
+    addRecipient(contact.name)
   }
 }
 
 // 添加星标联系人为收件人
 const addStarredRecipient = (contact: LetterContactStarRespVO) => {
   const displayName = starredContactDisplayNames.value.get(contact.id)
-  if (!displayName) return
-  
-  // 根据当前激活的字段决定添加到哪个列表
-  switch (activeRecipientField.value) {
-    case 'cc':
-      if (!mailForm.value.cc.includes(displayName)) {
-        mailForm.value.cc.push(displayName)
-        ElMessage.success(`已添加抄送人: ${displayName}`)
-      }
-      break
-    case 'bcc':
-      if (!mailForm.value.bcc.includes(displayName)) {
-        mailForm.value.bcc.push(displayName)
-        ElMessage.success(`已添加密送人: ${displayName}`)
-      }
-      break
-    case 'recipients':
-    default:
-      if (!mailForm.value.recipients.includes(displayName)) {
-        mailForm.value.recipients.push(displayName)
-        ElMessage.success(`已添加收件人: ${displayName}`)
-      }
-      break
+  if (displayName) {
+    addRecipient(displayName)
   }
 }
 
@@ -1128,23 +1159,12 @@ const toggleContactStar = async () => {
 }
 
 
-// 验证收件人 - 修改为支持姓名输入
-const validateRecipients = () => {
+// 验证收件人字段
+const validateRecipients = (type: 'recipients' | 'cc' | 'bcc') => {
   // 对于OA内部人员，允许输入姓名，不需要强制邮箱格式
-  // 这里可以添加其他验证逻辑，比如检查姓名是否在联系人列表中
-  console.log('收件人验证通过:', mailForm.value.recipients)
-}
-
-// 验证抄送人 - 修改为支持姓名输入
-const validateCc = () => {
-  // 对于OA内部人员，允许输入姓名，不需要强制邮箱格式
-  console.log('抄送人验证通过:', mailForm.value.cc)
-}
-
-// 验证密送人 - 修改为支持姓名输入
-const validateBcc = () => {
-  // 对于OA内部人员，允许输入姓名，不需要强制邮箱格式
-  console.log('密送人验证通过:', mailForm.value.bcc)
+  const fieldName = type === 'recipients' ? '收件人' : type === 'cc' ? '抄送人' : '密送人'
+  const fieldValue = type === 'recipients' ? mailForm.value.recipients : type === 'cc' ? mailForm.value.cc : mailForm.value.bcc
+  console.log(`${fieldName}验证通过:`, fieldValue)
 }
 
 // TextEditor 相关方法
@@ -1165,11 +1185,6 @@ const handleEditorCreated = (editor: any) => {
   }
 }
 
-// 编辑器内容变化回调
-const handleEditorChange = (editor: any) => {
-  // 内容变化时的处理逻辑
-  console.log('编辑器内容变化:', editor.getHtml())
-}
 
 
 // 触发文件选择
@@ -1180,31 +1195,27 @@ const triggerFileUpload = () => {
   }
 }
 
-// 格式化文件大小
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+// 拖拽上传相关方法
+const handleDragOver = (e: DragEvent) => {
+  e.preventDefault()
+  isDragOver.value = true
 }
 
-// 计算当前邮件的附件总大小
-const formatCurrentAttachmentSize = (): string => {
-  let totalSize = 0
-  
-  // 计算已上传附件的大小
-  attachmentList.value.forEach(attachment => {
-    totalSize += attachment.fileSize || 0
-  })
-  
-  // 计算本地文件的大小
-  mailForm.value.attachments.forEach(file => {
-    totalSize += file.size
-  })
-  
-  return formatFileSize(totalSize)
+const handleDragLeave = (e: DragEvent) => {
+  e.preventDefault()
+  isDragOver.value = false
 }
+
+const handleDrop = (e: DragEvent) => {
+  e.preventDefault()
+  isDragOver.value = false
+  
+  const files = e.dataTransfer?.files
+  if (files && files.length > 0) {
+    handleFileUpload(files)
+  }
+}
+
 
 // 获取当前附件总大小（字节）
 const getCurrentAttachmentSizeBytes = (): number => {
@@ -1212,7 +1223,29 @@ const getCurrentAttachmentSizeBytes = (): number => {
   
   // 计算已上传附件的大小
   attachmentList.value.forEach(attachment => {
-    totalSize += attachment.fileSize || 0
+    // 将字符串格式的文件大小转换为字节数
+    const sizeStr = attachment.fileSize
+    if (sizeStr) {
+      const sizeMatch = sizeStr.match(/(\d+(?:\.\d+)?)\s*(B|KB|MB|GB)/i)
+      if (sizeMatch) {
+        const size = parseFloat(sizeMatch[1])
+        const unit = sizeMatch[2].toUpperCase()
+        switch (unit) {
+          case 'B':
+            totalSize += size
+            break
+          case 'KB':
+            totalSize += size * 1024
+            break
+          case 'MB':
+            totalSize += size * 1024 * 1024
+            break
+          case 'GB':
+            totalSize += size * 1024 * 1024 * 1024
+            break
+        }
+      }
+    }
   })
   
   // 计算本地文件的大小
@@ -1221,6 +1254,11 @@ const getCurrentAttachmentSizeBytes = (): number => {
   })
   
   return totalSize
+}
+
+// 计算当前邮件的附件总大小（格式化）
+const formatCurrentAttachmentSize = (): string => {
+  return formatFileSize(getCurrentAttachmentSizeBytes())
 }
 
 // 检查是否显示附件大小警告
@@ -1283,7 +1321,7 @@ const removeAttachment = (index: number) => {
 // 删除已上传的附件
 const removeUploadedAttachment = async (attachmentId: number, index: number) => {
   try {
-    await deleteAttachment(attachmentId)
+    await deleteLetterAttachment(attachmentId)
     
     // 从表单中移除附件ID
     const idIndex = mailForm.value.attachmentIds.indexOf(attachmentId)
@@ -1301,10 +1339,38 @@ const removeUploadedAttachment = async (attachmentId: number, index: number) => 
   }
 }
 
-// 下载附件
-const downloadAttachmentFile = async (attachment: AttachmentInfoRespVO) => {
+// 预览附件
+const previewAttachment = (attachment: LetterAttachmentRespVO) => {
   try {
-    await downloadFileToLocal(attachment.id, attachment.fileName)
+    // 检查文件类型，决定预览方式
+    const fileExtension = getFileExtension(attachment.fileName).toLowerCase()
+    
+    // 图片文件直接在新窗口打开
+    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg'].includes(fileExtension)) {
+      window.open(attachment.fileUrl, '_blank')
+      return
+    }
+    
+    // 文档文件使用KKFileView预览（如果配置了的话）
+    if (['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt'].includes(fileExtension)) {
+      // 这里可以集成KKFileView或其他文档预览服务
+      // 暂时使用新窗口打开
+      window.open(attachment.fileUrl, '_blank')
+      return
+    }
+    
+    // 其他文件类型提示用户下载
+    ElMessage.info('该文件类型不支持预览，请下载后查看')
+  } catch (error: any) {
+    console.error('预览附件失败:', error)
+    ElMessage.error(`预览失败: ${error.message || '网络错误'}`)
+  }
+}
+
+// 下载附件
+const downloadAttachmentFile = async (attachment: LetterAttachmentRespVO) => {
+  try {
+    await downloadAttachment(attachment.id, attachment.fileName)
     ElMessage.success('下载开始')
   } catch (error: any) {
     console.error('下载附件失败:', error)
@@ -1315,7 +1381,10 @@ const downloadAttachmentFile = async (attachment: AttachmentInfoRespVO) => {
 // 批量删除附件
 const batchRemoveAttachments = async (attachmentIds: number[]) => {
   try {
-    await batchDeleteAttachments({ attachmentIds })
+    // 逐个删除附件
+    for (const id of attachmentIds) {
+      await deleteLetterAttachment(id)
+    }
     
     // 从表单中移除附件ID
     mailForm.value.attachmentIds = mailForm.value.attachmentIds.filter(id => !attachmentIds.includes(id))
@@ -1378,13 +1447,34 @@ const handleFileUpload = async (files: FileList | null) => {
     uploading.value = true
     uploadProgress.value = 0
     
-    // 使用批量上传API
-    const attachmentIds = await uploadAttachmentsBatchWithProgress(
-      newFiles,
-      (completed, total) => {
-        uploadProgress.value = Math.round((completed / total) * 100)
+    // 显示上传开始提示
+    ElMessage.info(`开始上传 ${newFiles.length} 个文件...`)
+    
+    // 逐个上传文件
+    const attachmentIds: number[] = []
+    for (let i = 0; i < newFiles.length; i++) {
+      const file = newFiles[i]
+      
+      // 验证单个文件
+      const fileValidation = validateFileBeforeUpload(file)
+      if (!fileValidation.valid) {
+        ElMessage.error(`文件 "${file.name}" 验证失败: ${fileValidation.message}`)
+        continue
       }
-    )
+      
+      try {
+        // 上传文件，使用邮件内容附件类型
+        const attachmentId = await uploadLetterAttachment(file, FILE_TYPE.LETTER_CONTENT)
+        attachmentIds.push(attachmentId)
+        
+        // 更新进度
+        uploadProgress.value = Math.round(((i + 1) / newFiles.length) * 100)
+        console.log(`📤 上传进度: ${i + 1}/${newFiles.length} (${uploadProgress.value}%)`)
+      } catch (error: any) {
+        console.error(`上传文件 "${file.name}" 失败:`, error)
+        ElMessage.error(`文件 "${file.name}" 上传失败`)
+      }
+    }
     
     // 添加到表单的附件ID列表
     console.log('📎 上传前 attachmentIds:', mailForm.value.attachmentIds)
@@ -1395,11 +1485,34 @@ const handleFileUpload = async (files: FileList | null) => {
     // 获取上传后的附件信息
     await loadAttachmentInfo(attachmentIds)
     
-    ElMessage.success(`成功上传 ${newFiles.length} 个附件`)
+    ElMessage.success(`成功上传 ${attachmentIds.length} 个附件`)
+    
+    // 清空文件输入框，允许重复选择相同文件
+    const fileInput = document.getElementById('file-input') as HTMLInputElement
+    if (fileInput) {
+      fileInput.value = ''
+    }
     
   } catch (error: any) {
     console.error('文件上传失败:', error)
-    ElMessage.error(`上传失败: ${error.message || '网络错误'}`)
+    
+    // 根据错误类型显示不同的错误信息
+    let errorMessage = '上传失败'
+    if (error.message) {
+      if (error.message.includes('网络')) {
+        errorMessage = '网络连接失败，请检查网络后重试'
+      } else if (error.message.includes('大小')) {
+        errorMessage = error.message
+      } else if (error.message.includes('格式')) {
+        errorMessage = error.message
+      } else {
+        errorMessage = `上传失败: ${error.message}`
+      }
+    } else {
+      errorMessage = '上传失败，请稍后重试'
+    }
+    
+    ElMessage.error(errorMessage)
   } finally {
     uploading.value = false
     uploadProgress.value = 0
@@ -1410,17 +1523,19 @@ const handleFileUpload = async (files: FileList | null) => {
 const validateFiles = (files: File[]) => {
   const singleFileMaxSize = 50 * 1024 * 1024 // 50MB
   const totalMaxSize = 100 * 1024 * 1024 // 100MB
+  const maxFileCount = 20 // 最大文件数量
+  
+  // 检查文件数量限制
+  const currentFileCount = attachmentList.value.length + mailForm.value.attachments.length
+  if (currentFileCount + files.length > maxFileCount) {
+    return {
+      valid: false,
+      message: `附件数量超过限制。当前已有 ${currentFileCount} 个附件，最多支持 ${maxFileCount} 个附件`
+    }
+  }
   
   // 计算当前已上传附件的大小
-  let currentTotalSize = 0
-  attachmentList.value.forEach(attachment => {
-    currentTotalSize += attachment.fileSize || 0
-  })
-  
-  // 计算当前本地文件的大小
-  mailForm.value.attachments.forEach(file => {
-    currentTotalSize += file.size
-  })
+  const currentTotalSize = getCurrentAttachmentSizeBytes()
   
   // 计算新文件的总大小
   let newFilesTotalSize = 0
@@ -1446,6 +1561,60 @@ const validateFiles = (files: File[]) => {
     }
   }
   
+  // 检查文件类型
+  const allowedTypes = [
+    // 文档类型
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'text/plain',
+    // 图片类型
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/gif',
+    'image/bmp',
+    'image/svg+xml',
+    // 压缩文件
+    'application/zip',
+    'application/x-rar-compressed',
+    'application/x-7z-compressed',
+    // 视频文件
+    'video/mp4',
+    'video/avi',
+    'video/quicktime',
+    'video/x-msvideo',
+    // 音频文件
+    'audio/mpeg',
+    'audio/wav',
+    'audio/flac',
+    'audio/aac'
+  ]
+  
+  const allowedExtensions = [
+    '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt',
+    '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.svg',
+    '.zip', '.rar', '.7z',
+    '.mp4', '.avi', '.mov', '.wmv',
+    '.mp3', '.wav', '.flac', '.aac'
+  ]
+  
+  for (const file of files) {
+    const fileName = file.name.toLowerCase()
+    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext))
+    
+    if (!allowedTypes.includes(file.type) && !hasValidExtension) {
+      return {
+        valid: false,
+        message: `文件 "${file.name}" 格式不支持。支持的文件格式：${allowedExtensions.join(', ')}`
+      }
+    }
+  }
+  
   return { valid: true, message: '' }
 }
 
@@ -1453,7 +1622,7 @@ const validateFiles = (files: File[]) => {
 const loadAttachmentInfo = async (attachmentIds: number[]) => {
   try {
     for (const id of attachmentIds) {
-      const info = await getAttachmentInfo(id)
+      const info = await getLetterAttachment(id)
       attachmentList.value.push(info)
     }
   } catch (error) {
@@ -1462,27 +1631,12 @@ const loadAttachmentInfo = async (attachmentIds: number[]) => {
 }
 
 
-// 加载临时附件列表
-const loadTempAttachments = async () => {
-  try {
-    // 临时附件列表功能已被移除，设置为空数组
-    tempAttachmentList.value = []
-    console.log('临时附件列表功能已禁用')
-  } catch (error) {
-    console.error('加载临时附件失败:', error)
-  }
-}
 
 // 发送邮件
 const sendMailHandler = async () => {
   // 防止重复发送
   if (sending.value) {
     ElMessage.warning('正在发送中，请稍候...')
-    return
-  }
-  
-  if (!mailForm.value.recipients.length) {
-    ElMessage.warning('请选择收件人')
     return
   }
   
@@ -1734,11 +1888,6 @@ onMounted(async () => {
   
   // 并发加载所有数据
   await loadAllData()
-  
-  // 加载附件相关数据
-  await Promise.all([
-    loadTempAttachments()
-  ])
   
   // 检查路由参数中是否有附件ID
   console.log('🔍 检查路由参数:', route.query)
@@ -2250,6 +2399,72 @@ onMounted(async () => {
   font-weight: 500;
   line-height: 1.3;
   margin-top: 2px;
+}
+
+/* 拖拽上传区域样式 */
+.drag-upload-area {
+  margin: 20px;
+  padding: 40px 20px;
+  border: 2px dashed #d9d9d9;
+  border-radius: 8px;
+  background-color: #fafafa;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drag-upload-area:hover {
+  border-color: #409eff;
+  background-color: #f0f9ff;
+}
+
+.drag-upload-area.drag-over {
+  border-color: #409eff;
+  background-color: #e6f7ff;
+  transform: scale(1.02);
+}
+
+.drag-upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.upload-icon {
+  font-size: 48px;
+  color: #c0c4cc;
+  transition: color 0.3s ease;
+}
+
+.drag-upload-area:hover .upload-icon {
+  color: #409eff;
+}
+
+.upload-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.upload-main-text {
+  font-size: 16px;
+  font-weight: 500;
+  color: #303133;
+}
+
+.upload-tip-text {
+  font-size: 14px;
+  color: #909399;
+}
+
+.upload-limit-text {
+  font-size: 12px;
+  color: #c0c4cc;
 }
 
 /* 附件网格布局 */

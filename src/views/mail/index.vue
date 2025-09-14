@@ -157,10 +157,13 @@ import {
   markAsTrash,
   restoreFromTrash,
   restoreFromTrashFlag,
-  getLetterAttachments,
   type MailListItemVO,
   type MailStatsVO
 } from '@/api/system/mail/letter'
+import {
+  // 邮件附件相关API
+  getLetterAttachmentsByLetterId
+} from '@/api/system/mail/attachment/index'
 import { 
   getFolderTree,
   getFolderMails, 
@@ -195,6 +198,7 @@ interface Email {
   isTrash?: boolean
   trashTime?: string
   isSelfSent?: boolean
+  isLoading?: boolean
 }
 
 // 邮件数据状态管理
@@ -1438,46 +1442,85 @@ async function preloadCurrentPageEmailDetails() {
 // 处理获取邮件详情
 async function handleGetEmailDetail(emailId: number) {
   try {
+    console.log('🔍 开始获取邮件详情，邮件ID:', emailId)
+    
     let emailDetail: any = null
     
     // 优先从缓存中获取
     if (emailDetailsCache.value[emailId]) {
+      console.log('📦 从缓存中获取邮件详情')
       emailDetail = emailDetailsCache.value[emailId]
     } else {
+      console.log('🌐 从服务器获取邮件详情')
       emailDetail = await getLetterDetail(emailId)
+      console.log('📨 服务器返回的邮件详情:', emailDetail)
       
       // 缓存邮件详情
       if (emailDetail) {
         emailDetailsCache.value[emailId] = emailDetail
+        console.log('💾 邮件详情已缓存')
       }
     }
     
     // 验证返回的数据结构
     if (!emailDetail) {
-      throw new Error('邮件详情数据为空')
+      console.error('❌ 邮件详情数据为空，邮件ID:', emailId)
+      throw new Error(`邮件详情数据为空，邮件ID: ${emailId}`)
+    }
+    
+    // 验证数据结构完整性
+    if (!emailDetail.content) {
+      console.warn('⚠️ 邮件详情缺少content字段:', emailDetail)
     }
     
     // 获取邮件附件列表
     try {
-      const attachments = await getLetterAttachments(emailId)
+      console.log('📎 开始获取邮件附件')
+      const attachments = await getLetterAttachmentsByLetterId(emailId)
+      console.log('📎 获取到的附件:', attachments)
       
       // 将附件信息添加到邮件详情中
       emailDetail.attachments = attachments || []
     } catch (attachmentError: any) {
-      console.error('获取邮件附件失败:', attachmentError)
+      console.error('❌ 获取邮件附件失败:', attachmentError)
       // 附件获取失败不影响邮件详情显示，设置为空数组
       emailDetail.attachments = []
     }
     
     // 将详细数据传递给子组件
     if (mainContentRef.value) {
+      console.log('📤 将邮件详情传递给子组件')
       mainContentRef.value.updateEmailDetail(emailDetail)
+    } else {
+      console.warn('⚠️ mainContentRef 为空，无法传递邮件详情')
     }
     
-  } catch (error: any) {
-    console.error('获取邮件详情失败:', error)
+    console.log('✅ 邮件详情获取成功')
     
-    const errorMsg = error?.response?.data?.message || error?.message || '获取邮件详情失败'
+  } catch (error: any) {
+    console.error('❌ 获取邮件详情失败:', error)
+    console.error('错误详情:', {
+      message: error?.message,
+      response: error?.response,
+      status: error?.response?.status,
+      data: error?.response?.data
+    })
+    
+    // 更详细的错误信息处理
+    let errorMsg = '获取邮件详情失败'
+    
+    if (error?.response?.status === 404) {
+      errorMsg = `邮件不存在或已被删除 (ID: ${emailId})`
+    } else if (error?.response?.status === 403) {
+      errorMsg = '没有权限查看此邮件'
+    } else if (error?.response?.status === 401) {
+      errorMsg = '用户未登录，请重新登录'
+    } else if (error?.response?.data?.msg) {
+      errorMsg = error.response.data.msg
+    } else if (error?.message) {
+      errorMsg = error.message
+    }
+    
     ElMessage.error(`查看邮件详情失败: ${errorMsg}`)
   }
 }

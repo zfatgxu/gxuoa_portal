@@ -211,7 +211,33 @@ export interface SearchLetterReqVO {
  * @returns Promise<LetterDetailRespVO>
  */
 export const getLetterDetail = async (id: number): Promise<LetterDetailRespVO> => {
-  return await request.get({url: `/letter/detail?id=${id}`})
+  try {
+    console.log('🌐 API调用: 获取信件详情，ID:', id)
+    const result = await request.get({url: `/letter/detail?id=${id}`})
+    console.log('📨 API返回结果:', result)
+    
+    // 验证返回的数据结构
+    if (!result) {
+      console.error('❌ API返回空数据')
+      throw new Error('服务器返回空数据')
+    }
+    
+    // 验证必要字段
+    if (!result.content) {
+      console.warn('⚠️ API返回数据缺少content字段:', result)
+    }
+    
+    return result
+  } catch (error: any) {
+    console.error('❌ getLetterDetail API调用失败:', error)
+    console.error('错误详情:', {
+      message: error?.message,
+      response: error?.response,
+      status: error?.response?.status,
+      data: error?.response?.data
+    })
+    throw error
+  }
 }
 
 /**
@@ -490,4 +516,5 @@ export const markAsTrash = async (data: { ids: number[] }): Promise<boolean> => 
 export const restoreFromTrashFlag = async (data: { ids: number[] }): Promise<boolean> => {
   return await request.put({url: '/letter/restore-trash-flag', data})
 }
+
 
