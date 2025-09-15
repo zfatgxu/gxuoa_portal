@@ -1052,6 +1052,29 @@ const remainingRouter: AppRouteRecordRaw[] = [
         }
       }
     ]
+  },
+  {
+    path: '/addressbook',
+    component: Layout,
+    name: 'Addressbook',
+    meta: {
+      hidden: true
+    },
+    children: [
+      {
+        path: 'fill-tasks/form',
+        component: () => import('@/views/addressbook/fill-tasks/form.vue'),
+        name: 'AddressbookFillTasksForm',
+        meta: {
+          title: '通讯录填写表单',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: 'ep:edit',
+          activeMenu: '/addressbook'
+        }
+      }
+    ]
   }
 
 ]
