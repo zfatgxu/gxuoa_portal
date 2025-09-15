@@ -265,15 +265,16 @@
                   {{ attachment.fileName }}
                 </div>
                 <div class="attachment-actions" style="flex-shrink: 0; margin-top: 2px; display: flex; gap: 5px;">
-                  <el-button 
-                    size="small" 
-                    type="success" 
-                    plain
-                    @click="downloadAttachmentFile(attachment)"
-                    title="下载"
-                  >
-                    <el-icon><Download /></el-icon>
-                  </el-button>
+                  <el-link 
+                    v-if="attachment.fileUrl"
+                    type="primary"
+                    :download="attachment.fileName"
+                    :href="attachment.fileUrl"
+                    :underline="false"
+                    target="_blank"
+                    :title="`下载 ${attachment.fileName}`"
+                  >下载</el-link>
+                  <span v-else style="color:#909399;font-size:12px;">无下载链接</span>
                   <el-button 
                     size="small" 
                     type="danger" 
@@ -288,7 +289,6 @@
                <div class="attachment-details" style="display: flex; gap: 12px; font-size: 12px; color: #909399; width: 100%; margin-top: 4px;">
                  <span class="file-size" style="color: #606266;">{{ formatFileSizeFromString(attachment.fileSize) }}</span>
                  <span v-if="getFileExtension(attachment.fileName)" class="file-type">{{ getFileExtension(attachment.fileName).toUpperCase() }}</span>
-                 <!-- 下载次数暂时不显示，因为新API中没有这个字段 -->
                </div>
             </div>
           </div>
@@ -476,7 +476,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, nextTick, onMounted, ref} from 'vue'
+import {computed, nextTick, onMounted, ref, watch} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {useUserStore} from '@/store/modules/user'
@@ -498,7 +498,6 @@ import {
   uploadLetterAttachment,
   deleteLetterAttachment,
   getLetterAttachment,
-  downloadAttachment,
   validateFileBeforeUpload,
   formatFileSize,
   formatFileSizeFromString,
@@ -515,7 +514,6 @@ import topImage from '@/views/mail/image/top.png'
 import {
   ArrowDown,
   Delete,
-  Download,
   Files,
   InfoFilled,
   Plus,
@@ -817,6 +815,9 @@ const loadAllData = async () => {
     console.error('❌ 并发加载过程中发生错误:', error)
   }
 }
+
+// 调试：深度监听 attachmentList 的变化
+watch(attachmentList, () => {}, { deep: true, immediate: false })
 
 // 搜索用户/联系人 - 基于预加载的用户列表进行过滤
 const remoteSearch = async (query: string) => {
@@ -1312,18 +1313,6 @@ const removeUploadedAttachment = async (attachmentId: number, index: number) => 
   }
 }
 
-
-// 下载附件
-const downloadAttachmentFile = async (attachment: LetterAttachmentRespVO) => {
-  try {
-    await downloadAttachment(attachment.id, attachment.fileName)
-    ElMessage.success('下载开始')
-  } catch (error: any) {
-    console.error('下载附件失败:', error)
-    ElMessage.error(`下载失败: ${error.message || '网络错误'}`)
-  }
-}
-
 // 批量删除附件
 const batchRemoveAttachments = async (attachmentIds: number[]) => {
   try {
@@ -1430,6 +1419,13 @@ const handleFileUpload = async (files: FileList | null) => {
     
     // 获取上传后的附件信息
     await loadAttachmentInfo(attachmentIds)
+    // 上传后统计一次已渲染下载链接
+    setTimeout(() => {
+      try {
+        const links = document.querySelectorAll('a[download]')
+        console.log('[下载渲染统计] 上传后 download 链接数量:', links?.length || 0)
+      } catch (e) {}
+    }, 0)
     
     ElMessage.success(`成功上传 ${attachmentIds.length} 个附件`)
     
@@ -1808,6 +1804,7 @@ onMounted(async () => {
   console.log('📎 初始化时 attachmentIds:', mailForm.value.attachmentIds)
   console.log('📎 初始化时 attachmentList:', attachmentList.value)
   
+  
   // 强制重置附件相关状态，确保页面初始化时是干净的状态
   console.log('🔄 开始强制重置附件状态...')
   console.log('📎 重置前 attachmentIds:', mailForm.value.attachmentIds)
@@ -1834,6 +1831,7 @@ onMounted(async () => {
   
   // 并发加载所有数据
   await loadAllData()
+  
   
   // 检查路由参数中是否有附件ID
   console.log('🔍 检查路由参数:', route.query)

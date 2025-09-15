@@ -154,17 +154,17 @@
                 <div class="attachment-info">
                   <div class="attachment-name">{{ att.fileName }}</div>
                   <div class="attachment-actions">
-                    <button 
-                      class="download-btn" 
-                      @click="downloadAttachmentFile(att)"
-                      :disabled="downloadingAttachments.includes(att.id)"
-                      :title="`下载 ${att.fileName}`"
-                    >
-                      <svg v-if="!downloadingAttachments.includes(att.id)" width="16" height="16" viewBox="0 0 20 20" fill="none">
-                        <path d="M3 17v3a2 2 0 002 2h10a2 2 0 002-2v-3M8 12l4 4 4-4M12 16V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                      </svg>
-                      <div v-else class="download-spinner"></div>
-                    </button>
+                    <!-- 统一使用下载功能 -->
+                    <template v-if="att.fileUrl">
+                      <el-link 
+                        type="primary"
+                        :download="att.fileName"
+                        :href="att.fileUrl"
+                        :underline="false"
+                        target="_blank"
+                        :title="`下载 ${att.fileName}`"
+                      >下载</el-link>
+                    </template>
                   </div>
                 </div>
                 <div class="attachment-details">
@@ -273,8 +273,10 @@
 import { ref, watch, computed } from 'vue'
 import topImage from '@/views/mail/image/top.png'
 import { getUserByIdCard } from '@/api/system/user'
-import { downloadAttachment, formatFileSizeFromString, getFileExtension } from '@/api/system/mail/attachment'
-import { ElMessage } from 'element-plus'
+import { formatFileSizeFromString, getFileExtension } from '@/api/system/mail/attachment'
+// import { ElMessage } from 'element-plus'
+
+//
 
 interface Email {
   id: number
@@ -299,6 +301,8 @@ interface Email {
     fileSize: string, 
     fileType: string,
     fileExtension: string,
+    url?: string,
+    fileUrl?: string,
     uploadUserIdCard: string,
     uploadTime: string,
     downloadCount: number,
@@ -349,8 +353,7 @@ const selectedEmails = ref<(string|number)[]>([])
 const markAsValue = ref('')
 const moveToValue = ref('')
 
-// 附件下载相关
-const downloadingAttachments = ref<number[]>([])
+// 附件加载状态
 const isLoadingAttachments = ref<boolean>(false)
 
 // 邮件详情显示相关
@@ -634,39 +637,6 @@ function closeEmailDetail() {
 
 
 // 工具函数
-
-async function downloadAttachmentFile(attachment: any) {
-  if (downloadingAttachments.value.includes(attachment.id)) {
-    return
-  }
-  
-  try {
-    downloadingAttachments.value.push(attachment.id)
-    
-    await downloadAttachment(attachment.id, attachment.fileName)
-    
-    ElMessage.success(`附件 "${attachment.fileName}" 下载成功`)
-    
-  } catch (error: any) {
-    let errorMsg = '下载失败'
-    if (error?.response?.status === 404) {
-      errorMsg = '附件不存在'
-    } else if (error?.response?.status === 403) {
-      errorMsg = '无权限访问该附件'
-    } else if (error?.response?.data?.msg) {
-      errorMsg = error.response.data.msg
-    } else if (error?.message) {
-      errorMsg = error.message
-    }
-    
-    ElMessage.error(`下载失败: ${errorMsg}`)
-  } finally {
-    const index = downloadingAttachments.value.indexOf(attachment.id)
-    if (index > -1) {
-      downloadingAttachments.value.splice(index, 1)
-    }
-  }
-}
 
 function formatDisplayTime(timeStr?: string): string {
   if (!timeStr) return '未知时间'
