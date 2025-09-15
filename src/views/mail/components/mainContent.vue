@@ -169,7 +169,7 @@
                 </div>
                 <div class="attachment-details">
                   <span class="file-size">{{ formatFileSizeFromString(att.fileSize) }}</span>
-                  <span v-if="att.fileExtension" class="file-type">{{ att.fileExtension.toUpperCase() }}</span>
+                  <span v-if="getFileExtension(att.fileName)" class="file-type">{{ getFileExtension(att.fileName).toUpperCase() }}</span>
                   <span v-if="att.isTemp" class="temp-badge">临时</span>
                 </div>
               </div>
@@ -273,7 +273,7 @@
 import { ref, watch, computed } from 'vue'
 import topImage from '@/views/mail/image/top.png'
 import { getUserByIdCard } from '@/api/system/user'
-import { downloadAttachment, formatFileSizeFromString } from '@/api/system/mail/attachment'
+import { downloadAttachment, formatFileSizeFromString, getFileExtension } from '@/api/system/mail/attachment'
 import { ElMessage } from 'element-plus'
 
 interface Email {
