@@ -1,9 +1,8 @@
-import request from '@/config/axios'
 import { getHomeToDoPage } from '@/api/home/todo'
 import { SupervisionTaskApi } from '@/api/supervision'
 import { getSealTodoPage } from '@/api/seal'
 import { RegisterApi } from '@/api/leave/create/createForm'
-// import { getMailLogPage } from '@/api/system/mail/letter'
+import { getMailStats } from '@/api/system/mail/letter'
 
 // Badge数据接口
 export interface BadgeData {
@@ -71,19 +70,16 @@ export class BadgeService {
     }
   }
 
-  // // 获取邮件待办数量（未读邮件）
-  // static async getMailTodoCount(): Promise<number> {
-  //   try {
-  //     const response = await getMailLogPage({
-  //       pageNo: 1,
-  //       pageSize: 1
-  //     })
-  //     return response?.total || 0
-  //   } catch (error) {
-  //     console.warn('获取邮件待办数量失败:', error)
-  //     return 0
-  //   }
-  // }
+  // 获取邮件待办数量（未读邮件总数）
+  static async getMailTodoCount(): Promise<number> {
+    try {
+      const stats = await getMailStats()
+      return (stats?.totalUnreadCount ?? 0) as number
+    } catch (error) {
+      console.warn('获取邮件待办数量失败:', error)
+      return 0
+    }
+  }
 
   // 获取所有模块的待办数量
   static async getAllBadgeCounts(): Promise<BadgeData> {
