@@ -154,17 +154,12 @@
                 <div class="attachment-info">
                   <div class="attachment-name">{{ att.fileName }}</div>
                   <div class="attachment-actions">
-                    <!-- 统一使用下载功能 -->
-                    <template v-if="att.fileUrl">
-                      <el-link 
-                        type="primary"
-                        :download="att.fileName"
-                        :href="att.fileUrl"
-                        :underline="false"
-                        target="_blank"
-                        :title="`下载 ${att.fileName}`"
-                      >下载</el-link>
-                    </template>
+                    <el-link 
+                      type="primary"
+                      :underline="false"
+                      :title="`下载 ${att.fileName}`"
+                      @click.prevent="handleDownloadAttachment(att)"
+                    >下载</el-link>
                   </div>
                 </div>
                 <div class="attachment-details">
@@ -273,7 +268,7 @@
 import { ref, watch, computed } from 'vue'
 import topImage from '@/views/mail/image/top.png'
 import { getUserByIdCard } from '@/api/system/user'
-import { formatFileSizeFromString, getFileExtension } from '@/api/system/mail/attachment'
+import { formatFileSizeFromString, getFileExtension, downloadAttachment } from '@/api/system/mail/attachment'
 // import { ElMessage } from 'element-plus'
 
 //
@@ -900,4 +895,16 @@ defineExpose({
   updateEmailDetail,
   closeEmailDetail
 })
+
+// 下载附件
+function handleDownloadAttachment(att: { id: number; fileName: string }) {
+  if (!att || !att.id) {
+    return
+  }
+  try {
+    downloadAttachment(att.id, att.fileName || '附件')
+  } catch (e) {
+    // 静默失败，由全局拦截处理
+  }
+}
 </script>

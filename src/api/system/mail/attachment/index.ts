@@ -177,12 +177,16 @@ export const formatFileSizeFromString = (sizeStr: string): string => {
  */
 export const downloadAttachment = async (attachmentId: number, fileName?: string): Promise<void> => {
   try {
-    const response = await request.get({
-      url: `/letter/attachment/download?id=${attachmentId}`,
-      responseType: 'blob'
+    const response = await request.download({
+      url: `/letter/attachment/download?id=${attachmentId}`
     })
     
-    const blob = new Blob([response])
+    if (!(response instanceof Blob)) {
+      const errorMsg = (response && (response.msg || response.message)) || '文件下载失败'
+      throw new Error(errorMsg)
+    }
+
+    const blob = response as Blob
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -192,7 +196,6 @@ export const downloadAttachment = async (attachmentId: number, fileName?: string
     document.body.removeChild(a)
     window.URL.revokeObjectURL(url)
   } catch (error) {
-    console.error('文件下载失败:', error)
     throw new Error('文件下载失败')
   }
 }
