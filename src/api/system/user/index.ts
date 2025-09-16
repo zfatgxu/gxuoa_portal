@@ -40,6 +40,11 @@ export const getUser = (id: number) => {
   return request.get({ url: '/app/user/get', params: { id } })
 }
 
+// 通过用户ID获取用户详情
+export const getUserById = (id: number) => {
+  return request.get({ url: '/app/user/get-by-id', params: { id } })
+}
+
 // 新增用户
 export const createUser = (data: UserVO) => {
   return request.post({ url: '/system/user/create', data })
