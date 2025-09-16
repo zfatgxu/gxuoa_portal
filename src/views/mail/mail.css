@@ -946,6 +946,7 @@
 
 .detail-attachments {
     margin: 20px 0;
+    padding: 0 20px; /* 为附件列表左右留出间隔 */
 }
 
 .attachments-header {
