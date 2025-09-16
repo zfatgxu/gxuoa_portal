@@ -252,8 +252,8 @@
   import {useRoute, useRouter} from 'vue-router'
   import * as DeptApi from '@/api/system/dept'
   import * as UserApi from '@/api/system/user'
-  import * as ContactsSubmitApi from '@/api/addressbook-flow/contactsSubmit'
-  import * as TaskContactApi from '@/api/addressbook/task-contact-relation'
+// import * as ContactsSubmitApi from '@/api/addressbook-flow/contactsSubmit'
+// import * as TaskContactApi from '@/api/addressbook/task-contact-relation'
   import {QuestionFilled} from '@element-plus/icons-vue'
   import {useTagsViewStore} from '@/store/modules/tagsView'
   
@@ -431,16 +431,16 @@
       let approverId = getApproverIdFromWorkflowData(existingWorkflowData.value)
       
       // 如果从workflowData中没有获取到，尝试从latestRecord中获取
-      if (!approverId && taskId.value && currentUser.value?.deptId) {
-        try {
-          const latestRecord = await TaskContactApi.taskContactRelationApi.getLatestTaskContact(taskId.value, currentUser.value.deptId)
-          if (latestRecord?.approver) {
-            approverId = getApproverIdFromString(latestRecord.approver)
-          }
-        } catch (error) {
-          console.error('从latestRecord获取审批人失败:', error)
-        }
-      }
+      // if (!approverId && taskId.value && currentUser.value?.deptId) {
+      //   try {
+      //     const latestRecord = await TaskContactApi.taskContactRelationApi.getLatestTaskContact(taskId.value, currentUser.value.deptId)
+      //     if (latestRecord?.approver) {
+      //       approverId = getApproverIdFromString(latestRecord.approver)
+      //     }
+      //   } catch (error) {
+      //     console.error('从latestRecord获取审批人失败:', error)
+      //   }
+      // }
       
       if (!approverId) {
         return
@@ -549,18 +549,18 @@
         ElMessage.error('任务ID或用户部门信息无效')
         return false
       }
-  
+
       // 获取最新的任务参与记录
-      const latestRecord = await TaskContactApi.taskContactRelationApi.getLatestTaskContact(taskId.value, currentUser.value.deptId)
-  
-      if (!latestRecord) {
-        console.error('❌ 未找到任务参与记录')
-        ElMessage.error('当前用户部门未参与此任务')
-        return false
-      }
-  
+      // const latestRecord = await TaskContactApi.taskContactRelationApi.getLatestTaskContact(taskId.value, currentUser.value.deptId)
+
+      // if (!latestRecord) {
+      //   console.error('❌ 未找到任务参与记录')
+      //   ElMessage.error('当前用户部门未参与此任务')
+      //   return false
+      // }
+
       // 检查状态并获取必要数据
-      await checkDetailedTaskStatus(latestRecord)
+      // await checkDetailedTaskStatus(latestRecord)
       return true
       
     } catch (error) {
@@ -571,44 +571,44 @@
   }
   
   // 检查任务状态并获取必要数据
-  const checkDetailedTaskStatus = async (latestRecord: any) => {
-    try {
-      // 重置状态
-      isRejectedTask.value = false
-      existingWorkflowData.value = null
-      
-      // 如果是已拒绝状态，获取原表单数据
-      if (latestRecord.status === 3) {
-        isRejectedTask.value = true
-        await getWorkflowContactsData(latestRecord)
-      }
-    } catch (error) {
-      console.error('检查任务状态失败:', error)
-      throw error
-    }
-  }
+  // const checkDetailedTaskStatus = async (latestRecord: any) => {
+  //   try {
+  //     // 重置状态
+  //     isRejectedTask.value = false
+  //     existingWorkflowData.value = null
+  //     
+  //     // 如果是已拒绝状态，获取原表单数据
+  //     if (latestRecord.status === 3) {
+  //       isRejectedTask.value = true
+  //       await getWorkflowContactsData(latestRecord)
+  //     }
+  //   } catch (error) {
+  //     console.error('检查任务状态失败:', error)
+  //     throw error
+  //   }
+  // }
   
   // 获取工作流联系人数据（参考detail.vue的逻辑）
-  const getWorkflowContactsData = async (latestRecord: any) => {
-    try {
-      if (!latestRecord?.processInstanceId) {
-        ElMessage.warning('无法获取原表单数据：缺少流程实例ID')
-        return
-      }
-  
-      // 通过processInstanceId获取联系人数据
-      const workflowContacts = await TaskContactApi.taskContactRelationApi.getWorkflowContacts(latestRecord.processInstanceId)
+  // const getWorkflowContactsData = async (latestRecord: any) => {
+  //   try {
+  //     if (!latestRecord?.processInstanceId) {
+  //       ElMessage.warning('无法获取原表单数据：缺少流程实例ID')
+  //       return
+  //     }
+
+  //     // 通过processInstanceId获取联系人数据
+  //     // const workflowContacts = await TaskContactApi.taskContactRelationApi.getWorkflowContacts(latestRecord.processInstanceId)
       
-      if (workflowContacts?.contacts && Array.isArray(workflowContacts.contacts) && workflowContacts.contacts.length > 0) {
-        existingWorkflowData.value = workflowContacts
-      } else {
-        ElMessage.warning('未找到原表单数据')
-      }
-    } catch (error) {
-      console.error('获取被拒绝工作流数据失败:', error)
-      ElMessage.error('获取原表单数据失败，请联系管理员')
-    }
-  }
+  //     // if (workflowContacts?.contacts && Array.isArray(workflowContacts.contacts) && workflowContacts.contacts.length > 0) {
+  //     //   existingWorkflowData.value = workflowContacts
+  //     // } else {
+  //     //   ElMessage.warning('未找到原表单数据')
+  //     // }
+  //   } catch (error) {
+  //     console.error('获取被拒绝工作流数据失败:', error)
+  //     ElMessage.error('获取原表单数据失败，请联系管理员')
+  //   }
+  // }
   
   
   
@@ -856,7 +856,11 @@
       }
   
       // 调用统一接口
-      await ContactsSubmitApi.createWithContacts(submitData)
+      // await ContactsSubmitApi.createWithContacts(submitData)
+      
+      // 临时模拟提交成功
+      console.log('提交数据:', submitData)
+      ElMessage.success('通讯录提交成功（模拟）')
   
       // 设置跳转状态
       isRedirecting.value = true
