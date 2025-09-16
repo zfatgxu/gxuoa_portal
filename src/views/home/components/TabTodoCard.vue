@@ -30,12 +30,20 @@
               <div class="todo-title" @click="goToTodoDetail(item)" :title="item.title" >
                 {{ item.title }}
               </div>
+              <div v-if="isAddressbookTask(item) && item.deadline" class="todo-deadline">
+                <span class="deadline-label">截止：</span>
+                <span class="deadline-value">{{ formatDate(item.deadline) }}</span>
+              </div>
             </div>
             <div class="todo-type">{{ item.type }}</div>
             <div class="todo-dept">{{ item.comeFrom }}</div>
             <div class="todo-date">{{ formatDate(item.comeTime) }}</div>
             <div class="todo-actions">
-              <el-tooltip content="流转历史" placement="top">
+              <el-tooltip 
+                v-if="!isAddressbookTask(item)"
+                content="流转历史" 
+                placement="top"
+              >
                 <div class="action-icon" @click.stop="goToHistory(item)">
                   <i class="bi bi-three-dots"></i>
                 </div>
@@ -412,30 +420,44 @@ const myFileList = ref([
 ])
 
 const goToTodoDetail = (item) => {
-  // 使用 router.resolve 获取完整路径
-  const path = router.resolve({
-    name: 'documentApproval',
-    query: { id: item.id, type: 3, isTodo: 1 }
-  }).href
-  
   try {
-    console.log('打开路径:', path)
+    console.log('待办事项详情:', item)
     
-    const newWindow = window.open(
-      path,
-      '_blank',
-      'width=1200,height=800,left=100,top=100,resizable=yes'
-    )
-    
-    if (!newWindow) {
-      ElMessage.warning('请允许弹出窗口')
-      // 备选方案：在当前页打开
-      router.push({ name: 'documentApproval', query: { id: item.id, type: 3, isTodo: 1 } })
+    // 检查是否为通讯录填报任务
+    if (isAddressbookTask(item)) {
+      // 通讯录填报任务直接在当前页面跳转
+      console.log('跳转到通讯录表单页面，任务ID:', item.id)
+      router.push({ name: 'AddressbookFillTasksForm', query: { taskId: item.id } })
+    } else {
+      // 其他类型的待办事项使用原有逻辑
+      const path = router.resolve({
+        name: 'documentApproval',
+        query: { id: item.id, type: 3, isTodo: 1 }
+      }).href
+      
+      console.log('打开文档审批路径:', path)
+      
+      const newWindow = window.open(
+        path,
+        '_blank',
+        'width=1200,height=800,left=100,top=100,resizable=yes'
+      )
+      
+      if (!newWindow) {
+        ElMessage.warning('请允许弹出窗口')
+        // 备选方案：在当前页打开
+        router.push({ name: 'documentApproval', query: { id: item.id, type: 3, isTodo: 1 } })
+      }
     }
   } catch (error) {
     console.error('打开失败:', error)
     ElMessage.error('处理失败')
   }
+}
+
+// 判断是否为通讯录填报任务
+const isAddressbookTask = (item) => {
+  return item.type === '通讯录填报'
 }
 
 // 跳转到待办历史
@@ -612,7 +634,7 @@ onMounted(() => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  width: 100%;
+  flex: 1;
   cursor: pointer;
 }
 
@@ -622,14 +644,17 @@ onMounted(() => {
 }
 
 .todo-type {
-  width: 70px;
-  padding: 2px 6px;
+  width: 90px;
+  padding: 2px 8px;
   border-radius: 4px;
   font-size: 14px;
   color: white;
   background-color: #0061B1;
   text-align: center;
   margin-right: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .todo-type.blue {
@@ -666,6 +691,25 @@ onMounted(() => {
   width: 130px;
   color: #909399;
   font-size: 14px;
+}
+
+.todo-deadline {
+  color: #E6A23C;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+  flex-shrink: 0;
+}
+
+.deadline-label {
+  color: #909399;
+  margin-right: 4px;
+}
+
+.deadline-value {
+  color: #E6A23C;
+  font-weight: 500;
 }
 
 .todo-actions {
