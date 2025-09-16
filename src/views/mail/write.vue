@@ -192,6 +192,38 @@
             @created="handleEditorCreated"
           />
         </div>
+
+        <!-- 原始邮件（回复场景）- 按邮件详情样式直接渲染 HTML 与附件信息 -->
+        <div v-if="replyOriginal" style="padding: 12px 20px 0 20px; background-color: #ffffff;">
+          <div class="orig-mail-title">
+            <span class="orig-mail-text">原始邮件</span>
+            <span class="orig-mail-divider"></span>
+          </div>
+          <div style="background:#f5f7fa; border:1px solid #eeeeee; border-radius:6px; padding:10px 12px; margin: 0 0 8px 0;">
+            <div style="font-size: 13px; color: #606266; display:grid; grid-template-columns: 72px 1fr; row-gap:6px; column-gap:8px; align-items:start;">
+              <div style="color:#909399;">发件人：</div>
+              <div>{{ replyOriginal.fromUserName || '' }}</div>
+              <div style="color:#909399;">收件人：</div>
+              <div>{{ replyOriginal.toUserNames || '' }}</div>
+              <div style="color:#909399;">发件时间：</div>
+              <div>{{ replyOriginal.sendTime || '' }}</div>
+              <div style="color:#909399;">主题：</div>
+              <div>{{ replyOriginal.subject || '' }}</div>
+            </div>
+          </div>
+          <div v-if="replyOriginalHtml" style="background:#fff; border:1px solid #eee; border-radius:6px; padding:12px;">
+            <div style="font-size: 14px; color: #303133; line-height: 1.8;" v-html="replyOriginalHtml"></div>
+          </div>
+          <div v-if="replyOriginal?.attachments?.length" style="margin-top:10px; background:#fff; border:1px dashed #e5e5e5; border-radius:6px; padding:10px;">
+            <div style="font-size: 13px; color: #606266; margin-bottom: 6px;">附件（{{ replyOriginal.attachments.length }}）</div>
+            <div>
+              <div v-for="att in replyOriginal.attachments" :key="att.id" style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px dashed #f1f1f1;">
+                <div style="font-size:13px; color:#303133; word-break:break-all;">{{ att.fileName }}</div>
+                <div style="font-size:12px; color:#909399; margin-left:12px;">{{ formatFileSizeFromString(att.fileSize) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
         
         <!-- 隐藏的文件输入 -->
         <input 
@@ -265,16 +297,6 @@
                   {{ attachment.fileName }}
                 </div>
                 <div class="attachment-actions" style="flex-shrink: 0; margin-top: 2px; display: flex; gap: 5px;">
-                  <el-link 
-                    v-if="attachment.fileUrl"
-                    type="primary"
-                    :download="attachment.fileName"
-                    :href="attachment.fileUrl"
-                    :underline="false"
-                    target="_blank"
-                    :title="`下载 ${attachment.fileName}`"
-                  >下载</el-link>
-                  <span v-else style="color:#909399;font-size:12px;">无下载链接</span>
                   <el-button 
                     size="small" 
                     type="danger" 
@@ -476,7 +498,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, nextTick, onMounted, ref, watch} from 'vue'
+import {computed, nextTick, onBeforeUnmount, onMounted, ref, watch} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {useUserStore} from '@/store/modules/user'
@@ -486,26 +508,33 @@ import {
   createLetterContactStar,
   deleteLetterContactStar,
   getLetterContactStarPage,
+  getLetterDetail,
   getSentMails,
   type LetterContactStarCreateReqVO,
   type LetterContactStarRespVO,
   type LetterSendReqVO,
   type MailListItemVO,
   sendLetter
-} from '@/api/system/mail/letter/index'
+} from '@/api/system/mail/letter'
 import {
-  // 邮件附件相关API
-  uploadLetterAttachment,
   deleteLetterAttachment,
-  getLetterAttachment,
-  validateFileBeforeUpload,
+  FILE_TYPE,
   formatFileSize,
   formatFileSizeFromString,
   getFileExtension,
+  getLetterAttachment,
   type LetterAttachmentRespVO,
-  FILE_TYPE
-} from '@/api/system/mail/attachment/index'
-import { getDraft, createDraft, updateDraft, type LetterDraftRespVO, type LetterDraftCreateReqVO, type LetterDraftUpdateReqVO } from '@/api/system/mail/draft'
+  uploadLetterAttachment,
+  validateFileBeforeUpload
+} from '@/api/system/mail/attachment'
+import {
+  createDraft,
+  getDraft,
+  type LetterDraftCreateReqVO,
+  type LetterDraftRespVO,
+  type LetterDraftUpdateReqVO,
+  updateDraft
+} from '@/api/system/mail/draft'
 import {getSimpleUserList, getUserByIdCard} from '@/api/system/user'
 import {getAccessToken} from '@/utils/auth'
 import '@/views/mail/mail.css'
@@ -634,6 +663,33 @@ const allUsers = ref<any[]>([])
 
 // 星标联系人用户信息缓存
 const starredContactUserCache = ref<Map<string, any>>(new Map())
+
+// 回复场景：原始邮件信息
+const replyOriginal = ref<null | {
+  id: number
+  subject: string
+  fromUserName?: string
+  toUserNames?: string
+  sendTime?: string
+  content?: string
+  attachments?: LetterAttachmentRespVO[]
+}>(null)
+const replyOriginalHtml = ref<string>('')
+// 时间格式化：yyyy年m月d日 hh:mm
+const formatDateTimeCn = (dateStr?: string): string => {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return ''
+  const y = d.getFullYear()
+  const m = d.getMonth() + 1
+  const day = d.getDate()
+  const hh = `${d.getHours()}`.padStart(2, '0')
+  const mm = `${d.getMinutes()}`.padStart(2, '0')
+  return `${y}年${m}月${day}日 ${hh}:${mm}`
+}
+
+
+// 仅身份证模式，无需姓名解析与回退逻辑
 
 // 获取星标联系人的显示名称
 const getStarredContactDisplayName = async (contact: LetterContactStarRespVO): Promise<string> => {
@@ -1348,7 +1404,26 @@ const resetForm = () => {
   
   // 重置编辑器内容
   if (editorInstance.value) {
-    editorInstance.value.clear()
+    try {
+      // 先尝试清空内容
+      if (typeof editorInstance.value.clear === 'function') {
+        editorInstance.value.clear()
+      }
+      // 如果清空失败，尝试设置空内容
+      else if (typeof editorInstance.value.setHtml === 'function') {
+        editorInstance.value.setHtml('')
+      }
+    } catch (e) {
+      console.warn('清空编辑器内容失败:', e)
+      // 如果清空失败，尝试直接设置空内容
+      try {
+        if (typeof editorInstance.value.setHtml === 'function') {
+          editorInstance.value.setHtml('')
+        }
+      } catch (e2) {
+        console.warn('设置空内容也失败:', e2)
+      }
+    }
   }
   
   // 重置附件相关状态
@@ -1721,12 +1796,21 @@ const doSendMail = async () => {
     await sendLetter(sendData)
     ElMessage.success('邮件发送成功')
     
+    // 先获取当前路由信息，避免在清理过程中丢失
+    const currentRoute = router.currentRoute.value
+    
     // 清空表单
     resetForm()
     
+    // 等待多个 tick 确保状态更新完成，特别是包含图片时
+    await nextTick()
+    await nextTick()
+    
     // 关闭当前标签页
-    const currentRoute = router.currentRoute.value
     tagsViewStore.delView(currentRoute)
+    
+    // 再次等待确保标签页关闭完成
+    await nextTick()
     
     // 跳转到邮件列表页面
     router.push('/mail/index')
@@ -1785,8 +1869,7 @@ const saveDraftHandler = async () => {
         ElMessage.warning('草稿未更新')
       }
     } else {
-      const newId = await createDraft(baseDraftData)
-      currentDraftId.value = newId
+      currentDraftId.value = await createDraft(baseDraftData)
       // 保持当前界面状态，不进行路由跳转或刷新
       ElMessage.success('草稿已创建并保存')
     }
@@ -1897,6 +1980,140 @@ onMounted(async () => {
       }
     }
   }
+
+  // 回复：根据 replyId 预填
+  const replyIdParam = route.query.replyId
+  if (replyIdParam && !draftIdParam) {
+    const replyId = Number(replyIdParam)
+    if (!Number.isNaN(replyId)) {
+      try {
+        const detail: any = await getLetterDetail(replyId)
+        if (detail) {
+          // 保存原始信息，用于页面展示
+          replyOriginal.value = {
+            id: detail.id,
+            subject: (detail?.content?.subject) || detail.subject || '',
+            fromUserName: '',
+            toUserNames: '',
+            sendTime: formatDateTimeCn(detail?.content?.sendTime),
+            content: detail.content || ''
+          }
+
+          // 计算原始正文 HTML（优先 content.content/html，其次 content 本身）
+          try {
+            const c = detail?.content
+            const html = (c && (c.content || c.html)) ? (c.content || c.html) : (typeof c === 'string' ? c : '')
+            replyOriginalHtml.value = html || ''
+          } catch {
+            replyOriginalHtml.value = ''
+          }
+
+          // 使用详情中自带的附件列表
+          if (replyOriginal.value) {
+            replyOriginal.value.attachments = Array.isArray(detail.attachments) ? detail.attachments : []
+          }
+
+          // 预填收件人
+          let replySenderIdCards: string[] = []
+          if (Array.isArray((detail as any).senders)) {
+            const firstSenderIdCard = (detail as any).senders
+              .map((s: any) => (s?.senderIdCard || '').toString().trim())
+              .find((v: string) => !!v)
+            if (firstSenderIdCard) {
+              replySenderIdCards = [firstSenderIdCard]
+            }
+          }
+          try {
+            const names: string[] = []
+            for (const id of replySenderIdCards) {
+              const user = await getUserByIdCard(id)
+              if (user && user.nickname) {
+                names.push(user.nickname)
+              }
+            }
+            mailForm.value.recipients = names
+            // 原始信息中的“发件人”也按相同逻辑填充
+            if (replyOriginal.value) {
+              replyOriginal.value.fromUserName = names[0] || ''
+            }
+          } catch {
+            mailForm.value.recipients = []
+          }
+
+          // 原始信息中的“收件人”：从 recipients[].recipientIdCard 获取姓名并拼接
+          try {
+            const recipientsArr = (detail as any)?.recipients
+            if (Array.isArray(recipientsArr) && recipientsArr.length > 0) {
+              const toNames: string[] = []
+              for (const r of recipientsArr) {
+                const idCard = (r?.recipientIdCard || '').toString().trim()
+                if (idCard) {
+                  const u = await getUserByIdCard(idCard)
+                  toNames.push(u?.nickname || idCard)
+                }
+              }
+              if (replyOriginal.value) {
+                replyOriginal.value.toUserNames = toNames.join('、')
+              }
+            }
+          } catch {}
+
+          // 预填主题（以 content.subject 为准）
+          const originalSubject = (detail?.content?.subject) || ''
+          mailForm.value.subject = originalSubject ? `回复：${originalSubject}` : '回复：'
+
+          // 正文置空（增加保护，避免 Slate DOM 错误）
+          try {
+            mailForm.value.content = ''
+            if (editorReady.value && editorInstance.value && typeof editorInstance.value.clear === 'function') {
+              editorInstance.value.clear()
+            } else if (editorReady.value && editorInstance.value && typeof editorInstance.value.setHtml === 'function') {
+              editorInstance.value.setHtml('<p><br/></p>')
+            }
+          } catch {}
+        }
+      } catch (e) {
+        console.error('加载回复原邮件失败:', e)
+      }
+    }
+  }
+})
+
+// 组件卸载时的清理
+onBeforeUnmount(() => {
+  try {
+    // 清理编辑器实例
+    if (editorInstance.value) {
+      // 先清空内容，避免图片等复杂元素导致的状态问题
+      try {
+        if (typeof editorInstance.value.clear === 'function') {
+          editorInstance.value.clear()
+        }
+      } catch (e) {
+        console.warn('清空编辑器内容失败:', e)
+      }
+      
+      // 等待一个 tick 后再销毁
+      nextTick(() => {
+        try {
+          if (typeof editorInstance.value.destroy === 'function') {
+            editorInstance.value.destroy()
+          }
+        } catch (e) {
+          console.warn('销毁编辑器实例失败:', e)
+        } finally {
+          editorInstance.value = null
+          editorReady.value = false
+        }
+      })
+    } else {
+      editorReady.value = false
+    }
+  } catch (e) {
+    console.warn('清理编辑器实例失败:', e)
+    editorInstance.value = null
+    editorReady.value = false
+  }
 })
 </script>
 
@@ -1907,7 +2124,7 @@ onMounted(async () => {
 .mail-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   background-color: #f5f7fa;
   color: #303133;
   overflow: hidden; /* 防止溢出出现滚动条 */
@@ -1922,6 +2139,7 @@ onMounted(async () => {
   background-color: #f5f7f9;
   padding: 8px;
   gap: 8px;
+  min-height: 0; /* 允许子项在 flex 容器内正确收缩以启用滚动 */
 }
 
 /* 主内容区域 */
@@ -1934,6 +2152,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: 0; /* 允许在父级 flex 布局内正确收缩并启用内部滚动 */
   width: 100%;
 }
 
@@ -2343,6 +2562,26 @@ onMounted(async () => {
   font-weight: 500;
   line-height: 1.3;
   margin-top: 2px;
+}
+
+/* 原始邮件标题行：文字与横线居中对齐 */
+.orig-mail-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px 0;
+}
+
+.orig-mail-text {
+  font-size: 12px;
+  color: #909399;
+  line-height: 1; /* 保证与横线垂直居中 */
+}
+
+.orig-mail-divider {
+  flex: 1;
+  height: 1px;
+  background: #e5e5e5;
 }
 
 /* 拖拽上传区域样式 */
