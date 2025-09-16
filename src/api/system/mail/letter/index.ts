@@ -203,6 +203,34 @@ export interface SearchLetterReqVO {
   pageSize?: number                  // 每页大小，可选，默认10
 }
 
+// ==================== 邮件回复转发相关VO ====================
+
+// 邮件回复请求VO
+export interface LetterReplyReqVO {
+  originalLetterId: number           // 必填，原邮件ID
+  content: string                    // 必填，回复内容
+  priority?: number                  // 可选，优先级(1-普通,2-重要,3-紧急)，默认1
+  requestReadReceipt?: boolean       // 可选，是否请求已读回执，默认false
+  recipientIdCards: string[]         // 必填，收件人身份证号列表
+  ccIdCards?: string[]               // 可选，抄送人身份证号列表
+  bccIdCards?: string[]              // 可选，密送人身份证号列表
+  attachmentIds?: number[]           // 可选，附件ID列表
+  remark?: string                    // 可选，回复备注
+}
+
+// 邮件转发请求VO
+export interface LetterForwardReqVO {
+  originalLetterId: number           // 必填，原邮件ID
+  content: string                    // 必填，转发说明内容
+  priority?: number                  // 可选，优先级(1-普通,2-重要,3-紧急)，默认1
+  requestReadReceipt?: boolean       // 可选，是否请求已读回执，默认false
+  recipientIdCards: string[]         // 必填，收件人身份证号列表
+  ccIdCards?: string[]               // 可选，抄送人身份证号列表
+  bccIdCards?: string[]              // 可选，密送人身份证号列表
+  attachmentIds?: number[]           // 可选，附件ID列表
+  remark?: string                    // 可选，转发备注
+}
+
 // ==================== 信件内容相关API ====================
 
 /**
@@ -515,6 +543,26 @@ export const markAsTrash = async (data: { ids: number[] }): Promise<boolean> => 
  */
 export const restoreFromTrashFlag = async (data: { ids: number[] }): Promise<boolean> => {
   return await request.put({url: '/letter/restore-trash-flag', data})
+}
+
+// ==================== 邮件回复转发相关API ====================
+
+/**
+ * 回复邮件
+ * @param data 回复邮件请求参数
+ * @returns Promise<number> 返回回复邮件的ID
+ */
+export const replyLetter = async (data: LetterReplyReqVO): Promise<number> => {
+  return await request.post({url: '/letter/reply', data})
+}
+
+/**
+ * 转发邮件
+ * @param data 转发邮件请求参数
+ * @returns Promise<number> 返回转发邮件的ID
+ */
+export const forwardLetter = async (data: LetterForwardReqVO): Promise<number> => {
+  return await request.post({url: '/letter/forward', data})
 }
 
 

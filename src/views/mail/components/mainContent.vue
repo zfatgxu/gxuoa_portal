@@ -27,6 +27,9 @@
         <button class="tool-btn" @click="deleteSelectedEmails" :disabled="!hasOperationTarget">
           {{ (isDeletedFolder || isTrashFolder) ? '彻底删除' : '删除' }}
         </button>
+        <button v-if="selectedEmailDetail && folderName === '收件箱'" class="tool-btn" @click="handleReply">
+          回复
+        </button>
         <button class="tool-btn">
           转发
         </button>
@@ -341,6 +344,7 @@ const emit = defineEmits<{
   syncMails: []
   viewEmailDetail: [emailId: number]
   getEmailDetail: [emailId: number]
+  replyEmail: [emailId: number]
 }>()
 
 // 邮件选择和操作相关
@@ -593,6 +597,13 @@ function markAllAsRead() {
 
 function toggleStar(emailId: number) {
   emit('toggleStar', emailId)
+}
+
+// 回复邮件
+function handleReply() {
+  if (selectedEmailDetail.value) {
+    emit('replyEmail', selectedEmailDetail.value.id)
+  }
 }
 
 // 邮件详情操作

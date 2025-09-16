@@ -123,6 +123,7 @@
         @view-email-detail="handleViewEmailDetail"
         @get-email-detail="handleGetEmailDetail"
         @delete-folder="handleDeleteFolder"
+        @reply-email="handleReplyEmail"
       />
     </div>
 
@@ -1561,6 +1562,18 @@ onMounted(async () => {
   }
 })
 
+
+// 处理回复邮件
+function handleReplyEmail(emailId: number) {
+  // 跳转到写信页面，并传递回复参数
+  router.push({ 
+    path: '/mail/write', 
+    query: { 
+      replyId: String(emailId),
+      type: 'reply'
+    } 
+  })
+}
 
 const router = useRouter()
 function goCompose() {
