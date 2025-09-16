@@ -252,8 +252,8 @@
   import {useRoute, useRouter} from 'vue-router'
   import * as DeptApi from '@/api/system/dept'
   import * as UserApi from '@/api/system/user'
-// import * as ContactsSubmitApi from '@/api/addressbook-flow/contactsSubmit'
-// import * as TaskContactApi from '@/api/addressbook/task-contact-relation'
+  import * as ContactsSubmitApi from '@/api/addressbook/workflow/contactsSubmit'
+  import * as TaskContactRelationApi from '@/api/addressbook/task-contact-relation'
   import {QuestionFilled} from '@element-plus/icons-vue'
   import {useTagsViewStore} from '@/store/modules/tagsView'
   
@@ -313,28 +313,44 @@
     }
   }
   
-  // 获取本单位人员列表
-  const getDeptUserList = async () => {
-    try {
-      userListLoading.value = true
-      const currentUser = userStore.getUser
-      if (!currentUser || !currentUser.deptId) {
-        console.error('当前用户部门信息无效')
-        return
-      }
-  
-      // 按 deptId 过滤简表，然后获取详情
-      const allUsers = await UserApi.getSimpleUserList()
-      const fallbackSimple = (allUsers || []).filter((u: any) => Array.isArray(u?.deptIds) && u.deptIds.includes(currentUser.deptId))
-      userList.value = await Promise.all(fallbackSimple.map((u: any) => UserApi.getUser(u.id)))
-  
-    } catch (error) {
-      console.error('获取本单位人员列表失败:', error)
-      userList.value = []
-    } finally {
-      userListLoading.value = false
+// 获取本单位人员列表
+const getDeptUserList = async () => {
+  try {
+    userListLoading.value = true
+    const currentUser = userStore.getUser
+    if (!currentUser || !currentUser.deptId) {
+      console.error('当前用户部门信息无效')
+      return
     }
+
+    // 1. 先获取部门用户的基本信息列表
+    const simpleUserList = await UserApi.getUserListByDeptId(currentUser.deptId)
+    
+    // 2. 通过用户ID获取每个用户的详细信息
+    userList.value = []
+    for (const simpleUser of simpleUserList) {
+      try {
+        const userDetail = await UserApi.getUserById(simpleUser.id)
+        if (userDetail) {
+          userList.value.push(userDetail)
+        } else {
+          // 如果获取详细信息失败，使用基本信息
+          userList.value.push(simpleUser)
+        }
+      } catch (error) {
+        console.warn(`获取用户详细信息失败，用户ID: ${simpleUser.id}`, error)
+        // 如果获取详细信息失败，使用基本信息
+        userList.value.push(simpleUser)
+      }
+    }
+
+  } catch (error) {
+    console.error('获取本单位人员列表失败:', error)
+    userList.value = []
+  } finally {
+    userListLoading.value = false
   }
+}
   
   // 智能填充表格数据
   const fillTableWithDeptUsers = async () => {
@@ -431,16 +447,16 @@
       let approverId = getApproverIdFromWorkflowData(existingWorkflowData.value)
       
       // 如果从workflowData中没有获取到，尝试从latestRecord中获取
-      // if (!approverId && taskId.value && currentUser.value?.deptId) {
-      //   try {
-      //     const latestRecord = await TaskContactApi.taskContactRelationApi.getLatestTaskContact(taskId.value, currentUser.value.deptId)
-      //     if (latestRecord?.approver) {
-      //       approverId = getApproverIdFromString(latestRecord.approver)
-      //     }
-      //   } catch (error) {
-      //     console.error('从latestRecord获取审批人失败:', error)
-      //   }
-      // }
+      if (!approverId && taskId.value && currentUser.value?.deptId) {
+        try {
+          const latestRecord = await TaskContactRelationApi.taskContactRelationApi.getLatestTaskContact(taskId.value, currentUser.value.deptId)
+          if (latestRecord?.approver) {
+            approverId = getApproverIdFromString(latestRecord.approver)
+          }
+        } catch (error) {
+          console.error('从latestRecord获取审批人失败:', error)
+        }
+      }
       
       if (!approverId) {
         return
@@ -551,16 +567,16 @@
       }
 
       // 获取最新的任务参与记录
-      // const latestRecord = await TaskContactApi.taskContactRelationApi.getLatestTaskContact(taskId.value, currentUser.value.deptId)
+      const latestRecord = await TaskContactRelationApi.taskContactRelationApi.getLatestTaskContact(taskId.value, currentUser.value.deptId)
 
-      // if (!latestRecord) {
-      //   console.error('❌ 未找到任务参与记录')
-      //   ElMessage.error('当前用户部门未参与此任务')
-      //   return false
-      // }
+      if (!latestRecord) {
+        console.error('❌ 未找到任务参与记录')
+        ElMessage.error('当前用户部门未参与此任务')
+        return false
+      }
 
       // 检查状态并获取必要数据
-      // await checkDetailedTaskStatus(latestRecord)
+      await checkDetailedTaskStatus(latestRecord)
       return true
       
     } catch (error) {
@@ -571,44 +587,44 @@
   }
   
   // 检查任务状态并获取必要数据
-  // const checkDetailedTaskStatus = async (latestRecord: any) => {
-  //   try {
-  //     // 重置状态
-  //     isRejectedTask.value = false
-  //     existingWorkflowData.value = null
-  //     
-  //     // 如果是已拒绝状态，获取原表单数据
-  //     if (latestRecord.status === 3) {
-  //       isRejectedTask.value = true
-  //       await getWorkflowContactsData(latestRecord)
-  //     }
-  //   } catch (error) {
-  //     console.error('检查任务状态失败:', error)
-  //     throw error
-  //   }
-  // }
+  const checkDetailedTaskStatus = async (latestRecord: any) => {
+    try {
+      // 重置状态
+      isRejectedTask.value = false
+      existingWorkflowData.value = null
+      
+      // 如果是已拒绝状态，获取原表单数据
+      if (latestRecord.status === 3) {
+        isRejectedTask.value = true
+        await getWorkflowContactsData(latestRecord)
+      }
+    } catch (error) {
+      console.error('检查任务状态失败:', error)
+      throw error
+    }
+  }
   
   // 获取工作流联系人数据（参考detail.vue的逻辑）
-  // const getWorkflowContactsData = async (latestRecord: any) => {
-  //   try {
-  //     if (!latestRecord?.processInstanceId) {
-  //       ElMessage.warning('无法获取原表单数据：缺少流程实例ID')
-  //       return
-  //     }
+  const getWorkflowContactsData = async (latestRecord: any) => {
+    try {
+      if (!latestRecord?.processInstanceId) {
+        ElMessage.warning('无法获取原表单数据：缺少流程实例ID')
+        return
+      }
 
-  //     // 通过processInstanceId获取联系人数据
-  //     // const workflowContacts = await TaskContactApi.taskContactRelationApi.getWorkflowContacts(latestRecord.processInstanceId)
+      // 通过processInstanceId获取联系人数据
+      const workflowContacts = await TaskContactRelationApi.taskContactRelationApi.getWorkflowContacts(latestRecord.processInstanceId)
       
-  //     // if (workflowContacts?.contacts && Array.isArray(workflowContacts.contacts) && workflowContacts.contacts.length > 0) {
-  //     //   existingWorkflowData.value = workflowContacts
-  //     // } else {
-  //     //   ElMessage.warning('未找到原表单数据')
-  //     // }
-  //   } catch (error) {
-  //     console.error('获取被拒绝工作流数据失败:', error)
-  //     ElMessage.error('获取原表单数据失败，请联系管理员')
-  //   }
-  // }
+      if (workflowContacts?.contacts && Array.isArray(workflowContacts.contacts) && workflowContacts.contacts.length > 0) {
+        existingWorkflowData.value = workflowContacts
+      } else {
+        ElMessage.warning('未找到原表单数据')
+      }
+    } catch (error) {
+      console.error('获取被拒绝工作流数据失败:', error)
+      ElMessage.error('获取原表单数据失败，请联系管理员')
+    }
+  }
   
   
   
@@ -856,11 +872,10 @@
       }
   
       // 调用统一接口
-      // await ContactsSubmitApi.createWithContacts(submitData)
+      await ContactsSubmitApi.createWithContacts(submitData)
       
-      // 临时模拟提交成功
       console.log('提交数据:', submitData)
-      ElMessage.success('通讯录提交成功（模拟）')
+      ElMessage.success('通讯录提交成功')
   
       // 设置跳转状态
       isRedirecting.value = true
@@ -876,8 +891,8 @@
           tagsViewStore.delView(currentView)
         }
         
-        // 跳转到任务列表页面
-        router.push('/addressbook/fill-tasks/index')
+        // 跳转到首页
+        router.push('/')
       }, 500)
   
     } catch (error: any) {
