@@ -1,5 +1,6 @@
 import request from '@/config/axios'
 import type {PageParam} from '@/api/supervision'
+import type { LetterAttachmentRespVO } from '@/api/system/mail/attachment'
 
 // ==================== 信件内容相关VO ====================
 
@@ -17,6 +18,7 @@ export interface LetterContentRespVO {
   updater: string              // 更新者
   updateTime: string           // 更新时间
   tenantId: number             // 租户编号
+  originalLetterId?: number    // 原始信件ID（仅回复/转发）
 }
 
 
@@ -135,12 +137,12 @@ export interface UserLetterStatusVO {
 
 // 信件详情响应VO - 对应后端 LetterDetailRespVO
 export interface LetterDetailRespVO {
-  content: LetterContentRespVO        // 信件内容信息
-  senders: LetterSenderRespVO[]       // 发件人信息列表
-  recipients: LetterRecipientRespVO[] // 收件人信息列表
-  userStatus: UserLetterStatusVO      // 当前用户状态
-  isTrash: boolean                    // 是否在垃圾箱
-  trashTime: string                   // 移入垃圾箱时间
+  content: LetterContentRespVO                 // 信件内容信息
+  senders: LetterSenderRespVO[]                // 发件人信息列表
+  recipients: LetterRecipientRespVO[]          // 收件人信息列表
+  attachments: LetterAttachmentRespVO[]        // 附件信息列表
+  userStatus: UserLetterStatusVO               // 当前用户对该信件的操作状态
+  originalLetterId?: number                    // 原始信件ID（仅回复/转发）
 }
 
 
@@ -208,6 +210,7 @@ export interface SearchLetterReqVO {
 // 邮件回复请求VO
 export interface LetterReplyReqVO {
   originalLetterId: number           // 必填，原邮件ID
+  subject: string                    // 必填，回复主题
   content: string                    // 必填，回复内容
   priority?: number                  // 可选，优先级(1-普通,2-重要,3-紧急)，默认1
   requestReadReceipt?: boolean       // 可选，是否请求已读回执，默认false
@@ -221,6 +224,7 @@ export interface LetterReplyReqVO {
 // 邮件转发请求VO
 export interface LetterForwardReqVO {
   originalLetterId: number           // 必填，原邮件ID
+  subject: string                    // 必填，转发主题
   content: string                    // 必填，转发说明内容
   priority?: number                  // 可选，优先级(1-普通,2-重要,3-紧急)，默认1
   requestReadReceipt?: boolean       // 可选，是否请求已读回执，默认false

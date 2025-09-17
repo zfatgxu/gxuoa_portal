@@ -124,6 +124,7 @@
         @get-email-detail="handleGetEmailDetail"
         @delete-folder="handleDeleteFolder"
         @reply-email="handleReplyEmail"
+        @forward-email="handleForwardEmail"
       />
     </div>
 
@@ -1573,6 +1574,19 @@ function handleReplyEmail(emailId: number) {
       type: 'reply'
     } 
   })
+}
+
+// 处理转发邮件（支持单封或多封）
+function handleForwardEmail(emailIdOrIds: number | number[]) {
+  const isArray = Array.isArray(emailIdOrIds)
+  const query: any = { type: 'forward' }
+  if (isArray) {
+    // 使用逗号分隔的字符串传递多个ID
+    query.replyIds = (emailIdOrIds as number[]).join(',')
+  } else {
+    query.replyId = String(emailIdOrIds)
+  }
+  router.push({ path: '/mail/write', query })
 }
 
 const router = useRouter()

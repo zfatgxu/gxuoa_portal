@@ -30,7 +30,11 @@
         <button v-if="selectedEmailDetail && folderName === '收件箱'" class="tool-btn" @click="handleReply">
           回复
         </button>
-        <button class="tool-btn">
+        <button 
+          v-if="(folderName === '收件箱' || folderName === '星标邮件' || folderName === '已发送')"
+          class="tool-btn"
+          @click="handleForward"
+        >
           转发
         </button>
         <button v-if="folderName === '收件箱'" class="tool-btn" @click="markAsSpam">
@@ -189,6 +193,54 @@
             <div v-else class="content-body" v-html="selectedEmailDetail.content">
             </div>
           </div>
+
+          <!-- 原始邮件（回复/转发场景）- 按写信页样式展示 -->
+          <div v-if="originalMail" class="original-mail-block" style="padding: 12px 20px 16px 20px; background-color: #ffffff;">
+            <div class="orig-mail-title">
+              <span class="orig-mail-text">原始邮件</span>
+              <span class="orig-mail-divider"></span>
+            </div>
+            <div style="background:#f5f7fa; border:1px solid #eeeeee; border-radius:6px; padding:10px 12px; margin: 0 0 8px 0;">
+              <div style="font-size: 13px; color: #606266; display:grid; grid-template-columns: 72px 1fr; row-gap:6px; column-gap:8px; align-items:start;">
+                <div style="color:#909399;">发件人：</div>
+                <div>{{ originalMail.fromUserName || '' }}</div>
+                <div style="color:#909399;">收件人：</div>
+                <div>{{ originalMail.toUserNames || '' }}</div>
+                <div style="color:#909399;">发件时间：</div>
+                <div>{{ formatDisplayTime(originalMail.sendTime) }}</div>
+                <div style="color:#909399;">主题：</div>
+                <div>{{ originalMail.subject || '' }}</div>
+              </div>
+            </div>
+            <div v-if="originalMail?.attachments?.length" class="detail-attachments">
+              <div class="attachments-list">
+                <div 
+                  v-for="att in originalMail.attachments" 
+                  :key="att.id" 
+                  class="attachment-item"
+                >
+                  <div class="attachment-info">
+                    <div class="attachment-name">{{ att.fileName }}</div>
+                    <div class="attachment-actions">
+                      <el-link 
+                        type="primary"
+                        :underline="false"
+                        :title="`下载 ${att.fileName}`"
+                        @click.prevent="handleDownloadAttachment(att)"
+                      >下载</el-link>
+                    </div>
+                  </div>
+                  <div class="attachment-details">
+                    <span class="file-size">{{ formatFileSizeFromString(att.fileSize) }}</span>
+                    <span v-if="getFileExtension(att.fileName)" class="file-type">{{ getFileExtension(att.fileName).toUpperCase() }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-if="originalMailHtml" style="background:#fff; border:none; border-radius:6px; padding:12px;">
+              <div style="font-size: 14px; color: #303133; line-height: 1.8;" v-html="originalMailHtml"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -272,9 +324,8 @@ import { ref, watch, computed } from 'vue'
 import topImage from '@/views/mail/image/top.png'
 import { getUserByIdCard } from '@/api/system/user'
 import { formatFileSizeFromString, getFileExtension, downloadAttachment } from '@/api/system/mail/attachment'
-// import { ElMessage } from 'element-plus'
-
-//
+import { getLetterDetail } from '@/api/system/mail/letter'
+ 
 
 interface Email {
   id: number
@@ -345,6 +396,7 @@ const emit = defineEmits<{
   viewEmailDetail: [emailId: number]
   getEmailDetail: [emailId: number]
   replyEmail: [emailId: number]
+  forwardEmail: [emailIdOrIds: number | number[]]
 }>()
 
 // 邮件选择和操作相关
@@ -360,7 +412,18 @@ const selectedEmailDetail = ref<Email | null>(null)
 const senderAvatar = ref<string>('')
 const avatarLoading = ref<boolean>(false)
 const userDetailsCache = ref<Record<string, any>>({})
-const updateTimeout = ref<NodeJS.Timeout | null>(null)
+ 
+
+// 原始邮件详情（用于回复/转发时展示）
+const originalMail = ref<null | {
+  id: number
+  subject: string
+  fromUserName?: string
+  toUserNames?: string
+  sendTime?: string
+  attachments?: any[]
+}>(null)
+const originalMailHtml = ref<string>('')
 
 // 计算属性
 const hasOperationTarget = computed(() => !!selectedEmailDetail.value || selectedEmails.value.length > 0)
@@ -606,6 +669,26 @@ function handleReply() {
   }
 }
 
+// 转发邮件
+function handleForward() {
+  if (selectedEmailDetail.value) {
+    emit('forwardEmail', selectedEmailDetail.value.id)
+    return
+  }
+  if (selectedEmails.value.length > 0) {
+    const ids = selectedEmails.value.map(id => Number(id)).filter(n => !Number.isNaN(n))
+    if (ids.length === 1) {
+      emit('forwardEmail', ids[0])
+      return
+    }
+    if (ids.length > 1) {
+      emit('forwardEmail', ids)
+      return
+    }
+  }
+  emit('showMessage', { type: 'warning', message: '请先选择要转发的邮件' })
+}
+
 // 邮件详情操作
 function viewEmailDetail(emailId: number) {
   const localEmail = props.emails.find(email => email.id === emailId)
@@ -631,10 +714,6 @@ function viewEmailDetail(emailId: number) {
 }
 
 function closeEmailDetail() {
-  if (updateTimeout.value) {
-    clearTimeout(updateTimeout.value)
-    updateTimeout.value = null
-  }
   
   selectedEmailDetail.value = null
   senderAvatar.value = ''
@@ -839,9 +918,6 @@ watch([() => props.emails, pageSize], () => {
 // 邮件详情更新
 async function updateEmailDetail(emailDetail: any) {
   if (emailDetail && selectedEmailDetail.value) {
-    if (updateTimeout.value) {
-      clearTimeout(updateTimeout.value)
-    }
     
     const currentDetail = selectedEmailDetail.value
     const rawContent = emailDetail.content?.content || emailDetail.content || ''
@@ -898,6 +974,67 @@ async function updateEmailDetail(emailDetail: any) {
     }
     
     loadSenderAvatar(emailDetail)
+
+    // 如果是回复/转发场景，尝试加载原始邮件详情展示
+    try {
+      const maybeOriginalId = emailDetail.originalLetterId || emailDetail.content?.originalLetterId || emailDetail.content?.originalId
+      if (maybeOriginalId) {
+        const detail = await getLetterDetail(Number(maybeOriginalId))
+        if (detail) {
+          // 构造原始邮件展示数据
+          const oSubject = (detail?.content?.subject) || (detail as any).subject || ''
+          const oSendTime = detail?.content?.sendTime || ''
+          originalMail.value = {
+            id: Number(maybeOriginalId),
+            subject: oSubject,
+            fromUserName: '',
+            toUserNames: '',
+            sendTime: oSendTime,
+            attachments: Array.isArray((detail as any).attachments) ? (detail as any).attachments : []
+          }
+          // 计算原始正文 HTML
+          try {
+            const c: any = (detail as any)?.content
+            const html = (c && (c.content || c.html)) ? (c.content || c.html) : (typeof c === 'string' ? c : '')
+            originalMailHtml.value = html || ''
+          } catch { originalMailHtml.value = '' }
+
+          // 发件人：从 senders 取第一个的身份证号查询姓名
+          try {
+            let firstSenderId = ''
+            if (Array.isArray((detail as any).senders) && (detail as any).senders.length > 0) {
+              firstSenderId = (detail as any).senders[0]?.senderIdCard || ''
+            }
+            if (firstSenderId) {
+              const u = await getUserDetailByIdCard(firstSenderId)
+              if (originalMail.value) originalMail.value.fromUserName = (u && u.nickname) ? u.nickname : ''
+            }
+          } catch {}
+
+          // 收件人：从 recipients[].recipientIdCard 获取姓名并拼接
+          try {
+            const recipientsArr = (detail as any)?.recipients
+            if (Array.isArray(recipientsArr) && recipientsArr.length > 0) {
+              const toNames: string[] = []
+              for (const r of recipientsArr) {
+                const idCard = (r?.recipientIdCard || '').toString().trim()
+                if (idCard) {
+                  const u = await getUserDetailByIdCard(idCard)
+                  toNames.push(u?.nickname || idCard)
+                }
+              }
+              if (originalMail.value) originalMail.value.toUserNames = toNames.join('、')
+            }
+          } catch {}
+        }
+      } else {
+        originalMail.value = null
+        originalMailHtml.value = ''
+      }
+    } catch (e) {
+      originalMail.value = null
+      originalMailHtml.value = ''
+    }
   }
 }
 
@@ -919,3 +1056,30 @@ function handleDownloadAttachment(att: { id: number; fileName: string }) {
   }
 }
 </script>
+
+<style scoped>
+/* 原始邮件标题行：与 write.vue 保持一致并增加灰色细线 */
+.orig-mail-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px 0;
+}
+
+.orig-mail-text {
+  font-size: 12px;
+  color: #909399;
+  line-height: 1;
+}
+
+.orig-mail-divider {
+  flex: 1;
+  height: 1px;
+  background: #e5e5e5;
+}
+
+.original-mail-block .detail-attachments {
+  padding: 0;
+}
+
+</style>
