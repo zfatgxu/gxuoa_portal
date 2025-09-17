@@ -194,22 +194,26 @@
         </div>
 
         <!-- 原始邮件（回复/转发场景） -->
-        <!-- 多封转发时：展示为邮件列表摘要 -->
-        <div v-if="replyOriginalList.length > 0" style="padding: 12px 20px 0 20px; background-color: #ffffff;">
+        <!-- 多封转发时：使用与邮件列表一致的摘要条目样式 -->
+        <div v-if="replyOriginalList.length > 0" class="forward-orig-mails" style="padding: 12px 20px 0 20px; background-color: #ffffff;">
           <div class="orig-mail-title">
             <span class="orig-mail-text">原始邮件</span>
             <span class="orig-mail-divider"></span>
           </div>
-          <div style="background:#f5f7fa; border:1px solid #eeeeee; border-radius:6px; padding: 6px 0; margin: 0 0 8px 0;">
-            <div v-for="item in replyOriginalList" :key="item.id" style="padding: 8px 12px; display:grid; grid-template-columns: 72px 1fr; row-gap:6px; column-gap:8px; align-items:start; border-bottom:1px solid #f0f0f0;">
-              <div style="color:#909399;">发件人：</div>
-              <div>{{ item.fromUserName || '' }}</div>
-              <div style="color:#909399;">收件人：</div>
-              <div>{{ item.toUserNames || '' }}</div>
-              <div style="color:#909399;">发件时间：</div>
-              <div>{{ item.sendTime || '' }}</div>
-              <div style="color:#909399;">主题：</div>
-              <div>{{ item.subject || '' }}</div>
+          <div class="forward-list" style="border:1px solid #eeeeee; border-radius:6px; overflow:hidden;">
+            <div 
+              v-for="item in replyOriginalList" 
+              :key="item.id" 
+              class="forward-item"
+              style="display:flex; align-items:center; gap:10px; padding:8px 12px; background:#fff; border-bottom:1px solid #f0f0f0;"
+            >
+              <span class="email-icon" style="flex-shrink:0;">✉️</span>
+              <span class="sender" style="width: 160px; color:#303133; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ item.fromUserName || '未知' }}</span>
+              <span class="subject" style="flex:1; min-width: 0; color:#303133; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                {{ item.subject || '无主题' }}
+                <span v-if="item.toUserNames" class="email-content" style="color:#909399;"> - {{ item.toUserNames }}</span>
+              </span>
+              <span class="time" style="flex-shrink:0; color:#909399;">{{ item.sendTime || '' }}</span>
             </div>
           </div>
           <!-- 不在多封场景展示正文/附件，避免过长；保持简洁列表 -->
@@ -273,7 +277,7 @@
           multiple 
           style="display: none" 
           accept=".jpg,.png,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.7z,.mp4,.avi,.mov,.mp3,.wav"
-          @change="(e: Event) => handleFileUpload(((e.target as HTMLInputElement).files))"
+          @change="onFileInputChange"
         />
         
         <!-- 拖拽上传区域 -->
@@ -1310,6 +1314,12 @@ const triggerFileUpload = () => {
   }
 }
 
+// 文件选择变更处理
+const onFileInputChange = (e: Event) => {
+  const target = e.target as HTMLInputElement | null
+  handleFileUpload(target && target.files ? target.files : null)
+}
+
 // 拖拽上传相关方法
 const handleDragOver = (e: DragEvent) => {
   e.preventDefault()
@@ -2106,53 +2116,53 @@ onMounted(async () => {
         if (ids.length === 1) {
           const detail: any = await getLetterDetail(ids[0])
           if (detail) {
-          // 保存原始信息，用于页面展示
-          replyOriginal.value = {
-            id: detail.id,
-            subject: (detail?.content?.subject) || detail.subject || '',
-            fromUserName: '',
-            toUserNames: '',
-            sendTime: formatDateTimeCn(detail?.content?.sendTime),
-            content: detail.content || ''
-          }
-
-          // 计算原始正文 HTML（优先 content.content/html，其次 content 本身）
-          try {
-            const c = detail?.content
-            const html = (c && (c.content || c.html)) ? (c.content || c.html) : (typeof c === 'string' ? c : '')
-            replyOriginalHtml.value = html || ''
-          } catch (e) {
-            replyOriginalHtml.value = ''
-          }
-
-          // 使用详情中自带的附件列表
-          if (replyOriginal.value) {
-            replyOriginal.value.attachments = Array.isArray(detail.attachments) ? detail.attachments : []
-          }
-
-          // 根据类型决定是否预填收件人（回复预填，转发不预填）；同时均补充原始发件人显示
-          const typeParam = (route.query.type || '').toString()
-          if (typeParam === 'reply') {
-            let replySenderIdCards: string[] = []
-            if (Array.isArray((detail as any).senders)) {
-              const firstSenderIdCard = (detail as any).senders
-                .map((s: any) => (s?.senderIdCard || '').toString().trim())
-                .find((v: string) => !!v)
-              if (firstSenderIdCard) {
-                replySenderIdCards = [firstSenderIdCard]
-              }
+            // 保存原始信息，用于页面展示
+            replyOriginal.value = {
+              id: detail.id,
+              subject: (detail?.content?.subject) || detail.subject || '',
+              fromUserName: '',
+              toUserNames: '',
+              sendTime: formatDateTimeCn(detail?.content?.sendTime),
+              content: detail.content || ''
             }
+
+            // 计算原始正文 HTML（优先 content.content/html，其次 content 本身）
             try {
-              const names: string[] = []
-              for (const id of replySenderIdCards) {
-                const user = await getUserByIdCard(id)
-                if (user && user.nickname) {
-                  names.push(user.nickname)
+              const c = detail?.content
+              const html = (c && (c.content || c.html)) ? (c.content || c.html) : (typeof c === 'string' ? c : '')
+              replyOriginalHtml.value = html || ''
+            } catch (e) {
+              replyOriginalHtml.value = ''
+            }
+
+            // 使用详情中自带的附件列表
+            if (replyOriginal.value) {
+              replyOriginal.value.attachments = Array.isArray(detail.attachments) ?   detail.attachments : []
+            }
+
+            // 根据类型决定是否预填收件人（回复预填，转发不预填）；同时均补充原始发件人显示
+            const typeParam = (route.query.type || '').toString()
+            if (typeParam === 'reply') {
+              let replySenderIdCards: string[] = []
+              if (Array.isArray((detail as any).senders)) {
+                const firstSenderIdCard = (detail as any).senders
+                  .map((s: any) => (s?.senderIdCard || '').toString().trim())
+                  .find((v: string) => !!v)
+                if (firstSenderIdCard) {
+                  replySenderIdCards = [firstSenderIdCard]
                 }
               }
-              mailForm.value.recipients = names
-              if (replyOriginal.value) {
-                replyOriginal.value.fromUserName = names[0] || ''
+              try {
+                const names: string[] = []
+                for (const id of replySenderIdCards) {
+                  const user = await getUserByIdCard(id)
+                  if (user && user.nickname) {
+                    names.push(user.nickname)
+                  }
+                }
+                mailForm.value.recipients = names
+                if (replyOriginal.value) {
+                  replyOriginal.value.fromUserName = names[0] || ''
               }
             } catch (e) {
               mailForm.value.recipients = []
@@ -2214,7 +2224,9 @@ onMounted(async () => {
               editorInstance.value.setHtml('<p><br/></p>')
             }
           } catch (e) {}
-        } else {
+          }
+        }
+        else {
           // 多封邮件：批量加载摘要列表
           const details = await Promise.allSettled(ids.map(id => getLetterDetail(id)))
           replyOriginalList.value = []
