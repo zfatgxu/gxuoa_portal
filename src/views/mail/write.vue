@@ -84,8 +84,8 @@
               </el-select>
             </div>
             <div class="form-actions">
-              <span class="action-link" @click="showCc = !showCc; if(showCc) activeRecipientField = 'cc'">抄送</span>
-              <span class="action-link" @click="showBcc = !showBcc; if(showBcc) activeRecipientField = 'bcc'">密送</span>
+              <span class="action-link" @click="toggleCc">抄送</span>
+              <span class="action-link" @click="toggleBcc">密送</span>
               <span>|</span>
               <span class="action-link">分别发送</span>
             </div>
@@ -972,6 +972,22 @@ const toggleContactsExpand = (type: 'recent' | 'starred') => {
     recentContactsExpanded.value = !recentContactsExpanded.value
   } else {
     starredContactsExpanded.value = !starredContactsExpanded.value
+  }
+}
+
+// 切换抄送显示状态
+const toggleCc = () => {
+  showCc.value = !showCc.value
+  if (showCc.value) {
+    activeRecipientField.value = 'cc'
+  }
+}
+
+// 切换密送显示状态
+const toggleBcc = () => {
+  showBcc.value = !showBcc.value
+  if (showBcc.value) {
+    activeRecipientField.value = 'bcc'
   }
 }
 
