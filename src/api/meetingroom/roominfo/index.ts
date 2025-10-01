@@ -31,6 +31,11 @@ export const RoomInfoApi = {
     return await request.get({ url: `/meetingroom/room-info/get?id=` + id })
   },
 
+  // 根据日期获取会议室信息
+  getRoomInfoByDate: async (date: string) => {
+    return await request.get({ url: `/meetingroom/room-info/get-day`, params: { date } })
+  },
+
   // 新增会议室信息
   createRoomInfo: async (data: RoomInfoVO) => {
     return await request.post({ url: `/meetingroom/room-info/create`, data })
@@ -50,4 +55,5 @@ export const RoomInfoApi = {
   exportRoomInfo: async (params) => {
     return await request.download({ url: `/meetingroom/room-info/export-excel`, params })
   },
+
 }

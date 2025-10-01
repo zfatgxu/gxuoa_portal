@@ -14,7 +14,7 @@
   </Dialog>
 </template>
 <script lang="ts" setup>
-import * as MailTemplateApi from '@/api/system/mail/template'
+import * as MailTemplateApi from '@/api/system/mail/letter'
 import { allSchemas, rules } from './template.data'
 
 defineOptions({ name: 'SystemMailTemplateForm' })

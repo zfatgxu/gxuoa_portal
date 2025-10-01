@@ -63,7 +63,6 @@
                 <el-input-number
                   v-model="seal.quantity"
                   :min="1"
-                  :max="99"
                   size="small"
                   class="quantity-input"
                 />
@@ -132,6 +131,7 @@
                 v-model="detail.phone"
                 placeholder="请输入联系电话"
                 class="phone-input"
+                @blur="validatePhone(detail.phone)"
               />
               <span v-else>{{ detail.phone }}</span>
             </div>
@@ -144,19 +144,7 @@
         <div class="section-header">单位负责人审核意见</div>
         <div class="approval-opinion-content">
           <div v-if="getUnitLeaderOpinions().length > 0">
-            <div v-for="(opinion, index) in getUnitLeaderOpinions()" :key="index" class="opinion-box" :class="{ 'mb-3': index < getUnitLeaderOpinions().length - 1 }">
-              <div class="opinion-header">
-                <span class="approver-name">{{ opinion.approver }}</span>
-                <span v-if="shouldShowUnitLeaderStatusTag(opinion.status)" class="approval-status" :class="getStatusClass(opinion.status)">
-                  {{ opinion.statusText }}
-                </span>
-                <span class="approval-time" v-if="opinion.time">
-                  {{ opinion.time }}
-                </span>
-                <span class="opinion-round" v-if="getUnitLeaderOpinions().length > 1">
-                  第{{ index + 1 }}次审批
-                </span>
-              </div>
+            <div v-for="(opinion, index) in getUnitLeaderOpinions()" :key="index" class="opinion-box">
               <div class="opinion-content">
                 {{ opinion.content }}
               </div>
@@ -174,19 +162,7 @@
         <div class="section-header">用印审核</div>
         <div class="approval-opinion-content">
           <div v-if="getSealAuditOpinions().length > 0">
-            <div v-for="(opinion, index) in getSealAuditOpinions()" :key="index" class="opinion-box" :class="{ 'mb-3': index < getSealAuditOpinions().length - 1 }">
-              <div class="opinion-header">
-                <span class="approver-name">{{ opinion.approver }}</span>
-                <span v-if="opinion.statusText" class="approval-status" :class="getStatusClass(opinion.status)">
-                  {{ opinion.statusText }}
-                </span>
-                <span class="approval-time" v-if="opinion.time">
-                  {{ opinion.time }}
-                </span>
-                <span class="opinion-round" v-if="getSealAuditOpinions().length > 1">
-                  第{{ index + 1 }}次审批
-                </span>
-              </div>
+            <div v-for="(opinion, index) in getSealAuditOpinions()" :key="index" class="opinion-box">
               <div class="opinion-content">
                 {{ opinion.content }}
               </div>
@@ -409,7 +385,6 @@ const props = defineProps({
 
 //父组件传入的ID和activityNodes
 const id = props.id
-const applyId = props.applyId
 const activityNodes = props.activityNodes
 const applyUser = props.applyUser
 const applyTime = props.applyTime
@@ -438,23 +413,11 @@ const getSealTypeOptions = async () => {
       return
     }
 
-    // 第一步：通过单位ID获取准确的单位名称
-    let orgName = detail.value.applyDeptName // 先使用现有的名称作为默认值
-
-    try {
-      const deptInfo = await getDept(detail.value.applyDept)
-
-      if (deptInfo && deptInfo.name) {
-        orgName = deptInfo.name
-      }
-    } catch (deptError) {
-      console.error('获取单位信息失败，使用现有名称:', deptError)
-    }
-
-    // 第二步：使用准确的单位名称获取印章类型
+    // 获取印章类型
     const params = {
-      pageSize: 100,
-      orgName: orgName // 使用从系统接口获取的准确单位名称
+      orgId: detail.value.applyDept,
+      isAPP: true,
+      enableFlag: 1
     }
 
     const res = await sealApi.getsealPage(params)
@@ -557,7 +520,7 @@ const formatFileSize = (bytes) => {
 
 // 获取文
 const getFileType = (fileName) => {
-  const ext = fileName.split('.').pop().toLowerCase()
+  const ext = fileName.split('.').pop()?.toLowerCase()
   if (['xls', 'xlsx'].includes(ext)) return 'excel'
   if (ext === 'pdf') return 'pdf'
   return 'document'
@@ -863,7 +826,8 @@ const detail = ref({
   signers: '',
   phone: '',
   createTime: '',
-  unitNoticeContent: '' // 注意事项内容
+  unitNoticeContent: '' ,// 注意事项内容
+  applyDept: '',
 })
 
 const fetchDetail = async () => {
@@ -926,45 +890,49 @@ const getFileIconClass = (filename) => {
   return 'document-icon'
 }
 
-// 获取单位负责人审核意见（所有历史记录）
+// 获取单位负责人审核意见（只显示最新的一次审核结果）
 const getUnitLeaderOpinions = () => {
   const opinions = []
 
-  // 如果有活动节点数据，获取所有相关的审批记录
+  // 如果有活动节点数据，获取最新的审批记录
   if (filteredActivityNodes.value && filteredActivityNodes.value.length > 0) {
     // 找到所有单位负责人相关的活动节点
     const unitLeaderActivities = filteredActivityNodes.value.filter(activity => {
       return activity.name === '单位负责人'
     })
 
-    unitLeaderActivities.forEach((activity, activityIndex) => {
-      if (activity.tasks && activity.tasks.length > 0) {
-        activity.tasks.forEach((task, taskIndex) => {
-          // 特殊处理：如果审批人为空，认为是自动通过
-          if (!task.assigneeUser) {
-            opinions.push({
-              approver: '系统自动',
-              status: 2,
-              statusText: '自动通过',
-              content: task.reason || '审批人为空，自动通过',
-              time: task.startTime ? formatDate(task.startTime) : ''
-            })
-          } else {
-            const statusText = activity.status === 2 ? '已同意' :
-                              activity.status === 1 ? '处理中' : ''  // 其他状态不显示文本
-            opinions.push({
-              approver: task.assigneeUser.nickname,
-              status: activity.status,
-              statusText: statusText,
-              content: task.reason || '',
-              time: task.endTime ? formatDate(task.endTime) : ''
-            })
-          }
-        })
-      }
-    })
-  }
+    // 只处理最新的活动节点（最后一个）
+    if (unitLeaderActivities.length > 0) {
+      const latestActivity = unitLeaderActivities[unitLeaderActivities.length - 1]
 
+      if (latestActivity.tasks && latestActivity.tasks.length > 0) {
+        // 只处理最新任务（最后一个）
+        const latestTask = latestActivity.tasks[latestActivity.tasks.length - 1]
+
+        // 特殊处理：如果审批人为空，认为是自动通过
+        if (!latestTask.assigneeUser) {
+          opinions.push({
+            approver: '系统自动',
+            status: 2,
+            statusText: '自动通过',
+            content: latestTask.reason || '审批人为空，自动通过',
+            time: latestTask.endTime ? formatDate(latestTask.endTime) : ''
+          })
+        } else {
+          const statusText = latestActivity.status === 2 ? '已同意' :
+                            latestActivity.status === 1 ? '处理中' :
+                            latestActivity.status === 5 ? '已驳回' : ''  // 其他状态不显示文本
+          opinions.push({
+            approver: latestTask.assigneeUser.nickname,
+            status: latestActivity.status,
+            statusText: statusText,
+            content: latestTask.reason || '',
+            time: latestTask.endTime ? formatDate(latestTask.endTime) : ''
+          })
+        }
+      }
+    }
+  }
 
   return opinions
 }
@@ -985,46 +953,63 @@ const getUnitLeaderOpinion = () => {
   }
 }
 
-// 获取用印审核意见（返回已完成审批的记录）
+// 手机号验证
+const validatePhone = (phoneValue) => {
+  if (!phoneValue) return;
+  
+  const phoneRegex = /^1[3-9]\d{9}$/;
+  if (!phoneRegex.test(phoneValue)) {
+    ElMessage.warning('请输入正确的11位手机号码');
+    return '';
+  }
+  return phoneValue;
+};
+
+// 获取用印审核意见（只显示最新的一次审核结果）
 const getSealAuditOpinions = () => {
   const opinions = []
 
-  // 如果有活动节点数据，获取所有相关的审批记录
+  // 如果有活动节点数据，获取最新的审批记录
   if (filteredActivityNodes.value && filteredActivityNodes.value.length > 0) {
     // 找到所有用印审核相关的活动节点
     const sealAuditActivities = filteredActivityNodes.value.filter(activity => {
       return activity.name === '用印审核人'
     })
 
-    sealAuditActivities.forEach((activity, activityIndex) => {
-      if (activity.tasks && activity.tasks.length > 0) {
-        activity.tasks.forEach((task, taskIndex) => {
-          // 收集所有已完成审批的记录（不是处理中状态的都算完成）
-          if (activity.status !== 1 && activity.status !== 0) {
-            // 特殊处理：如果审批人为空，认为是自动通过
-            if (!task.assigneeUser) {
-              opinions.push({
-                approver: '系统自动',
-                status: 2,
-                statusText: '已同意',
-                content: task.reason || '审批人为空，自动通过',
-                time: task.startTime ? formatDate(task.startTime) : ''
-              })
-            } else {
-              // 只有同意状态才显示标签，其他状态（包括拒绝）不显示标签
-              const statusText = activity.status === 2 ? '已同意' : ''
-              opinions.push({
-                approver: task.assigneeUser.nickname,
-                status: activity.status,
-                statusText: statusText,
-                content: task.reason || '',
-                time: task.endTime ? formatDate(task.endTime) : ''
-              })
-            }
+    // 只处理最新的活动节点（最后一个）
+    if (sealAuditActivities.length > 0) {
+      const latestActivity = sealAuditActivities[sealAuditActivities.length - 1]
+
+      if (latestActivity.tasks && latestActivity.tasks.length > 0) {
+        // 只处理最新任务（最后一个）
+        const latestTask = latestActivity.tasks[latestActivity.tasks.length - 1]
+
+        // 只显示已完成审批的记录（不是处理中状态的都算完成）
+        if (latestActivity.status !== 1 && latestActivity.status !== 0) {
+          // 特殊处理：如果审批人为空，认为是自动通过
+          if (!latestTask.assigneeUser) {
+            opinions.push({
+              approver: '系统自动',
+              status: 2,
+              statusText: '已同意',
+              content: latestTask.reason || '审批人为空，自动通过',
+              time: latestTask.endTime ? formatDate(latestTask.endTime) : ''
+            })
+          } else {
+            // 显示同意和驳回状态的标签
+            const statusText = latestActivity.status === 2 ? '已同意' :
+                              latestActivity.status === 5 ? '已驳回' : ''
+            opinions.push({
+              approver: latestTask.assigneeUser.nickname,
+              status: latestActivity.status,
+              statusText: statusText,
+              content: latestTask.reason || '',
+              time: latestTask.endTime ? formatDate(latestTask.endTime) : ''
+            })
           }
-        })
+        }
       }
-    })
+    }
   }
 
   return opinions
@@ -1051,14 +1036,14 @@ const shouldShowStatusTag = (status) => {
   return status === 2  // 只显示已同意(2)的标签
 }
 
-// 判断是否显示单位负责人状态标签（显示已同意和处理中）
+// 判断是否显示单位负责人状态标签（隐藏所有状态标签）
 const shouldShowUnitLeaderStatusTag = (status) => {
-  return status === 2 || status === 1  // 显示已同意(2)和处理中(1)的标签
+  return false  // 隐藏所有状态标签
 }
 
-// 判断是否显示用印审核状态标签（只显示已同意）
+// 判断是否显示用印审核状态标签（隐藏所有状态标签）
 const shouldShowSealAuditStatusTag = (status) => {
-  return status === 2  // 只显示已同意(2)的标签
+  return false  // 隐藏所有状态标签
 }
 
 // 获取审批状态对应的样式类
@@ -1066,6 +1051,7 @@ const getStatusClass = (status) => {
   switch (status) {
     case 2: return 'status-approved'    // 已同意
     case 1: return 'status-processing'  // 处理中
+    case 5: return 'status-rejected'    // 已驳回
     default: return 'status-pending'    // 其他状态（不会显示，但保留样式）
   }
 }
@@ -1121,18 +1107,25 @@ const updateSealApplication = async () => {
       }
     }
 
+    // 验证是否选择了两个相同的印章
+    const sealIds = detail.value.sealTypes.map(seal => seal.id)
+    const uniqueSealIds = new Set(sealIds)
+    if (sealIds.length !== uniqueSealIds.size) {
+      ElMessage.warning('不能选择两个相同的印章')
+      return false
+    }
+
     // 处理附件数据：合并已有附件和新上传的附件，统一字段结构
     const existingAttachments = (detail.value.attachments || []).map(file => ({
-      attachmentId: file.attachmentId,
-      attachmentName: file.attachmentName,
-      attachmentSize: file.attachmentSize,
-      attachmentUrl: file.attachmentUrl
+      name: file.attachmentName,
+      size: file.attachmentSize,
+      url: file.attachmentUrl
     }))
 
     const newAttachments = uploadedFiles.map(file => ({
-      attachmentName: file.name,
-      attachmentSize: file.size,
-      attachmentUrl: file.url
+      name: file.name,
+      size: file.size,
+      url: file.url
       // 新上传的文件没有attachmentId，后端会自动生成
     }))
 
@@ -1309,7 +1302,7 @@ defineExpose({
 }
 
 .quantity-input {
-  width: 80px;
+  width: 100px!important;  
 }
 
 .unit {
@@ -1599,16 +1592,18 @@ defineExpose({
 /* 审批意见样式 */
 .approval-opinion-content {
   flex: 1;
-  padding: 15px;
+  padding: 20px;
   background: #f8f9fa;
+  min-height: 80px;
 }
 
 .opinion-box {
   background: white;
   border: 1px solid #e4e7ed;
-  border-radius: 6px;
-  padding: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 20px 24px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  min-height: 60px;
 }
 
 .opinion-header {
@@ -1665,10 +1660,11 @@ defineExpose({
 
 .opinion-content {
   color: #333;
-  line-height: 1.6;
-  font-size: 14px;
+  line-height: 1.8;
+  font-size: 15px;
   white-space: pre-wrap;
   word-wrap: break-word;
+  padding: 8px 0;
 }
 
 .no-opinion {
@@ -1692,17 +1688,5 @@ defineExpose({
   font-size: 14px;
 }
 
-/* 多次审批记录样式 */
-.mb-3 {
-  margin-bottom: 12px;
-}
 
-.opinion-round {
-  background: #f0f2f5;
-  color: #666;
-  padding: 2px 6px;
-  border-radius: 10px;
-  font-size: 11px;
-  margin-left: 8px;
-}
 </style>

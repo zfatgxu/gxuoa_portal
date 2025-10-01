@@ -7,6 +7,8 @@ export interface DeptVO {
   status: number
   sort: number
   leaderUserId: number
+  leaderUserIds?: string
+  chargeLeaderUserIds?: string
   phone: string
   email: string
   createTime: Date
@@ -28,7 +30,7 @@ export const getDeptPage = async (params: PageParam) => {
 }
 
 // 查询部门详情
-export const getDept = (id: number) => {
+export const getDept = (id: number): Promise<DeptVO> => {
   return request.get({ url: '/app/dept/get?id=' + id })
 }
 

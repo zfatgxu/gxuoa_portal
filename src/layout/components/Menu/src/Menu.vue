@@ -136,6 +136,7 @@ $prefix-cls: #{$namespace}-menu;
   :deep(.#{$elNamespace}-menu) {
     width: 100% !important;
     border-right: none;
+    border-top: none !important;
 
     // 默认菜单样式：白色背景，黑色文字
     .#{$elNamespace}-sub-menu__title,
@@ -143,10 +144,20 @@ $prefix-cls: #{$namespace}-menu;
       color: var(--left-menu-text-color) !important;
       background-color: var(--left-menu-bg-color) !important;
       
+      // 菜单图标样式：深灰色
+      .#{$namespace}-icon {
+        color: #4a4a4a !important;
+      }
+      
       // 悬停状态：蓝色背景，白色文字
       &:hover {
         color: var(--left-menu-text-active-color) !important;
         background-color: var(--left-menu-bg-active-color) !important;
+        
+        // 悬停时图标变为白色
+        .#{$namespace}-icon {
+          color: var(--left-menu-text-active-color) !important;
+        }
       }
     }
 
@@ -155,13 +166,39 @@ $prefix-cls: #{$namespace}-menu;
       color: var(--left-menu-text-active-color) !important;
       background-color: var(--left-menu-bg-active-color) !important;
       position: relative;
+      border: none !important;
+      outline: none !important;
+      box-shadow: none !important;
+      
+      // 选中时图标变为白色
+      .#{$namespace}-icon {
+        color: var(--left-menu-text-active-color) !important;
+      }
+      
+      // 移除选中状态的所有边框效果
+      &::before,
+      &::after {
+        display: none !important;
+      }
     }
     
-    // 父级菜单项选中状态：较浅的高亮色，与子菜单区分
+    // 父级菜单项选中状态：深蓝色背景，白色文字
     .#{$elNamespace}-sub-menu.is-active > .#{$elNamespace}-sub-menu__title {
-      color: var(--left-menu-text-color) !important;
-      background-color: rgba(64, 158, 255, 0.1) !important; // 浅蓝色背景
+      color: var(--left-menu-text-active-color) !important;
+      background-color: var(--left-menu-bg-active-color) !important;
       font-weight: 600; // 加粗字体以示区分
+      border: none !important;
+      
+      // 选中时图标变成白色
+      .#{$namespace}-icon {
+          color:rgb(255, 255, 255) !important;
+        }
+      
+      // 移除父级菜单选中状态的边框和轮廓
+      &::before,
+      &::after {
+        display: none !important;
+      }
     }
 
     // 子菜单内部的样式
@@ -171,17 +208,27 @@ $prefix-cls: #{$namespace}-menu;
       .#{$elNamespace}-menu-item {
         background-color: var(--left-menu-bg-light-color) !important;
         
+        // 隐藏子菜单图标
+        .#{$namespace}-icon {
+          display: none !important;
+        }
+        
         &:hover {
           color: var(--left-menu-text-active-color) !important;
           background-color: var(--left-menu-bg-active-color) !important;
         }
       }
       
-      // 子菜单内的选中菜单项（最终点击的菜单项）
+      // 子菜单内的选中菜单项（最终点击的菜单项）：较浅的高亮色
       .#{$elNamespace}-menu-item.is-active {
-        color: var(--left-menu-text-active-color) !important;
-        background-color: var(--left-menu-bg-active-color) !important;
-        border-left: 3px solid #fff; // 添加白色左边框以示区分
+        color: var(--left-menu-text-color) !important;
+        background-color: rgba(64, 158, 255, 0.2) !important; // 浅蓝色背景
+        border-left: 3px solid rgba(64, 158, 255, 0.5); // 蓝色左边框
+        
+        // 子菜单选中时也隐藏图标
+        .#{$namespace}-icon {
+          display: none !important;
+        }
       }
       
       // 子菜单内的父级菜单项（二级菜单标题）
@@ -193,19 +240,13 @@ $prefix-cls: #{$namespace}-menu;
       }
     }
     
-    // 添加菜单项之间的分隔线
+    // 移除菜单项之间的分隔线
     .#{$elNamespace}-menu-item:not(:last-child),
     .#{$elNamespace}-sub-menu:not(:last-child) {
       position: relative;
       
       &::after {
-        content: '';
-        position: absolute;
-        left: 20px;
-        right: 20px;
-        bottom: 0;
-        height: 1px;
-        background-color: rgba(19, 18, 18, 0.1);
+        display: none;
       }
     }
   }

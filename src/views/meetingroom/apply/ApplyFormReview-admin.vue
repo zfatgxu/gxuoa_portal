@@ -174,7 +174,7 @@
                   v-model="departmentInfo.opinion"
                   type="textarea"
                   :rows="4"
-                  placeholder="请输入使用单位意见"
+                  placeholder="经审核，该申请符合会议室使用规定，申请材料齐全，使用时间合理，同意该申请。请按时使用会议室，并注意保持会议室整洁。"
                   :disabled="!canEditDepartmentOpinion || formData.status !== 0" />
               </el-form-item>
               <div class="signature-line">
@@ -299,28 +299,16 @@
         </table>
 
         <div class="form-actions">
-          <!-- 如果状态为 2：已拒绝 -->
-          <div v-if="formData.status === 2" style="color: red; font-weight: bold;">
+          <!-- 如果状态为 3：已拒绝 -->
+          <div v-if="formData.status === 3" style="color: red; font-weight: bold;">
             当前申请已被拒绝
           </div>
-
-          <!-- 如果状态为 0：待审批，显示操作按钮 -->
-          <template v-else-if="formData.status === 0">
-            <el-button type="primary" @click="approveApplication" :loading="loading">同意</el-button>
-            <el-button type="danger" @click="rejectApplication" :loading="loading">不同意</el-button>
-            <el-button type="success" @click="saveApplication" :loading="loading">保存</el-button>
-            <el-button type="success" @click="exitApplication" :loading="loading">退出</el-button>
-          </template>
-
-          <!-- 其它情况（如为唯一审批人），不显示“同意”，但显示其它按钮 -->
-          <template v-else>
-            <el-button type="danger" @click="rejectApplication" :loading="loading">不同意</el-button>
-            <el-button type="success" @click="exitApplication" :loading="loading">退出</el-button>
-          </template>
+          <!-- 按需求移除“同意 / 不同意 / 保存 / 退出”按钮及相关功能 -->
         </div>
       </el-form>
     </div>
   </div>
+
 </template>
 
 <script setup>
@@ -336,6 +324,13 @@ import { getUser } from '@/api/system/user'
 import { useUserStore } from '@/store/modules/user'
 import EquipmentTable from '@/views/meetingroom/apply/equipmentTable.vue'
 import { RoomEquipmentApi } from '@/api/meetingroom/roomequipment'
+import { propTypes } from '@/utils/propTypes'
+
+const props = defineProps({
+  id: propTypes.number.def(undefined)
+})
+const { query } = useRoute() // 查询参数
+const queryId = query.id //as unknown as number // 从 URL 传递过来的 id 编号
 
 const formRef = ref(null)
 const route = useRoute()
@@ -828,9 +823,20 @@ const fetchApplyDetail = async (id) => {
 }
 
 onMounted(() => {
-  const id = route.query.id
-  if (id) {
-    fetchApplyDetail(id)
+  // 优先使用业务表单通过 props 传入的业务主键，其次尝试从路由上解析数值型 ID
+  let resolvedId = null
+  if (props.id !== undefined && props.id !== null && !isNaN(Number(props.id))) {
+    resolvedId = Number(props.id)
+  } else {
+    const q = route.query
+    const possible = q.businessKey || q.applyId || q.id
+    if (possible !== undefined && possible !== null && !isNaN(Number(possible))) {
+      resolvedId = Number(possible)
+    }
+  }
+
+  if (resolvedId !== null) {
+    fetchApplyDetail(resolvedId)
   } else {
     ElMessage.warning('未找到申请记录ID')
   }
@@ -838,6 +844,7 @@ onMounted(() => {
 
 // 同意申请
 const approveApplication = async () => {
+  return
   try {
     loading.value = true
     const submitData = {
@@ -879,6 +886,7 @@ const approveApplication = async () => {
 
 // 拒绝申请
 const rejectApplication = async () => {
+  return
   try {
     loading.value = true
     const submitData = {
@@ -943,6 +951,7 @@ const convertDateToTimestamp = (dateStr) => {
 
 // 保存申请
 const saveApplication = async () => {
+  return
   try {
     loading.value = true
     const submitData = {
@@ -973,6 +982,7 @@ const saveApplication = async () => {
 
 // 退出
 const exitApplication = () => {
+  return
   if (window.opener && !window.opener.closed) {
     try {
       // 调用父窗口的刷新方法
@@ -984,6 +994,7 @@ const exitApplication = () => {
   window.close()
 }
 const files = reactive([])
+
 
 </script>
 

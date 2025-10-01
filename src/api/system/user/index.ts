@@ -3,18 +3,31 @@ import request from '@/config/axios'
 export interface UserVO {
   id: number
   username: string
+  workId?: string
   nickname: string
-  deptId: number
-  postIds: string[]
+  remark?: string
+  deptIds?: number[]
+  deptNames?: string[]
+  deptNamesStr?: string
+  isChief?: number
+  postIds?: number[]
   email: string
   mobile: string
   sex: number
   avatar: string
-  loginIp: string
   status: number
-  remark: string
+  loginIp: string
   loginDate: Date
   createTime: Date
+  level?: number
+  professionalTitle?: number
+  job?: string
+  idCard?: string
+  deptCode?: string
+  unitSort?: string
+  isRetired?: boolean
+  isBlocked?: boolean
+  isApproved?: boolean
 }
 
 // 查询用户管理列表
@@ -24,7 +37,12 @@ export const getUserPage = (params: PageParam) => {
 
 // 查询用户详情
 export const getUser = (id: number) => {
-  return request.get({ url: '/app/user/get'})
+  return request.get({ url: '/app/user/get', params: { id } })
+}
+
+// 通过用户ID获取用户详情
+export const getUserById = (id: number) => {
+  return request.get({ url: '/app/user/get-by-id', params: { id } })
 }
 
 // 新增用户
@@ -84,4 +102,9 @@ export const getSimpleUserList = (): Promise<UserVO[]> => {
 //根据部门id获取用户列表
 export const getUserListByDeptId = (deptId: number): Promise<UserVO[]> => {
   return request.get({ url: '/app/user/list-by-dept', params: { deptId: deptId } })
+}
+
+// 通过身份证号获取用户详情
+export const getUserByIdCard = (idCard: string): Promise<UserVO> => {
+  return request.get({ url: '/app/user/get-by-id-card', params: { idCard } })
 }

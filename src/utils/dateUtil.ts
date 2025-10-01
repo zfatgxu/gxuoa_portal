@@ -15,4 +15,7 @@ export function formatToDate(date?: dayjs.ConfigType, format = DATE_FORMAT): str
   return dayjs(date).format(format)
 }
 
+// 兼容性导出，避免其他文件的导入错误
+export const utilFormatDate = formatToDateTime
+
 export const dateUtil = dayjs

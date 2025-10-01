@@ -28,7 +28,7 @@
                 v-if="processInstance?.startUser?.avatar"
                 :src="processInstance?.startUser?.avatar"
               />
-              <el-avatar :size="28" v-else-if="processInstance?.startUser?.nickname">
+              <el-avatar :size="28" v-else-if="processInstance?.startUser?.nickname" class="!bg-blue-500">
                 {{ processInstance?.startUser?.nickname.substring(0, 1) }}
               </el-avatar>
               {{ processInstance?.startUser?.nickname }}
@@ -272,26 +272,10 @@
           const isSpecialSealProcess = processDefinition.value.key === 'seal_apply_special'
           console.log('当前流程类型:', processDefinition.value.key, '是否为特殊印章流程:', isSpecialSealProcess)
           
-          // 如果businessKey为空或者是特殊印章流程，尝试通过API获取印章申请单ID
-          if (!sealId || isSpecialSealProcess) {
-            try {
-              console.log('尝试通过流程实例ID获取印章申请单ID:', processInstance.value.id)
-              const response = await SealApi.getSealApplicationIdByProcessInstanceId(processInstance.value.id)
-              if (response && response.id) {
-                sealId = response.id
-                console.log('成功获取到印章申请单ID:', sealId)
-              } else {
-                console.warn('通过流程实例ID未能获取到印章申请单ID')
-              }
-            } catch (apiError) {
-              console.error('获取印章申请单ID失败:', apiError)
-            }
-          }
-          
-          // 如果仍然无法获取ID，使用流程实例ID作为最后的备选
+          // 如果businessKey为空，使用流程实例ID作为印章申请单ID
           if (!sealId) {
-            console.warn('无法获取印章申请单ID，将使用流程实例ID作为备选')
             sealId = processInstance.value.id
+            console.log('使用流程实例ID作为印章申请单ID:', sealId)
           }
           
           console.log('最终使用的印章申请单ID:', sealId)

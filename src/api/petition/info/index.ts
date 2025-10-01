@@ -1,18 +1,5 @@
 import request from '@/config/axios'
 
-// 信访信息 VO
-export interface InfoVO {
-  id: number                // 信访 ID
-  receiptNo: string         // 受理编号
-  title: string             // 标题
-  content: string           // 内容（缺失，需补上）
-  deptId: number            // 处理单位 ID
-  deptName: string          // 处理单位名称
-  recipientId: number       // 接收人 ID
-  recipientName: string     // 接收人姓名（缺失，需补上）
-  source: string            // 来源（如“信访系统”）
-}
-
 // 信访信息 API
 export const InfoApi = {
   // 查询信访信息分页
@@ -26,12 +13,12 @@ export const InfoApi = {
   },
 
   // 新增信访信息
-  createInfo: async (data: InfoVO) => {
+  createInfo: async (data: any) => {
     return await request.post({ url: `/petition/info/create`, data })
   },
 
   // 修改信访信息
-  updateInfo: async (data: InfoVO) => {
+  updateInfo: async (data: any) => {
     return await request.put({ url: `/petition/info/update`, data })
   },
 

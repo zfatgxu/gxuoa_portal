@@ -126,4 +126,8 @@ export const CancelFormApi = {
   getCancelFormId: async (processInstanceId: string) => {
     return await request.get({ url: `/leave/app-cancel-form/get-leaveRegisterId`, params: { processInstanceId: processInstanceId } })
   },
+  // 查询销假表单分页
+  getCancelFormPage: async (params: any) => {
+    return await request.get({ url: `/leave/app-cancel-form/page`, params })
+  },
 }

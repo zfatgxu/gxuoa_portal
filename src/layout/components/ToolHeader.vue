@@ -7,6 +7,7 @@ import { Screenfull } from '@/layout/components/Screenfull'
 import { Breadcrumb } from '@/layout/components/Breadcrumb'
 import { SizeDropdown } from '@/layout/components/SizeDropdown'
 import { LocaleDropdown } from '@/layout/components/LocaleDropdown'
+import { ThemeSwitch } from '@/layout/components/ThemeSwitch'
 import RouterSearch from '@/components/RouterSearch/index.vue'
 import TenantVisit from '@/layout/components/TenantVisit/index.vue'
 import QuickAccess from '@/layout/components/QuickAccess/index.vue'
@@ -90,6 +91,7 @@ export default defineComponent({
               color="var(--top-header-text-color)"
             ></LocaleDropdown>
           ) : undefined}
+          <ThemeSwitch />
           {message.value ? (
             <Message class="custom-hover" color="var(--top-header-text-color)"></Message>
           ) : undefined}

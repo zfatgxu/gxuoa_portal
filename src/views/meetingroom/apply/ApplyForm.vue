@@ -230,45 +230,46 @@
             </td>
           </tr>
           </tbody>
+
           <tbody>
           <tr>
             <td class="label-cell" style="width: 120px; padding: 8px;">使用单位意见</td>
             <td class="content-cell" colspan="3">
-              <el-form-item prop="departmentOpinion" class="no-margin" :validate-status="undefined">
+              <el-form-item prop="adminOpinion" class="no-margin" :validate-status="undefined">
                 <el-input
-                  v-model="formData.departmentOpinion"
+                  v-model="departmentInfo.opinion"
                   type="textarea"
                   :rows="4"
-                  placeholder="请输入使用单位意见(申请人不用填写)"
+                  placeholder="经审核，该申请符合会议室使用规定，申请材料齐全，使用时间合理，同意该申请。请按时使用会议室，并注意保持会议室整洁。"
                   readonly
                 />
               </el-form-item>
               <div class="signature-line">
                 <span>负责人签字：</span>
-                <el-input v-model="formData.departmentHead" class="!w-150px" placeholder="请输入负责人姓名" readonly/>
+                <el-input v-model="departmentInfo.head" class="!w-150px" placeholder="请输入负责人姓名" />
                 <span class="time-right"> 日期：</span>
                 <el-date-picker
-                  v-model="formData.departmentApprovalDate"
+                  v-model="departmentInfo.approvalDate"
                   value-format="YYYY-MM-DD HH:mm:ss"
                   type="datetime"
-                  placeholder="选择部门审批时间"
+                  placeholder="选择管理员审批时间"
                   class="!w-220px"
                   :clearable="true"
                   :editable="false"
                   :disabled-date="(time) => time > new Date()"
-                  readonly
                 />
               </div>
             </td>
           </tr>
           </tbody>
+
           <tbody>
           <tr>
             <td class="label-cell" style="width: 120px; padding: 8px;">管理单位意见</td>
             <td class="content-cell" colspan="3">
               <el-form-item prop="adminOpinion" class="no-margin" :validate-status="undefined">
                 <el-input
-                  v-model="formData.adminOpinion"
+                  v-model="adminInfo.opinion"
                   type="textarea"
                   :rows="4"
                   placeholder="请输入管理单位意见(申请人不用填写)"
@@ -277,10 +278,10 @@
               </el-form-item>
               <div class="signature-line">
                 <span>负责人签字：</span>
-                <el-input v-model="formData.adminPerson" class="!w-150px" placeholder="请输入负责人姓名" readonly/>
+                <el-input v-model="adminInfo.person" class="!w-150px" placeholder="请输入负责人姓名" readonly/>
                 <span class="time-right"> 日期：</span>
                 <el-date-picker
-                  v-model="formData.adminApprovalDate"
+                  v-model="adminInfo.approvalDate"
                   value-format="YYYY-MM-DD HH:mm:ss"
                   type="datetime"
                   placeholder="选择管理员审批时间"
@@ -294,13 +295,14 @@
             </td>
           </tr>
           </tbody>
+
           <tbody>
           <tr>
             <td class="label-cell" style="width: 120px; padding: 8px;">注意事项</td>
             <td class="content-cell" colspan="3">
               <el-form-item prop="precautions" class="no-margin" :validate-status="undefined">
                 <el-input
-                  v-model="formData.precautions"
+                  v-model="adminInfo.notes"
                   type="textarea"
                   :rows="4"
                   placeholder="请输入注意事项（申请人不用填写）"
@@ -322,6 +324,14 @@
                   :rows="4"
                   placeholder="请输入备注内容" />
               </el-form-item>
+            </td>
+          </tr>
+          </tbody>
+
+          <tbody>
+          <tr>
+            <td class="label-cell" style="width: 120px; padding: 8px;">附件</td>
+            <td class="content-cell" colspan="3">
               <el-upload
                 class="upload-demo"
                 :http-request="customUpload"
@@ -333,14 +343,10 @@
                 :limit="3"
                 :on-exceed="handleExceed"
                 show-file-list
-                style="margin-top: 15px;"
                 :on-start="() => uploading.value = true"
               >
-
                 <el-button type="primary">上传附件</el-button>
               </el-upload>
-
-
             </td>
           </tr>
           </tbody>
@@ -349,7 +355,6 @@
 
         <div class="form-actions" v-if="!uploading">
           <el-button type="primary" @click="submitForm(id)" :loading="loading">提交</el-button>
-          <el-button @click="resetForm">重置</el-button>
           <el-button @click="goBack">返回</el-button>
         </div>
       </el-form>
@@ -407,6 +412,21 @@ const formData = reactive({
   participantsNum:'',
   meetingRoomTimeId:''
 });
+
+// 部门负责人信息 - 按照 ApplyFormReview-admin.vue 的样式
+const departmentInfo = reactive({
+  head: '',
+  opinion: '',
+  approvalDate: ''
+})
+
+// 管理员信息 - 按照 ApplyFormReview-admin.vue 的样式
+const adminInfo = reactive({
+  person: '',
+  opinion: '',
+  approvalDate: '',
+  notes: ''
+})
 
 const rules = {
   department: [{ required
@@ -554,7 +574,15 @@ const submitForm = () => {
       equipments: (selectedEquipments.value || [])
                                     .map(item => `${item.id}*${item.num}`)
                                     .join('|'),
-      meetingRoomTimeId: formData.meetingRoomTimeId
+      meetingRoomTimeId: formData.meetingRoomTimeId,
+      // 使用单位意见相关字段 - 按照后端 RoomApplyVO 接口
+      departmentHead: departmentInfo.head,
+      departmentOpinion: departmentInfo.opinion,
+      departmentApprovalDate: convertDateToTimestamp(departmentInfo.approvalDate),
+      // 管理单位意见相关字段 - 按照后端 RoomApplyVO 接口
+      adminPerson: adminInfo.person,
+      adminOpinion: adminInfo.opinion,
+      adminApprovalDate: convertDateToTimestamp(adminInfo.approvalDate)
     };
     if (id) {
       submitData.id = id;
@@ -571,7 +599,7 @@ const submitForm = () => {
 
       if (res) {
         ElMessage.success('会议室申请提交成功！');
-        router.push('/meeting/MyApply');
+        router.push('/xzsp/meetingroom/MyApply');
       } else {
         ElMessage.error('申请提交失败，请重试');
       }
@@ -641,7 +669,7 @@ const resetForm = () => {
 };
 
 const goBack = () => {
-  router.push('/meeting/apply');
+  router.push('/xzsp/meetingroom/apply');
 };
 
 onMounted(() => {
@@ -742,6 +770,16 @@ async function fetchRoomApplyDetail(id) {
     formData.signature = res.signature || ''
     formData.participantsNum = res.participantsNum
     formData.meetingRoomId = res.meetingRoomId
+    
+    // 添加意见相关字段的处理 - 按照后端 RoomApplyVO 接口
+    departmentInfo.head = res.departmentHead || ''
+    departmentInfo.opinion = res.departmentOpinion || ''
+    departmentInfo.approvalDate = formatTimestamp(res.departmentApprovalDate)
+    adminInfo.person = res.adminPerson || ''
+    adminInfo.opinion = res.adminOpinion || ''
+    adminInfo.approvalDate = formatTimestamp(res.adminApprovalDate)
+    // 注意：后端没有 precautions 字段，所以 adminInfo.notes 保持为空
+    adminInfo.notes = ''
 
     return res
   } catch (error) {

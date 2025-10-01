@@ -300,7 +300,19 @@ const remainingRouter: AppRouteRecordRaw[] = [
           hidden: true,
           canTo: true,
           title: '信访写信',
-          activeMenu: '/petition'
+          activeMenu: '/petition',
+        }
+      },
+      {
+        path: 'detail',
+        component: () => import('@/views/petition/write/detail.vue'),
+        name: 'PetitionDetail',
+        meta: {
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          title: '信访详情',
+          activeMenu: '/petition',
         }
       },
       {
@@ -493,6 +505,20 @@ const remainingRouter: AppRouteRecordRaw[] = [
     ]
   },
   {
+    path: '/leave-document/detail',
+    component: () => import('@/views/leave/create/detail.vue'),
+    name: 'LeaveDetails',
+    meta: {
+      title: '公文流转请假详情',
+      noCache: false,
+      hidden: true,
+      // 确保没有限制滚动的配置
+      fullscreen: false,
+      // 确保使用标准布局
+      layout: 'default'
+    }
+  },
+  {
     path: '/seal',
     component: Layout,
     name: 'SealCenter',
@@ -512,18 +538,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
           activeMenu: '/seal'
         }
       },
-      {
-        path: 'createSpecial',
-        component: () => import('@/views/seal/task/create/special.vue'),
-        name: 'SealCreateSpecial',
-        meta: {
-          noCache: true,
-          hidden: true,
-          canTo: true,
-          title: '发起印章申请(含单位负责人)',
-          activeMenu: '/seal'
-        }
-      },
+
       {
         path: 'detail',
         component: () => import('@/views/bpm/processInstance/detail/sealindex.vue'),
@@ -911,6 +926,29 @@ const remainingRouter: AppRouteRecordRaw[] = [
     ]
   },
   {
+    path:'/meetingroom',
+    component: Layout,
+    name: 'MeetingRoom',
+    meta: {
+      hidden: true
+    },
+    children: [
+      {
+        path: 'apply',
+        name: 'MeetingRoomApply',
+        component: () => import('@/views/meetingroom/apply/ApplyForm.vue'),
+        meta: {
+          title: '会议室申请',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: 'ep:edit',
+          activeMenu: '/meetingroom'
+        }
+      }
+    ]
+  },
+  {
     path: '/iot',
     component: Layout,
     name: 'IOT',
@@ -992,7 +1030,52 @@ const remainingRouter: AppRouteRecordRaw[] = [
       activeMenu: '/document/presentation-view'
     }
   },
-  
+  {
+    path: '/mail',
+    component: Layout,
+    name: 'Mail',
+    meta: {
+      hidden: true
+    },
+    children: [
+      {
+        path: 'write',
+        component: () => import('@/views/mail/write.vue'),
+        name: 'MailWrite',
+        meta: {
+          title: '写邮件',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: 'ep:edit',
+          activeMenu: '/mail'
+        }
+      }
+    ]
+  },
+  {
+    path: '/addressbook',
+    component: Layout,
+    name: 'Addressbook',
+    meta: {
+      hidden: true
+    },
+    children: [
+      {
+        path: 'fill-tasks/form',
+        component: () => import('@/views/addressbook/fill-tasks/form.vue'),
+        name: 'AddressbookFillTasksForm',
+        meta: {
+          title: '通讯录填写表单',
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          icon: 'ep:edit',
+          activeMenu: '/addressbook'
+        }
+      }
+    ]
+  }
 
 ]
 

@@ -281,7 +281,7 @@ onMounted(() => {
   width: 50px;
   height: 50px;
   border-radius: 5px;
-  background-color: #409EFF; /* 替换var(--primary-color) */
+  background-color: #0061B1;
   color: white;
   display: flex;
   flex-direction: column;

@@ -5,12 +5,13 @@
         <ContentWrap class="h-1/1">
           <el-tree
             ref="treeRef"
+            :key="treeRenderKey"
             :data="deptTree"
             :props="defaultProps"
             show-checkbox
             :check-strictly="checkStrictly"
             check-on-click-node
-            default-expand-all
+            :default-expanded-keys="[]"
             highlight-current
             node-key="id"
             @check="handleCheck"
@@ -58,6 +59,7 @@ const props = defineProps({
 })
 
 const treeRef = ref()
+const treeRenderKey = ref(0)
 const deptTree = ref<Tree[]>([]) // 部门树形结构
 const selectedDeptIds = ref<number[]>([]) // 选中的部门 ID 列表
 const dialogVisible = ref(false) // 弹窗的是否展示
@@ -75,9 +77,17 @@ const open = async (selectedList?: DeptApi.DeptVO[]) => {
     formLoading.value = false
   }
   dialogVisible.value = true
-  // 设置已选择的部门
-  if (selectedList?.length) {
+  await nextTick()
+  // 打开时强制全部折叠
+  if (treeRef.value && typeof treeRef.value.collapseAll === 'function') {
+    try { treeRef.value.collapseAll() } catch (e) {}
+  } else {
+    // 兼容不支持 collapseAll 的环境，通过重渲染实现默认折叠
+    treeRenderKey.value += 1
     await nextTick()
+  }
+  // 设置已选择的部门（不自动展开）
+  if (selectedList?.length) {
     const selectedIds = selectedList
       .map((dept) => dept.id)
       .filter((id): id is number => id !== undefined)
@@ -116,6 +126,8 @@ const resetForm = () => {
   if (treeRef.value) {
     treeRef.value.setCheckedKeys([])
   }
+  // 确保下次打开时为折叠初始态
+  treeRenderKey.value += 1
 }
 
 defineExpose({ open }) // 提供 open 方法，用于打开弹窗

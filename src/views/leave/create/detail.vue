@@ -16,7 +16,7 @@
           <el-table-column prop="name" label="姓名" />
           <el-table-column prop="department" label="部门" />
           <el-table-column prop="title" label="职称" :formatter="(cellValue) => getDictLabel(DICT_TYPE.PROFESSIONAL_TITLE, cellValue.professionalTitle)"/>
-          <el-table-column prop="position" label="职务" :formatter="(cellValue) => getDictLabel(DICT_TYPE.LEVEL, cellValue.level)"/>
+          <el-table-column prop="position" label="职级" :formatter="(cellValue) => getDictLabel(DICT_TYPE.LEVEL, cellValue.level)"/>
         </el-table>
       </div>
 
@@ -411,16 +411,16 @@
           </el-descriptions-item>
 
           <!-- 前往地点 -->
-          <el-descriptions-item label="前往地点(必填)" label-class-name="approval-label">
-            <div v-for="(loc, index) in destinations" :key="index" class="detail-item">
-              <!-- <span class="detail-label">国内</span> -->
-              <el-cascader :options="pcaTextArr" v-model="loc.destination" :disabled="isReadOnly" clearable style="width: 100%;"/>
-<!--              <el-input v-model="loc.destinationDetail" placeholder="可选填写详细地址（如门牌号、楼层等）" clearable style="margin-left: 10px;" :disabled="isReadOnly"/>-->
+          <el-descriptions-item label="前往地点(必填)">
+            <div v-for="(loc, index) in destinations" :key="index">
+              <div v-if="loc.locationType === 'domestic'" class="flex items-center">
+                <span>{{ loc.destination.join(' / ') }}</span>
+              </div>
+              <div v-if="loc.locationType === 'foreign'" class="flex items-center">
+                <span>{{ loc.foreignAddress }}</span>
+              </div>
+              <div v-if="index < destinations.length - 1" class="item-divider"></div>
             </div>
-            <!-- <div class="detail-item">
-              <span class="detail-label">国外</span>
-              <el-input v-model="personalPhone" placeholder="请输入国外地址"/>
-            </div> -->
           </el-descriptions-item>
 
           <!-- 请假期间主持工作负责人安排 -->
@@ -440,16 +440,16 @@
               v-model="remarks"
               type="textarea"
               :rows="3"
-              placeholder="请输入备注信息"
+              placeholder=""
               :disabled="isReadOnly"
             />
           </el-descriptions-item>
         </el-descriptions>
       </div>
-      <!-- 审批意见 -->
+      <!-- 请假审批意见 -->
       <div v-if="Number(personnel.level) !== 100" class="approval-section">
         <div class="divider">
-          <span class="divider-text">审批意见</span>
+          <span class="divider-text">请假审批意见</span>
         </div>
         <el-descriptions 
           border
@@ -457,12 +457,33 @@
           class="approval-descriptions"
         >
           <el-descriptions-item v-if="Number(personnel.level) >= 27" label="请假期间主持工作负责人会签" label-class-name="approval-label">
-            <div>{{ hostApproval }}</div>
+            <div v-html="formatApprovalDisplay(hostApproval)"></div>
           </el-descriptions-item>
-          <el-descriptions-item label="领导意见" label-class-name="approval-label">
-            <div>{{ leaderApproval }}</div>
+          <el-descriptions-item v-if="Number(personnel.level) >= 27" label="校领导意见" label-class-name="approval-label">
+            <div v-html="formatApprovalDisplay(leaderApproval)"></div>
           </el-descriptions-item>
+          <el-descriptions-item v-if="Number(personnel.level) < 27" label="单位负责人意见" label-class-name="approval-label">
+            <div v-html="formatApprovalDisplay(leaderApproval)"></div>
+          </el-descriptions-item>
+        </el-descriptions>
+      </div>
 
+      <!-- 销假审批意见 -->
+      <div v-if="shouldShowCancelLeaveApproval" class="approval-section">
+        <div class="divider">
+          <span class="divider-text">销假审批意见</span>
+        </div>
+        <el-descriptions 
+          border
+          :column="1"
+          class="approval-descriptions"
+        >
+          <el-descriptions-item label="单位负责人意见" label-class-name="approval-label">
+            <div v-html="formatApprovalDisplay(unitLeaderApproval)"></div>
+          </el-descriptions-item>
+          <el-descriptions-item label="人资处意见" label-class-name="approval-label">
+            <div v-html="formatApprovalDisplay(hrApproval)"></div>
+          </el-descriptions-item>
         </el-descriptions>
       </div>
 
@@ -471,7 +492,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { DICT_TYPE, getIntDictOptions, getStrDictOptions, getDictLabel } from '@/utils/dict'
 import { Minus, Plus } from '@element-plus/icons-vue'
 import { pcaTextArr } from "element-china-area-data";
@@ -659,8 +680,9 @@ const workArrangement = ref('');
 const remarks = ref('');
 const destinations = ref([
   {
-    destination: '',
-    destinationDetail: ''
+    locationType: 'domestic',
+    destination: [],
+    foreignAddress: ''
   }
 ]);
 // 获取请假人信息
@@ -789,28 +811,81 @@ const fetchUserProfile = async () => {
           if (res.destination.includes('|||')) {
             const multiDestinations = res.destination.split('|||');
             destinations.value = multiDestinations.map(dest => {
-              // 对每个地点，使用逗号分隔省市区和详细地址
-              const parts = dest.split(',');
-              return {
-                destination: parts.slice(0, 3), 
-                destinationDetail: parts.slice(3).join(',')
-              };
+            const trimmedDest = dest.trim();
+              
+              // 检查是否是国内地址
+              if (trimmedDest.startsWith('国内 /')) {
+                const parts = trimmedDest.substring(4).trim().split('/').map(p => p.trim());
+                return {
+                  locationType: 'domestic',
+                  destination: parts,
+                  foreignAddress: ''
+                };
+              }
+              
+              // 检查是否是国外地址
+              if (trimmedDest.startsWith('国外 /')) {
+                return {
+                  locationType: 'foreign',
+                  destination: [],
+                  foreignAddress: trimmedDest.substring(4).trim()
+                };
+              }
+              
+              // 兼容旧格式（没有国内/国外前缀）
+              // 假设有/的是国内地址，否则为国外
+              if (trimmedDest.includes('/')) {
+                return {
+                  locationType: 'domestic',
+                  destination: trimmedDest.split('/').map(p => p.trim()),
+                  foreignAddress: ''
+                };
+              } else {
+                return {
+                  locationType: 'foreign',
+                  destination: [],
+                  foreignAddress: trimmedDest
+                };
+              }
             });
-          console.log(destinations.value)
           } else {
-            // 兼容旧格式（只使用逗号分隔）
-            const destParts = res.destination.split(',');
-            // 如果地点数据包含超过省市区的部分，则最后一部分为详细地址
-            if (destParts.length > 3) {
+            // 单一地点的情况
+            const trimmedDest = res.destination.trim();
+            
+            // 检查是否是国内地址
+            if (trimmedDest.startsWith('国内 /')) {
+              const parts = trimmedDest.substring(4).trim().split('/').map(p => p.trim());
               destinations.value = [{
-                destination: destParts.slice(0, 3), 
-                destinationDetail: destParts.slice(3).join(',')
+                locationType: 'domestic',
+                destination: parts,
+                foreignAddress: ''
               }];
-            } else {
+            }
+            // 检查是否是国外地址
+            else if (trimmedDest.startsWith('国外 /')) {
               destinations.value = [{
-                destination: destParts, 
-                destinationDetail: ''
+                locationType: 'foreign',
+                destination: [],
+                foreignAddress: trimmedDest.substring(4).trim()
               }];
+            }
+            // 兼容旧格式
+            else {
+              // 假设有/或,的是国内地址，否则为国外
+              if (trimmedDest.includes('/') || trimmedDest.includes(',')) {
+                const separator = trimmedDest.includes('/') ? '/' : ',';
+                destinations.value = [{
+                  locationType: 'domestic',
+                  destination: trimmedDest.split(separator).map(p => p.trim()),
+                  foreignAddress: ''
+                }];
+              } else {
+                destinations.value = [{
+                  locationType: 'foreign',
+                  destination: [],
+                  foreignAddress: trimmedDest
+                }];
+              }
             }
           }
         }
@@ -837,6 +912,97 @@ const fetchUserProfile = async () => {
 // 审批意见数据
 const leaderApproval = ref('');
 const hostApproval = ref('');
+// 销假审批意见数据
+const unitLeaderApproval = ref('');
+const hrApproval = ref('');
+
+// 计算是否显示销假审批意见
+const shouldShowCancelLeaveApproval = computed(() => {
+  // 检查是否包含因私类型（type = 4）
+  const hasPrivateLeave = selectedReasons.value.includes(4);
+  
+  if (!hasPrivateLeave) {
+    return false;
+  }
+  
+  // 计算因私请假的总天数
+  let totalPrivateDays = 0;
+  personalList.value.forEach(personal => {
+    if (personal.personalTotalDays) {
+      totalPrivateDays += Number(personal.personalTotalDays) || 0;
+    }
+  });
+  
+  // 只有因私请假且总天数大于等于7天才显示销假审批意见
+  return totalPrivateDays >= 7;
+});
+
+// 格式化审批意见显示
+const formatLeaveApprovalReason = (reason: string) => {
+  if (!reason) return ''
+  
+  // 如果是"再次提交"类型的意见，不显示
+  if (reason.includes('再次提交')) {
+    return ''
+  }
+  
+  // 检查是否包含审批人名字和时间的格式（包含换行符和右对齐空格）
+  const lines = reason.split('\n')
+  if (lines.length >= 2) {
+    const firstLine = lines[0].trim()
+    const secondLine = lines[1].trim()
+    
+    // 如果第一行只是"同意"，显示完整格式：同意 + 审批人 + 日期
+    if (firstLine === '同意' && secondLine) {
+      return `同意\n                                                    ${secondLine}`
+    }
+    // 如果第一行只是"不同意"，显示完整格式：不同意 + 审批人 + 日期
+    if (firstLine === '不同意' && secondLine) {
+      return `不同意\n                                                    ${secondLine}`
+    }
+    // 如果第一行是"同意，xxx"格式，显示完整格式
+    if (firstLine.startsWith('同意，') && secondLine) {
+      return `${firstLine}\n                                                    ${secondLine}`
+    }
+    // 如果第一行是"不同意，xxx"格式，显示完整格式
+    if (firstLine.startsWith('不同意，') && secondLine) {
+      return `${firstLine}\n                                                    ${secondLine}`
+    }
+  }
+  
+  // 其他情况直接返回原内容
+  return reason
+}
+
+// 格式化审批意见显示为HTML布局
+const formatApprovalDisplay = (reason: string) => {
+  if (!reason) return ''
+  
+  // 如果是"再次提交"类型的意见，不显示
+  if (reason.includes('再次提交')) {
+    return ''
+  }
+  
+  // 检查是否包含审批人名字和时间的格式（包含换行符和右对齐空格）
+  const lines = reason.split('\n')
+  if (lines.length >= 2) {
+    const firstLine = lines[0].trim()
+    const secondLine = lines[1].trim()
+    
+    if (firstLine && secondLine) {
+      // 意见在第一行，名字日期在第二行右对齐但稍微往左一点
+      return `
+        <div>
+          <div>${firstLine}</div>
+          <div style="text-align: right; margin-top: 5px; padding-right: 50px;">${secondLine}</div>
+        </div>
+      `
+    }
+  }
+  
+  // 其他情况直接返回原内容
+  return reason
+}
 
 // 获取审批意见
 const processInstanceId = ref('');
@@ -857,6 +1023,13 @@ const getApprovalOpinions = async () => {
         } 
         if (node.id==='host_sign' && node.tasks && node.tasks.length > 0) {
           hostApproval.value = node.tasks[0].reason || '';
+        }
+        // 处理销假审批意见
+        if (node.id==='unit_leader_sign' && node.tasks && node.tasks.length > 0) {
+          unitLeaderApproval.value = node.tasks[0].reason || '';
+        }
+        if (node.id==='hr_sign' && node.tasks && node.tasks.length > 0) {
+          hrApproval.value = node.tasks[0].reason || '';
         }
       });
     }

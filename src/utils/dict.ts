@@ -241,7 +241,7 @@ export enum DICT_TYPE {
   SUPERVISION_APPROVE_TYPE = 'supervision_approve_type', // 督察办审批状态
   SUPERVISION_REAPPROVE_TYPE = 'supervision_reapprove_type', // 督察办复核状态
   SUPERVISION_TASK_STATUS = 'supervision_task_status' ,// 督办任务状态
-
+  REPORT_FREQUENCY='report_frequency', // 汇报频率
   // ========== IOT - 物联网模块  ==========
   IOT_NET_TYPE = 'iot_net_type', // IOT 联网方式
   IOT_VALIDATE_TYPE = 'iot_validate_type', // IOT 数据校验级别

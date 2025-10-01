@@ -77,7 +77,7 @@
 </template>
 <script lang="ts" setup>
 import { allSchemas } from './template.data'
-import * as MailTemplateApi from '@/api/system/mail/template'
+import * as MailTemplateApi from '@/api/system/mail/letter'
 import MailTemplateForm from './MailTemplateForm.vue'
 import MailTemplateSendForm from './MailTemplateSendForm.vue'
 
@@ -106,12 +106,12 @@ const handleDelete = (id: number) => {
 
 /** 是否有选中行 */
 const isSelected = computed(() => {
-  return tableObject.selections && tableObject.selections.length > 0
+  return tableObject.selectedRows && tableObject.selectedRows.length > 0
 })
 
 /** 批量删除按钮操作 */
 const handleDeleteBatch = async () => {
-  const ids = tableObject.selections.map(item => item.id)
+  const ids = tableObject.selectedList.map(item => item.id)
   if (ids.length === 0) return
   await MailTemplateApi.deleteMailTemplateList(ids)
   tableMethods.getList()
