@@ -1755,11 +1755,6 @@ const setUniformLabelWidth = () => {
 /* 指定不换行的标签（如：工作推进情况） */
 .form-label.no-wrap {
   white-space: nowrap;
-  min-width: 120px;
-  width: 120px;
-  font-size: 15px;
-  letter-spacing: 0.5px;
-  line-height: 1.4;
 }
 
 .form-content {

@@ -1798,7 +1798,6 @@ const isShowButton = (btnType: OperationButtonType): boolean => {
   return isShow
 }
 
-
 /** 获取按钮的显示名称 */
 const getButtonDisplayName = (btnType: OperationButtonType) => {
   let displayName = OPERATION_BUTTON_NAME.get(btnType)

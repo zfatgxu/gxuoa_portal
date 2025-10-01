@@ -7823,38 +7823,12 @@ defineExpose({
   width: 130px;
 }
 
-/* 表单样式 - 与创建页面一致 */
-.order-form {
-  padding: 0;
-}
-
-.form-table {
-  width: 100%;
-}
-
-.form-row {
+/* 只读标签样式 */
+.readonly-tags {
   display: flex;
-  border-bottom: 1px solid #e8eaed;
-  min-height: 50px;
-  align-items: stretch;
-  transition: background-color 0.2s ease;
-}
-
-.form-row:hover {
-  background-color: #fafafa;
-}
-
-.form-row:last-child {
-  border-bottom: none;
-}
-
-.form-label {
-  background: white;
-  color: #d32f2f;
-  border-right: 1px solid #e8eaed;
-  padding: 12px 16px;
-  font-weight: bold;
-  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 32px;
   align-items: center;
 }
 
