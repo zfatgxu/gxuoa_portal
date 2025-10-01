@@ -1,29 +1,29 @@
 <template>
   <ContentWrap>
-    <div class="supervision-order-create">
-      <!-- 页面标题 - 移到表格外面 -->
+    <div class="supervision-order-create" ref="orderFormEl">
+      <!-- 页面标题 -->
       <div class="page-header-outside">
-        <template v-if="!selectedType">
+        <div class="title-with-action">
+          <h1 class="form-title">{{ pageTitle }}</h1>
           <el-select
+            v-if="!selectedType"
             v-model="selectedType"
             placeholder="请选择督办类型"
-            size="large"
-            style="width: 220px"
+            class="type-selector"
+            style="width: 200px; height: 36px;"
           >
-            <el-option
-              v-for="opt in supervisionTypeDict"
-              :key="opt.value"
-              :label="opt.label"
-              :value="opt.value"
-            />
+            <el-option label="工作督办" :value="1" />
+            <el-option label="专项督查" :value="2" />
           </el-select>
-        </template>
-        <template v-else>
-          <div class="title-with-action">
-            <h1 class="form-title">{{ pageTitle }}</h1>
-            <el-button type="text" class="change-type-btn" @click="selectedType = undefined">更改类型</el-button>
-          </div>
-        </template>
+          <el-button
+            v-else
+            type="text"
+            class="change-type-btn"
+            @click="selectedType = undefined"
+          >
+            更改
+          </el-button>
+        </div>
       </div>
 
       <!-- 督办单表单 -->
@@ -34,6 +34,7 @@
           :model="orderForm"
           :rules="rules"
           ref="orderFormRef"
+          label-width="120px"
           class="order-form"
           :show-message="true"
           :inline-message="false"
@@ -67,21 +68,23 @@
                   type="textarea"
                   v-model="orderForm.content"
                   placeholder="请输入主要内容"
-                  :rows="4"
+                  :autosize="{ minRows: 4, maxRows: 20 }"
                   maxlength="2000"
                   show-word-limit
+                  class="form-input"
                 />
               </div>
             </div>
 
-            <!-- 督办分类和紧急程度 -->
+            <!-- 督办分类和紧急程度（未选类型时：督办分类禁用并提示） -->
             <div class="form-row">
               <div class="form-label required">督办分类</div>
               <div class="form-content half-width">
                 <div class="custom-select-container">
                   <el-select
                     v-model="orderForm.category"
-                    placeholder="请选择督办分类"
+                    :placeholder="selectedType ? '请选择督办分类' : '请先选择督办类型'"
+                    :disabled="!selectedType"
                     filterable
                     allow-create
                     default-first-option
@@ -109,7 +112,7 @@
                     </el-option>
                   </el-select>
                   <el-button
-                    v-if="showAddCategoryToDictButton"
+                    v-if="showAddCategoryToDictButton && selectedType"
                     type="text"
                     size="small"
                     class="add-to-dict-btn"
@@ -133,7 +136,7 @@
               </div>
             </div>
 
-            <!-- 完成期限和汇报频次 -->
+            <!-- 完成期限和办理单位进度报告频次 -->
             <div class="form-row">
               <div class="form-label required">完成期限</div>
               <div class="form-content half-width">
@@ -151,9 +154,9 @@
                   :default-time="defaultTime"
                 />
               </div>
-              <div class="form-label required">汇报频次</div>
+              <div class="form-label required long-label">办理单位进度报告频次</div>
               <div class="form-content half-width">
-                <el-select v-model="orderForm.reportFrequency" placeholder="请选择汇报频次" class="form-select">
+                <el-select v-model="orderForm.reportFrequency" placeholder="请选择办理单位进度报告频次" class="form-select">
                   <el-option
                     v-for="dict in getIntDictOptions(DICT_TYPE.REPORT_FREQUENCY)"
                     :key="dict.value"
@@ -164,25 +167,40 @@
               </div>
             </div>
 
-            <!-- 分管校领导和其他校领导 -->
+            <!-- 分管校领导 + 其他校领导 -->
             <div class="form-row">
               <div class="form-label">分管校领导</div>
               <div class="form-content half-width">
-                <el-input value="由督办人选择牵头单位后自动获取" placeholder="由督办人选择牵头单位后自动获取" disabled class="form-input" />
+                <el-select
+                  v-model="orderForm.chargeLeaderIds"
+                  multiple
+                  filterable
+                  clearable
+                  placeholder="系统将自动关联，亦可修改"
+                  class="form-select"
+                  @change="handleChargeLeadersChange"
+                >
+                  <el-option
+                    v-for="user in sortedUserList"
+                    :key="user.id"
+                    :label="user.nickname || user.username"
+                    :value="user.id"
+                  />
+                </el-select>
               </div>
               <div class="form-label">其他校领导</div>
               <div class="form-content half-width">
                 <el-select
                   v-model="orderForm.otherLeaderIds"
                   multiple
-                  placeholder="请选择其他校领导"
-                  :collapse-tags="true"
-                  :max-collapse-tags="3"
+                  filterable
+                  clearable
+                  placeholder="可多选"
                   class="form-select"
                   @change="handleOtherLeadersChange"
                 >
                   <el-option
-                    v-for="user in userList"
+                    v-for="user in sortedUserList"
                     :key="user.id"
                     :label="user.nickname || user.username"
                     :value="user.id"
@@ -191,25 +209,45 @@
               </div>
             </div>
 
-            <!-- 牵头单位和协办单位 -->
+            <!-- 办理单位和协办单位 -->
             <div class="form-row">
-              <div class="form-label">牵头单位</div>
+              <div class="form-label required">办理单位</div>
               <div class="form-content half-width">
-                <el-input
-                  value="由督办人选择"
-                  placeholder="由督办人选择"
-                  class="form-input"
-                  disabled
-                />
+                <el-select
+                  v-model="orderForm.leadDepts"
+                  placeholder="请选择办理单位（可多选）"
+                  filterable
+                  clearable
+                  multiple
+                  class="form-select"
+                  @change="handleLeadDeptsChange"
+                >
+                  <el-option
+                    v-for="dept in deptList"
+                    :key="dept.id"
+                    :label="dept.name"
+                    :value="dept.name"
+                  />
+                </el-select>
               </div>
               <div class="form-label">协办单位</div>
               <div class="form-content half-width">
-                <el-input
-                  value="由牵头单位选择"
-                  placeholder="由牵头单位选择"
-                  class="form-input"
-                  disabled
-                />
+                <el-select
+                  v-model="orderForm.collaborateDepts"
+                  multiple
+                  placeholder="请选择协办单位（可选）"
+                  filterable
+                  clearable
+                  class="form-select"
+                  @change="handleCollaborateDeptsChange"
+                >
+                  <el-option
+                    v-for="dept in availableCollaborateDepts"
+                    :key="dept.id"
+                    :label="dept.name"
+                    :value="dept.name"
+                  />
+                </el-select>
               </div>
             </div>
 
@@ -223,13 +261,11 @@
                   placeholder="请选择督办人"
                   filterable
                   clearable
-                  :collapse-tags="true"
-                  :max-collapse-tags="3"
                   @change="handleSupervisorChange"
                   class="form-select"
                 >
                   <el-option
-                    v-for="user in userList"
+                    v-for="user in sortedUserList"
                     :key="user.id"
                     :label="user.nickname || user.username"
                     :value="user.id"
@@ -248,7 +284,7 @@
 
             <!-- 工作推进情况 -->
             <div class="form-row">
-              <div class="form-label">工作推进情况</div>
+              <div class="form-label no-wrap" style="color: #d32f2f;">工作推进情况</div>
               <div class="form-content full-width">
                 <el-input
                   type="textarea"
@@ -263,30 +299,27 @@
             </div>
 
             <!-- 是否立项督办 -->
-            <div class="form-row">
+            <!-- <div class="form-row">
               <div class="form-label">是否立项督办</div>
               <div class="form-content full-width">
-                <el-radio-group v-model="orderForm.isProjectSupervision" disabled>
-                  <el-radio :label="true">是</el-radio>
-                  <el-radio :label="false">否</el-radio>
-                </el-radio-group>
+                <el-input readonly :value="''" class="readonly-display" />
               </div>
-            </div>
+            </div> -->
 
             <!-- 是否结束督办 -->
-            <div class="form-row">
+            <!-- <div class="form-row">
               <div class="form-label">是否结束督办</div>
               <div class="form-content full-width">
-                <el-radio-group v-model="orderForm.isSupervisionClosed" disabled>
-                  <el-radio :label="true">是</el-radio>
-                  <el-radio :label="false">否</el-radio>
-                </el-radio-group>
+                <el-input readonly :value="''" class="readonly-display" />
               </div>
-            </div>
+            </div> -->
           </div>
 
           <!-- 操作按钮 -->
           <div class="form-actions">
+            <el-button type="info" @click="fillTestData" size="large" style="margin-right: 12px;">
+              填充测试数据
+            </el-button>
             <el-button type="primary" @click="createOrder" size="large" :loading="submitLoading">
               提交
             </el-button>
@@ -298,7 +331,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount, computed, watch, nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 import { useRouter, useRoute } from 'vue-router'
@@ -313,14 +346,30 @@ import { Icon } from '@/components/Icon'
 
 defineOptions({ name: 'SupervisionOrderCreate' })
 
+
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const dictStore = useDictStoreWithOut()
 
-// 获取返回路径的函数
+// 获取返回路径的函数：优先按来源返回
 const getReturnPath = () => {
-  // 统一返回新的督办列表页
+  // 优先使用来源完整路径（由列表页传入）
+  const fromPath = route.query?.fromPath as string | undefined
+  if (fromPath && typeof fromPath === 'string') {
+    return fromPath
+  }
+  // 兼容：根据来源类型回退
+  const from = route.query?.from as string | undefined
+  if (from === 'special') {
+    // 若未传 fromPath，则按固定专项督查列表地址回退（如路由不同，请在此调整）
+    return '/supervision/special'
+  }
+  if (from === 'work') {
+    // 若未传 fromPath，则按固定工作督办列表地址回退（如路由不同，请在此调整）
+    return '/supervision/work'
+  }
+  // 最终兜底：统一返回首页列表
   return '/supervision/index'
 }
 
@@ -392,15 +441,23 @@ const submitLoading = ref(false)
 const dataLoading = ref(false)
 const phoneLoading = ref(false) // 获取办公电话的加载状态
 const orderFormRef = ref()
+const orderFormEl = ref<HTMLElement | null>(null)
 const deptList = ref<DeptApi.DeptVO[]>([])
 const userList = ref<any[]>([])
 // 搜索关键词变量在下面的搜索逻辑部分声明
 
+// 自动生成的领导（显示 & ID集合）
+const supervisionLeaderDisplay = ref('待办理单位确定后自动生成')
+const unitLeaderDisplay = ref('待办理单位确定后自动生成')
+const supervisionLeaderIds = ref<number[]>([]) // 督查办分管校领导ID集合（来自部门ID=125）
+const unitChargeLeaderIds = ref<number[]>([]) // 办理单位分管校领导ID集合（来自所选办理单位）
+const manualChargeLeaderEdited = ref(false) // 用户是否手动编辑过“分管校领导”
 
 
-// 计算属性：可选择的协办单位（排除牵头单位）
+
+// 计算属性：可选择的协办单位（排除办理单位）
 const availableCollaborateDepts = computed(() => {
-  return deptList.value.filter(dept => dept.name !== orderForm.leadDept)
+  return deptList.value.filter(dept => !orderForm.leadDepts.includes(dept.name))
 })
 
 // 使用自定义过滤逻辑确保搜索准确性
@@ -428,6 +485,24 @@ const filteredUserList = computed(() => {
   })
 })
 
+// 排序后的用户列表：督查办（部门ID=125）用户优先显示
+const sortedUserList = computed(() => {
+  const users = [...userList.value]
+  return users.sort((a, b) => {
+    const aIsSupervision = a.deptIds?.includes(125) || false
+    const bIsSupervision = b.deptIds?.includes(125) || false
+    
+    // 督查办用户排在前面
+    if (aIsSupervision && !bIsSupervision) return -1
+    if (!aIsSupervision && bIsSupervision) return 1
+    
+    // 同类型按姓名排序
+    const aName = a.nickname || a.username || ''
+    const bName = b.nickname || b.username || ''
+    return aName.localeCompare(bName)
+  })
+})
+
 // 部门搜索方法
 const searchDepts = (query: string) => {
   deptSearchKeyword.value = query
@@ -436,6 +511,92 @@ const searchDepts = (query: string) => {
 // 用户搜索方法
 const searchUsers = (query: string) => {
   userSearchKeyword.value = query
+}
+
+// 根据用户ID数组获取用户姓名
+const getUserNamesByIds = (userIds: string): string => {
+  if (!userIds || !userIds.trim()) return ''
+  
+  const ids = userIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))
+  const names = ids.map(id => {
+    const user = userList.value.find(u => u.id === id)
+    return user ? (user.nickname || user.username) : ''
+  }).filter(name => name)
+  
+  return names.length > 0 ? names.join('、') : ''
+}
+
+// 更新督查办校领导显示内容
+const updateSupervisionLeaderDisplay = async () => {
+  try {
+    const deptDetail = await DeptApi.getDept(125) // 督查办部门ID=125
+    if (deptDetail?.chargeLeaderUserIds) {
+      const names = getUserNamesByIds(deptDetail.chargeLeaderUserIds)
+      supervisionLeaderDisplay.value = names || '暂无分管校领导'
+      // 同步ID集合
+      supervisionLeaderIds.value = deptDetail.chargeLeaderUserIds
+        .split(',')
+        .map((id: string) => parseInt(id.trim()))
+        .filter((id: number) => !isNaN(id))
+    } else {
+      supervisionLeaderDisplay.value = '暂无分管校领导'
+      supervisionLeaderIds.value = []
+    }
+  } catch (error) {
+    console.error('获取督查办校领导失败:', error)
+    supervisionLeaderDisplay.value = '获取失败'
+    supervisionLeaderIds.value = []
+  }
+}
+
+// 更新办理单位分管校领导显示内容
+const updateUnitLeaderDisplay = async () => {
+  if (!orderForm.leadDeptIds || orderForm.leadDeptIds.length === 0) {
+    unitLeaderDisplay.value = '待办理单位确定后自动生成'
+    unitChargeLeaderIds.value = []
+    return
+  }
+  
+  try {
+    // 使用现有的 getDeptList 接口，传入 ids 参数
+    const deptDetails = await DeptApi.getDeptList({ ids: orderForm.leadDeptIds.join(',') })
+    const allLeaderIds = new Set<string>()
+    
+    if (Array.isArray(deptDetails)) {
+      deptDetails.forEach(dept => {
+        if (dept.chargeLeaderUserIds) {
+          dept.chargeLeaderUserIds.split(',').forEach(id => {
+            const trimmedId = id.trim()
+            if (trimmedId) allLeaderIds.add(trimmedId)
+          })
+        }
+      })
+    }
+    
+    if (allLeaderIds.size > 0) {
+      const names = getUserNamesByIds(Array.from(allLeaderIds).join(','))
+      unitLeaderDisplay.value = names || '暂无分管校领导'
+      unitChargeLeaderIds.value = Array.from(allLeaderIds)
+        .map(id => parseInt(id))
+        .filter(id => !isNaN(id))
+    } else {
+      unitLeaderDisplay.value = '暂无分管校领导'
+      unitChargeLeaderIds.value = []
+    }
+  } catch (error) {
+    console.error('获取办理单位分管校领导失败:', error)
+    unitLeaderDisplay.value = '获取失败'
+    unitChargeLeaderIds.value = []
+  }
+  // 异步完成后，再次根据最新集合刷新默认“分管校领导”
+  refreshDefaultChargeLeaders()
+}
+
+// 根据自动获取结果更新“分管校领导”的默认集合（仅在用户未手动编辑时）
+const refreshDefaultChargeLeaders = () => {
+  if (manualChargeLeaderEdited.value) return
+  const merged = new Set<number>([...supervisionLeaderIds.value, ...unitChargeLeaderIds.value])
+  orderForm.chargeLeaderIds = Array.from(merged)
 }
 
 // 督办依据相关（已移除UI，逻辑注释保留参考）
@@ -455,25 +616,24 @@ const orderForm = reactive({
   category: undefined as number | undefined, // 督办分类（数字ID）
   // basis: undefined, // 督办依据（数字类型）
   urgencyLevel: undefined, // 紧急程度（数字类型）
-  reportFrequency: undefined, // 汇报频次 (对应数据库 report_frequency) 1=每日 2=每周 3=每月 4=阶段性
+  reportFrequency: undefined, // 办理单位进度报告频次 (对应数据库 report_frequency) 1=每日 2=每周 3=每月 4=阶段性
   deadline: '', // 完成期限
-  leadDept: '', // 牵头单位名称（用于显示）
-  leadDeptId: 0, // 牵头单位ID（用于提交）
-  collaborateDepts: [], // 协办单位名称数组（用于显示）
-  collaborateDeptIds: [], // 协办单位ID数组（用于提交）
-  supervisorNames: [], // 督办人姓名数组（用于显示，支持多选）
-  supervisorIds: [], // 督办人ID数组（用于提交，支持多选）
+  leadDepts: [] as string[], // 办理单位名称数组（用于显示）
+  leadDeptIds: [] as number[], // 办理单位ID数组（用于提交）
+  collaborateDepts: [] as string[], // 协办单位名称数组（用于显示）
+  collaborateDeptIds: [] as number[], // 协办单位ID数组（用于提交）
+  supervisorNames: [] as string[], // 督办人姓名数组（用于显示，支持多选）
+  supervisorIds: [] as number[], // 督办人ID数组（用于提交，支持多选）
   officePhone: '',
-  leader: '', // 分管校领导姓名（用于显示）
-  leaderId: 0, // 分管校领导ID（用于提交）
-  otherLeaders: [], // 其他校领导姓名数组（用于显示）
-  otherLeaderIds: [], // 其他校领导ID数组（用于提交）
+  chargeLeaderIds: [] as number[], // 分管校领导（合并：督查办 + 办理单位）用于前端显示与调整，不参与提交
+  otherLeaders: [] as string[], // 其他校领导姓名数组（用于显示）
+  otherLeaderIds: [] as number[], // 其他校领导ID数组（用于提交）
   content: '', // 主要内容
   tasks: '', // 承办事项
   // 以下字段在创建阶段不可编辑，由工作流程控制
   handlingDetails: '', // 工作推进情况 - 仅用于界面显示
-  isProjectSupervision: null, // 是否立项督办 (对应数据库 isProjectSupervision)
-  isSupervisionClosed: null // 是否结束督办 (对应数据库 isSupervisionClosed)
+  isProjectSupervision: null as boolean | null, // 是否立项督办 (对应数据库 isProjectSupervision)
+  isSupervisionClosed: null as boolean | null // 是否结束督办 (对应数据库 isSupervisionClosed)
 })
 
 // 表单验证规则
@@ -525,7 +685,19 @@ const rules = {
       trigger: 'change'
     }
   ],
-  // leadDept 不再是必填项，由督办人在后续流程中选择
+  leadDeptIds: [
+    { required: true, message: '请选择办理单位', trigger: 'change' },
+    {
+      validator: (rule: any, value: number[], callback: Function) => {
+        if (!Array.isArray(value) || value.length === 0) {
+          callback(new Error('请至少选择一个办理单位'))
+        } else {
+          callback()
+        }
+      },
+      trigger: 'change'
+    }
+  ],
   supervisorIds: [
     { required: true, message: '请选择督办人', trigger: 'change' },
     {
@@ -554,7 +726,7 @@ const rules = {
     }
   ],
   reportFrequency: [
-    { required: true, message: '请选择汇报频次', trigger: 'change' }
+    { required: true, message: '请选择办理单位进度报告频次', trigger: 'change' }
   ],
   officePhone: [
     { required: true, message: '请输入联系电话', trigger: 'blur' },
@@ -665,11 +837,15 @@ watch(selectedType, async () => {
   if (!selectedType.value) {
     orderForm.category = undefined
     orderForm.orderNumber = ''
+    // 清空分类选项，避免残留显示
+    supervisionTypeOptions.value = []
     return
   }
   
   // 清空分类选择
   orderForm.category = undefined
+  // 先清空旧的下拉选项，再加载新的
+  supervisionTypeOptions.value = []
   
   // 生成督办编号
   await generateOrderNumber()
@@ -697,14 +873,19 @@ const removeDept = (deptName: string) => {
   }
 }
 
-// 处理牵头单位变化
-const handleLeadDeptChange = (deptName: string) => {
-  const dept = deptList.value.find(d => d.name === deptName)
-  if (dept) {
-    orderForm.leadDeptId = dept.id
-    // 自动获取部门负责人信息
-    getDeptLeaderInfo(dept.id)
-  }
+// 处理办理单位变化（多选）
+const handleLeadDeptsChange = (deptNames: string[]) => {
+  orderForm.leadDeptIds = []
+  deptNames.forEach(name => {
+    const dept = deptList.value.find(d => d.name === name)
+    if (dept) {
+      orderForm.leadDeptIds.push(dept.id)
+    }
+  })
+  // 自动生成办理单位分管校领导显示内容
+  updateUnitLeaderDisplay()
+  // 重新合并默认分管校领导
+  refreshDefaultChargeLeaders()
 }
 
 // 处理协办单位变化
@@ -776,6 +957,16 @@ const handleOtherLeadersChange = (userIds: number[]) => {
     orderForm.otherLeaderIds = []
   } else {
     orderForm.otherLeaderIds = [...userIds] // 创建副本避免引用问题
+  }
+}
+
+// 处理“分管校领导”手动变更
+const handleChargeLeadersChange = (userIds: number[]) => {
+  manualChargeLeaderEdited.value = true
+  if (!Array.isArray(userIds)) {
+    orderForm.chargeLeaderIds = []
+  } else {
+    orderForm.chargeLeaderIds = [...userIds]
   }
 }
 
@@ -857,7 +1048,7 @@ const getPriorityLabel = (value: number): string => {
 }
 
 
-// 获取汇报频次标签
+// 获取办理单位进度报告频次标签
 const getReportFrequencyLabel = (value: number | string | undefined): string => {
   if (value === undefined || value === null) return ''
   const num = typeof value === 'string' ? Number(value) : value
@@ -1065,7 +1256,9 @@ const validateRequiredFields = (): string[] => {
   if (!orderForm.deadline) {
     missingFields.push('完成期限')
   }
-  // 牵头单位不再在创建阶段验证，由督办人在后续流程中选择
+  if (!Array.isArray(orderForm.leadDeptIds) || orderForm.leadDeptIds.length === 0) {
+    missingFields.push('办理单位')
+  }
   if (!Array.isArray(orderForm.supervisorIds) || orderForm.supervisorIds.length === 0) {
     missingFields.push('督办人')
   }
@@ -1117,7 +1310,7 @@ const generateAutoSummary = () => {
     parts.push(`请于${deadlineText}前完成`)
   }
 
-  // 汇报频次（可选）
+  // 办理单位进度报告频次（可选）
   const freqLabel = getReportFrequencyLabel(orderForm.reportFrequency as any)
   const sentence = [
     parts.join('，'),
@@ -1125,6 +1318,67 @@ const generateAutoSummary = () => {
   ].filter(Boolean).join('，')
 
   return sentence ? `${sentence}。` : ''
+}
+
+// 填充测试数据
+const fillTestData = async () => {
+  // 如果未选择督办类型，先选择工作督办
+  if (!selectedType.value) {
+    selectedType.value = 1
+    // 等待督办分类加载完成
+    await loadSupervisionTypes()
+  }
+  
+  // 填充基础信息
+  orderForm.title = '测试督办事项 - ' + new Date().toLocaleString()
+  orderForm.content = '这是一条用于开发测试的督办单内容，包含了完整的督办要求和具体事项说明。'
+  
+  // 选择第一个可用的督办分类
+  if (supervisionTypeOptions.value && supervisionTypeOptions.value.length > 0) {
+    orderForm.category = supervisionTypeOptions.value[0].value
+  }
+  
+  orderForm.urgencyLevel = 2 // 一般
+  orderForm.reportFrequency = 7 // 每周
+  
+  // 设置完成期限为7天后
+  const deadline = new Date()
+  deadline.setDate(deadline.getDate() + 7)
+  deadline.setHours(18, 0, 0, 0) // 设为下午6点
+  orderForm.deadline = deadline.toISOString().slice(0, 19).replace('T', ' ')
+  
+  // 设置办理单位（leadDept：1和122）
+  const leadDeptNames = []
+  const leadDeptIds = [1, 122]
+  leadDeptIds.forEach(id => {
+    const dept = deptList.value.find(d => d.id === id)
+    if (dept) {
+      leadDeptNames.push(dept.name)
+    }
+  })
+  orderForm.leadDepts = leadDeptNames
+  orderForm.leadDeptIds = leadDeptIds
+  
+  // 设置协办单位（coDept：124）
+  const coDeptNames = []
+  const coDeptIds = [124]
+  coDeptIds.forEach(id => {
+    const dept = deptList.value.find(d => d.id === id)
+    if (dept) {
+      coDeptNames.push(dept.name)
+    }
+  })
+  orderForm.collaborateDepts = coDeptNames
+  orderForm.collaborateDeptIds = coDeptIds
+  
+  // 设置督办人（supervisors：338和339）
+  orderForm.supervisorIds = [338, 339]
+  
+  // 触发相关联动更新（会自动获取督办人手机号）
+  updateUnitLeaderDisplay()
+  handleSupervisorChange(orderForm.supervisorIds)
+  
+  ElMessage.success('测试数据填充完成')
 }
 
 const createOrder = async () => {
@@ -1152,6 +1406,19 @@ const createOrder = async () => {
     // 自动生成概述信息字符串
     const summaryContent = generateAutoSummary()
 
+    // 计算发起人角色类型：4=主任(dcb_zr)，3=副主任(dcb_fzr)，1=督查办管理员(dcb_gly)，2=其他（优先级：主任>副主任>管理员>其他）
+    const roles = (userStore as any)?.getRoles || []
+    let initiatorRoleType = 2
+    if (Array.isArray(roles)) {
+      if (roles.includes('dcb_zr')) {
+        initiatorRoleType = 4
+      } else if (roles.includes('dcb_fzr')) {
+        initiatorRoleType = 3
+      } else if (roles.includes('dcb_gly')) {
+        initiatorRoleType = 1
+      }
+    }
+
     // 准备提交数据，转换为API需要的格式
     // 使用用户在页面上选择的督办类型，而不是URL参数
     const supervisionType = selectedType.value // 1=工作督办, 2=专项督查
@@ -1162,6 +1429,10 @@ const createOrder = async () => {
       return
     }
 
+    // 将办理单位和协办单位 ID 转换为字符串格式
+    const leadDeptIds = orderForm.leadDeptIds.length > 0 ? orderForm.leadDeptIds.join(',') : ''
+    const coDeptIds = orderForm.collaborateDeptIds.length > 0 ? orderForm.collaborateDeptIds.join(',') : ''
+
     const submitData: OrderVO = {
       orderCode: orderForm.orderNumber,
       orderTitle: orderForm.title,
@@ -1171,17 +1442,22 @@ const createOrder = async () => {
       // reason: orderForm.basis, // 已移除“督办依据”，不再提交
       priority: orderForm.urgencyLevel,
       deadline: orderForm.deadline,
-      leadDept: '', // 牵头单位由督办人在后续流程中选择，创建时为空
-      coDept: '', // 协办单位由牵头单位选择，创建时为空
-      supervisor: orderForm.supervisorIds.join(','), // 督办人ID（支持多选，逗号分隔）
+      leadDept: leadDeptIds, // 办理单位 ID（逗号分隔字符串，支持多选）
+      coDept: coDeptIds, // 协办单位 ID（逗号分隔的字符串）
+      supervisor: orderForm.supervisorIds.join(','), // 督办人 ID（支持多选，逗号分隔）
       content: orderForm.content,
-      reportFrequency: orderForm.reportFrequency ? Number(orderForm.reportFrequency) : undefined, // 汇报频次
-      otherLeaders: orderForm.otherLeaderIds.join(','), // 其他校领导ID（支持多选，逗号分隔）
+      reportFrequency: orderForm.reportFrequency ? Number(orderForm.reportFrequency) : undefined, // 办理单位进度报告频次
+      otherLeaders: orderForm.otherLeaderIds.join(','), // 其他校领导 ID（支持多选，逗号分隔）
       summary: summaryContent, // 添加自动生成的概述信息字符串
-      officePhone: orderForm.officePhone // 办公电话
+      officePhone: orderForm.officePhone, // 办公电话
+      initiatorRoleType // 发起人角色类型（4=主任，3=副主任，1=督查办管理员，2=其他）
     }
 
     // 验证必要的ID字段
+    if (!orderForm.leadDeptIds || orderForm.leadDeptIds.length === 0 || !leadDeptIds) {
+      ElMessage.error('请确保已正确选择办理单位')
+      return
+    }
     if (!Array.isArray(orderForm.supervisorIds) || orderForm.supervisorIds.length === 0 || !submitData.supervisor) {
       ElMessage.error('请确保已正确选择督办人')
       return
@@ -1261,8 +1537,7 @@ const resetForm = async () => {
   orderForm.supervisorNames = []
   orderForm.supervisorIds = []
   orderForm.officePhone = ''
-  orderForm.leader = ''
-  orderForm.leaderId = 0
+  orderForm.chargeLeaderIds = []
   orderForm.otherLeaders = []
   orderForm.otherLeaderIds = []
   orderForm.content = ''
@@ -1273,6 +1548,7 @@ const resetForm = async () => {
 
   // 清除验证错误信息
   orderFormRef.value?.clearValidate()
+  manualChargeLeaderEdited.value = false
 }
 
 const handleCancel = async () => {
@@ -1299,7 +1575,35 @@ const initSupervisionType = () => {
 onMounted(async () => {
   await initData()
   initSupervisionType()
+  // 初始化督查办校领导显示
+  await updateSupervisionLeaderDisplay()
+  // 首次根据默认集合填充“分管校领导”
+  refreshDefaultChargeLeaders()
+  // 统一标签宽度：以“工作推进情况”为基准
+  await nextTick()
+  setUniformLabelWidth()
+  window.addEventListener('resize', setUniformLabelWidth)
 })
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', setUniformLabelWidth)
+})
+
+// 以“工作推进情况”的标签宽度为基准，设置所有标签等宽，并使用两端对齐
+const setUniformLabelWidth = () => {
+  const root = orderFormEl.value || document.querySelector('.supervision-order-create') as HTMLElement
+  if (!root) return
+  // 找到文本为“工作推进情况”的标签
+  const labels = Array.from(root.querySelectorAll('.form-label')) as HTMLElement[]
+  if (labels.length === 0) return
+  const target = labels.find(l => (l.textContent || '').replace(/\s+/g, '') === '工作推进情况')
+  const width = target ? Math.ceil(target.getBoundingClientRect().width) : Math.max(...labels.map(l => l.getBoundingClientRect().width))
+  if (Number.isFinite(width) && width > 0) {
+    // 设置 CSS 变量，供样式使用
+    const container = root.closest('.order-form-container') as HTMLElement || root
+    container.style.setProperty('--label-width', width + 'px')
+  }
+}
 </script>
 
 <style scoped>
@@ -1412,21 +1716,29 @@ onMounted(async () => {
 }
 
 .form-label {
-  background: white;
-  color: #d32f2f;
-  border-right: 1px solid #e8eaed;
+  width: var(--label-width, 120px);
+  min-width: 0;
   padding: 12px 16px;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  white-space: nowrap;
-  min-width: 120px;
-  width: 120px;
+  background: #f9fafb;
+  border-right: 1px solid #e8eaed;
+  color: #d32f2f; /* 恢复为原先红色 */
+  font-weight: 600;
+  text-align: justify;
+  text-align-last: justify; /* 使中文在一行内两端对齐 */
+  position: relative; /* 供星号绝对定位，不影响测量宽度 */
   font-size: 15px;
   letter-spacing: 0.5px;
   line-height: 1.4;
+}
+
+/* 长标签支持换行但保持固定宽度 */
+.form-label.long-label {
+  white-space: normal;
+  word-break: break-all;
+  line-height: 1.2;
+  width: var(--label-width, 120px);
+  font-size: 13px;
+  padding: 8px 12px;
 }
 
 /* 确保第二个标签有左边框 */
@@ -1434,11 +1746,20 @@ onMounted(async () => {
   border-left: 1px solid #e8eaed;
 }
 
+/* 去掉必填星号显示 */
 .form-label.required::before {
-  content: '*';
-  color: #d32f2f;
-  margin-right: 4px;
-  font-weight: bold;
+  display: none;
+  content: none;
+}
+
+/* 指定不换行的标签（如：工作推进情况） */
+.form-label.no-wrap {
+  white-space: nowrap;
+  min-width: 120px;
+  width: 120px;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  line-height: 1.4;
 }
 
 .form-content {
@@ -1546,7 +1867,7 @@ onMounted(async () => {
 /* } */
 
 /* .report-frequency-select { */
-/*   width: 130px;   调整宽度以完整显示汇报频次选项 */
+/*   width: 130px;   调整宽度以完整显示办理单位进度报告频次选项 */
 /* } */
 
 /* 统一表单控件样式 */
@@ -1752,5 +2073,11 @@ onMounted(async () => {
     padding: 10px 25px;
     font-size: 14px;
   }
+}
+
+/* 只读显示框样式 - 灰色提示 */
+.readonly-display {
+  color: #909399 !important;
+  cursor: not-allowed !important;
 }
 </style>

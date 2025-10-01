@@ -8,10 +8,10 @@
           :src="auditIconsMap[processInstance.status]"
           alt=""
         />
-        <div class="text-#878c93 h-15px">编号：{{ id }}</div>
+        <div class="text-#878c93 h-15px" v-if="!isSupervisionFlow">编号：{{ id }}</div>
         <el-divider class="!my-8px" />
         <div class="flex items-center gap-5 mb-10px h-40px">
-          <div class="text-26px font-bold mb-5px">{{ processInstance.name }}</div>
+          <div class="text-26px font-bold mb-5px">{{ dynamicTitle }}</div>
           <dict-tag
             v-if="processInstance.status"
             :type="DICT_TYPE.SEAL_APPLY_STATE"
@@ -69,6 +69,8 @@
                           :apply-user="applyUser"
                           :apply-time="applyTime"
                           :status="processInstance.status"
+                          @open-approve="(targetElement) => handleOpenApprove(targetElement)"
+                          @open-reject="(targetElement) => handleOpenReject(targetElement)"
                         />
                         <!-- 其他业务表单 -->
                         <BusinessFormComponent
@@ -140,7 +142,12 @@
             :writable-fields="writableFields"
             :supervision-detail-ref="supervisionDetailRef"
             :lead-dept-leader-ids="leadDeptLeaderIdsRef"
+            :terminate-running="terminateRunningRef"
+            :delegated-task-id="delegatedTaskId"
+            :use-dialog="useDialogMode"
+            :dialog-type="dialogType"
             @success="refresh"
+            @dialog-cancel="resetPreviewDialog"
           />
         </div>
       </el-scrollbar>
@@ -156,13 +163,16 @@ import { setConfAndFields2 } from '@/utils/formCreate'
 import { registerComponent } from '@/utils/routerHelper'
 import type { ApiAttrs } from '@form-create/element-ui/types/config'
 import * as ProcessInstanceApi from '@/api/bpm/processInstance'
+import * as TaskApi from '@/api/bpm/task'
 import * as UserApi from '@/api/system/user'
+import { useUserStore } from '@/store/modules/user'
 import ProcessInstanceBpmnViewer from '@/views/bpm/processInstance/detail/ProcessInstanceBpmnViewer.vue'
 import ProcessInstanceSimpleViewer from '@/views/bpm/processInstance/detail/ProcessInstanceSimpleViewer.vue'
 import ProcessInstanceTaskList from '@/views/bpm/processInstance/detail/ProcessInstanceTaskList.vue'
 import SupervisionOperationButton from './SupervisionOperationButton.vue'
 import ProcessInstanceTimeline from '@/views/bpm/processInstance/detail/ProcessInstanceTimeline.vue'
 import { FieldPermissionType } from '@/components/SimpleProcessDesignerV2/src/consts'
+import { useTagsViewStoreWithOut } from '@/store/modules/tagsView'
 import { TaskStatusEnum } from '@/api/bpm/task'
 import runningSvg from '@/assets/svgs/bpm/running.svg'
 import approveSvg from '@/assets/svgs/bpm/approve.svg'
@@ -173,6 +183,7 @@ defineOptions({ name: 'SupervisionWorkflowDetail' })
 
 const route = useRoute()
 const message = useMessage() // 消息弹窗
+const userStore = useUserStore() // 用户store
 const id = route.params.id as string // 流程实例的编号
 const taskId = route.query.taskId as string // 任务编号
 const activityId = route.query.activityId as string // 流程活动编号，用于抄送查看
@@ -185,6 +196,14 @@ const supervisionDetailRef = ref() // 督办详情组件 ref
 
 // 本地响应式状态，用于同步子组件暴露的 computed 属性
 const leadDeptLeaderIdsRef = ref<number[]>([])
+// 是否有进行中的终止流程（来自审批详情顶层字段）
+const terminateRunningRef = ref(false)
+// 被代管中的任务ID（用于原办理人取消代管）
+const delegatedTaskId = ref<string | null>(null)
+
+// 预览区弹窗模式相关状态
+const useDialogMode = ref(false)
+const dialogType = ref<'approve' | 'reject' | null>(null)
 
 const auditIconsMap = {
   [TaskStatusEnum.RUNNING]: runningSvg,
@@ -208,6 +227,43 @@ const applyUser = ref('')
 const applyTime = ref('')
 
 const writableFields: Array<string> = [] // 表单可以编辑的字段
+
+// 是否为督办业务流程（使用自定义业务表单且路径包含 supervision）
+const isSupervisionFlow = computed(() => {
+  return (
+    processDefinition.value?.formType === BpmModelFormType.CUSTOM &&
+    !!processDefinition.value?.formCustomViewPath?.includes('supervision')
+  )
+})
+
+// 动态标题：督办流程 => 根据 type 显示“工作督办/专项督办”；否则回退为流程实例名称
+const dynamicTitle = computed(() => {
+  if (isSupervisionFlow.value) {
+    const type = supervisionDetailRef.value?.getOrderDetailData?.()?.type
+    if (type === 1) return '工作督办'
+    if (type === 2) return '专项督办'
+  }
+  return processInstance.value?.name || '流程详情'
+})
+
+// 监听标题变化，更新当前路由的 meta.title（仅督办流程）
+watch(
+  () => dynamicTitle.value,
+  (val) => {
+    if (isSupervisionFlow.value && val) {
+      // 覆盖当前页面标题，仅影响本路由实例
+      route.meta.title = val
+      // 同步更新标签页（页签）标题
+      try {
+        const tagsView = useTagsViewStoreWithOut()
+        tagsView.setTitle(val, route.path)
+      } catch (e) {
+        // ignore if tags view store not ready
+      }
+    }
+  },
+  { immediate: true }
+)
 
 /** 获得详情 */
 const getDetail = () => {
@@ -285,10 +341,56 @@ const getApprovalDetail = async () => {
     // 获取审批节点，显示 Timeline 的数据
     activityNodes.value = data.activityNodes
 
+    // 保存顶层的 terminateRunning 字段（正确的字段路径）
+    terminateRunningRef.value = !!data.terminateRunning
+
+    // 查询被代管的任务（用于原办理人取消代管）
+    await findDelegatedTask()
+
     // 获取待办任务显示操作按钮
     operationButtonRef.value?.loadTodoTask(data.todoTask)
   } finally {
     processInstanceLoading.value = false
+  }
+}
+
+/** 查询被代管的任务 */
+const findDelegatedTask = async () => {
+  try {
+    if (!processInstance.value?.id) return
+    
+    // 获取当前流程实例的所有运行任务
+    const tasks = await TaskApi.getTaskListByProcessInstanceId(processInstance.value.id)
+    if (!tasks || !Array.isArray(tasks)) return
+    
+    const currentUserId = userStore.getUser.id
+    
+    // 查找当前用户作为原办理人的被代管任务
+    const delegatedTask = tasks.find(task => {
+      // 方法1：通过 delegationState 判断
+      if (task.delegationState === 'PENDING' && task.ownerUser?.id === currentUserId) {
+        return true
+      }
+      
+      // 方法2：通过 ownerUser 和 assigneeUser 不同判断
+      if (task.ownerUser?.id === currentUserId && 
+          task.assigneeUser?.id && 
+          task.ownerUser.id !== task.assigneeUser.id) {
+        return true
+      }
+      
+      return false
+    })
+    
+    if (delegatedTask) {
+      delegatedTaskId.value = delegatedTask.id
+      console.log('找到被代管的任务:', delegatedTask.id)
+    } else {
+      delegatedTaskId.value = null
+    }
+  } catch (error) {
+    console.warn('查询被代管任务失败:', error)
+    delegatedTaskId.value = null
   }
 }
 
@@ -332,6 +434,8 @@ const setFieldPermission = (field: string, permission: string) => {
  * 操作成功后刷新
  */
 const refresh = () => {
+  // 重置预览弹窗状态
+  resetPreviewDialog()
   // 重新获取详情
   getDetail()
 }
@@ -347,6 +451,36 @@ watch(
   },
   { immediate: true }
 )
+
+// 处理从预览表格点击通过
+const handleOpenApprove = (targetElement?: HTMLElement) => {
+  if (targetElement) {
+    // 使用虚拟锚点在预览按钮旁边显示 Popover
+    operationButtonRef.value?.openApproveAt?.(targetElement)
+  } else {
+    // 兜底：使用弹窗模式
+    useDialogMode.value = true
+    dialogType.value = 'approve'
+  }
+}
+
+// 处理从预览表格点击拒绝
+const handleOpenReject = (targetElement?: HTMLElement) => {
+  if (targetElement) {
+    // 使用虚拟锚点在预览按钮旁边显示 Popover
+    operationButtonRef.value?.openRejectAt?.(targetElement)
+  } else {
+    // 兜底：使用弹窗模式
+    useDialogMode.value = true
+    dialogType.value = 'reject'
+  }
+}
+
+// 重置预览弹窗状态
+const resetPreviewDialog = () => {
+  useDialogMode.value = false
+  dialogType.value = null
+}
 
 /** 初始化 */
 const userOptions = ref<UserApi.UserVO[]>([]) // 用户列表

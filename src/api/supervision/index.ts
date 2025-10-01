@@ -10,6 +10,19 @@ export interface OrderPageReqVO extends PageParam {
   type?: number // 督办类型：1=工作督办，2=专项督办
 }
 
+// ========== 督办流程实例 API ==========
+export const SupervisionProcessApi = {
+  // 通过流程定义 Key 启动督办相关流程（支持 businessKey）
+  createProcessInstanceByKey: async (data: {
+    processDefinitionKey: string
+    businessKey: string
+    variables?: Record<string, any>
+    startUserSelectAssignees?: Record<string, number[]>
+  }) => {
+    return await request.post({ url: '/bpm/supervision/process-instance/create-by-key', data })
+  }
+}
+
 // 督办单导出参数（专门用于导出功能）
 export interface OrderExportReqVO {
   ids?: number[] // 要导出的督办单ID列表（可选，用于导出选中的特定行）
@@ -32,6 +45,8 @@ export interface OrderWorkflowUpdateReqVO {
   deptDetail?: string // 牵头单位承办情况
   detailType?: number // 督办具体分类ID
   fileList?: AttachmentFileInfo[] // 附件列表
+  // 是否变更了办理/协办单位：1=有变更，2=无变更（仅 select_leaddept 节点计算并传递）
+  deptChangeFlag?: number
 }
 
 // 附件文件信息
@@ -65,6 +80,8 @@ export interface OrderVO {
   otherLeaders?: string // 其他校领导ID（逗号分隔，对应数据库 other_leaders）
   summary?: string // 概述信息（字符串格式）
   officePhone?: string // 办公电话
+  // 发起人角色类型：1=督查办管理员(dcb_gly)，2=其他，3=督查办副主任(dcb_fzr)，4=督查办主任(dcb_zr)
+  initiatorRoleType?: number
   // 工作流审批人配置由后端自动设置，前端不传递
   // 以下字段已废弃但保留兼容性，前端不需要传递
   significance?: number // 重要程度 (已废弃)
@@ -102,6 +119,7 @@ export interface OrderRespVO {
   isSupervisionClosed?: boolean | null // 是否结束督办
   summary?: string // 概述信息
   processInstanceId?: string // 流程实例ID
+  supervisionStatus?: number // 督办状态（1进行中、6已中止等）
   createTime: number // 创建时间（时间戳）
 }
 
@@ -160,8 +178,20 @@ export const OrderApi = {
   },
 
   // 删除督办单
-  deleteOrder: async (id: number) => {
-    return await request.delete({ url: `/supervision/order/delete?id=` + id })
+  deleteOrder: (id: number) => {
+    return request.delete({ url: `/supervision/order/${id}` })
+  },
+
+  // 中止督办单
+  suspendOrder: (id: number) => {
+    return request.post({ 
+      url: `/supervision/order/${id}/suspend`
+    })
+  },
+
+  // 恢复督办单
+  resumeOrder: (id: number) => {
+    return request.post({ url: `/supervision/order/${id}/resume` })
   },
 
   // 获取督办单详情
@@ -221,7 +251,8 @@ export const OrderApi = {
     }>
   }) => {
     return await request.post({ url: '/bpm/supervision/insertSupervisionOrderTaskNew', data })
-  }
+  },
+  
 }
 
 // 督办任务 API
@@ -474,6 +505,128 @@ export const SupervisionFollowApi = {
   // 获取我的关注列表
   getMyFollowList: async (params: PageParam) => {
     return await request.get({ url: '/supervision/follow/my-follows', params })
+  }
+}
+
+// ========== 标记已读相关接口 ==========
+
+// 标记已读请求参数
+export interface MarkReadReqVO {
+  orderId: number // 督办单ID
+}
+
+// 标记已读相关API
+export const MarkReadApi = {
+  // 标记督办单已读
+  markRead: async (orderId: number) => {
+    return await request.post({ url: '/supervision/order/read/mark', data: { orderId } })
+  }
+}
+
+// ========== 任务操作相关接口 ==========
+
+// 撤回代管请求参数
+export interface RevokeTaskDelegationReqVO {
+  taskId: string // 任务ID
+  reason?: string // 撤回理由（可选）
+}
+
+// 任务操作相关API
+export const SupervisionTaskOperationApi = {
+  // 撤回代管（督办专用）
+  revokeTaskDelegation: async (data: RevokeTaskDelegationReqVO) => {
+    return await request.post({ url: '/bpm/supervision/task/revoke-delegation', data })
+  }
+}
+
+// ========== 督办计划记录相关 API ==========
+
+// 督办计划记录提交请求
+export interface PlanEntrySubmitReqVO {
+  processInstanceId: string // 流程实例ID
+  targetUserId: number // 办理人用户ID
+  targetUserName: string // 办理人用户名
+  targetDeptName: string // 办理人部门名称
+  periodDate: string // 期次日期 (YYYY-MM-DD)
+  summary?: string // 计划内容摘要
+  fileList?: AttachmentFileInfo[] // 附件列表
+}
+
+// 督办计划记录审核请求
+export interface PlanEntryAuditReqVO {
+  processInstanceId: string // 流程实例ID
+  targetUserId: number // 办理人用户ID
+  periodDate: string // 期次日期 (YYYY-MM-DD)
+  decision: number // 审核决策：1-通过，2-不通过
+  remark?: string // 审核备注
+  delayNext?: boolean // 是否顺延到下一期
+  reportFrequency?: number // 汇报频次
+  deadline?: string // 截止日期 (YYYY-MM-DD)
+}
+
+// 督办计划记录响应
+export interface PlanEntryRespVO {
+  id: number // 记录ID
+  processInstanceId: string // 流程实例ID
+  targetUserId: number // 办理人用户ID
+  targetUserName: string // 办理人用户名
+  targetDeptName: string // 办理人部门名称
+  periodDate: string // 期次日期
+  summary?: string // 计划内容摘要
+  status: string // 状态：draft/submitted/approved/rejected/pending_delay
+  statusDisplay: string // 状态显示名称
+  isDelayedPlaceholder: boolean // 是否为顺延占位记录
+  sourceEntryId?: number // 源记录ID（顺延时）
+  fileCount: number // 附件数量
+  attachmentInfo?: string // 附件信息（JSON格式）
+  version: number // 版本号
+  createTime: string // 创建时间
+  updateTime: string // 更新时间
+}
+
+// 督办计划记录审核结果
+export interface PlanEntryAuditResultVO {
+  currentEntry: PlanEntryRespVO // 当前记录
+  hasNextPeriod: boolean // 是否有下一期记录
+  nextPeriodEntry?: PlanEntryRespVO // 下一期记录（顺延时）
+}
+
+// 督办计划记录 API
+export const PlanEntryApi = {
+  // 提交计划记录
+  submit: async (data: PlanEntrySubmitReqVO) => {
+    return await request.post({ url: '/supervision/plan/entry/submit', data })
+  },
+  
+  // 查询计划记录列表
+  list: async (processInstanceId: string, targetUserId?: number) => {
+    const params: any = { processInstanceId }
+    if (targetUserId) {
+      params.targetUserId = targetUserId
+    }
+    return await request.get({ url: '/supervision/plan/entry/list', params })
+  },
+  
+  // 按版本类型查询计划记录列表
+  listByVersionType: async (processInstanceId: string, versionType: string, targetUserId?: number) => {
+    const params: any = { processInstanceId, versionType }
+    if (targetUserId) {
+      params.targetUserId = targetUserId
+    }
+    return await request.get({ url: '/supervision/plan/entry/list-by-version', params })
+  },
+  
+  // 查询单个计划记录
+  get: async (processInstanceId: string, targetUserId: number, periodDate: string) => {
+    return await request.get({ 
+      url: '/supervision/plan/entry/get', 
+      params: { processInstanceId, targetUserId, periodDate }
+    })
+  },
+  
+  // 审核计划记录
+  audit: async (data: PlanEntryAuditReqVO) => {
+    return await request.post({ url: '/supervision/plan/entry/audit', data })
   }
 }
 

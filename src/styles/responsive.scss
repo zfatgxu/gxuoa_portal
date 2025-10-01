@@ -1,0 +1,12 @@
+/* Global responsive root font-size using rem + vw scaling
+   Base width: 1440px; Base root font-size: 16px
+   Clamp to keep readability on very small/large screens */
+html {
+  font-size: clamp(12px, calc(100vw / 1440 * 16), 16px);
+}
+
+/* Optional: ensure body scales smoothly without unexpected overflow */
+body {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}

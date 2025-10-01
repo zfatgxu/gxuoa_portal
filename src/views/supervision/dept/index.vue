@@ -44,13 +44,15 @@
           </div>
         </el-card>
       </div>
+      </div>
     </div>
 
     <!-- Task Management Section -->
     <div class="task-section">
+      <div class="bg-white rounded-lg shadow-sm supervision-layout" ref="layoutRef">
       <div class="task-header-controls">
         <!-- 第一行：左 tabs + 右 搜索区域 -->
-        <div class="task-header-row">
+        <div class="task-header-row header-scale" ref="headerRef">
           <el-tabs v-model="activeTab" class="inline-tabs" @tab-change="handleTabChange">
             <el-tab-pane label="牵头任务" name="lead" />
             <el-tab-pane label="协办任务" name="co" />
@@ -92,58 +94,158 @@
                       :value="status.value"
                   />
               </el-select>
-              <el-button type="primary" @click="handleSearch">
-                  查询
-              </el-button>
-              <el-button @click="handleReset">
-                  重置
-              </el-button>
-              <el-button type="primary" plain @click="openSeniorFilter">
-                  <el-icon class="mr-1"><Filter /></el-icon>
-                  高级筛选
-              </el-button>
+              <template v-if="pureTextMode">
+                  <button
+                      class="text-lg font-bold transition-all duration-200 cursor-pointer hover:text-gray-600"
+                      :style="{
+                        color: '#111827',
+                        background: 'none',
+                        border: 'none',
+                        padding: '0',
+                        margin: '0 16px 0 0'
+                      }"
+                      @click="handleSearch">
+                      查询
+                  </button>
+                  <button
+                      class="text-lg font-bold transition-all duration-200 cursor-pointer hover:text-gray-600"
+                      :style="{
+                        color: '#111827',
+                        background: 'none',
+                        border: 'none',
+                        padding: '0',
+                        margin: '0 16px 0 0'
+                      }"
+                      @click="handleReset">
+                      重置
+                  </button>
+                  <button
+                      class="text-lg font-bold transition-all duration-200 cursor-pointer hover:text-gray-600 flex items-center"
+                      :style="{
+                        color: '#111827',
+                        background: 'none',
+                        border: 'none',
+                        padding: '0',
+                        margin: '0'
+                      }"
+                      @click="openSeniorFilter">
+                      <el-icon class="mr-1"><Filter /></el-icon>
+                      高级筛选
+                  </button>
+              </template>
+              <template v-else>
+                  <el-button type="primary" @click="handleSearch">
+                      查询
+                  </el-button>
+                  <el-button @click="handleReset">
+                      重置
+                  </el-button>
+                  <el-button type="primary" plain @click="openSeniorFilter">
+                      <el-icon class="mr-1"><Filter /></el-icon>
+                      高级筛选
+                  </el-button>
+              </template>
           </div>
         </div>
 
         <!-- 第二行：状态筛选按钮（与 tabs 左对齐，独占一行） -->
         <div class="task-status-row">
           <div class="status-buttons">
-            <button
-              @click="toggleStatusFilter('pendingReview')"
-              class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-white border-0 outline-none hover:shadow-md cursor-pointer"
-              :style="{
-                backgroundColor: statusFilters.pendingReview ? '#39A8F9' : '#9A9A9A'
-              }"
-            >
-              待审核
-            </button>
-            <button
-              @click="toggleStatusFilter('inProgress')"
-              class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-white border-0 outline-none hover:shadow-md cursor-pointer"
-              :style="{
-                backgroundColor: statusFilters.inProgress ? '#39A8F9' : '#9A9A9A'
-              }"
-            >
-              进行中
-            </button>
-            <button
-              @click="toggleStatusFilter('overdue')"
-              class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-white border-0 outline-none hover:shadow-md cursor-pointer"
-              :style="{
-                backgroundColor: statusFilters.overdue ? '#39A8F9' : '#9A9A9A'
-              }"
-            >
-              已超时
-            </button>
-            <button
-              @click="toggleStatusFilter('completed')"
-              class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-white border-0 outline-none hover:shadow-md cursor-pointer"
-              :style="{
-                backgroundColor: statusFilters.completed ? '#39A8F9' : '#9A9A9A'
-              }"
-            >
-              已结束
-            </button>
+            <!-- 纯文本模式状态按钮 -->
+            <template v-if="pureTextMode">
+              <button
+                @click="toggleStatusFilter('pendingReview')"
+                class="text-lg font-bold transition-all duration-200 cursor-pointer hover:text-gray-600"
+                :style="{
+                  color: statusFilters.pendingReview ? '#111827' : '#6B7280',
+                  background: 'none',
+                  border: 'none',
+                  padding: '0',
+                  margin: '0 16px 0 0'
+                }"
+              >
+                待审核
+              </button>
+              <button
+                @click="toggleStatusFilter('inProgress')"
+                class="text-lg font-bold transition-all duration-200 cursor-pointer hover:text-gray-600"
+                :style="{
+                  color: statusFilters.inProgress ? '#111827' : '#6B7280',
+                  background: 'none',
+                  border: 'none',
+                  padding: '0',
+                  margin: '0 16px 0 0'
+                }"
+              >
+                进行中
+              </button>
+              <button
+                @click="toggleStatusFilter('overdue')"
+                class="text-lg font-bold transition-all duration-200 cursor-pointer hover:text-gray-600"
+                :style="{
+                  color: statusFilters.overdue ? '#111827' : '#6B7280',
+                  background: 'none',
+                  border: 'none',
+                  padding: '0',
+                  margin: '0 16px 0 0'
+                }"
+              >
+                已超时
+              </button>
+              <button
+                @click="toggleStatusFilter('completed')"
+                class="text-lg font-bold transition-all duration-200 cursor-pointer hover:text-gray-600"
+                :style="{
+                  color: statusFilters.completed ? '#111827' : '#6B7280',
+                  background: 'none',
+                  border: 'none',
+                  padding: '0',
+                  margin: '0 16px 0 0'
+                }"
+              >
+                已结束
+              </button>
+            </template>
+            
+            <!-- 原版状态按钮 -->
+            <template v-else>
+              <button
+                @click="toggleStatusFilter('pendingReview')"
+                class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-white border-0 outline-none hover:shadow-md cursor-pointer"
+                :style="{
+                  backgroundColor: statusFilters.pendingReview ? '#39A8F9' : '#9A9A9A'
+                }"
+              >
+                待审核
+              </button>
+              <button
+                @click="toggleStatusFilter('inProgress')"
+                class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-white border-0 outline-none hover:shadow-md cursor-pointer"
+                :style="{
+                  backgroundColor: statusFilters.inProgress ? '#39A8F9' : '#9A9A9A'
+                }"
+              >
+                进行中
+              </button>
+              <button
+                @click="toggleStatusFilter('overdue')"
+                class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-white border-0 outline-none hover:shadow-md cursor-pointer"
+                :style="{
+                  backgroundColor: statusFilters.overdue ? '#39A8F9' : '#9A9A9A'
+                }"
+              >
+                已超时
+              </button>
+              <button
+                @click="toggleStatusFilter('completed')"
+                class="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 text-white border-0 outline-none hover:shadow-md cursor-pointer"
+                :style="{
+                  backgroundColor: statusFilters.completed ? '#39A8F9' : '#9A9A9A'
+                }"
+              >
+                已结束
+              </button>
+            </template>
           </div>
         </div>
       </div>
@@ -153,126 +255,255 @@
         <el-card
           v-for="task in filteredTaskList"
           :key="task.id"
-          class="task-item clickable-card"
+          class="task-item clickable-card card-item"
+          :class="{ 'card-item--updated': task.supervisionPageVOData?.hasUpdate || task.supervisionPageVOData?.unread }"
           :data-tab="activeTab"
           shadow="hover"
           :style="{ border: '1px solid #e5e7eb' }"
           @click="navigateToWorkflowDetail(task)"
         >
-          <div class="task-header">
-            <div class="flex items-center">
-              <button
-                @click.stop
-                :style="{
-                  color: 'white',
-                  padding: '4px 8px',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  backgroundColor: getTypeText(task) === '工作督办' ? 'rgb(27, 173, 255)' : 'rgb(129, 179, 55)',
-                  border: 'none',
-                  cursor: 'default',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }"
-                class="mr-3"
-              >
-                {{ getTypeText(task) }}
-              </button>
-              <h4 class="task-title" @click.stop="viewTaskDetail(task)">{{ getTaskTitle(task) }}</h4>
-            </div>
-            <div class="task-actions">
-              <span
-                class="px-2 py-1 rounded text-xs font-medium w-20 text-center text-white"
-                :style="{
-                  fontWeight: 'bold',
-                  backgroundColor: getPriorityText(task) === '高优先级' ? 'rgb(179, 55, 55)' :
-                                 getPriorityText(task) === '中优先级' ? 'rgb(129, 179, 55)' :
-                                 getPriorityText(task) === '一般优先' ? 'rgb(64, 149, 229)' :
-                                 'rgb(64, 149, 229)'
-                }">
-                {{ getPriorityText(task) }}
-              </span>
-              <span
-                class="ml-2 px-2 py-1 rounded text-xs font-medium w-20 text-center text-white"
-                :style="{
-                  fontWeight: 'bold',
-                  backgroundColor: getStatusText(task) === '已超时' ? 'rgb(179, 55, 55)' :
-                                 getStatusText(task) === '已结束' ? 'rgb(154, 154, 154)' :
-                                 getStatusText(task) === '进行中' ? 'rgb(129, 179, 55)' :
-                                 getStatusText(task) === '待审核' ? 'rgb(99, 102, 241)' :
-                                 'rgb(154, 154, 154)'
-                }">
-                {{ getStatusText(task) }}
-              </span>
-            </div>
-          </div>
-          <!-- 描述 + 批示 同行展示 -->
-          <div
-            class="task-desc-row mb-7"
-            v-if="getDisplayText(task) || (task.leaderRemarks && task.leaderRemarks.length > 0)"
-          >
-            <el-tooltip 
-              class="desc-box"
-              :content="getDisplayText(task)" 
-              :disabled="getDisplayText(task).length <= 45"
-              placement="bottom"
-              effect="dark"
-            >
-              <span class="text-gray-600 leading-relaxed desc-text inline-block">{{ getTruncatedText(task) }}</span>
-            </el-tooltip>
+          <!-- 纯文本模式卡片布局 -->
+          <template v-if="pureTextMode">
+            <div>
+              <!-- 头部区域：标题 -->
+              <div class="mb-2">
+                <div class="flex items-center justify-between">
+                  <h4 class="text-xl font-bold text-gray-900 mr-2" @click.stop="navigateToWorkflowDetail(task)">{{ getTaskTitle(task) }}</h4>
+                </div>
+              </div>
+              
+              <!-- 左右结构：左侧包含描述+批示+时间网格，右侧为侧栏 -->
+              <div class="flex items-start gap-12">
+                <!-- 左列：描述 + 批示 + 时间状态网格 -->
+                <div class="left-col-wrap" style="width: calc(100% - 340px - 48px); max-width: 720px;">
+                  <div class="shrink-0">
+                    <!-- 督办内容（描述）-->
+                    <div v-if="getDisplayText(task)" class="mb-3">
+                      <span class="leading-relaxed desc-text inline-block whitespace-normal break-words" style="color: #111827;">{{ getDisplayText(task) }}</span>
+                    </div>
 
-            <div v-if="task.leaderRemarks && task.leaderRemarks.length > 0" class="task-remarks inline-remarks">
-              <el-icon class="remark-icon"><Document /></el-icon>
-              <el-tooltip placement="bottom" effect="dark">
-                <template #content>
-                  <div style="max-width: 900px; white-space: pre-wrap;">{{ getAllRemarksText(task) }}</div>
-                </template>
-                <span class="remark-item">
-                  <span class="remark-text">{{ getFirstRemarkDisplay(task) }}</span>
+                    <!-- 批示：显示在督办内容下方 -->
+                    <div v-if="task.leaderRemarks && task.leaderRemarks.length > 0" class="task-remarks mb-4">
+                      <el-icon class="remark-icon"><Document /></el-icon>
+                      <el-tooltip placement="bottom" effect="dark">
+                        <template #content>
+                          <div style="max-width: 900px; white-space: pre-wrap;">{{ getAllRemarksText(task) }}</div>
+                        </template>
+                        <span class="remark-item">
+                          <span class="remark-text">{{ getFirstRemarkDisplay(task) }}</span>
+                        </span>
+                      </el-tooltip>
+                    </div>
+
+                    <!-- 最新部门办理信息：显示在描述/批示下方一行（来自 supervisionPageVOData），与时间行对齐 -->
+                    <div
+                      v-if="task.supervisionPageVOData && task.supervisionPageVOData.latestDeptDetail &&
+                           (task.supervisionPageVOData.latestDeptDetail.creatorName || task.supervisionPageVOData.latestDeptDetail.content)"
+                      class="mb-3 flex items-start"
+                    >
+                      <!-- 左侧标签：固定宽度，粗体，含全角冒号 -->
+                      <span class="text-gray-900 font-semibold inline-block w-24 whitespace-nowrap">最新进展：</span>
+                      <!-- 右侧内容（单行省略），与时间值起始位置对齐 -->
+                      <span class="text-gray-900 flex-1 one-line-ellipsis" :title="getLatestProgressFullText(task)">
+                        <template v-if="task.supervisionPageVOData.latestDeptDetail.creatorName && task.supervisionPageVOData.latestDeptDetail.content">
+                          {{ task.supervisionPageVOData.latestDeptDetail.creatorName }}：{{ task.supervisionPageVOData.latestDeptDetail.content }}
+                        </template>
+                        <template v-else-if="task.supervisionPageVOData.latestDeptDetail.creatorName">
+                          {{ task.supervisionPageVOData.latestDeptDetail.creatorName }}
+                        </template>
+                        <template v-else>
+                          {{ task.supervisionPageVOData.latestDeptDetail.content }}
+                        </template>
+                      </span>
+                    </div>
+
+                    <!-- 时间/状态二维网格：
+                         行1：起始时间 | 督办状态
+                         行2：结束时间 | 剩余时间 -->
+                    <div>
+                      <div class="grid items-start w-fit" style="grid-template-columns: max-content max-content; column-gap: 70px; row-gap: 8px;">
+                        <div class="flex items-center">
+                          <span class="text-gray-900 font-semibold inline-block w-24">起始时间：</span>
+                          <span class="text-gray-900">{{ formatCreateTime(task.createTime) }}</span>
+                        </div>
+                        <!-- 右上：督办状态 - 纯文本显示 -->
+                        <div class="flex items-center">
+                          <span class="text-gray-900 font-semibold">{{ getStatusText(task) }}</span>
+                        </div>
+
+                        <div class="flex items-center">
+                          <span class="text-gray-900 font-semibold inline-block w-24">结束时间：</span>
+                          <span class="font-semibold" :style="getDeadlineColorStyle(task)">{{ getDeadlineText(task) }}</span>
+                        </div>
+                        
+                        <!-- 右下：剩余时间 - 纯文本显示，保持原有颜色逻辑 -->
+                        <div class="flex items-center">
+                          <span v-if="activeTab !== 'done' && getStatusText(task) !== '已结束'" class="font-semibold" :style="getRemainingTimeColorStyle(task)">{{ getPreciseTimeRemaining(task) || '—' }}</span>
+                          <span v-else class="font-semibold text-gray-900">—</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 右侧：侧栏，固定宽度 -->
+                <div class="flex flex-col items-start gap-2" style="width: 340px;">
+                  <div class="flex items-center">
+                    <span class="text-gray-900 font-semibold leader-field-label">校领导</span><span class="text-gray-900 font-semibold">：</span>
+                    <span class="text-gray-900 whitespace-nowrap">{{ getLeadLeadersText(task.supervisionPageVOData?.leadLeaders) || '未设置' }}</span>
+                  </div>
+                  <div class="flex items-center">
+                    <span class="text-gray-900 font-semibold leader-field-label">办理部门</span><span class="text-gray-900 font-semibold">：</span>
+                    <span class="text-gray-900 whitespace-nowrap">{{ getLeadDeptName(task) }}</span>
+                  </div>
+                  <div class="flex items-center">
+                    <span class="text-gray-900 font-semibold leader-field-label">协办部门</span><span class="text-gray-900 font-semibold">：</span>
+                    <span class="text-gray-900 whitespace-nowrap">{{ getCoDeptNames(task) }}</span>
+                  </div>
+                  <div class="flex items-center">
+                    <span class="text-gray-900 font-semibold leader-field-label">督办人</span><span class="text-gray-900 font-semibold">：</span>
+                    <span class="text-gray-900 whitespace-nowrap">{{ getSupervisorsDisplay(task) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- 原版模式卡片布局 -->
+          <template v-else>
+            <div class="task-header">
+              <div class="flex items-center">
+                <button
+                  @click.stop
+                  :style="{
+                    color: 'white',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    backgroundColor: getTypeText(task) === '工作督办' ? 'rgb(27, 173, 255)' : 'rgb(129, 179, 55)',
+                    border: 'none',
+                    cursor: 'default',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }"
+                  class="mr-3"
+                >
+                  {{ getTypeText(task) }}
+                </button>
+                <h4 class="task-title" @click.stop="navigateToWorkflowDetail(task)">{{ getTaskTitle(task) }}</h4>
+                <span
+                  class="ml-2 px-2 py-1 rounded text-xs font-medium w-20 text-center text-white"
+                  :style="{
+                    fontWeight: 'bold',
+                    backgroundColor: getPriorityText(task) === '高优先级' ? 'rgb(179, 55, 55)' :
+                                   getPriorityText(task) === '中优先级' ? 'rgb(129, 179, 55)' :
+                                   getPriorityText(task) === '一般优先' ? 'rgb(64, 149, 229)' :
+                                   'rgb(64, 149, 229)'
+                  }">
+                  {{ getPriorityText(task) }}
                 </span>
+                <span
+                  class="ml-2 px-2 py-1 rounded text-xs font-medium w-20 text-center text-white"
+                  :style="{
+                    fontWeight: 'bold',
+                    backgroundColor: getStatusText(task) === '已超时' ? 'rgb(179, 55, 55)' :
+                                   getStatusText(task) === '已结束' ? 'rgb(154, 154, 154)' :
+                                   getStatusText(task) === '进行中' ? 'rgb(129, 179, 55)' :
+                                   getStatusText(task) === '待审核' ? 'rgb(99, 102, 241)' :
+                                   'rgb(154, 154, 154)'
+                  }">
+                  {{ getStatusText(task) }}
+                </span>
+              </div>
+            </div>
+            <!-- 描述 + 批示 同行展示 -->
+            <div
+              class="task-desc-row mb-7"
+              v-if="getDisplayText(task) || (task.leaderRemarks && task.leaderRemarks.length > 0)"
+            >
+              <el-tooltip 
+                class="desc-box"
+                :content="getDisplayText(task)" 
+                :disabled="getDisplayText(task).length <= 45"
+                placement="bottom"
+                effect="dark"
+              >
+                <span class="text-gray-600 leading-relaxed desc-text inline-block">{{ getTruncatedText(task) }}</span>
               </el-tooltip>
-            </div>
-          </div>
 
-          <div class="task-content">
-            <div class="flex items-center justify-between text-sm">
-              <div class="flex items-center gap-6 flex-wrap">
-                <div class="flex items-center">
-                  <span class="text-gray-500">创建时间：</span>
-                  <span class="text-gray-700">{{ formatCreateTime(task.createTime) }}</span>
-                </div>
-                <div class="flex items-center">
-                  <span class="text-gray-500">截止时间：</span>
-                  <span :class="getDeadlineClass(task)">{{ getDeadlineText(task) }}</span>
-                </div>
-                <div class="flex items-center min-h-[20px]">
-                  <span v-if="activeTab !== 'done' && getStatusText(task) !== '已结束'" :class="getPreciseTimeRemainingClass(task)">
-                    {{ getPreciseTimeRemaining(task) }}
+              <div v-if="task.leaderRemarks && task.leaderRemarks.length > 0" class="task-remarks inline-remarks">
+                <el-icon class="remark-icon"><Document /></el-icon>
+                <el-tooltip placement="bottom" effect="dark">
+                  <template #content>
+                    <div style="max-width: 900px; white-space: pre-wrap;">{{ getAllRemarksText(task) }}</div>
+                  </template>
+                  <span class="remark-item">
+                    <span class="remark-text">{{ getFirstRemarkDisplay(task) }}</span>
                   </span>
-                </div>
-                <div class="flex items-center">
-                  <span class="text-gray-500">协办部门：</span>
-                  <span class="text-gray-700">{{ getCoDeptNames(task) }}</span>
-                </div>
-                <div class="flex items-center">
-                  <span class="text-gray-500">牵头部门：</span>
-                  <span class="text-gray-700">{{ getLeadDeptName(task) }}</span>
-                </div>
-                <div class="flex items-center">
-                  <span class="text-gray-500">分管校领导：</span>
-                  <span class="text-gray-700">{{ getLeadLeadersText(task.supervisionPageVOData?.leadLeaders) || '未设置' }}</span>
-                </div>
+                </el-tooltip>
               </div>
             </div>
 
-              <div class="flex ml-6">
-                <!-- <el-button v-if="activeTab === 'lead' || activeTab === 'co'" class="w-20 ml-2" type="primary" @click.stop="handleAudit(task)">办理</el-button> -->
-                <!-- 已完成标签页的隐藏占位符，保持与领导页面一致的布局 -->
-                <!-- <el-button v-if="activeTab === 'done'" class="w-20 ml-2" type="primary" style="visibility: hidden;">占位</el-button> -->
+            <!-- 最新部门办理信息：显示在描述行下方一行（来自 supervisionPageVOData） -->
+            <div
+              v-if="task.supervisionPageVOData && task.supervisionPageVOData.latestDeptDetail &&
+                   (task.supervisionPageVOData.latestDeptDetail.creatorName || task.supervisionPageVOData.latestDeptDetail.content)"
+              class="mb-4 flex items-start"
+            >
+              <span class="text-gray-900 font-semibold inline-block w-24 whitespace-nowrap">最新进展：</span>
+              <span class="text-gray-900 flex-1 one-line-ellipsis" :title="getLatestProgressFullText(task)">
+                <template v-if="task.supervisionPageVOData.latestDeptDetail.creatorName && task.supervisionPageVOData.latestDeptDetail.content">
+                  {{ task.supervisionPageVOData.latestDeptDetail.creatorName }}：{{ task.supervisionPageVOData.latestDeptDetail.content }}
+                </template>
+                <template v-else-if="task.supervisionPageVOData.latestDeptDetail.creatorName">
+                  {{ task.supervisionPageVOData.latestDeptDetail.creatorName }}
+                </template>
+                <template v-else>
+                  {{ task.supervisionPageVOData.latestDeptDetail.content }}
+                </template>
+              </span>
+            </div>
+
+            <div class="task-content">
+              <div class="flex items-center justify-between text-sm">
+                <div class="flex items-center gap-6 flex-wrap">
+                  <div class="flex items-center">
+                    <span class="text-gray-500">起始时间：</span>
+                    <span class="text-gray-700">{{ formatCreateTime(task.createTime) }}</span>
+                  </div>
+                  <div class="flex items-center">
+                    <span class="text-gray-500">结束时间：</span>
+                    <span :class="getDeadlineClass(task)">{{ getDeadlineText(task) }}</span>
+                  </div>
+                  <div class="flex items-center min-h-[20px]">
+                    <span v-if="activeTab !== 'done' && getStatusText(task) !== '已结束'" :class="getPreciseTimeRemainingClass(task)">
+                      {{ getPreciseTimeRemaining(task) }}
+                    </span>
+                  </div>
+                  <div class="flex items-center">
+                    <span class="text-gray-500">协办部门：</span>
+                    <span class="text-gray-700">{{ getCoDeptNames(task) }}</span>
+                  </div>
+                  <div class="flex items-center">
+                    <span class="text-gray-500">牵头部门：</span>
+                    <span class="text-gray-700">{{ getLeadDeptName(task) }}</span>
+                  </div>
+                  <div class="flex items-center">
+                    <span class="text-gray-500">分管校领导：</span>
+                    <span class="text-gray-700">{{ getLeadLeadersText(task.supervisionPageVOData?.leadLeaders) || '未设置' }}</span>
+                  </div>
+                </div>
               </div>
-          </div>
+
+                <div class="flex ml-6">
+                  <!-- <el-button v-if="activeTab === 'lead' || activeTab === 'co'" class="w-20 ml-2" type="primary" @click.stop="handleAudit(task)">办理</el-button> -->
+                  <!-- 已完成标签页的隐藏占位符，保持与领导页面一致的布局 -->
+                  <!-- <el-button v-if="activeTab === 'done'" class="w-20 ml-2" type="primary" style="visibility: hidden;">占位</el-button> -->
+                </div>
+            </div>
+          </template>
         </el-card>
         <div v-if="filteredTaskList.length === 0 && !loading" class="no-tasks-message">
           {{ taskList.length === 0 ? '暂无相关任务。' : '没有符合条件的任务。' }}
@@ -311,7 +542,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import {
   Search, Bell, DataAnalysis, Document, Clock, CircleCheck, Warning,
   OfficeBuilding, User, Filter
@@ -324,6 +555,61 @@ import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
 import { useRouter } from 'vue-router'
 import { dateFormatter, formatDate as utilFormatDate } from '@/utils/formatTime'
+
+// 等比例缩放（整块白色容器）
+const layoutRef = ref(null)
+const BASE_WIDTH = 1440 // 设计基准宽度
+// 顶部第一行微缩（只作用于 header 行）
+const headerRef = ref(null)
+
+// 仅针对第一行（tabs + 搜索）做微缩，保证一行容纳
+const applyHeaderScale = () => {
+  const wrap = headerRef.value
+  if (!wrap) return
+  const parent = wrap.parentElement
+  if (!parent) return
+  // 重置
+  wrap.style.transform = ''
+  wrap.style.transformOrigin = 'left center'
+  const available = parent.clientWidth
+  const needed = wrap.scrollWidth
+  if (available <= 0 || needed <= 0) return
+  if (needed <= available) return
+  let scale = available / needed
+  const MIN = 0.8
+  if (scale < MIN) scale = MIN
+  wrap.style.transform = `scale(${scale})`
+}
+
+// 整体容器等比缩放
+const applyZoomScale = () => {
+  const el = layoutRef.value
+  if (!el) return
+  const container = el.parentElement
+  if (!container) return
+  const available = container.clientWidth || window.innerWidth
+  const scale = Math.min(1, available / BASE_WIDTH)
+  el.style.zoom = String(scale)
+  const zoomComputed = getComputedStyle(el).zoom
+  if (!zoomComputed || zoomComputed === 'normal') {
+    el.style.transformOrigin = 'top left'
+    el.style.transform = `scale(${scale})`
+    el.style.width = BASE_WIDTH + 'px'
+  } else {
+    el.style.transform = ''
+    el.style.width = ''
+  }
+}
+
+onMounted(() => {
+  applyZoomScale()
+  window.addEventListener('resize', applyZoomScale)
+  nextTick(() => { applyZoomScale(); applyHeaderScale() })
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', applyZoomScale)
+})
 
 // 从leadLeaders数组中提取分管校领导（督办领导和牵头领导）
 const getLeadLeadersText = (leadLeaders) => {
@@ -340,6 +626,21 @@ const getLeadLeadersText = (leadLeaders) => {
   return targetLeaders.map(leader => leader.name).join('、')
 }
 
+// 展示督办人姓名（与首页一致）
+const getSupervisorsDisplay = (task) => {
+  // 从 supervisionPageVOData.supervisors 读取
+  const supList = task?.supervisionPageVOData?.supervisors
+  if (Array.isArray(supList) && supList.length > 0) {
+    const names = supList.map((s) => s?.name).filter(Boolean)
+    return names.length > 0 ? names.join('、') : '未设置'
+  }
+  // 兼容任务直接携带 supervisors
+  if (Array.isArray(task?.supervisors) && task.supervisors.length > 0) {
+    return task.supervisors.join('、')
+  }
+  return '未设置'
+}
+
 // 根据supervisionStatus获取状态文本
 const getSupervisionStatusText = (supervisionStatus) => {
   if (supervisionStatus === null || supervisionStatus === undefined) return '进行中'
@@ -348,6 +649,8 @@ const getSupervisionStatusText = (supervisionStatus) => {
     case 2: return '已超时'
     case 3: return '已结束'
     case 4: return '待审核'
+    case 5: return '已终止'
+    case 6: return '已中止'
     default: return '进行中'
   }
 }
@@ -379,7 +682,7 @@ const calculateDisplayStatusNew = (supervisionStatus) => {
 // 格式化日期，只显示年月日
 const formatDateOnly = (timestamp) => {
   if (!timestamp) return ''
-  return utilFormatDate(new Date(timestamp), 'YYYY年MM月DD日 HH:mm')
+  return utilFormatDate(new Date(timestamp), 'YYYY年MM月DD日')
 }
 
 // 获取用户store
@@ -447,6 +750,16 @@ const getAllRemarksText = (task) => {
   return remarks.map((r) => `${getRemarkLabel(r)}：${r?.remark || ''}`).join('; ')
 }
 
+// 组合“最新进展”的完整文本（用于 title 提示）
+const getLatestProgressFullText = (task) => {
+  const detail = task?.supervisionPageVOData?.latestDeptDetail
+  if (!detail) return ''
+  const name = detail.creatorName || ''
+  const content = detail.content || ''
+  if (name && content) return `${name}：${content}`
+  return name || content
+}
+
 const { push } = useRouter() // 路由
 
 // 响应式数据
@@ -464,6 +777,9 @@ const seniorFilterVisible = ref(false)
 const seniorFilterParams = ref({})
 const seniorFilterResultCount = ref(0)
 const seniorFilterRef = ref()
+
+// 纯文本模式开关（默认开启，用于预览效果）
+const pureTextMode = ref(true)
 
 // 状态筛选按钮状态
 const statusFilters = ref({
@@ -601,6 +917,12 @@ const loadTaskList = async () => {
         // 全开不传supervisionStatusList
       }
     }
+
+    // 添加统一查询参数，启用"最新进展优先+高亮+最近一条进度返回"
+    params.sortByLatestProgress = true
+    params.includeLatestProgress = true
+    params.highlightUnread = true
+    params.unreadFirst = true
 
     console.log('最终传递给后端的参数:', params)
 
@@ -794,14 +1116,12 @@ const getTaskContent = (task) => {
   return task.supervisionPageVOData?.content || ''
 }
 
-// 描述显示：summary 优先，回退 content，再回退到“未设置”
+// 描述显示：直接显示 content（与首页一致）
 const getDisplayText = (task) => {
-  const summary = task.supervisionPageVOData?.summary
-  const content = task.supervisionPageVOData?.content
-  return summary || content || '未设置'
+  return task.supervisionPageVOData?.content || '未设置'
 }
 
-// 截断到 45 个字符，超长加省略号
+// 截断到 45 个字符，超长加省略号（保留原版模式使用）
 const getTruncatedText = (task) => {
   const text = getDisplayText(task)
   return text.length > 45 ? text.substring(0, 45) + '...' : text
@@ -834,7 +1154,7 @@ const getCoDeptNames = (task) => {
 const getDeadlineText = (task) => {
   const deadline = task.supervisionPageVOData?.deadline
   if (!deadline) return '无'
-  return utilFormatDate(new Date(deadline), 'YYYY年MM月DD日 HH:mm')
+  return utilFormatDate(new Date(deadline), 'YYYY年MM月DD日')
 }
 
 // 根据任务状态获取截止时间的样式类 - 基于supervisionStatus
@@ -850,6 +1170,79 @@ const getDeadlineClass = (task) => {
     return 'deadline-date-processing' // 橙色
   }
   return 'deadline-date' // 默认颜色
+}
+
+// 获取截止时间的内联样式（纯文本模式使用）
+const getDeadlineColorStyle = (task) => {
+  const supervisionStatus = task.supervisionPageVOData?.supervisionStatus
+  const statusText = getSupervisionStatusText(supervisionStatus)
+  
+  if (statusText === '已超时') {
+    return { color: '#DC2626' } // 红色
+  } else if (statusText === '已结束') {
+    return { color: '#111827' } // 黑色
+  } else if (statusText === '进行中') {
+    return { color: '#D97706' } // 橙色
+  }
+  return { color: '#111827' } // 默认黑色
+}
+
+// 根据创建到截止的跨度计算预警阈值（天数）（与首页一致）
+const getOrangeThresholdDays = (createdTimestamp, deadlineTimestamp) => {
+  if (!createdTimestamp || !deadlineTimestamp) {
+    return 1 // 兜底：24小时内变橙（约等于1天）
+  }
+  
+  const spanMs = deadlineTimestamp - createdTimestamp
+  if (spanMs <= 0) {
+    return 0 // 异常数据：创建时间晚于截止时间
+  }
+  
+  const spanDays = Math.ceil(spanMs / (24 * 60 * 60 * 1000))
+  
+  if (spanDays <= 7) return 2
+  if (spanDays <= 15) return 3
+  if (spanDays <= 30) return 7
+  if (spanDays <= 90) return 10
+  if (spanDays <= 180) return 15
+  if (spanDays <= 365) return 30
+  return 30 // 超过一年固定30天
+}
+
+// 获取创建时间戳（与首页一致）
+const getCreatedTimestamp = (task) => {
+  // 优先使用 createdTimestamp，其次 createTime
+  return task.createdTimestamp || task.createTime || null
+}
+
+// 状态颜色常量（与首页保持一致）
+const STATUS_COLORS = {
+  normal: { bg: 'rgb(129, 179, 55)', border: '#10B981', text: '#065F46' }, // 绿色与优先级标签一致
+  urgent: { bg: '#F59E0B', border: '#F59E0B', text: '#92400E' }, // 橙色
+  overdue: { bg: '#F44336', border: '#F44336', text: '#FFFFFF' } // 红色
+}
+
+// 计算状态盒子的颜色风格，沿用剩余时间的颜色变化逻辑（与首页一致）
+const getStatusVariant = (task) => {
+  const cls = getPreciseTimeRemainingClass(task) || ''
+  if (cls.includes('overdue')) return 'overdue'
+  if (cls.includes('urgent')) return 'urgent'
+  return 'normal'
+}
+
+// 获取剩余时间的内联样式（与首页完全一致）
+const getRemainingTimeColorStyle = (task) => {
+  // 特殊状态：已结束时显示黑色（不受时间影响）
+  if (getStatusText(task) === '已结束') {
+    return { color: '#111827' } // 黑色
+  }
+  
+  // 其他状态：复用状态盒子的颜色逻辑，使用完全相同的颜色值
+  const variant = getStatusVariant(task)
+  const colors = STATUS_COLORS[variant]
+  
+  // 直接使用状态盒子的背景色作为文字颜色
+  return { color: colors.bg }
 }
 
 // 计算精确的剩余时间文本（与首页一致）
@@ -892,17 +1285,42 @@ const getPreciseTimeRemaining = (task) => {
   }
 }
 
-// 获取剩余时间的样式类 - 基于supervisionStatus
+// 获取剩余时间的样式类（与首页完全一致）
 const getPreciseTimeRemainingClass = (task) => {
-  const supervisionStatus = task.supervisionPageVOData?.supervisionStatus
-  const statusText = getSupervisionStatusText(supervisionStatus)
+  const deadlineTimestamp = task.deadlineTimestamp || task.supervisionPageVOData?.deadline
+  if (!deadlineTimestamp || typeof deadlineTimestamp !== 'number') {
+    return 'remaining-days'
+  }
+
+  const now = new Date()
+  const deadlineDate = new Date(deadlineTimestamp)
+  const timeDiff = deadlineDate.getTime() - now.getTime()
+
+  // 已超时：红色
+  if (timeDiff <= 0) {
+    return 'remaining-days overdue'
+  }
+
+  // 计算剩余天数
+  const remainDays = Math.floor(timeDiff / (24 * 60 * 60 * 1000))
   
-  if (statusText === '已超时') {
-    return 'remaining-days overdue' // 超期显示红色
-  } else if (statusText === '进行中') {
-    return 'remaining-days' // 正常显示绿色
+  // 获取创建时间戳
+  const createdTimestamp = getCreatedTimestamp(task)
+  
+  // 计算预警阈值
+  const orangeThreshold = getOrangeThresholdDays(createdTimestamp, deadlineTimestamp)
+  
+  // 调试日志
+  if (createdTimestamp && deadlineTimestamp) {
+    const spanDays = Math.ceil((deadlineTimestamp - createdTimestamp) / (24 * 60 * 60 * 1000))
+    console.log(`[变色规则] 督办单: ${getTaskTitle(task)}, 跨度: ${spanDays}天, 剩余: ${remainDays}天, 阈值: ${orangeThreshold}天, 结果: ${remainDays <= orangeThreshold ? '橙色' : '绿色'}`)
+  }
+  
+  // 判断颜色
+  if (remainDays <= orangeThreshold) {
+    return 'remaining-days urgent' // 橙色
   } else {
-    return 'remaining-days' // 默认绿色
+    return 'remaining-days' // 绿色
   }
 }
 
@@ -954,12 +1372,12 @@ const getStatusText = (task) => {
 
 const formatCreateTime = (timestamp) => {
   if (!timestamp) return ''
-  return utilFormatDate(new Date(timestamp), 'YYYY年MM月DD日 HH:mm')
+  return utilFormatDate(new Date(timestamp), 'YYYY年MM月DD日')
 }
 
 const formatEndTime = (timestamp) => {
   if (!timestamp) return ''
-  return utilFormatDate(new Date(timestamp), 'YYYY年MM月DD日 HH:mm')
+  return utilFormatDate(new Date(timestamp), 'YYYY年MM月DD日')
 }
 
 // 获取督办状态用于详情弹窗显示（与外面状态标签保持一致）
@@ -986,10 +1404,10 @@ const viewTaskDetail = async (task) => {
       collaborators: coDeptNames,
       supervisor: getLeadLeadersText(supervisionData.leadLeaders) || '',
       priority: getPriorityText(task),
-      deadline: supervisionData.deadline ? utilFormatDate(new Date(supervisionData.deadline), 'YYYY年MM月DD日 HH:mm') : '无',
+      deadline: supervisionData.deadline ? utilFormatDate(new Date(supervisionData.deadline), 'YYYY年MM月DD日') : '无',
       deadlineTimestamp: supervisionData.deadline, // 添加原始时间戳
-      createTime: utilFormatDate(new Date(task.createTime), 'YYYY年MM月DD日 HH:mm'),
-      createdDate: utilFormatDate(new Date(task.createTime), 'YYYY年MM月DD日 HH:mm'),
+      createTime: utilFormatDate(new Date(task.createTime), 'YYYY年MM月DD日'),
+      createdDate: utilFormatDate(new Date(task.createTime), 'YYYY年MM月DD日'),
       orderNumber: supervisionData.orderCode || '',
       processInstanceId: task.processInstance?.id || task.processInstanceId,
       // 添加流程实例信息以匹配组件期望的数据结构
@@ -1487,5 +1905,34 @@ onMounted(() => {
 /* Element Plus 卡片样式调整 */
 :deep(.el-card__body) {
   padding: 24px; /* 与督办单列表页面保持一致 */
+}
+
+/* 单行省略统一样式 */
+.one-line-ellipsis {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* 卡片基础浅灰背景，使卡片更“独立” */
+.card-item {
+  background-color: #FAFBFC;
+}
+
+/* 卡片高亮样式（有新进展/未读） */
+.card-item--updated {
+  background-color: #F0F7FF; /* 高亮卡片底色 */
+  border-color: #cdd5df !important; /* 略深边框 */
+}
+
+/* 纯文本模式的侧栏字段标签对齐 */
+.leader-field-label {
+  display: inline-block;
+  width: 80px;
+  text-align: justify;
+  text-align-last: justify;
 }
 </style>

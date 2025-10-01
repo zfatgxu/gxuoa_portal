@@ -7,15 +7,27 @@
         <div class="header">
       <div class="header-left">
         <img class="header-image" :src="topImage" alt="header" />
+    <!-- 主体内容区 -->
+    <div class="content-wrapper">
+      <!-- 主内容区域 -->
+      <div class="main-content">
+        <div class="header">
+      <div class="header-left">
+        <img class="header-image" :src="topImage" alt="header" />
       </div>
       <div class="header-right">
+      </div>
+    </div>
+        <!-- 工具栏 -->
       </div>
     </div>
         <!-- 工具栏 -->
         <div class="toolbar">
           <div class="toolbar-left">
             <div class="tool-btn primary" :class="{ 'disabled': sending }" @click="sendMailHandler">
+            <div class="tool-btn primary" :class="{ 'disabled': sending }" @click="sendMailHandler">
               <el-icon><Position /></el-icon>
+              <span>{{ sending ? '发送中...' : '发送' }}</span>
               <span>{{ sending ? '发送中...' : '发送' }}</span>
             </div>
             <el-dropdown trigger="click">
@@ -34,6 +46,9 @@
             </el-dropdown>
           </div>
           <div class="toolbar-right">
+            <span class="time" style="min-width: 120px; white-space: nowrap;">已于{{ currentTime }}保存至草稿</span>
+            <div class="tool-btn" @click="saveDraftHandler">
+              <span>保存草稿</span>
             <span class="time" style="min-width: 120px; white-space: nowrap;">已于{{ currentTime }}保存至草稿</span>
             <div class="tool-btn" @click="saveDraftHandler">
               <span>保存草稿</span>
@@ -57,8 +72,15 @@
                 default-first-option
                 placeholder="请输入收件人姓名、工号或邮箱地址"
                 :remote-method="remoteSearch"
+                allow-create
+                default-first-option
+                placeholder="请输入收件人姓名、工号或邮箱地址"
+                :remote-method="remoteSearch"
                 :loading="loading"
                 class="recipient-select"
+                @change="() => validateRecipients('recipients')"
+                @focus="activeRecipientField = 'recipients'"
+                @click="activeRecipientField = 'recipients'"
                 @change="() => validateRecipients('recipients')"
                 @focus="activeRecipientField = 'recipients'"
                 @click="activeRecipientField = 'recipients'"
@@ -79,11 +101,22 @@
                         <span v-if="item.email" class="email-info">{{ item.email }}</span>
                       </div>
                     </div>
+                    <el-avatar :size="24" :src="item.avatar">{{ item.name?.substring(0, 1) || '?' }}</el-avatar>
+                    <div class="user-info">
+                      <div class="user-name">{{ item.name }}</div>
+                      <div class="user-details">
+                        <span v-if="item.deptName" class="dept-info">{{ item.deptName }}</span>
+                        <span v-if="item.workId" class="work-id">工号: {{ item.workId }}</span>
+                        <span v-if="item.email" class="email-info">{{ item.email }}</span>
+                      </div>
+                    </div>
                   </div>
                 </el-option>
               </el-select>
             </div>
             <div class="form-actions">
+              <span class="action-link" @click="toggleCc">抄送</span>
+              <span class="action-link" @click="toggleBcc">密送</span>
               <span class="action-link" @click="toggleCc">抄送</span>
               <span class="action-link" @click="toggleBcc">密送</span>
               <span>|</span>
@@ -105,8 +138,15 @@
                 default-first-option
                 placeholder="请输入抄送人姓名、工号或邮箱地址"
                 :remote-method="remoteSearch"
+                allow-create
+                default-first-option
+                placeholder="请输入抄送人姓名、工号或邮箱地址"
+                :remote-method="remoteSearch"
                 :loading="loading"
                 class="recipient-select"
+                @change="() => validateRecipients('cc')"
+                @focus="activeRecipientField = 'cc'"
+                @click="activeRecipientField = 'cc'"
                 @change="() => validateRecipients('cc')"
                 @focus="activeRecipientField = 'cc'"
                 @click="activeRecipientField = 'cc'"
@@ -118,6 +158,15 @@
                   :value="item.value"
                 >
                   <div class="user-option">
+                    <el-avatar :size="24" :src="item.avatar">{{ item.name?.substring(0, 1) || '?' }}</el-avatar>
+                    <div class="user-info">
+                      <div class="user-name">{{ item.name }}</div>
+                      <div class="user-details">
+                        <span v-if="item.deptName" class="dept-info">{{ item.deptName }}</span>
+                        <span v-if="item.workId" class="work-id">工号: {{ item.workId }}</span>
+                        <span v-if="item.email" class="email-info">{{ item.email }}</span>
+                      </div>
+                    </div>
                     <el-avatar :size="24" :src="item.avatar">{{ item.name?.substring(0, 1) || '?' }}</el-avatar>
                     <div class="user-info">
                       <div class="user-name">{{ item.name }}</div>
@@ -147,8 +196,15 @@
                 default-first-option
                 placeholder="请输入密送人姓名、工号或邮箱地址"
                 :remote-method="remoteSearch"
+                allow-create
+                default-first-option
+                placeholder="请输入密送人姓名、工号或邮箱地址"
+                :remote-method="remoteSearch"
                 :loading="loading"
                 class="recipient-select"
+                @change="() => validateRecipients('bcc')"
+                @focus="activeRecipientField = 'bcc'"
+                @click="activeRecipientField = 'bcc'"
                 @change="() => validateRecipients('bcc')"
                 @focus="activeRecipientField = 'bcc'"
                 @click="activeRecipientField = 'bcc'"
@@ -160,6 +216,15 @@
                   :value="item.value"
                 >
                   <div class="user-option">
+                    <el-avatar :size="24" :src="item.avatar">{{ item.name?.substring(0, 1) || '?' }}</el-avatar>
+                    <div class="user-info">
+                      <div class="user-name">{{ item.name }}</div>
+                      <div class="user-details">
+                        <span v-if="item.deptName" class="dept-info">{{ item.deptName }}</span>
+                        <span v-if="item.workId" class="work-id">工号: {{ item.workId }}</span>
+                        <span v-if="item.email" class="email-info">{{ item.email }}</span>
+                      </div>
+                    </div>
                     <el-avatar :size="24" :src="item.avatar">{{ item.name?.substring(0, 1) || '?' }}</el-avatar>
                     <div class="user-info">
                       <div class="user-name">{{ item.name }}</div>
@@ -215,6 +280,52 @@
               </span>
               <span class="time" style="flex-shrink:0; color:#909399;">{{ item.sendTime || '' }}</span>
             </div>
+          </div>
+          <!-- 不在多封场景展示正文/附件，避免过长；保持简洁列表 -->
+        </div>
+
+        <!-- 单封回复/转发：按详情样式渲染 -->
+        <div v-else-if="replyOriginal" style="padding: 12px 20px 0 20px; background-color: #ffffff;">
+          <div class="orig-mail-title">
+            <span class="orig-mail-text">原始邮件</span>
+            <span class="orig-mail-divider"></span>
+          </div>
+          <div style="background:#f5f7fa; border:1px solid #eeeeee; border-radius:6px; padding:10px 12px; margin: 0 0 8px 0;">
+            <div style="font-size: 13px; color: #606266; display:grid; grid-template-columns: 72px 1fr; row-gap:6px; column-gap:8px; align-items:start;">
+              <div style="color:#909399;">发件人：</div>
+              <div>{{ replyOriginal.fromUserName || '' }}</div>
+              <div style="color:#909399;">收件人：</div>
+              <div>{{ replyOriginal.toUserNames || '' }}</div>
+              <div style="color:#909399;">发件时间：</div>
+              <div>{{ replyOriginal.sendTime || '' }}</div>
+              <div style="color:#909399;">主题：</div>
+              <div>{{ replyOriginal.subject || '' }}</div>
+            </div>
+          </div>
+          <!-- 原始邮件附件 -->
+          <div v-if="replyOriginal?.attachments?.length" class="detail-attachments">
+            <div class="attachments-list">
+              <div 
+                v-for="att in replyOriginal.attachments" 
+                :key="att.id" 
+                class="attachment-item"
+              >
+                <div class="attachment-info">
+                  <div class="attachment-name">{{ att.fileName }}</div>
+                  <div class="attachment-actions">
+                    <el-link 
+                      type="primary"
+                      :underline="false"
+                      :title="`下载 ${att.fileName}`"
+                      @click.prevent="handleDownloadAttachment(att)"
+                    >下载</el-link>
+                  </div>
+                </div>
+                <div class="attachment-details">
+                  <span class="file-size">{{ formatFileSizeFromString(att.fileSize) }}</span>
+                  <span v-if="getFileExtension(att.fileName)" class="file-type">{{ getFileExtension(att.fileName).toUpperCase() }}</span>
+                </div>
+              </div>
           </div>
           <!-- 不在多封场景展示正文/附件，避免过长；保持简洁列表 -->
         </div>
@@ -326,6 +437,25 @@
               >
                 清空所有
               </el-button>
+            <div class="attachments-actions" style="display: flex; gap: 8px;">
+              <el-button 
+                size="small" 
+                type="primary" 
+                plain
+                @click="triggerFileUpload"
+              >
+                <el-icon><Plus /></el-icon>
+                添加附件
+              </el-button>
+              <el-button 
+                v-if="attachmentList.length > 0" 
+                size="small" 
+                type="danger" 
+                plain
+                @click="batchRemoveAttachments(attachmentList.map(a => a.id))"
+              >
+                清空所有
+              </el-button>
             </div>
           </div>
           
@@ -357,7 +487,101 @@
                  <span class="file-size" style="color: #606266;">{{ formatFileSizeFromString(attachment.fileSize) }}</span>
                  <span v-if="getFileExtension(attachment.fileName)" class="file-type">{{ getFileExtension(attachment.fileName).toUpperCase() }}</span>
                </div>
+          </div>
+          
+          <!-- 已上传的附件 -->
+          <div v-if="attachmentList.length > 0" class="uploaded-attachments" style="margin-bottom: 10px;">
+            <div 
+              v-for="(attachment, index) in attachmentList" 
+              :key="attachment.id"
+              class="attachment-item uploaded"
+              style="display: flex; flex-direction: column; align-items: flex-start; padding: 12px; background: #ffffff; border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 8px; transition: all 0.2s; min-height: 60px;"
+            >
+              <div class="attachment-info" style="flex: 1; min-width: 0; width: 100%; display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+                <div class="attachment-name" style="font-size: 14px; font-weight: 500; color: #303133; flex: 1; min-width: 0; word-break: break-word; line-height: 1.4;">
+                  {{ attachment.fileName }}
+                </div>
+                <div class="attachment-actions" style="flex-shrink: 0; margin-top: 2px; display: flex; gap: 5px;">
+                  <el-button 
+                    size="small" 
+                    type="danger" 
+                    plain
+                    @click="removeUploadedAttachment(attachment.id, index)"
+                    title="删除"
+                  >
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </div>
+              </div>
+               <div class="attachment-details" style="display: flex; gap: 12px; font-size: 12px; color: #909399; width: 100%; margin-top: 4px;">
+                 <span class="file-size" style="color: #606266;">{{ formatFileSizeFromString(attachment.fileSize) }}</span>
+                 <span v-if="getFileExtension(attachment.fileName)" class="file-type">{{ getFileExtension(attachment.fileName).toUpperCase() }}</span>
+               </div>
             </div>
+          </div>
+          
+          <!-- 本地文件（未上传） -->
+          <div v-if="mailForm.attachments.length > 0" class="local-attachments" style="margin-bottom: 10px;">
+            <div 
+              v-for="(file, index) in mailForm.attachments" 
+              :key="index"
+              class="attachment-item local"
+              style="display: flex; flex-direction: column; align-items: flex-start; padding: 12px; background: #fff7e6; border: 1px solid #ffd591; border-radius: 8px; margin-bottom: 8px; min-height: 60px;"
+            >
+              <div class="attachment-info" style="flex: 1; min-width: 0; width: 100%; display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px;">
+                <div class="attachment-name" style="font-size: 14px; font-weight: 500; color: #303133; flex: 1; min-width: 0; word-break: break-word; line-height: 1.4;">
+                  {{ file.name }}
+                </div>
+                <div class="attachment-actions" style="flex-shrink: 0; margin-top: 2px;">
+                  <el-button 
+                    size="small" 
+                    type="danger" 
+                    plain
+                    @click="removeAttachment(index)"
+                    title="删除"
+                  >
+                    <el-icon><Delete /></el-icon>
+                  </el-button>
+                </div>
+              </div>
+              <div class="attachment-details" style="display: flex; gap: 12px; font-size: 12px; color: #909399; width: 100%; margin-top: 4px;">
+                <span class="file-size" style="color: #606266;">{{ formatFileSize(file.size) }}</span>
+                <span v-if="getFileExtension(file.name)" class="file-type">{{ getFileExtension(file.name).toUpperCase() }}</span>
+                <span style="color: #fa8c16; background: #fff3cd; padding: 2px 6px; border-radius: 4px; font-weight: 500; font-size: 11px;">待上传</span>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 上传进度 -->
+          <div v-if="uploading" class="upload-progress" style="margin-top: 10px;">
+            <el-progress 
+              :percentage="uploadProgress" 
+              :show-text="true"
+              :stroke-width="6"
+              status="success"
+            />
+            <div style="text-align: center; font-size: 12px; color: #909399; margin-top: 5px;">
+              正在上传附件...
+            </div>
+          </div>
+          
+          <!-- 附件统计信息 -->
+          <div v-if="(attachmentList.length + mailForm.attachments.length) > 0" class="attachment-stats" :style="getAttachmentStatsStyle()">
+            <el-icon style="margin-right: 5px;"><InfoFilled /></el-icon>
+            <div class="stats-content">
+              <div class="stats-main">
+                当前邮件 {{ attachmentList.length + mailForm.attachments.length }} 个附件，大小 {{ formatCurrentAttachmentSize() }}
+              </div>
+              <div class="stats-limit">
+                限制：单个文件 ≤ 50MB，总大小 ≤ 100MB
+              </div>
+              <div v-if="isAttachmentSizeWarning()" class="stats-warning">
+                ⚠️ 附件总大小接近限制，建议减少附件数量
+              </div>
+            </div>
+          </div>
+        </div>
+        
           </div>
           
           <!-- 本地文件（未上传） -->
@@ -485,31 +709,110 @@
           
           <!-- 星标联系人分组 -->
           <div class="contact-group" style="margin-bottom: 10px;">
+          <!-- 最近联系人分组 -->
+          <div class="contact-group" style="margin-bottom: 10px;">
             <div 
               class="folder-item" 
+              @click="() => toggleContactsExpand('recent')"
+              style="display: flex; align-items: center; padding: 6px 4px; cursor: pointer; font-size: 12px; color: #333; border-radius: 2px; margin-bottom: 2px;"
+            >
+              <span class="folder-icon">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M4 6l4 4 4-4" stroke="#ff9800" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" :transform="!recentContactsExpanded ? 'rotate(-90 8 8)' : ''"/>
+                </svg>
+              </span>
+              <span class="folder-name">最近联系人</span>
+              <span class="folder-badge">{{ filteredRecentContacts.length || 0 }}</span>
+            </div>
+            
+            <div class="group-contacts" v-if="recentContactsExpanded">
+              <div 
+                v-for="contact in filteredRecentContacts" 
+                :key="contact.name"
+                class="contact-item"
+                @click="addRecentRecipient(contact)"
+                @contextmenu.prevent="showContextMenu($event, contact, 'recent')"
+                style="display: flex; align-items: center; padding: 6px 12px 6px 25px; cursor: pointer; transition: background-color 0.2s; border-radius: 4px; margin: 2px 4px;"
+              >
+                <el-avatar :size="24" style="margin-right: 8px; background-color: #4e73df;">{{ contact.name?.substring(0, 1) || '?' }}</el-avatar>
+                <div class="contact-info" style="flex: 1; min-width: 0; overflow: hidden;">
+                  <div class="contact-name" style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; color: #303133;">{{ contact.name }}</div>
+                  <div class="contact-time" style="font-size: 11px; color: #909399; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    {{ formatLastSendTime(contact.lastSendTime) }}
+                  </div>
+                </div>
+              </div>
+              <!-- 空状态提示 -->
+              <div v-if="filteredRecentContacts.length === 0 && !contactSearch.trim()" style="padding: 20px 25px; text-align: center; color: #909399; font-size: 12px;">
+                暂无最近联系人
+              </div>
+            </div>
+          </div>
+          
+          <!-- 星标联系人分组 -->
+          <div class="contact-group" style="margin-bottom: 10px;">
+            <div 
+              class="folder-item" 
+              @click="() => toggleContactsExpand('starred')"
               @click="() => toggleContactsExpand('starred')"
               style="display: flex; align-items: center; padding: 6px 4px; cursor: pointer; font-size: 12px; color: #333; border-radius: 2px; margin-bottom: 2px;"
             >
               <span class="folder-icon">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <path d="M4 6l4 4 4-4" stroke="#ff9800" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" :transform="!starredContactsExpanded ? 'rotate(-90 8 8)' : ''"/>
+                  <path d="M4 6l4 4 4-4" stroke="#ff9800" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" :transform="!starredContactsExpanded ? 'rotate(-90 8 8)' : ''"/>
                 </svg>
               </span>
+              <span class="folder-name">星标联系人</span>
+              <span class="folder-badge">{{ filteredStarredContacts.length || 0 }}</span>
               <span class="folder-name">星标联系人</span>
               <span class="folder-badge">{{ filteredStarredContacts.length || 0 }}</span>
             </div>
             
             <div class="group-contacts" v-if="starredContactsExpanded">
+            <div class="group-contacts" v-if="starredContactsExpanded">
               <div 
+                v-for="contact in filteredStarredContacts" 
                 v-for="contact in filteredStarredContacts" 
                 :key="contact.id"
                 class="contact-item"
                 @click="addStarredRecipient(contact)"
                 @contextmenu.prevent="showContextMenu($event, contact, 'starred')"
                 style="display: flex; align-items: center; padding: 6px 12px 6px 25px; cursor: pointer; transition: background-color 0.2s; border-radius: 4px; margin: 2px 4px;"
+                @click="addStarredRecipient(contact)"
+                @contextmenu.prevent="showContextMenu($event, contact, 'starred')"
+                style="display: flex; align-items: center; padding: 6px 12px 6px 25px; cursor: pointer; transition: background-color 0.2s; border-radius: 4px; margin: 2px 4px;"
               >
                 <el-avatar :size="24" style="margin-right: 8px; background-color: #ff9800;">{{ (starredContactDisplayNames.get(contact.id) || '?').substring(0, 1) }}</el-avatar>
+                <el-avatar :size="24" style="margin-right: 8px; background-color: #ff9800;">{{ (starredContactDisplayNames.get(contact.id) || '?').substring(0, 1) }}</el-avatar>
                 <div class="contact-info" style="flex: 1; min-width: 0; overflow: hidden;">
+                  <div class="contact-name" style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; color: #303133;">{{ starredContactDisplayNames.get(contact.id) || '加载中...' }}</div>
+                  <div class="contact-time" style="font-size: 11px; color: #909399; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    {{ formatLastSendTime(contact.createTime) }}
+                  </div>
+                </div>
+              </div>
+              <!-- 空状态提示 -->
+              <div v-if="filteredStarredContacts.length === 0 && !contactSearch.trim()" style="padding: 20px 25px; text-align: center; color: #909399; font-size: 12px;">
+                暂无星标联系人
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 右键菜单 -->
+    <div 
+      v-if="contextMenu.visible"
+      :key="`context-menu-${contextMenu.contact?.name || 'unknown'}-${contextMenu.type}`"
+      class="context-menu"
+      :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
+      @click.stop
+    >
+      <div class="context-menu-item" @click="toggleContactStar">
+        <el-icon><Star /></el-icon>
+        <span>{{ isContactStarred ? '取消星标' : '添加星标' }}</span>
                   <div class="contact-name" style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; color: #303133;">{{ starredContactDisplayNames.get(contact.id) || '加载中...' }}</div>
                   <div class="contact-time" style="font-size: 11px; color: #909399; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                     {{ formatLastSendTime(contact.createTime) }}
@@ -587,17 +890,69 @@ import {
 } from '@/api/system/mail/draft'
 import {getSimpleUserList, getUserByIdCard} from '@/api/system/user'
 import {getAccessToken} from '@/utils/auth'
+<script setup lang="ts">
+import {computed, nextTick, onBeforeUnmount, onMounted, ref, watch} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {useUserStore} from '@/store/modules/user'
+import {useTagsViewStore} from '@/store/modules/tagsView'
+import TextEditor from '@/views/mail/components/TextEditor.vue'
+import {
+  createLetterContactStar,
+  deleteLetterContactStar,
+  getLetterContactStarPage,
+  getLetterDetail,
+  getSentMails,
+  forwardLetter,
+  type LetterContactStarCreateReqVO,
+  type LetterContactStarRespVO,
+  type LetterForwardReqVO,
+  type LetterSendReqVO,
+  type MailListItemVO,
+  replyLetter,
+  type LetterReplyReqVO,
+  sendLetter
+} from '@/api/system/mail/letter'
+import {
+  deleteLetterAttachment,
+  FILE_TYPE,
+  formatFileSize,
+  formatFileSizeFromString,
+  getFileExtension,
+  getLetterAttachment,
+  downloadAttachment,
+  type LetterAttachmentRespVO,
+  uploadLetterAttachment,
+  validateFileBeforeUpload
+} from '@/api/system/mail/attachment'
+import {
+  createDraft,
+  getDraft,
+  type LetterDraftCreateReqVO,
+  type LetterDraftRespVO,
+  type LetterDraftUpdateReqVO,
+  updateDraft
+} from '@/api/system/mail/draft'
+import {getSimpleUserList, getUserByIdCard} from '@/api/system/user'
+import {getAccessToken} from '@/utils/auth'
 import '@/views/mail/mail.css'
+import topImage from '@/views/mail/image/top.png'
 import topImage from '@/views/mail/image/top.png'
 
 import {
   ArrowDown,
+  ArrowDown,
   Delete,
+  Files,
+  InfoFilled,
   Files,
   InfoFilled,
   Plus,
   Position,
+  Position,
   Setting,
+  Star,
+  UploadFilled
   Star,
   UploadFilled
 } from '@element-plus/icons-vue'
@@ -606,8 +961,19 @@ import {
 const router = useRouter()
 const route = useRoute()
 const tagsViewStore = useTagsViewStore()
+const route = useRoute()
+const tagsViewStore = useTagsViewStore()
 
 // 表单数据
+const mailForm = ref<{
+  recipients: string[]
+  cc: string[]
+  bcc: string[]
+  subject: string
+  content: string
+  attachments: File[]
+  attachmentIds: number[] // 已上传的附件ID列表
+}>({
 const mailForm = ref<{
   recipients: string[]
   cc: string[]
@@ -624,6 +990,9 @@ const mailForm = ref<{
   content: '',
   attachments: [],
   attachmentIds: []
+  content: '',
+  attachments: [],
+  attachmentIds: []
 })
 
 // UI状态
@@ -631,6 +1000,42 @@ const showCc = ref(false)
 const showBcc = ref(false)
 const contactSearch = ref('')
 const loading = ref(false)
+const activeRecipientField = ref<'recipients' | 'cc' | 'bcc'>('recipients') // 当前激活的收件人字段
+const sending = ref(false) // 发送状态，防止重复发送
+
+// 附件相关状态
+const uploading = ref(false)
+const uploadProgress = ref(0)
+const attachmentList = ref<LetterAttachmentRespVO[]>([]) // 已上传的附件信息列表
+const tempAttachmentList = ref<LetterAttachmentRespVO[]>([]) // 临时附件列表
+const isDragOver = ref(false) // 拖拽状态
+
+// TextEditor 相关状态
+const editorInstance = ref<any>(null)
+const editorReady = ref(false)
+
+// 右键菜单状态
+const contextMenu = ref({
+  visible: false,
+  x: 0,
+  y: 0,
+  contact: null as any,
+  type: '' as 'recent' | 'starred'
+})
+
+// 用户选项数据
+const userOptions = ref<any[]>([])
+
+// 最近联系人数据
+const recentContacts = ref<any[]>([])
+const recentContactsExpanded = ref(true)
+
+// 星标联系人数据
+const starredContacts = ref<LetterContactStarRespVO[]>([])
+const starredContactsExpanded = ref(true)
+
+// 星标联系人显示名称映射
+const starredContactDisplayNames = ref<Map<number, string>>(new Map())
 const activeRecipientField = ref<'recipients' | 'cc' | 'bcc'>('recipients') // 当前激活的收件人字段
 const sending = ref(false) // 发送状态，防止重复发送
 
@@ -696,6 +1101,31 @@ const filteredStarredContacts = computed(() => {
   })
 })
 
+// 过滤后的最近联系人（基于搜索关键词）
+const filteredRecentContacts = computed(() => {
+  if (!contactSearch.value.trim()) {
+    return recentContacts.value
+  }
+  
+  const searchTerm = contactSearch.value.toLowerCase().trim()
+  return recentContacts.value.filter(contact => 
+    contact.name && contact.name.toLowerCase().startsWith(searchTerm)
+  )
+})
+
+// 过滤后的星标联系人（基于搜索关键词）
+const filteredStarredContacts = computed(() => {
+  if (!contactSearch.value.trim()) {
+    return starredContacts.value
+  }
+  
+  const searchTerm = contactSearch.value.toLowerCase().trim()
+  return starredContacts.value.filter(contact => {
+    const displayName = starredContactDisplayNames.value.get(contact.id)
+    return displayName && displayName.toLowerCase().startsWith(searchTerm)
+  })
+})
+
 // 当前时间
 const currentTime = computed(() => {
   const now = new Date()
@@ -704,6 +1134,241 @@ const currentTime = computed(() => {
   return `${hours}:${minutes}`
 })
 
+
+// 当前草稿ID（用于判断创建还是更新）
+const currentDraftId = ref<number | null>(null)
+
+// 预加载用户列表
+const allUsers = ref<any[]>([])
+
+// 星标联系人用户信息缓存
+const starredContactUserCache = ref<Map<string, any>>(new Map())
+
+// 回复/转发场景：原始邮件信息（单封或多封）
+const replyOriginal = ref<null | {
+  id: number
+  subject: string
+  fromUserName?: string
+  toUserNames?: string
+  sendTime?: string
+  content?: string
+  attachments?: LetterAttachmentRespVO[]
+}>(null)
+const replyOriginalHtml = ref<string>('')
+// 多封转发时的原始列表
+const replyOriginalList = ref<Array<{
+  id: number
+  subject: string
+  fromUserName?: string
+  toUserNames?: string
+  sendTime?: string
+  attachments?: LetterAttachmentRespVO[]
+}>>([])
+// 时间格式化：yyyy年m月d日 hh:mm
+const formatDateTimeCn = (dateStr?: string): string => {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return ''
+  const y = d.getFullYear()
+  const m = d.getMonth() + 1
+  const day = d.getDate()
+  const hh = `${d.getHours()}`.padStart(2, '0')
+  const mm = `${d.getMinutes()}`.padStart(2, '0')
+  return `${y}年${m}月${day}日 ${hh}:${mm}`
+}
+
+
+// 仅身份证模式，无需姓名解析与回退逻辑
+
+// 获取星标联系人的显示名称
+const getStarredContactDisplayName = async (contact: LetterContactStarRespVO): Promise<string> => {
+  try {
+    // 先检查缓存
+    if (starredContactUserCache.value.has(contact.contactIdCard)) {
+      const cachedUser = starredContactUserCache.value.get(contact.contactIdCard)
+      return cachedUser.nickname || '未知用户'
+    }
+    
+    // 从缓存中获取用户信息
+    const user = await getUserByIdCard(contact.contactIdCard)
+    if (user) {
+      // 缓存用户信息
+      starredContactUserCache.value.set(contact.contactIdCard, user)
+      return user.nickname || '未知用户'
+    }
+    
+    return '未知用户'
+  } catch (error) {
+    console.error('获取星标联系人用户信息失败:', error)
+    return '未知用户'
+  }
+}
+
+
+// 获取最近联系人
+const loadRecentContacts = async () => {
+  try {
+    console.log('📡 开始加载最近联系人...')
+    const response = await getSentMails({ pageNo: 1, pageSize: 50 })
+    
+    if (response && Array.isArray(response.list)) {
+      console.log(`📊 获取到 ${response.list.length} 封已发送邮件`)
+      
+      // 提取收件人信息并去重
+      const contactMap = new Map()
+      
+      response.list.forEach((mail: MailListItemVO) => {
+        if (mail.toUserNames) {
+          // 解析收件人姓名列表（可能是逗号分隔的字符串）
+          const recipients = mail.toUserNames.split(',').map(name => name.trim()).filter(name => name)
+          
+          recipients.forEach(recipientName => {
+            if (recipientName && !contactMap.has(recipientName)) {
+              contactMap.set(recipientName, {
+                name: recipientName,
+                lastSendTime: mail.sendTime,
+                sendCount: 1
+              })
+            } else if (contactMap.has(recipientName)) {
+              // 更新发送次数和最新发送时间
+              const existing = contactMap.get(recipientName)
+              existing.sendCount += 1
+              if (new Date(mail.sendTime) > new Date(existing.lastSendTime)) {
+                existing.lastSendTime = mail.sendTime
+              }
+            }
+          })
+        }
+      })
+      
+      // 转换为数组并按最后发送时间倒序排列
+      recentContacts.value = Array.from(contactMap.values())
+        .sort((a, b) => new Date(b.lastSendTime).getTime() - new Date(a.lastSendTime).getTime())
+        .slice(0, 20) // 只显示最近20个联系人
+      
+      console.log(`✅ 最近联系人加载成功，共 ${recentContacts.value.length} 个联系人`)
+    } else {
+      console.log('⚠️ 已发送邮件响应格式异常')
+      recentContacts.value = []
+    }
+  } catch (error: any) {
+    console.error('❌ 加载最近联系人失败:', error)
+    recentContacts.value = []
+  }
+}
+
+// 获取星标联系人
+const loadStarredContacts = async () => {
+  try {
+    console.log('📡 开始加载星标联系人...')
+    const response = await getLetterContactStarPage({ pageNo: 1, pageSize: 50 })
+    
+    if (response && Array.isArray(response.list)) {
+      console.log(`📊 获取到 ${response.list.length} 个星标联系人`)
+      
+      // 直接使用API返回的星标联系人数据
+      starredContacts.value = response.list
+        .sort((a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime())
+        .slice(0, 20) // 只显示最近20个星标联系人
+      
+      console.log(`✅ 星标联系人加载成功，共 ${starredContacts.value.length} 个联系人`)
+      
+      // 异步加载每个联系人的显示名称
+      for (const contact of starredContacts.value) {
+        try {
+          const displayName = await getStarredContactDisplayName(contact)
+          starredContactDisplayNames.value.set(contact.id, displayName)
+        } catch (error) {
+          console.error(`获取联系人 ${contact.contactIdCard} 的显示名称失败:`, error)
+          starredContactDisplayNames.value.set(contact.id, '未知用户')
+        }
+      }
+    } else {
+      console.log('⚠️ 星标联系人响应格式异常')
+      starredContacts.value = []
+    }
+  } catch (error: any) {
+    console.error('❌ 加载星标联系人失败:', error)
+    starredContacts.value = []
+  }
+}
+
+// 并发加载所有数据
+const loadAllData = async () => {
+  console.log('🚀 开始并发加载所有数据...')
+  
+  try {
+    // 使用 Promise.allSettled 进行并发加载，即使某个请求失败也不会影响其他请求
+    const results = await Promise.allSettled([
+      // 加载用户列表
+      (async () => {
+        console.log('📡 并发加载用户列表...')
+        const users = await getSimpleUserList()
+        if (users && Array.isArray(users)) {
+          console.log(`✅ 并发加载用户列表成功，共 ${users.length} 个用户`)
+          allUsers.value = users
+          
+          // 转换为前端需要的格式，限制显示前20个用户
+          userOptions.value = users.slice(0, 20).map((user: any) => ({
+            value: user.id.toString(),
+            label: `${user.nickname || '未知用户'} <${user.deptNames ? user.deptNames.join(', ') : ''}>`,
+            avatar: user.avatar || '',
+            name: user.nickname || '未知用户',
+            userId: user.id,
+            deptName: user.deptNames ? user.deptNames.join(', ') : ''
+          }))
+          
+          console.log('🔄 并发初始化用户选项列表:', userOptions.value)
+          return { type: 'users', data: users, success: true }
+        } else {
+          throw new Error('用户列表数据格式错误')
+        }
+      })(),
+      
+      // 加载最近联系人
+      (async () => {
+        console.log('📡 并发加载最近联系人...')
+        await loadRecentContacts()
+        return { type: 'recentContacts', success: true }
+      })(),
+      
+      // 加载星标联系人
+      (async () => {
+        console.log('📡 并发加载星标联系人...')
+        await loadStarredContacts()
+        return { type: 'starredContacts', success: true }
+      })(),
+    ])
+    
+    // 处理并发加载结果
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') {
+        console.log(`✅ 并发加载任务 ${index + 1} 成功:`, result.value)
+      } else {
+        console.error(`❌ 并发加载任务 ${index + 1} 失败:`, result.reason)
+      }
+    })
+    
+    // 检查是否有任何任务失败
+    const hasFailures = results.some(result => result.status === 'rejected')
+    if (hasFailures) {
+      console.warn('⚠️ 部分并发加载任务失败')
+    }
+    
+    console.log('🏁 并发加载完成')
+  } catch (error: unknown) {
+    console.error('❌ 并发加载过程中发生错误:', error)
+  }
+}
+
+// 调试：深度监听 attachmentList 的变化
+watch(attachmentList, () => {}, { deep: true, immediate: false })
+
+// 搜索用户/联系人 - 基于预加载的用户列表进行过滤
+const remoteSearch = async (query: string) => {
+  console.log(`🔍 开始搜索联系人，关键词: "${query}"`)
+  
+  try {
 
 // 当前草稿ID（用于判断创建还是更新）
 const currentDraftId = ref<number | null>(null)
@@ -1029,7 +1694,105 @@ const remoteSearch = async (query: string) => {
 const toggleContactsExpand = (type: 'recent' | 'starred') => {
   if (type === 'recent') {
     recentContactsExpanded.value = !recentContactsExpanded.value
+    
+    // 如果输入为空或只有空格，不进行联想搜索
+    if (!query || !query.trim()) {
+      console.log('🔍 输入为空，清空联想选项')
+      userOptions.value = []
+      return
+    }
+    
+    if (allUsers.value.length === 0) {
+      // 如果还没有预加载用户列表，使用并发加载
+      await loadAllData()
+    }
+    
+    const searchTerm = query.toLowerCase().trim()
+    
+    // 如果搜索词太短，不进行过滤
+    if (searchTerm.length < 1) {
+      console.log('🔍 搜索词太短，清空联想选项')
+      userOptions.value = []
+      return
+    }
+    
+    // 基于预加载的用户列表进行过滤
+    const filteredUsers = allUsers.value.filter(user => {
+      // 姓名使用模糊匹配，工号和邮箱使用前缀匹配
+      const nickname = (user.nickname || '').toLowerCase()
+      const workId = (user.workId || '').toLowerCase()
+      const email = (user.email || '').toLowerCase()
+      
+      return nickname.includes(searchTerm) || 
+             workId.startsWith(searchTerm) || 
+             email.startsWith(searchTerm)
+    })
+    
+    // 按姓名排序
+    filteredUsers.sort((a, b) => {
+      const aName = (a.nickname || '').toLowerCase()
+      const bName = (b.nickname || '').toLowerCase()
+      
+      return aName.localeCompare(bName)
+    })
+    
+    console.log(`🔍 过滤后找到 ${filteredUsers.length} 个匹配用户`)
+    
+    // 转换为前端需要的格式，显示部门名称、工号和邮箱
+    userOptions.value = filteredUsers.slice(0, 50).map((user: any) => {
+      const nickname = user.nickname || '未知用户'
+      const deptName = user.deptNames ? user.deptNames.join(', ') : ''
+      const workId = user.workId || ''
+      const email = user.email || ''
+      
+      // 构建显示标签，包含姓名、部门、工号和邮箱信息
+      let label = nickname
+      if (deptName) label += ` <${deptName}>`
+      if (workId) label += ` <工号:${workId}>`
+      if (email) label += ` <${email}>`
+      
+      return {
+        value: user.id.toString(), // 使用用户ID作为值
+        label: label, // 显示格式：姓名 <部门名称> <工号:xxx> <邮箱>
+        avatar: user.avatar || '',
+        name: nickname,
+        userId: user.id,
+        deptName: deptName,
+        workId: workId,
+        email: email
+      }
+    })
+    
+    console.log('🔄 更新用户选项列表:', userOptions.value)
+  } catch (error: unknown) {
+    console.error('❌ 搜索联系人失败:', error)
+    console.error('🔍 搜索错误详情:', {
+      message: (error as any)?.message,
+      response: (error as any)?.response,
+      status: (error as any)?.response?.status
+    })
+    // 搜索失败时清空用户选项
+    userOptions.value = []
+  } finally {
+    loading.value = false
+    console.log('🏁 搜索完成，loading状态:', loading.value)
+  }
+}
+
+// 切换联系人展开状态
+const toggleContactsExpand = (type: 'recent' | 'starred') => {
+  if (type === 'recent') {
+    recentContactsExpanded.value = !recentContactsExpanded.value
   } else {
+    starredContactsExpanded.value = !starredContactsExpanded.value
+  }
+}
+
+// 切换抄送显示状态
+const toggleCc = () => {
+  showCc.value = !showCc.value
+  if (showCc.value) {
+    activeRecipientField.value = 'cc'
     starredContactsExpanded.value = !starredContactsExpanded.value
   }
 }
@@ -1746,10 +2509,27 @@ const sendMailHandler = async () => {
   // 防止重复发送
   if (sending.value) {
     ElMessage.warning('正在发送中，请稍候...')
+const sendMailHandler = async () => {
+  // 防止重复发送
+  if (sending.value) {
+    ElMessage.warning('正在发送中，请稍候...')
     return
   }
   
+  
   if (!mailForm.value.subject) {
+    try {
+      await ElMessageBox.confirm('是否确认发送无主题邮件？', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      })
+    } catch {
+      return
+    }
+  }
+  
+  await doSendMail()
     try {
       await ElMessageBox.confirm('是否确认发送无主题邮件？', '提示', {
         confirmButtonText: '确定',
@@ -2353,11 +3133,31 @@ onBeforeUnmount(() => {
   padding: 8px;
   gap: 8px;
   min-height: 0; /* 允许子项在 flex 容器内正确收缩以启用滚动 */
+  color: #303133;
+  overflow: hidden; /* 防止溢出出现滚动条 */
+}
+
+
+
+/* 主体布局 */
+.content-wrapper {
+  display: flex;
+  flex: 1;
+  background-color: #f5f7f9;
+  padding: 8px;
+  gap: 8px;
+  min-height: 0; /* 允许子项在 flex 容器内正确收缩以启用滚动 */
 }
 
 /* 主内容区域 */
 .main-content {
+/* 主内容区域 */
+.main-content {
   flex: 1;
+  background-color: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.07);
+  margin: 0;
   background-color: #fff;
   border-radius: 18px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.07);
@@ -2367,8 +3167,12 @@ onBeforeUnmount(() => {
   overflow: hidden;
   min-height: 0; /* 允许在父级 flex 布局内正确收缩并启用内部滚动 */
   width: 100%;
+  min-height: 0; /* 允许在父级 flex 布局内正确收缩并启用内部滚动 */
+  width: 100%;
 }
 
+/* 工具栏 */
+.toolbar {
 /* 工具栏 */
 .toolbar {
   display: flex;
@@ -2378,10 +3182,15 @@ onBeforeUnmount(() => {
   height: 66px;
   background-color: #fff;
   border-bottom: 2px solid #e3f2fd;
+  padding: 12px 20px;
+  height: 66px;
+  background-color: #fff;
+  border-bottom: 2px solid #e3f2fd;
 }
 
 .toolbar-left {
   display: flex;
+  gap: 10px;
   gap: 10px;
   align-items: center;
 }
@@ -2395,8 +3204,18 @@ onBeforeUnmount(() => {
   cursor: pointer;
   font-size: 15px;
   color: #222;
+  height: 33px;
+  padding: 0 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  background-color: #ffffff;
+  cursor: pointer;
+  font-size: 15px;
+  color: #222;
   display: flex;
   align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
   gap: 6px;
   box-sizing: border-box;
 }
@@ -2413,11 +3232,41 @@ onBeforeUnmount(() => {
 
 .tool-btn.active:hover {
   background-color: #337ecc;
+  background-color: #f0f0f0;
+}
+
+.tool-btn.active {
+  background-color: #409eff;
+  color: white;
+  border-color: #409eff;
+}
+
+.tool-btn.active:hover {
+  background-color: #337ecc;
 }
 
 .tool-btn.primary {
   background-color: #4285f4;
+  background-color: #4285f4;
   color: white;
+  border-color: #4285f4;
+}
+
+.tool-btn.primary:hover {
+  background-color: #3367d6;
+}
+
+.tool-btn.disabled {
+  background-color: #c0c4cc !important;
+  border-color: #c0c4cc !important;
+  color: #a8abb2 !important;
+  cursor: not-allowed !important;
+}
+
+.tool-btn.disabled:hover {
+  background-color: #c0c4cc !important;
+  border-color: #c0c4cc !important;
+  color: #a8abb2 !important;
   border-color: #4285f4;
 }
 
@@ -2443,9 +3292,13 @@ onBeforeUnmount(() => {
 }
 
 
+
 .toolbar-right {
   display: flex;
   align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #666;
   gap: 8px;
   font-size: 12px;
   color: #666;
@@ -2454,12 +3307,16 @@ onBeforeUnmount(() => {
 .time {
   font-size: 12px;
   color: #666;
+  font-size: 12px;
+  color: #666;
   margin-right: 10px;
 }
 
 /* 邮件表单 */
 .mail-form {
   padding: 10px 15px;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #fff;
   border-bottom: 1px solid #e0e0e0;
   background-color: #fff;
 }
@@ -2514,8 +3371,17 @@ onBeforeUnmount(() => {
 .user-info {
   flex: 1;
   min-width: 0;
+  width: 100%;
+  min-height: 40px;
+  padding: 4px 0;
+}
+
+.user-info {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
+  gap: 8px;
   gap: 8px;
   flex-wrap: wrap;
 }
@@ -2529,14 +3395,35 @@ onBeforeUnmount(() => {
 }
 
 .user-details {
+.user-name {
+  font-weight: 500;
+  color: #303133;
+  font-size: 14px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.user-details {
   display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   flex-wrap: wrap;
   gap: 6px;
   font-size: 12px;
   color: #909399;
   line-height: 1.2;
+  color: #909399;
+  line-height: 1.2;
 }
 
+.dept-info {
+  color: #909399;
+  white-space: nowrap;
+}
+
+.work-id {
+  color: #909399;
+  white-space: nowrap;
 .dept-info {
   color: #909399;
   white-space: nowrap;
@@ -2550,17 +3437,34 @@ onBeforeUnmount(() => {
 .email-info {
   color: #909399;
   white-space: nowrap;
+.email-info {
+  color: #909399;
+  white-space: nowrap;
 }
 
+/* TextEditor 容器样式 */
+.text-editor-container {
 /* TextEditor 容器样式 */
 .text-editor-container {
   flex: 1;
   padding: 20px;
   background-color: #ffffff;
   border-radius: 0 0 4px 4px;
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 0 0 4px 4px;
 }
 
 
+
+/* 自定义 wangEditor 样式以匹配现有设计 */
+.text-editor-container :deep(.w-e-toolbar) {
+  background-color: #f5faff;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.text-editor-container :deep(.w-e-text-container) {
+  background-color: #ffffff;
 /* 自定义 wangEditor 样式以匹配现有设计 */
 .text-editor-container :deep(.w-e-toolbar) {
   background-color: #f5faff;
@@ -2577,18 +3481,32 @@ onBeforeUnmount(() => {
   font-size: 14px;
   line-height: 1.5;
   color: #303133;
+.text-editor-container :deep(.w-e-text) {
+  padding: 20px;
+  font-family: SimSun, "宋体", serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #303133;
 }
+
+
 
 
 
 /* 联系人列表 */
 .contact-list {
   width: 220px;
+  width: 220px;
   background-color: #fff;
+  border-left: 1px solid #e0e0e0;
   border-left: 1px solid #e0e0e0;
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  margin-left: 8px;
+  overflow: hidden;
   border-radius: 4px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   margin-left: 8px;
@@ -2600,15 +3518,18 @@ onBeforeUnmount(() => {
   font-size: 16px;
   font-weight: bold;
   border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid #e0e0e0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   color: #4e73df;
   background-color: #f5faff;
+  background-color: #f5faff;
 }
 
 .contact-search {
   padding: 10px;
+  border-bottom: 1px solid #e0e0e0;
   border-bottom: 1px solid #e0e0e0;
 }
 
@@ -2635,6 +3556,8 @@ onBeforeUnmount(() => {
   transition: background-color 0.2s;
   border-radius: 4px;
   margin: 2px 4px;
+  border-radius: 4px;
+  margin: 2px 4px;
 }
 
 .contact-item:hover {
@@ -2656,6 +3579,136 @@ onBeforeUnmount(() => {
   color: #303133;
 }
 
+
+/* 星标联系人特殊样式 */
+.folder-badge {
+  margin-left: auto;
+  background-color: #909399;
+  color: white;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 16px;
+  text-align: center;
+}
+
+.folder-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 4px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #333;
+  border-radius: 2px;
+  margin-bottom: 2px;
+  transition: background-color 0.2s;
+}
+
+.folder-item:hover {
+  background-color: #f5f5f5;
+}
+
+.folder-icon {
+  margin-right: 6px;
+  transition: transform 0.2s;
+}
+
+.folder-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+/* 右键菜单样式 */
+.context-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  min-width: 120px;
+  overflow: hidden;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #303133;
+  transition: background-color 0.2s;
+}
+
+.context-menu-item:hover {
+  background-color: #f5f7fa;
+}
+
+.context-menu-item .el-icon {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+/* 附件区域滚动条样式 */
+.attachments-section::-webkit-scrollbar {
+  width: 6px;
+}
+
+.attachments-section::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.attachments-section::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.attachments-section::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* 附件统计信息样式 */
+.attachment-stats {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.stats-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stats-main {
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.stats-limit {
+  font-size: 11px;
+  opacity: 0.8;
+  line-height: 1.3;
+}
+
+.stats-warning {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
+  margin-top: 2px;
+}
+
+/* 原始邮件标题行：文字与横线居中对齐 */
+.orig-mail-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px 0;
+}
+
+.orig-mail-text {
 
 /* 星标联系人特殊样式 */
 .folder-badge {
@@ -2889,5 +3942,107 @@ onBeforeUnmount(() => {
   .local-attachments {
     grid-template-columns: 1fr;
   }
+  line-height: 1; /* 保证与横线垂直居中 */
+}
+
+.orig-mail-divider {
+  flex: 1;
+  height: 1px;
+  background: #e5e5e5;
+}
+
+/* 拖拽上传区域样式 */
+.drag-upload-area {
+  margin: 20px;
+  padding: 40px 20px;
+  border: 2px dashed #d9d9d9;
+  border-radius: 8px;
+  background-color: #fafafa;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drag-upload-area:hover {
+  border-color: #409eff;
+  background-color: #f0f9ff;
+}
+
+.drag-upload-area.drag-over {
+  border-color: #409eff;
+  background-color: #e6f7ff;
+  transform: scale(1.02);
+}
+
+.drag-upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.upload-icon {
+  font-size: 48px;
+  color: #c0c4cc;
+  transition: color 0.3s ease;
+}
+
+.drag-upload-area:hover .upload-icon {
+  color: #409eff;
+}
+
+.upload-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.upload-main-text {
+  font-size: 16px;
+  font-weight: 500;
+  color: #303133;
+}
+
+.upload-tip-text {
+  font-size: 14px;
+  color: #909399;
+}
+
+.upload-limit-text {
+  font-size: 12px;
+  color: #c0c4cc;
+}
+
+/* 原始邮件附件容器去内边距 */
+.detail-attachments {
+  padding: 0 !important;
+}
+
+/* 附件网格布局 */
+.uploaded-attachments,
+.local-attachments {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .uploaded-attachments,
+  .local-attachments {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .uploaded-attachments,
+  .local-attachments {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
+
