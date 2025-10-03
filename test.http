@@ -1,0 +1,35 @@
+### 邮件系统API测试文件
+### 使用VS Code的REST Client插件或类似工具来执行这些请求
+
+### ==================== 环境变量设置 ====================
+@baseUrl = http://localhost:48080
+@token = {{login.response.body.data.accessToken}}
+
+### ==================== 用户登录获取Token ====================
+# @name login
+POST {{baseUrl}}/app-api/app/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+### ==================== 发送邮件 ====================
+POST {{baseUrl}}/app-api/system/letter/content/create
+Authorization: Bearer 63ff488348f14650ba54d60f6a28d198
+Content-Type: application/json
+
+
+{
+  "receiverIds": "1,2,3",
+  "ccUserIds": "4,5",
+  "senderId": 1,
+  "subject": "测试邮件主题",
+  "content": "<p>这是一封测试邮件的内容</p><p>支持HTML格式</p>",
+  "priority": 1,
+  "requestReadReceipt": false,
+  "isDraft": false,
+  "status": 0,
+  "folder": "sent"
+}

@@ -25,3 +25,14 @@ declare module 'slate' {
     }
   }
 }
+
+declare module '@wangeditor/editor' {
+  interface SlateText {
+    text: string
+  }
+
+  interface SlateElement {
+    type: string
+    children: SlateDescendant[]
+  }
+}
