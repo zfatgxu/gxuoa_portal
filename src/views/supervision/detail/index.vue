@@ -936,8 +936,39 @@
         <el-form :model="progressForm" :rules="progressRules" ref="progressFormRef" label-width="140px" class="progress-form">
           <!-- 所有节点都不再显示当前进度情况文本框，改为使用计划表格 -->
 
-          <!-- upload_plan 节点：是分支 - 动态表格 -->
-          <template v-if="isUploadPlanNode && progressForm.canFinishOnTime">
+          <!-- upload_plan 节点：否分支 - 原因和重新选择时间 -->
+          <template v-if="isUploadPlanNode && !progressForm.canFinishOnTime">
+            <el-form-item label="不能按时完成原因" prop="delayReason" class="form-item-custom form-item-no-label">
+              <el-input
+                v-model="progressForm.delayReason"
+                type="textarea"
+                :rows="3"
+                placeholder="请详细说明不能按时完成的具体原因..."
+                maxlength="200"
+                show-word-limit
+                class="textarea-custom"
+              />
+            </el-form-item>
+
+            <el-form-item label="请重新选择完成时间" prop="planTime" class="form-item-custom form-item-no-label">
+              <el-date-picker
+                v-model="progressForm.planTime"
+                type="datetime"
+                placeholder="请选择预计完成时间"
+                format="YYYY年MM月DD日 HH:mm"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                style="width: 100%"
+                class="date-picker-custom"
+                :disabled-date="disabledProgressDate"
+                :disabled-hours="disabledProgressHours"
+                :disabled-minutes="disabledProgressMinutes"
+                :default-time="defaultProgressTime"
+              />
+            </el-form-item>
+          </template>
+
+          <!-- upload_plan 节点：计划表格（无论是否能按时完成均显示；放在预计完成时间选择的下方） -->
+          <template v-if="isUploadPlanNode">
             <div class="plan-table-section">
               <div class="plan-table-title">工作计划安排</div>
               <div class="plan-table-tip">
@@ -996,37 +1027,6 @@
                 </el-table-column>
               </el-table>
             </div>
-          </template>
-
-          <!-- upload_plan 节点：否分支 - 原因和重新选择时间 -->
-          <template v-if="isUploadPlanNode && !progressForm.canFinishOnTime">
-            <el-form-item label="不能按时完成原因" prop="delayReason" class="form-item-custom form-item-no-label">
-              <el-input
-                v-model="progressForm.delayReason"
-                type="textarea"
-                :rows="3"
-                placeholder="请详细说明不能按时完成的具体原因..."
-                maxlength="200"
-                show-word-limit
-                class="textarea-custom"
-              />
-            </el-form-item>
-
-            <el-form-item label="请重新选择完成时间" prop="planTime" class="form-item-custom form-item-no-label">
-              <el-date-picker
-                v-model="progressForm.planTime"
-                type="datetime"
-                placeholder="请选择预计完成时间"
-                format="YYYY年MM月DD日 HH:mm"
-                value-format="YYYY-MM-DD HH:mm:ss"
-                style="width: 100%"
-                class="date-picker-custom"
-                :disabled-date="disabledProgressDate"
-                :disabled-hours="disabledProgressHours"
-                :disabled-minutes="disabledProgressMinutes"
-                :default-time="defaultProgressTime"
-              />
-            </el-form-item>
           </template>
 
           <!-- 非 upload_plan 和 implement_plan 节点保持原有的预计完成时间字段 -->
@@ -1404,33 +1404,32 @@ const progressRules = computed(() => {
   const rules: any = {}
   
   if (isUploadPlanNode.value) {
-    // upload_plan 节点的校验规则
-    if (progressForm.canFinishOnTime) {
-      // 选择"是"时，验证计划表格
-      rules.planRows = [
-        {
-          validator: (rule: any, value: any[], callback: any) => {
-            if (!value || value.length === 0) {
-              callback(new Error('请至少填写一行计划内容'))
-              return
-            }
-            
-            const hasValidRow = value.some(row => 
-              (row.summary && row.summary.trim() !== '') || 
-              (row.fileList && row.fileList.length > 0)
-            )
-            
-            if (!hasValidRow) {
-              callback(new Error('请至少在一行中填写工作内容或上传文件'))
-            } else {
-              callback()
-            }
-          },
-          trigger: 'blur'
-        }
-      ]
-    } else {
-      // 选择"否"时，验证原有字段
+    // upload_plan 节点：始终校验计划表格
+    rules.planRows = [
+      {
+        validator: (rule: any, value: any[], callback: any) => {
+          if (!value || value.length === 0) {
+            callback(new Error('请至少填写一行计划内容'))
+            return
+          }
+          
+          const hasValidRow = value.some(row => 
+            (row.summary && row.summary.trim() !== '') || 
+            (row.fileList && row.fileList.length > 0)
+          )
+          
+          if (!hasValidRow) {
+            callback(new Error('请至少在一行中填写工作内容或上传文件'))
+          } else {
+            callback()
+          }
+        },
+        trigger: 'blur'
+      }
+    ]
+
+    // 选择“否”时，额外校验延期相关字段
+    if (!progressForm.canFinishOnTime) {
       rules.planTime = [
         { required: true, message: '请选择预计完成时间', trigger: 'change' }
       ]
@@ -3135,7 +3134,7 @@ const getPlanEntryRecords = async (processInstanceId: string) => {
   try {
     console.log('[getPlanEntryRecords] 开始获取计划记录:', processInstanceId)
     
-    const planEntries: PlanEntryRespVO[] = await PlanEntryApi.list(processInstanceId) || []
+    const planEntries: PlanEntryRespVO[] = await PlanEntryApi.listByVersionType(processInstanceId, 'exec') || []
 
     console.log('[getPlanEntryRecords] 获取到计划记录:', planEntries.length, '条')
 
@@ -3230,7 +3229,7 @@ const loadImplementPlanContext = async (processInstanceId: string, targetUserId?
     implementPlanLoading.value = true
     console.log('[loadImplementPlanContext] 开始加载 implement_plan 上下文:', processInstanceId, targetUserId ? `用户ID: ${targetUserId}` : '所有用户')
     
-    const planEntries: PlanEntryRespVO[] = await PlanEntryApi.list(processInstanceId, targetUserId) || []
+    const planEntries: PlanEntryRespVO[] = await PlanEntryApi.listByVersionType(processInstanceId, 'exec', targetUserId) || []
 
     console.log('[loadImplementPlanContext] 获取到计划记录:', planEntries.length, '条')
 
@@ -4105,12 +4104,12 @@ const fillPlanRowsFromPlanEntries = async () => {
   }
   
   try {
-    console.log('🔍 [fillPlanRowsFromPlanEntries] 开始从新API获取计划记录')
+    console.log('🔍 [fillPlanRowsFromPlanEntries] 开始从新API获取计划记录（仅执行版）')
     
-    // 使用新的 PlanEntryApi.list 获取当前用户的计划记录
-    const planEntries: PlanEntryRespVO[] = await PlanEntryApi.list(processInstanceId, currentUserId) || []
+    // 使用新的 PlanEntryApi.listByVersionType 获取当前用户的执行版计划记录
+    const planEntries: PlanEntryRespVO[] = await PlanEntryApi.listByVersionType(processInstanceId, 'exec', currentUserId) || []
     
-    console.log('🔍 [fillPlanRowsFromPlanEntries] 获取到计划记录数量:', planEntries.length)
+    console.log('🔍 [fillPlanRowsFromPlanEntries] 获取到执行版计划记录数量:', planEntries.length)
     
     // 直接根据计划记录填充对应的计划行
     planEntries.forEach(entry => {
@@ -5062,12 +5061,12 @@ const buildAuditUserOptions = async (preserveSelection: boolean = false) => {
   }
   
   try {
-    console.log('🔍 [buildAuditUserOptions] 从新API获取所有计划记录')
+    console.log('🔍 [buildAuditUserOptions] 从新API获取所有执行版计划记录')
     
-    // 使用新的 PlanEntryApi.list 获取所有用户的计划记录
-    const planEntries: PlanEntryRespVO[] = await PlanEntryApi.list(processInstanceId) || []
+    // 使用新的 PlanEntryApi.listByVersionType 获取所有用户的执行版计划记录
+    const planEntries: PlanEntryRespVO[] = await PlanEntryApi.listByVersionType(processInstanceId, 'exec') || []
     
-    console.log('🔍 [buildAuditUserOptions] 获取到计划记录数量:', planEntries.length)
+    console.log('🔍 [buildAuditUserOptions] 获取到执行版计划记录数量:', planEntries.length)
     
     // 过滤出需要审核的记录（排除当前督办人自己的记录）
     const recordsToShow = planEntries.filter(entry => {
@@ -5204,10 +5203,10 @@ const refreshPlanRowsForSelectedUser = async () => {
   }
   
   try {
-    // 使用新的 PlanEntryApi.list 获取选中用户的计划记录
-    const planEntries: PlanEntryRespVO[] = await PlanEntryApi.list(processInstanceId, selectedAuditUserId.value) || []
+    // 使用新的 PlanEntryApi.listByVersionType 获取选中用户的执行版计划记录
+    const planEntries: PlanEntryRespVO[] = await PlanEntryApi.listByVersionType(processInstanceId, 'exec', selectedAuditUserId.value) || []
     
-    console.log('🔍 [refreshPlanRowsForSelectedUser] 获取到计划记录数量:', planEntries.length)
+    console.log('🔍 [refreshPlanRowsForSelectedUser] 获取到执行版计划记录数量:', planEntries.length)
     
     // 将计划记录填充到对应的计划行
     planEntries.forEach(entry => {
@@ -5697,53 +5696,38 @@ const getPlanSummaryForRecord = (record: any) => {
   return generatePlanSummary(planRows)
 }
 
-// 显示进度记录对应的全部计划
+// 显示进度记录对应的全部计划（严格按记录类型分流）
 const showViewAllPlansForRecord = async (record: any) => {
-  // 判断记录类型：如果是 implement_plan 执行进度记录
-  if (record.recordType === 'implement_plan' || isPlanLikeRecord(record)) {
-    // 如果当前用户是督办人，打开审核弹窗（可审核）
+  // implement_plan 执行进度记录：只看 exec
+  if (record.recordType === 'implement_plan') {
+    // 督办人：打开审核弹窗
     if (isCurrentUserSupervisor.value) {
       await openAuditDialog()
       return
     }
-    
-    // 如果当前用户不是督办人，打开查看弹窗（只读查看该用户的计划）
+
+    // 非督办：查看该用户的执行计划
     const targetUserId = record.targetUserId || record.creatorUserId
     const hasDataInTable = await showStructuredViewAllPlans(targetUserId, false)
-    
-    if (hasDataInTable) {
-      return
-    }
-    
-    // 兜底：生成整套计划并合并记录
+    if (hasDataInTable) return
+
+    // 兜底：从单行描述合并到整套期次进行展示
     let planRows = generatePlanRows()
     mergeSingleRecordIntoPlanRows(record, planRows)
     showViewAllPlansDialog(planRows)
     return
   }
-  
-  // 其他记录类型（如整套计划提交）：优先从表中读取，兜底使用 deptDetail 解析
-  if (shouldShowPlanSummary(record)) {
-    // upload_plan 节点：优先从表中读取整套计划（template 版本）
-    const targetUserId = record.targetUserId || record.creatorUserId
-    const hasDataInTable = await showStructuredViewAllPlans(targetUserId, true)
-    
-    // 如果表中有数据，已经打开弹窗，直接返回
-    if (hasDataInTable) {
-      return
-    }
-    
-    // 兜底：表中无数据时，从 deptDetail 还原（兼容历史数据）
-    console.log('🔍 [showViewAllPlansForRecord] 表中无数据，使用 deptDetail 兜底解析')
-    let planRows = parsePlanRowsFromDeptDetail(record.description)
-    planRows = ensureRowFilesFromAttachments(planRows, record.attachments || [], 'modal')
-    showViewAllPlansDialog(planRows)
-  } else {
-    // 其他情况：生成整套计划并合并记录
-    let planRows = generatePlanRows()
-    mergeSingleRecordIntoPlanRows(record, planRows)
-    showViewAllPlansDialog(planRows)
-  }
+
+  // 其余（如 upload_plan 记录）：只看 template
+  const targetUserId = record.targetUserId || record.creatorUserId
+  const hasDataInTable = await showStructuredViewAllPlans(targetUserId, true)
+  if (hasDataInTable) return
+
+  // 兜底：表中无数据时，从 deptDetail 还原模板
+  console.log('🔍 [showViewAllPlansForRecord] 表中无数据，使用 deptDetail 兜底解析')
+  let planRows = parsePlanRowsFromDeptDetail(record.description)
+  planRows = ensureRowFilesFromAttachments(planRows, record.attachments || [], 'modal')
+  showViewAllPlansDialog(planRows)
 }
 
 // 显示结构化的全部计划（implement_plan 节点专用）
@@ -5770,28 +5754,12 @@ const showStructuredViewAllPlans = async (targetUserId?: number, forceTemplate: 
     
     if (forceTemplate || isHistoricalNode) {
       // 强制查询template版本（整套计划）或历史节点
-      try {
-        planEntries = await PlanEntryApi.listByVersionType(processInstanceId, 'template') || []
-        console.log('🔍 [showStructuredViewAllPlans] 获取到template版本计划记录:', planEntries.length, '条')
-      } catch (error) {
-        console.warn('🔍 [showStructuredViewAllPlans] 获取template版本失败，尝试获取所有记录:', error)
-        planEntries = await PlanEntryApi.list(processInstanceId, targetUserId) || []
-      }
+      planEntries = await PlanEntryApi.listByVersionType(processInstanceId, 'template', targetUserId) || []
+      console.log('🔍 [showStructuredViewAllPlans] 获取到template版本计划记录:', planEntries.length, '条')
     } else {
-      // 当前活动节点：查询exec版本（执行阶段的记录）
-      try {
-        planEntries = await PlanEntryApi.listByVersionType(processInstanceId, 'exec') || []
-        console.log('🔍 [showStructuredViewAllPlans] 获取到exec版本计划记录:', planEntries.length, '条')
-        
-        // 如果exec版本为空，兜底查询所有记录
-        if (planEntries.length === 0) {
-          planEntries = await PlanEntryApi.list(processInstanceId, targetUserId) || []
-          console.log('🔍 [showStructuredViewAllPlans] exec版本为空，兜底获取所有记录:', planEntries.length, '条')
-        }
-      } catch (error) {
-        console.warn('🔍 [showStructuredViewAllPlans] 获取exec版本失败，尝试获取所有记录:', error)
-        planEntries = await PlanEntryApi.list(processInstanceId, targetUserId) || []
-      }
+      // 当前活动节点：仅查询 exec 版本
+      planEntries = await PlanEntryApi.listByVersionType(processInstanceId, 'exec', targetUserId) || []
+      console.log('🔍 [showStructuredViewAllPlans] 获取到exec版本计划记录:', planEntries.length, '条')
     }
     
     // 如果指定了targetUserId，过滤只保留该用户的记录
@@ -7008,8 +6976,10 @@ const handleCanFinishOnTimeChange = (value: boolean) => {
       recalcPlanRowsStatus()
     })
   } else {
-    // 选择“否”时，清空计划表格
-    progressForm.planRows = []
+    // 选择“否”时，仍保留计划表格，方便统一上传整套计划
+    nextTick(() => {
+      recalcPlanRowsStatus()
+    })
   }
 }
 
@@ -7329,8 +7299,8 @@ const submitAddProgress = async () => {
     let didSubmitViaNewApi = false
     
     if (isUploadPlanNode.value) {
-      // upload_plan 节点：批量提交整套计划到 supervision_plan_entry
-      if (progressForm.canFinishOnTime && progressForm.planRows.length > 0) {
+      // upload_plan 节点：始终批量提交整套计划到 supervision_plan_entry
+      if (progressForm.planRows.length > 0) {
         // 获取当前用户信息
         const currentUser = userStore.getUser
         if (!currentUser) {
@@ -7391,8 +7361,11 @@ const submitAddProgress = async () => {
         didSubmitViaNewApi = true
         
         console.log('[submitAddProgress] 批量提交模板版计划成功:', batchSubmitData)
-      } else {
-        // 选择"否"时的原有逻辑，构造旧接口数据
+      }
+
+      // 若选择"否"或存在协办单位变更，则额外调用旧接口记录延期信息
+      if (!progressForm.canFinishOnTime || progressForm.coopUnitsChanged) {
+        // 选择"否"及协办变更时的原有逻辑，构造旧接口数据
         progressData.canFinishOnTime = progressForm.canFinishOnTime
         progressData.delayReason = progressForm.delayReason || undefined
         progressData.coopUnitsChanged = progressForm.coopUnitsChanged
@@ -7402,10 +7375,16 @@ const submitAddProgress = async () => {
           progressData.tempCoDeptIds = editForm.value.collaborateDeptIds
         }
         
-        progressData.deptDetail = progressForm.deptDetail
+        // 构造 deptDetail：若不能按时完成，增加前缀"已上传工作计划，但需要延期"
+        const deptDetailPrefix = !progressForm.canFinishOnTime ? '已上传工作计划，但需要延期，' : ''
+        const deptDetailBase = progressForm.deptDetail?.trim()
+        progressData.deptDetail = deptDetailBase ? `${deptDetailPrefix}；${deptDetailBase}` : deptDetailPrefix
+        
         // 将 planTime 转为时间戳字符串，避免后端解析错误
         progressData.planTime = progressForm.planTime ? String(new Date(progressForm.planTime).getTime()) : undefined
         progressData.fileList = fileList.length > 0 ? fileList : undefined
+
+        await OrderApi.insertSupervisionOrderTaskNew(progressData)
       }
     } else if (isImplementPlanNode.value) {
       // implement_plan 节点：使用新的计划记录接口
@@ -7501,17 +7480,15 @@ const submitAddProgress = async () => {
     
     // 根据节点类型更新行状态
     if (isUploadPlanNode.value) {
-      // upload_plan：标记所有行为已提交
-      if (progressForm.canFinishOnTime) {
-        progressForm.planRows.forEach(row => {
-          row.submitted = true
-          row.submittedAt = Date.now()
-          row.status = 'submitted'
-        })
-        
-        // 保存整套计划到本地缓存
-        savePlanRowsToCache(processInstanceId, progressForm.planRows)
-      }
+      // upload_plan：标记所有行为已提交（无论是否能按时完成）
+      progressForm.planRows.forEach(row => {
+        row.submitted = true
+        row.submittedAt = Date.now()
+        row.status = 'submitted'
+      })
+      
+      // 保存整套计划到本地缓存
+      savePlanRowsToCache(processInstanceId, progressForm.planRows)
     } else {
       // implement_plan：仅标记当前提交的行
       const targetRow = findFirstPendingRow()
