@@ -100,7 +100,7 @@
                 
                 <!-- 单行计划记录（implement_plan）也显示查看全部计划链接 -->
                 <div v-if="isPlanLikeRecord(progressRecords[0])" class="single-plan-view-all">
-                  <el-link type="primary" @click="handleViewAllPlansClick">
+                  <el-link type="primary" @click="showViewAllPlansForRecord(progressRecords[0])">
                     查看全部计划
                   </el-link>
                 </div>
@@ -589,7 +589,7 @@
                         
                         <!-- 单行计划记录（implement_plan）也显示查看全部计划链接 -->
                         <div v-if="isPlanLikeRecord(record)" class="single-plan-view-all">
-                          <el-link type="primary" @click="handleViewAllPlansClick">
+                          <el-link type="primary" @click="showViewAllPlansForRecord(record)">
                             查看全部计划
                           </el-link>
                         </div>
@@ -1263,7 +1263,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed, watch, reactive, nextTick, shallowRef } from 'vue'
 import { useRoute } from 'vue-router'
-import { OrderApi, LeaderRemarkApi, MarkReadApi, PlanEntryApi, type OrderRespVO, type OrderSaveReqVO, type OrderWorkflowUpdateReqVO, type AttachmentFileInfo, type AttachmentRespVO, type PlanEntryRespVO, type PlanEntrySubmitReqVO, type PlanEntryAuditReqVO } from '@/api/supervision'
+import { OrderApi, LeaderRemarkApi, MarkReadApi, PlanEntryApi, type OrderRespVO, type OrderSaveReqVO, type OrderWorkflowUpdateReqVO, type AttachmentFileInfo, type AttachmentRespVO, type PlanEntryRespVO, type PlanEntrySubmitReqVO, type PlanEntryAuditReqVO, type PlanEntryBatchSubmitReqVO, type PlanEntryBatchItem } from '@/api/supervision'
 import { getSimpleDeptList, getDept, type DeptVO } from '@/api/system/dept'
 import { EditPen, ArrowRight, InfoFilled, Select, Close, StarFilled, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 import { getSimpleUserList, type UserVO } from '@/api/system/user'
@@ -4242,16 +4242,19 @@ const approveEntry = async (entry: any) => {
     
     ElMessage.success(`${entry.date} 计划审核通过`)
     
-    // 刷新数据
+    // 刷新数据（保留当前用户选择）
     if (processInstanceId) {
       await getProgressRecords(processInstanceId, true)
       
-      // 刷新结构化上下文
-      if (isImplementPlanNode.value) {
-        await loadImplementPlanContext(processInstanceId)
+      // 刷新结构化上下文（传入当前审核的用户ID）
+      if (isImplementPlanNode.value && entry.targetUserId) {
+        await loadImplementPlanContext(processInstanceId, entry.targetUserId)
       }
       
-      await buildAuditUserOptions()
+      // 重建用户选项列表，保留当前选择
+      await buildAuditUserOptions(true)
+      
+      // 刷新当前用户的表格数据
       if (selectedAuditUserId.value) {
         await refreshPlanRowsForSelectedUser()
       }
@@ -4330,16 +4333,19 @@ const rejectEntry = async (entry: any) => {
     
     ElMessage.success(`${entry.date} 计划已退回并顺延到下一周期`)
     
-    // 刷新数据
+    // 刷新数据（保留当前用户选择）
     if (processInstanceId) {
       await getProgressRecords(processInstanceId, true)
       
-      // 刷新结构化上下文
-      if (isImplementPlanNode.value) {
-        await loadImplementPlanContext(processInstanceId)
+      // 刷新结构化上下文（传入当前审核的用户ID）
+      if (isImplementPlanNode.value && entry.targetUserId) {
+        await loadImplementPlanContext(processInstanceId, entry.targetUserId)
       }
       
-      await buildAuditUserOptions()
+      // 重建用户选项列表，保留当前选择
+      await buildAuditUserOptions(true)
+      
+      // 刷新当前用户的表格数据
       if (selectedAuditUserId.value) {
         await refreshPlanRowsForSelectedUser()
       }
@@ -4387,85 +4393,47 @@ const approveRow = async (index: number) => {
     
     const processInstanceId = props.id?.toString() || route.query.processInstanceId as string || route.params.id as string || route.query.id as string
     
-    // implement_plan 节点：使用新的审核接口
-    if (isImplementPlanNode.value) {
-      // 解析真实的用户ID
-      let numericUserId: number = 0
-      
-      if (typeof selectedAuditUserId.value === 'number') {
-        numericUserId = selectedAuditUserId.value
-      } else if (typeof selectedAuditUserId.value === 'string' && /^\d+$/.test(selectedAuditUserId.value)) {
-        numericUserId = parseInt(selectedAuditUserId.value, 10)
-      } else {
-        const selectedOption = auditUserOptions.value.find(option => option.value === selectedAuditUserId.value)
-        if (selectedOption && selectedOption.userId > 0) {
-          numericUserId = selectedOption.userId
-        }
-      }
-      
-      if (numericUserId <= 0) {
-        ElMessage.error('无法识别办理人ID，请重新选择')
-        return
-      }
-      
-      // 调用新的审核接口
-      const auditReqVO: PlanEntryAuditReqVO = {
-        processInstanceId: processInstanceId || '',
-        targetUserId: numericUserId,
-        periodDate: row.date,
-        decision: 1, // 通过
-        remark: `审核通过 - ${selectedAuditUserName.value}（${selectedAuditUserDept.value}）`,
-        delayNext: false
-      }
-      
-      await PlanEntryApi.audit(auditReqVO)
-      
-      console.log('[approveRow] 审核通过成功:', auditReqVO)
+    // 其他节点：使用旧接口
+    // 解析真实的用户ID
+    let numericUserId: number = 0
+    
+    if (typeof selectedAuditUserId.value === 'number') {
+      numericUserId = selectedAuditUserId.value
+    } else if (typeof selectedAuditUserId.value === 'string' && /^\d+$/.test(selectedAuditUserId.value)) {
+      numericUserId = parseInt(selectedAuditUserId.value, 10)
     } else {
-      // 其他节点：保持原有逻辑
-      // 解析真实的用户ID（与审核不通过逻辑保持一致）
-      let numericUserId: number = 0
-      
-      if (typeof selectedAuditUserId.value === 'number') {
-        numericUserId = selectedAuditUserId.value
-      } else if (typeof selectedAuditUserId.value === 'string' && /^\d+$/.test(selectedAuditUserId.value)) {
-        numericUserId = parseInt(selectedAuditUserId.value, 10)
-      } else {
-        const selectedOption = auditUserOptions.value.find(option => option.value === selectedAuditUserId.value)
-        if (selectedOption && selectedOption.userId > 0) {
-          numericUserId = selectedOption.userId
-        }
+      const selectedOption = auditUserOptions.value.find(option => option.value === selectedAuditUserId.value)
+      if (selectedOption && selectedOption.userId > 0) {
+        numericUserId = selectedOption.userId
       }
-      
-      const auditData = {
-        processInstanceId: processInstanceId || '',
-        deptDetail: `[审核通过] ${row.date}（用户：${selectedAuditUserName.value}，部门：${selectedAuditUserDept.value}）`,
-        fileList: [],
-        // 结构化字段，确保审核结果准确存储和索引
-        recordType: 'audit',
-        decision: 1, // approved
-        targetUserId: numericUserId,
-        periodDate: row.date
-      }
-      
-      await OrderApi.insertSupervisionOrderTaskNew(auditData)
     }
+    
+    const auditData = {
+      processInstanceId: processInstanceId || '',
+      deptDetail: `[审核通过] ${row.date}（用户：${selectedAuditUserName.value}，部门：${selectedAuditUserDept.value}）`,
+      fileList: [],
+      // 结构化字段，确保审核结果准确存储和索引
+      recordType: 'audit',
+      decision: 1, // approved
+      targetUserId: numericUserId,
+      periodDate: row.date
+    }
+    
+    await OrderApi.insertSupervisionOrderTaskNew(auditData)
     
     ElMessage.success(`${row.date} 计划审核通过`)
     
     // 本地更新该行的审核状态
     row.auditDecision = 'approved'
     
-    // 强制刷新最新进展，确保审核结果和状态同步
+    // 强制刷新最新进展
     if (processInstanceId) {
       await getProgressRecords(processInstanceId, true)
       
-      // 如果是 implement_plan 节点，同时刷新结构化上下文
-      if (isImplementPlanNode.value) {
-        await loadImplementPlanContext(processInstanceId)
-      }
+      // 重建用户选项列表，保留当前选择
+      await buildAuditUserOptions(true)
       
-      await buildAuditUserOptions()
+      // 刷新当前用户的表格数据
       if (selectedAuditUserId.value) {
         await refreshPlanRowsForSelectedUser()
       }
@@ -4515,133 +4483,72 @@ const rejectRow = async (index: number) => {
       
       const processInstanceId = props.id?.toString() || route.query.processInstanceId as string || route.params.id as string || route.query.id as string
       
-      // implement_plan 节点：使用新的审核接口
-      if (isImplementPlanNode.value) {
-        // 校验必要参数
-        if (!orderDetail.value?.reportFrequency) {
-          ElMessage.error('督办单未设置汇报频次，无法进行顺延操作，请联系管理员')
-          return
-        }
-        
-        if (!orderDetail.value?.deadline) {
-          ElMessage.error('督办单未设置截止日期，无法进行顺延操作，请联系管理员')
-          return
-        }
-        
-        // 解析真实的用户ID
-        let numericUserId: number = 0
-        
-        if (typeof selectedAuditUserId.value === 'number') {
-          numericUserId = selectedAuditUserId.value
-        } else if (typeof selectedAuditUserId.value === 'string' && /^\d+$/.test(selectedAuditUserId.value)) {
-          numericUserId = parseInt(selectedAuditUserId.value, 10)
-        } else {
-          const selectedOption = auditUserOptions.value.find(option => option.value === selectedAuditUserId.value)
-          if (selectedOption && selectedOption.userId > 0) {
-            numericUserId = selectedOption.userId
-          }
-        }
-        
-        if (numericUserId <= 0) {
-          ElMessage.error('无法识别办理人ID，请重新选择')
-          return
-        }
-        
-        // 格式化本地日期（避免 toISOString 导致的时区问题）
-        const formatLocalDate = (timestamp: number) => {
-          const d = new Date(timestamp)
-          const year = d.getFullYear()
-          const month = String(d.getMonth() + 1).padStart(2, '0')
-          const day = String(d.getDate()).padStart(2, '0')
-          return `${year}-${month}-${day}`
-        }
-        
-        // 统一改为新审核接口
-        const auditReqVO: PlanEntryAuditReqVO = {
-          processInstanceId: processInstanceId || '',
-          targetUserId: numericUserId,
-          periodDate: row.date,
-          decision: 2, // 不通过
-          remark: `审核不通过并顺延 - ${selectedAuditUserName.value}（${selectedAuditUserDept.value}）`,
-          delayNext: true,
-          reportFrequency: orderDetail.value.reportFrequency,
-          deadline: formatLocalDate(orderDetail.value.deadline)
-        }
-        await PlanEntryApi.audit(auditReqVO)
-        
-        console.log('[rejectRow] 审核不通过成功:', auditReqVO)
+      // 其他节点：使用旧接口
+      // 校验必要参数
+      if (!orderDetail.value?.reportFrequency) {
+        ElMessage.error('督办单未设置汇报频次，无法进行顺延操作，请联系管理员')
+        return
+      }
+      
+      if (!orderDetail.value?.deadline) {
+        ElMessage.error('督办单未设置截止日期，无法进行顺延操作，请联系管理员')
+        return
+      }
+      
+      // 解析真实的用户ID
+      let numericUserId: number = 0
+      
+      if (typeof selectedAuditUserId.value === 'number') {
+        numericUserId = selectedAuditUserId.value
+      } else if (typeof selectedAuditUserId.value === 'string' && /^\d+$/.test(selectedAuditUserId.value)) {
+        numericUserId = parseInt(selectedAuditUserId.value, 10)
       } else {
-        // 其他节点：保持原有逻辑
-        // 校验必要参数
-        if (!orderDetail.value?.reportFrequency) {
-          ElMessage.error('督办单未设置汇报频次，无法进行顺延操作，请联系管理员')
-          return
+        const selectedOption = auditUserOptions.value.find(option => option.value === selectedAuditUserId.value)
+        if (selectedOption && selectedOption.userId > 0) {
+          numericUserId = selectedOption.userId
         }
+      }
+      
+      // 验证用户ID是否有效
+      if (numericUserId <= 0) {
+        ElMessage.error('无法识别上传人ID，无法执行审核不通过操作。请让该用户重新提交一次或联系管理员处理。')
+        return
+      }
+      
+      // 格式化本地日期（避免 toISOString 导致的时区问题）
+      const formatLocalDate = (timestamp: number) => {
+        const d = new Date(timestamp)
+        const year = d.getFullYear()
+        const month = String(d.getMonth() + 1).padStart(2, '0')
+        const day = String(d.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+      }
+      
+      // 使用新审核接口
+      const auditReqVO: PlanEntryAuditReqVO = {
+        processInstanceId: processInstanceId || '',
+        targetUserId: numericUserId,
+        periodDate: row.date,
+        decision: 2, // 不通过
+        remark: `审核不通过并顺延 - ${selectedAuditUserName.value}（${selectedAuditUserDept.value}）`,
+        delayNext: true,
+        reportFrequency: orderDetail.value.reportFrequency,
+        deadline: formatLocalDate(orderDetail.value.deadline)
+      }
+      await PlanEntryApi.audit(auditReqVO)
+      
+      ElMessage.success(`${row.date} 计划已退回并顺延到下一周期`)
+      
+      // 刷新进度记录和用户选项（强制拉取全部记录，保留当前用户选择）
+      if (processInstanceId) {
+        await getProgressRecords(processInstanceId, true)
         
-        if (!orderDetail.value?.deadline) {
-          ElMessage.error('督办单未设置截止日期，无法进行顺延操作，请联系管理员')
-          return
-        }
+        // 重建用户选项列表，保留当前选择
+        await buildAuditUserOptions(true)
         
-        // 解析真实的用户ID
-        let numericUserId: number = 0
-        
-        // 如果selectedAuditUserId是纯数字字符串，直接转换
-        if (typeof selectedAuditUserId.value === 'number') {
-          numericUserId = selectedAuditUserId.value
-        } else if (typeof selectedAuditUserId.value === 'string' && /^\d+$/.test(selectedAuditUserId.value)) {
-          numericUserId = parseInt(selectedAuditUserId.value, 10)
-        } else {
-          // 否则从选项中查找对应的userId
-          const selectedOption = auditUserOptions.value.find(option => option.value === selectedAuditUserId.value)
-          if (selectedOption && selectedOption.userId > 0) {
-            numericUserId = selectedOption.userId
-          }
-        }
-        
-        // 验证用户ID是否有效
-        if (numericUserId <= 0) {
-          ElMessage.error('无法识别上传人ID，无法执行审核不通过操作。请让该用户重新提交一次或联系管理员处理。')
-          return
-        }
-        
-        // 格式化本地日期（避免 toISOString 导致的时区问题）
-        const formatLocalDate = (timestamp: number) => {
-          const d = new Date(timestamp)
-          const year = d.getFullYear()
-          const month = String(d.getMonth() + 1).padStart(2, '0')
-          const day = String(d.getDate()).padStart(2, '0')
-          return `${year}-${month}-${day}`
-        }
-        
-        // 统一改为新审核接口
-        const auditReqVO: PlanEntryAuditReqVO = {
-          processInstanceId: processInstanceId || '',
-          targetUserId: numericUserId,
-          periodDate: row.date,
-          decision: 2, // 不通过
-          remark: `审核不通过并顺延 - ${selectedAuditUserName.value}（${selectedAuditUserDept.value}）`,
-          delayNext: true,
-          reportFrequency: orderDetail.value.reportFrequency,
-          deadline: formatLocalDate(orderDetail.value.deadline)
-        }
-        await PlanEntryApi.audit(auditReqVO)
-        
-        ElMessage.success(`${row.date} 计划已退回并顺延到下一周期`)
-        
-        // 刷新进度记录和用户选项（强制拉取全部记录）
-        if (processInstanceId) {
-          await getProgressRecords(processInstanceId, true)
-          
-          // 如果是 implement_plan 节点，同时刷新结构化上下文
-          if (isImplementPlanNode.value) {
-            await loadImplementPlanContext(processInstanceId)
-          }
-          
-          await buildAuditUserOptions()
-          if (selectedAuditUserId.value) {
-            await refreshPlanRowsForSelectedUser()
-          }
+        // 刷新当前用户的表格数据
+        if (selectedAuditUserId.value) {
+          await refreshPlanRowsForSelectedUser()
         }
       }
     } else {
@@ -4993,8 +4900,9 @@ const recalcPlanRowsStatus = () => {
 }
 
 // 查找第一个可提交的行（implement_plan 节点用）
+// 包含 pending 和 pending_delay（顺延占位）状态
 const findFirstPendingRow = () => {
-  return progressForm.planRows.find(row => row.status === 'pending')
+  return progressForm.planRows.find(row => row.status === 'pending' || row.status === 'pending_delay')
 }
 
 // 判断行是否禁用
@@ -5003,11 +4911,11 @@ const getRowDisabled = (row: any, index: number) => {
     // upload_plan 节点：所有行都可编辑（除非已提交），不受时间限制
     return row.status === 'submitted'
   } else {
-    // implement_plan 节点：仅第一个 pending 行可编辑
+    // implement_plan 节点：仅第一个 pending 或 pending_delay 行可编辑
     if (row.status === 'submitted' || row.status === 'waiting') {
       return true
     }
-    if (row.status === 'pending') {
+    if (row.status === 'pending' || row.status === 'pending_delay') {
       return !isFirstPendingRow(row, index)
     }
     return true
@@ -5120,14 +5028,19 @@ const loadPlanRowsFromCache = (processInstanceId: string) => {
 }
 
 // 构建审核用户选项列表（新版：基于 PlanEntryApi.list）
-const buildAuditUserOptions = async () => {
-  console.log('🔍 [buildAuditUserOptions] 开始构建审核用户选项')
+const buildAuditUserOptions = async (preserveSelection: boolean = false) => {
+  console.log('🔍 [buildAuditUserOptions] 开始构建审核用户选项, preserveSelection:', preserveSelection)
+  
+  // 保存当前选择
+  const previousUserId = selectedAuditUserId.value
   
   // 清空现有数据
   auditUserOptions.value = []
-  selectedAuditUserId.value = ''
-  selectedAuditUserName.value = ''
-  selectedAuditUserDept.value = ''
+  if (!preserveSelection) {
+    selectedAuditUserId.value = ''
+    selectedAuditUserName.value = ''
+    selectedAuditUserDept.value = ''
+  }
   
   const processInstanceId = props.id?.toString() || 
                            route.query.processInstanceId as string || 
@@ -5223,17 +5136,44 @@ const buildAuditUserOptions = async () => {
       return a.nickname.localeCompare(b.nickname)
     })
     
-    // 默认选中第一个有待审核记录的用户，如果没有则选中第一个
-    const firstWithPending = auditUserOptions.value.find(opt => opt.count > 0)
-    const firstOption = firstWithPending || auditUserOptions.value[0]
-    
-    if (firstOption) {
-      selectedAuditUserId.value = firstOption.value
-      selectedAuditUserName.value = firstOption.nickname
-      selectedAuditUserDept.value = firstOption.deptName
+    // 选择逻辑：如果需要保留选择，优先恢复之前的用户
+    if (preserveSelection && previousUserId) {
+      const previousOption = auditUserOptions.value.find(opt => 
+        String(opt.value) === String(previousUserId)
+      )
+      
+      if (previousOption) {
+        // 之前选中的用户仍在列表中，保持选择
+        selectedAuditUserId.value = previousOption.value
+        selectedAuditUserName.value = previousOption.nickname
+        selectedAuditUserDept.value = previousOption.deptName
+        console.log('🔍 [buildAuditUserOptions] 保留之前的选择:', previousOption.nickname)
+      } else {
+        // 之前选中的用户已不在列表中（可能已全部审核完），选择下一个有待审的用户
+        const firstWithPending = auditUserOptions.value.find(opt => opt.count > 0)
+        const firstOption = firstWithPending || auditUserOptions.value[0]
+        
+        if (firstOption) {
+          selectedAuditUserId.value = firstOption.value
+          selectedAuditUserName.value = firstOption.nickname
+          selectedAuditUserDept.value = firstOption.deptName
+          console.log('🔍 [buildAuditUserOptions] 之前的用户已不在列表，切换到:', firstOption.nickname)
+        }
+      }
+    } else {
+      // 不保留选择，默认选中第一个有待审核记录的用户
+      const firstWithPending = auditUserOptions.value.find(opt => opt.count > 0)
+      const firstOption = firstWithPending || auditUserOptions.value[0]
+      
+      if (firstOption) {
+        selectedAuditUserId.value = firstOption.value
+        selectedAuditUserName.value = firstOption.nickname
+        selectedAuditUserDept.value = firstOption.deptName
+      }
     }
     
     console.log('🔍 [buildAuditUserOptions] 构建完成，用户选项:', auditUserOptions.value.map(opt => `${opt.nickname}(待审核:${opt.count})`))
+    console.log('🔍 [buildAuditUserOptions] 当前选中:', selectedAuditUserName.value)
   } catch (error) {
     console.error('🔍 [buildAuditUserOptions] 获取计划记录失败:', error)
     // 静默失败，不影响其他功能
@@ -5759,36 +5699,56 @@ const getPlanSummaryForRecord = (record: any) => {
 
 // 显示进度记录对应的全部计划
 const showViewAllPlansForRecord = async (record: any) => {
-  // 如果是督办人在 implement_plan 节点，打开审核弹窗
-  if (isImplementPlanNode.value && isCurrentUserSupervisor.value) {
-    await openAuditDialog()
-    return
-  }
-  
-  // 直接根据记录类型处理，不使用缓存（避免展示时被当前用户缓存污染）
-  let planRows = []
-  
-  if (isImplementPlanNode.value) {
-    // implement_plan 节点：使用结构化数据源
-    await showStructuredViewAllPlans()
-    return
-  } else if (shouldShowPlanSummary(record)) {
-    // upload_plan 节点：从 deptDetail 还原多行计划
-    planRows = parsePlanRowsFromDeptDetail(record.description)
-    // 为计划行分配附件（弹窗模式）
-    planRows = ensureRowFilesFromAttachments(planRows, record.attachments || [], 'modal')
-  } else if (isPlanLikeRecord(record)) {
-    // 其他节点的单行记录：生成整套计划，然后合并单行记录
-    planRows = generatePlanRows()
-    // 将单行记录合并到对应日期的行
+  // 判断记录类型：如果是 implement_plan 执行进度记录
+  if (record.recordType === 'implement_plan' || isPlanLikeRecord(record)) {
+    // 如果当前用户是督办人，打开审核弹窗（可审核）
+    if (isCurrentUserSupervisor.value) {
+      await openAuditDialog()
+      return
+    }
+    
+    // 如果当前用户不是督办人，打开查看弹窗（只读查看该用户的计划）
+    const targetUserId = record.targetUserId || record.creatorUserId
+    const hasDataInTable = await showStructuredViewAllPlans(targetUserId, false)
+    
+    if (hasDataInTable) {
+      return
+    }
+    
+    // 兜底：生成整套计划并合并记录
+    let planRows = generatePlanRows()
     mergeSingleRecordIntoPlanRows(record, planRows)
+    showViewAllPlansDialog(planRows)
+    return
   }
   
-  showViewAllPlansDialog(planRows)
+  // 其他记录类型（如整套计划提交）：优先从表中读取，兜底使用 deptDetail 解析
+  if (shouldShowPlanSummary(record)) {
+    // upload_plan 节点：优先从表中读取整套计划（template 版本）
+    const targetUserId = record.targetUserId || record.creatorUserId
+    const hasDataInTable = await showStructuredViewAllPlans(targetUserId, true)
+    
+    // 如果表中有数据，已经打开弹窗，直接返回
+    if (hasDataInTable) {
+      return
+    }
+    
+    // 兜底：表中无数据时，从 deptDetail 还原（兼容历史数据）
+    console.log('🔍 [showViewAllPlansForRecord] 表中无数据，使用 deptDetail 兜底解析')
+    let planRows = parsePlanRowsFromDeptDetail(record.description)
+    planRows = ensureRowFilesFromAttachments(planRows, record.attachments || [], 'modal')
+    showViewAllPlansDialog(planRows)
+  } else {
+    // 其他情况：生成整套计划并合并记录
+    let planRows = generatePlanRows()
+    mergeSingleRecordIntoPlanRows(record, planRows)
+    showViewAllPlansDialog(planRows)
+  }
 }
 
 // 显示结构化的全部计划（implement_plan 节点专用）
-const showStructuredViewAllPlans = async () => {
+// 返回值：boolean - 是否成功从表中获取到数据
+const showStructuredViewAllPlans = async (targetUserId?: number, forceTemplate: boolean = false): Promise<boolean> => {
   const processInstanceId = props.id?.toString() || 
                            route.query.processInstanceId as string || 
                            route.params.id as string || 
@@ -5796,11 +5756,11 @@ const showStructuredViewAllPlans = async () => {
   
   if (!processInstanceId) {
     console.log('🔍 [showStructuredViewAllPlans] 无法获取流程实例ID')
-    return
+    return false
   }
   
   try {
-    console.log('🔍 [showStructuredViewAllPlans] 开始获取结构化计划数据')
+    console.log('🔍 [showStructuredViewAllPlans] 开始获取结构化计划数据, targetUserId:', targetUserId, 'forceTemplate:', forceTemplate)
     
     // 根据节点类型决定查询哪个版本的计划记录
     let planEntries: PlanEntryRespVO[] = []
@@ -5808,14 +5768,14 @@ const showStructuredViewAllPlans = async () => {
     // 判断当前是否为历史节点（通过检查是否有运行中的任务来判断）
     const isHistoricalNode = !fullActivityNodes.value.some(node => node.status === 1)
     
-    if (isHistoricalNode) {
-      // 历史节点：优先查询template版本
+    if (forceTemplate || isHistoricalNode) {
+      // 强制查询template版本（整套计划）或历史节点
       try {
         planEntries = await PlanEntryApi.listByVersionType(processInstanceId, 'template') || []
         console.log('🔍 [showStructuredViewAllPlans] 获取到template版本计划记录:', planEntries.length, '条')
       } catch (error) {
         console.warn('🔍 [showStructuredViewAllPlans] 获取template版本失败，尝试获取所有记录:', error)
-        planEntries = await PlanEntryApi.list(processInstanceId) || []
+        planEntries = await PlanEntryApi.list(processInstanceId, targetUserId) || []
       }
     } else {
       // 当前活动节点：查询exec版本（执行阶段的记录）
@@ -5825,16 +5785,28 @@ const showStructuredViewAllPlans = async () => {
         
         // 如果exec版本为空，兜底查询所有记录
         if (planEntries.length === 0) {
-          planEntries = await PlanEntryApi.list(processInstanceId) || []
+          planEntries = await PlanEntryApi.list(processInstanceId, targetUserId) || []
           console.log('🔍 [showStructuredViewAllPlans] exec版本为空，兜底获取所有记录:', planEntries.length, '条')
         }
       } catch (error) {
         console.warn('🔍 [showStructuredViewAllPlans] 获取exec版本失败，尝试获取所有记录:', error)
-        planEntries = await PlanEntryApi.list(processInstanceId) || []
+        planEntries = await PlanEntryApi.list(processInstanceId, targetUserId) || []
       }
     }
     
+    // 如果指定了targetUserId，过滤只保留该用户的记录
+    if (targetUserId) {
+      planEntries = planEntries.filter(entry => entry.targetUserId === targetUserId)
+      console.log('🔍 [showStructuredViewAllPlans] 过滤后只保留用户', targetUserId, '的记录:', planEntries.length, '条')
+    }
+    
     console.log('🔍 [showStructuredViewAllPlans] 获取到计划记录数量:', planEntries.length)
+    
+    // 如果没有数据，返回 false 让调用方使用兜底方案
+    if (planEntries.length === 0) {
+      console.log('🔍 [showStructuredViewAllPlans] 表中无数据，返回 false')
+      return false
+    }
     
     // 生成基础计划行
     const planRows = generatePlanRows()
@@ -5849,39 +5821,55 @@ const showStructuredViewAllPlans = async () => {
       userPlanMap.get(userId)!.push(entry)
     })
     
-    // 为每个计划行填充所有用户的数据
+    // 为每个计划行填充数据
     planRows.forEach(row => {
-      row.userPlans = []
       row.hasAnyContent = false
       
-      // 遍历所有用户的计划记录
-      userPlanMap.forEach((userEntries, userId) => {
-        const matchingEntry = userEntries.find(entry => normalizePeriodDate(entry.periodDate) === row.date)
+      if (forceTemplate) {
+        // 整套计划（template）：使用单用户模式，不设置 userPlans
+        // 这样模板会走单用户渲染分支，呈现简洁样式
+        userPlanMap.forEach((userEntries, userId) => {
+          const matchingEntry = userEntries.find(entry => normalizePeriodDate(entry.periodDate) === row.date)
+          
+          if (matchingEntry) {
+            row.summary = matchingEntry.summary || ''
+            row.fileList = parseAttachmentInfo(matchingEntry.attachmentInfo) || []
+            row.hasAnyContent = Boolean(row.summary) || row.fileList.length > 0
+          }
+        })
+      } else {
+        // 执行进度（exec）：使用多用户模式，设置 userPlans
+        row.userPlans = []
         
-        if (matchingEntry) {
-          const userPlan = {
-            userId: matchingEntry.targetUserId,
-            userName: matchingEntry.targetUserName,
-            deptName: matchingEntry.targetDeptName,
-            summary: matchingEntry.summary || '',
-            status: matchingEntry.status,
-            statusDisplay: matchingEntry.statusDisplay,
-            fileList: parseAttachmentInfo(matchingEntry.attachmentInfo) || [],
-            isDelayed: matchingEntry.isDelayedPlaceholder || false,
-            createTime: matchingEntry.createTime,
-            updateTime: matchingEntry.updateTime
-          }
+        // 遍历所有用户的计划记录
+        userPlanMap.forEach((userEntries, userId) => {
+          const matchingEntry = userEntries.find(entry => normalizePeriodDate(entry.periodDate) === row.date)
           
-          row.userPlans.push(userPlan)
-          
-          if (userPlan.summary || userPlan.fileList.length > 0) {
-            row.hasAnyContent = true
+          if (matchingEntry) {
+            const userPlan = {
+              userId: matchingEntry.targetUserId,
+              userName: matchingEntry.targetUserName,
+              deptName: matchingEntry.targetDeptName,
+              summary: matchingEntry.summary || '',
+              status: matchingEntry.status,
+              statusDisplay: matchingEntry.statusDisplay,
+              fileList: parseAttachmentInfo(matchingEntry.attachmentInfo) || [],
+              isDelayed: matchingEntry.isDelayedPlaceholder || false,
+              createTime: matchingEntry.createTime,
+              updateTime: matchingEntry.updateTime
+            }
+            
+            row.userPlans.push(userPlan)
+            
+            if (userPlan.summary || userPlan.fileList.length > 0) {
+              row.hasAnyContent = true
+            }
           }
-        }
-      })
-      
-      // 按用户名排序
-      row.userPlans.sort((a, b) => a.userName.localeCompare(b.userName))
+        })
+        
+        // 按用户名排序
+        row.userPlans.sort((a, b) => a.userName.localeCompare(b.userName))
+      }
     })
     
     // 只显示有内容的行
@@ -5890,9 +5878,11 @@ const showStructuredViewAllPlans = async () => {
     console.log('🔍 [showStructuredViewAllPlans] 处理完成，有内容的行数:', rowsWithContent.length)
     
     showViewAllPlansDialog(rowsWithContent)
+    return true
   } catch (error) {
     console.error('🔍 [showStructuredViewAllPlans] 获取结构化计划数据失败:', error)
     ElMessage.error('获取计划数据失败')
+    return false
   }
 }
 
@@ -7339,41 +7329,79 @@ const submitAddProgress = async () => {
     let didSubmitViaNewApi = false
     
     if (isUploadPlanNode.value) {
-      // upload_plan 节点：批量提交整套计划
-      progressData.canFinishOnTime = progressForm.canFinishOnTime
-      progressData.delayReason = progressForm.delayReason || undefined
-      progressData.coopUnitsChanged = progressForm.coopUnitsChanged
-      progressData.needExtraApprovalFlag = (!progressForm.canFinishOnTime || progressForm.coopUnitsChanged) ? 1 : 0
-      
-      if (progressForm.coopUnitsChanged && editForm.value.collaborateDeptIds) {
-        progressData.tempCoDeptIds = editForm.value.collaborateDeptIds
-      }
-      
+      // upload_plan 节点：批量提交整套计划到 supervision_plan_entry
       if (progressForm.canFinishOnTime && progressForm.planRows.length > 0) {
-        // 生成汇总文本
-        const summaryLines = progressForm.planRows
-          .filter(row => row.summary && row.summary.trim() !== '')
-          .map(row => `${row.date}：${row.summary}`)
-        progressData.deptDetail = summaryLines.join('\n')
+        // 获取当前用户信息
+        const currentUser = userStore.getUser
+        if (!currentUser) {
+          ElMessage.error('无法获取用户信息')
+          progressSubmitting.value = false
+          return
+        }
         
-        // 合并所有行的附件（可选，根据需求决定）
-        const allFiles = []
-        progressForm.planRows.forEach(row => {
-          row.fileList.forEach(file => {
-            if (file.url && file.url !== '') {
-              allFiles.push({
+        // 多级兜底获取办理人部门名称
+        const deptNameFromUser = currentUser.deptName && currentUser.deptName.trim()
+        const deptNameFromId = typeof currentUser.deptId === 'number' ? getDeptName(currentUser.deptId) : ''
+        const deptNameFromLead = Array.isArray(editForm.value.leadDeptNames) && editForm.value.leadDeptNames.length > 0
+          ? editForm.value.leadDeptNames[0]
+          : ''
+
+        const targetDeptName = deptNameFromUser || 
+                              (deptNameFromId && deptNameFromId !== '待督办人选择' ? deptNameFromId : '') ||
+                              deptNameFromLead || ''
+
+        if (!targetDeptName) {
+          ElMessage.error('无法获取办理人部门名称，请先完善个人信息或选择办理单位')
+          progressSubmitting.value = false
+          return
+        }
+        
+        // 构建批量提交数据
+        const entries: PlanEntryBatchItem[] = progressForm.planRows
+          .filter(row => row.summary && row.summary.trim() !== '')
+          .map(row => ({
+            periodDate: row.date,
+            summary: row.summary || '',
+            fileList: row.fileList
+              .filter(file => file.url && file.url !== '')
+              .map(file => ({
+                id: file.id,
                 name: file.name,
                 url: file.url,
                 size: file.size || ''
-              })
-            }
-          })
-        })
-        if (allFiles.length > 0) {
-          progressData.fileList = allFiles
+              }))
+          }))
+        
+        if (entries.length === 0) {
+          ElMessage.error('请至少填写一条计划内容')
+          progressSubmitting.value = false
+          return
         }
+        
+        const batchSubmitData: PlanEntryBatchSubmitReqVO = {
+          processInstanceId: processInstanceId || '',
+          targetUserId: currentUser.id,
+          targetUserName: currentUser.nickname || '',
+          targetDeptName: targetDeptName,
+          entries: entries
+        }
+        
+        // 调用新的批量提交接口
+        await PlanEntryApi.submitBatchTemplate(batchSubmitData)
+        didSubmitViaNewApi = true
+        
+        console.log('[submitAddProgress] 批量提交模板版计划成功:', batchSubmitData)
       } else {
-        // 选择"否"时的原有逻辑
+        // 选择"否"时的原有逻辑，构造旧接口数据
+        progressData.canFinishOnTime = progressForm.canFinishOnTime
+        progressData.delayReason = progressForm.delayReason || undefined
+        progressData.coopUnitsChanged = progressForm.coopUnitsChanged
+        progressData.needExtraApprovalFlag = (!progressForm.canFinishOnTime || progressForm.coopUnitsChanged) ? 1 : 0
+        
+        if (progressForm.coopUnitsChanged && editForm.value.collaborateDeptIds) {
+          progressData.tempCoDeptIds = editForm.value.collaborateDeptIds
+        }
+        
         progressData.deptDetail = progressForm.deptDetail
         // 将 planTime 转为时间戳字符串，避免后端解析错误
         progressData.planTime = progressForm.planTime ? String(new Date(progressForm.planTime).getTime()) : undefined
