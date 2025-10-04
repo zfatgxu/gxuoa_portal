@@ -863,9 +863,7 @@ function getDateLabel(dateStr: string) {
   if (diffDays === 1) return '昨天'
   if (diffDays < 7) return '本周'
   if (diffDays < 14) return '上周'
-  if (diffDays < 40) return '上月'
-  if (today.getFullYear() === d.getFullYear()) return '今年'
-  return '更早'
+  return '更早'  // 上周之后直接归为"更早"
 }
 // 邮件分组计算
 const groupedEmails = computed(() => {
@@ -885,7 +883,8 @@ const groupedEmails = computed(() => {
     groups[label].push(email)
   })
   
-  const order = ['今天','昨天','本周','上周']
+  // 日期分组标签：今天 -> 昨天 -> 本周 -> 上周 -> 更早
+  const order = ['今天','昨天','本周','上周','更早']
   return order.map(label => ({ 
     label, 
     emails: (groups[label]||[]).sort((a,b)=> {
