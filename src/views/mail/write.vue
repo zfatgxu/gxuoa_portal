@@ -111,8 +111,10 @@
       <!-- 右侧联系人面板 -->
       <ContactPanel
         :filtered-recent-contacts="contactsState.filteredRecentContacts.value"
+        :recent-contact-departments="contactsState.recentContactDepartments.value"
         :filtered-starred-contacts="contactsState.filteredStarredContacts.value"
         :starred-contact-display-names="contactsState.starredContactDisplayNames.value"
+        :starred-contact-departments="contactsState.starredContactDepartments.value"
         v-model:contact-search="contactsState.contactSearch.value"
         @select-contact="handleSelectContact"
         @context-menu="handleContextMenu"

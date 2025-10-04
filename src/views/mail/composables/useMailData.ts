@@ -1,0 +1,181 @@
+import { ref, reactive } from 'vue'
+import { ElMessage } from 'element-plus'
+import {
+  getInboxMails,
+  getSentMails,
+  getDraftMails,
+  getStarredMails,
+  getDeletedMails,
+  getTrashMails
+} from '@/api/mail/letter'
+import { getFolderMails } from '@/api/mail/folder'
+import { convertMailToEmail, formatEmailContent, parseRecipients, type Email } from '../utils/mailFormatter'
+import { useUserStoreWithOut } from '@/store/modules/user'
+
+export function useMailData(getUserDetailByIdCard: (idCard: string) => Promise<any>) {
+  // 状态
+  const allEmails = reactive<Record<string, Email[]>>({
+    inbox: [],
+    starred: [],
+    sent: [],
+    drafts: [],
+    deleted: [],
+    trash: []
+  })
+  
+  const folderEmails = reactive<Record<number, Email[]>>({})
+  const loading = ref(false)
+  
+  // 获取当前用户身份证号
+  const getCurrentUserIdCard = () => {
+    const userStore = useUserStoreWithOut()
+    const currentUser = userStore.getUser
+    return (currentUser as any)?.idCard || ''
+  }
+  
+  // 方法
+  const loadFolderEmails = async (folder: string) => {
+    try {
+      loading.value = true
+      
+      let response
+      
+      switch (folder) {
+        case 'inbox':
+          response = await getInboxMails({ pageNo: 1, pageSize: 100 })
+          break
+        case 'sent':
+          response = await getSentMails({ pageNo: 1, pageSize: 100 })
+          break
+        case 'drafts':
+          response = await getDraftMails({ pageNo: 1, pageSize: 100 })
+          break
+        case 'starred':
+          response = await getStarredMails({ pageNo: 1, pageSize: 100 })
+          break
+        case 'deleted':
+          response = await getDeletedMails({ pageNo: 1, pageSize: 100 })
+          break
+        case 'trash':
+          response = await getTrashMails({ pageNo: 1, pageSize: 100 })
+          break
+        default:
+          return
+      }
+      
+      if (response && Array.isArray(response.list)) {
+        const currentUserIdCard = getCurrentUserIdCard()
+        const convertedEmails = await Promise.all(
+          response.list.map(mail =>
+            convertMailToEmail(mail, {
+              parseRecipients: (recipients) => parseRecipients(recipients, getUserDetailByIdCard),
+              formatEmailContent,
+              currentUserIdCard
+            })
+          )
+        )
+        allEmails[folder] = convertedEmails
+      } else {
+        allEmails[folder] = []
+      }
+    } catch (error: any) {
+      console.error(`加载${folder}邮件失败:`, error)
+      
+      const folderLabels: Record<string, string> = {
+        inbox: '收件箱',
+        starred: '星标邮件',
+        sent: '已发送',
+        drafts: '草稿箱',
+        deleted: '已删除',
+        trash: '垃圾箱'
+      }
+      
+      let errorMsg = '未知错误'
+      if (error?.response?.status === 401) {
+        errorMsg = '用户未登录，请重新登录'
+      } else if (error?.response?.status === 403) {
+        errorMsg = '权限不足，无法访问邮件'
+      } else if (error?.response?.status === 404) {
+        errorMsg = '邮件服务不可用'
+      } else if (error?.response?.data?.msg) {
+        errorMsg = error.response.data.msg
+      } else if (error?.message) {
+        errorMsg = error.message
+      }
+      
+      ElMessage.error(`加载${folderLabels[folder] || folder}失败: ${errorMsg}`)
+      allEmails[folder] = []
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  const loadFolderEmailsById = async (folderId: number) => {
+    try {
+      const response = await getFolderMails(folderId, 1, 100)
+      
+      if (response && Array.isArray(response.list)) {
+        const currentUserIdCard = getCurrentUserIdCard()
+        const convertedEmails = await Promise.all(
+          response.list.map(mail =>
+            convertMailToEmail(mail, {
+              parseRecipients: (recipients) => parseRecipients(recipients, getUserDetailByIdCard),
+              formatEmailContent,
+              currentUserIdCard
+            })
+          )
+        )
+        folderEmails[folderId] = convertedEmails
+      } else {
+        folderEmails[folderId] = []
+      }
+    } catch (error: any) {
+      console.error(`加载文件夹 ${folderId} 邮件失败:`, error)
+      ElMessage.error(`加载文件夹邮件失败: ${error?.response?.data?.msg || error?.message || '未知错误'}`)
+      folderEmails[folderId] = []
+    }
+  }
+  
+  const getCurrentEmails = (selectedFolder: string, selectedFolderId: number | null): Email[] => {
+    if (selectedFolder === 'custom' && selectedFolderId) {
+      return folderEmails[selectedFolderId] || []
+    }
+    return allEmails[selectedFolder] || []
+  }
+  
+  const updateEmailStatusInAllFolders = (
+    emailIds: number[],
+    updateFn: (email: Email) => void
+  ) => {
+    // 更新系统文件夹中的邮件状态
+    emailIds.forEach(emailId => {
+      Object.keys(allEmails).forEach(folderKey => {
+        const email = allEmails[folderKey].find(e => e.id === emailId)
+        if (email) {
+          updateFn(email)
+        }
+      })
+    })
+    
+    // 更新自定义文件夹中的邮件状态
+    emailIds.forEach(emailId => {
+      Object.keys(folderEmails).forEach(folderId => {
+        const email = folderEmails[folderId].find(e => e.id === emailId)
+        if (email) {
+          updateFn(email)
+        }
+      })
+    })
+  }
+  
+  return {
+    allEmails,
+    folderEmails,
+    loading,
+    loadFolderEmails,
+    loadFolderEmailsById,
+    getCurrentEmails,
+    updateEmailStatusInAllFolders
+  }
+}
+

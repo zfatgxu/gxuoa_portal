@@ -9,19 +9,24 @@ import {
   type LetterContactStarCreateReqVO,
   type MailListItemVO
 } from '@/api/mail/letter'
-import { getSimpleUserList, getUserByIdCard } from '@/api/system/user'
+import { getSimpleUserList } from '@/api/system/user'
 import type { RecentContact, UserOption } from '../types/mail'
+import { useUserCache } from './useUserCache'
 
 /**
  * 联系人管理 Composable
  * 负责管理最近联系人、星标联系人和用户搜索
  */
 export function useContacts() {
+  // 使用统一的用户缓存服务
+  const { getUserNickname, getUserByIdCardCached } = useUserCache()
+  
   // 状态
   const recentContacts = ref<RecentContact[]>([])
+  const recentContactDepartments = ref<Map<string, string>>(new Map())
   const starredContacts = ref<LetterContactStarRespVO[]>([])
   const starredContactDisplayNames = ref<Map<number, string>>(new Map())
-  const starredContactUserCache = ref<Map<string, any>>(new Map())
+  const starredContactDepartments = ref<Map<number, string>>(new Map())
   const allUsers = ref<any[]>([])
   const userOptions = ref<UserOption[]>([])
   const loading = ref(false)
@@ -54,24 +59,12 @@ export function useContacts() {
   
   /**
    * 获取星标联系人的显示名称
+   * 使用统一的用户缓存服务
    */
   const getStarredContactDisplayName = async (contact: LetterContactStarRespVO): Promise<string> => {
     try {
-      // 先检查缓存
-      if (starredContactUserCache.value.has(contact.contactIdCard)) {
-        const cachedUser = starredContactUserCache.value.get(contact.contactIdCard)
-        return cachedUser.nickname || '未知用户'
-      }
-      
-      // 从API获取用户信息
-      const user = await getUserByIdCard(contact.contactIdCard)
-      if (user) {
-        // 缓存用户信息
-        starredContactUserCache.value.set(contact.contactIdCard, user)
-        return user.nickname || '未知用户'
-      }
-      
-      return '未知用户'
+      // 直接使用统一缓存服务获取用户昵称
+      return await getUserNickname(contact.contactIdCard)
     } catch (error) {
       console.error('获取星标联系人用户信息失败:', error)
       return '未知用户'
@@ -122,6 +115,22 @@ export function useContacts() {
           .slice(0, 20) // 只显示最近20个联系人
         
         console.log(`✅ 最近联系人加载成功，共 ${recentContacts.value.length} 个联系人`)
+        
+        // 确保用户列表已加载
+        if (allUsers.value.length === 0) {
+          await loadAllUsers()
+        }
+        
+        // 加载每个最近联系人的部门信息
+        recentContacts.value.forEach(contact => {
+          const user = allUsers.value.find((u: any) => u.nickname === contact.name)
+          if (user) {
+            const department = user.deptNamesStr || user.deptNames?.join('、') || '未知部门'
+            recentContactDepartments.value.set(contact.name, department)
+          } else {
+            recentContactDepartments.value.set(contact.name, '未知部门')
+          }
+        })
       } else {
         console.log('⚠️ 已发送邮件响应格式异常')
         recentContacts.value = []
@@ -149,14 +158,20 @@ export function useContacts() {
         
         console.log(`✅ 星标联系人加载成功，共 ${starredContacts.value.length} 个联系人`)
         
-        // 异步加载每个联系人的显示名称
+        // 异步加载每个联系人的显示名称和部门信息
         for (const contact of starredContacts.value) {
           try {
             const displayName = await getStarredContactDisplayName(contact)
             starredContactDisplayNames.value.set(contact.id, displayName)
+            
+            // 获取用户完整信息以获取部门
+            const userInfo = await getUserByIdCardCached(contact.contactIdCard)
+            const department = userInfo?.deptNamesStr || userInfo?.deptNames?.join('、') || '未知部门'
+            starredContactDepartments.value.set(contact.id, department)
           } catch (error) {
             console.error(`获取联系人 ${contact.contactIdCard} 的显示名称失败:`, error)
             starredContactDisplayNames.value.set(contact.id, '未知用户')
+            starredContactDepartments.value.set(contact.id, '未知部门')
           }
         }
       } else {
@@ -395,8 +410,10 @@ export function useContacts() {
   return {
     // 状态
     recentContacts,
+    recentContactDepartments,
     starredContacts,
     starredContactDisplayNames,
+    starredContactDepartments,
     allUsers,
     userOptions,
     loading,

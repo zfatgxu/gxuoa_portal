@@ -56,7 +56,7 @@
             <div class="contact-info">
               <div class="contact-name">{{ contact.name }}</div>
               <div class="contact-time">
-                {{ formatTime(contact.lastSendTime) }}
+                {{ recentContactDepartments.get(contact.name) || '未知部门' }}
               </div>
             </div>
           </div>
@@ -104,7 +104,7 @@
                 {{ starredContactDisplayNames.get(contact.id) || '加载中...' }}
               </div>
               <div class="contact-time">
-                {{ formatTime(contact.createTime) }}
+                {{ starredContactDepartments.get(contact.id) || '未知部门' }}
               </div>
             </div>
           </div>
@@ -125,8 +125,10 @@ import { formatLastSendTime } from '../utils/mailHelpers'
 
 interface Props {
   filteredRecentContacts: RecentContact[]
+  recentContactDepartments: Map<string, string>
   filteredStarredContacts: LetterContactStarRespVO[]
   starredContactDisplayNames: Map<number, string>
+  starredContactDepartments: Map<number, string>
   contactSearch: string
 }
 

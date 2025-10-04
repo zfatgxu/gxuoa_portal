@@ -1,4 +1,46 @@
 /**
+ * 格式化邮件时间显示（智能显示）
+ * - 今天：今天 hh:mm
+ * - 昨天：昨天 hh:mm
+ * - 本年：m月d日
+ * - 往年：yyyy/mm/dd
+ */
+export function formatMailTime(dateStr: string): string {
+  const date = new Date(dateStr)
+  const today = new Date()
+  const mailDate = new Date(date)
+  
+  const todayStr = today.toISOString().split('T')[0]
+  const mailDateStr = mailDate.toISOString().split('T')[0]
+  
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayStr = yesterday.toISOString().split('T')[0]
+  
+  const timeStr = date.toTimeString().slice(0, 5)
+  
+  if (mailDateStr === todayStr) {
+    return `今天 ${timeStr}`
+  } else if (mailDateStr === yesterdayStr) {
+    return `昨天 ${timeStr}`
+  } else {
+    const currentYear = today.getFullYear()
+    const mailYear = mailDate.getFullYear()
+    
+    if (mailYear === currentYear) {
+      const month = mailDate.getMonth() + 1
+      const day = mailDate.getDate()
+      return `${month}月${day}日`
+    } else {
+      const year = mailDate.getFullYear()
+      const month = String(mailDate.getMonth() + 1).padStart(2, '0')
+      const day = String(mailDate.getDate()).padStart(2, '0')
+      return `${year}/${month}/${day}`
+    }
+  }
+}
+
+/**
  * 格式化日期时间为中文格式：yyyy年m月d日 hh:mm
  */
 export function formatDateTimeCn(dateStr?: string): string {
@@ -13,6 +55,22 @@ export function formatDateTimeCn(dateStr?: string): string {
   const mm = `${d.getMinutes()}`.padStart(2, '0')
   
   return `${y}年${m}月${day}日 ${hh}:${mm}`
+}
+
+/**
+ * 格式化日期为 YYYY-MM-DD
+ */
+export function formatDate(date: Date | string): string {
+  const d = new Date(date)
+  return d.toISOString().split('T')[0]
+}
+
+/**
+ * 格式化时间为 HH:MM
+ */
+export function formatTime(date: Date | string): string {
+  const d = new Date(date)
+  return d.toTimeString().slice(0, 5)
 }
 
 /**

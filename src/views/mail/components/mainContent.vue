@@ -56,7 +56,7 @@
           <option v-if="folderName !== '星标邮件'" value="star">星标邮件</option>
           <option value="unstar">取消星标</option>
         </select>
-        <select v-if="!isDeletedFolder && !isTrashFolder" class="tool-select move-select" v-model="moveToValue" @change="handleMoveToChange">
+        <select v-if="!isDeletedFolder && !isTrashFolder && folderName !== '草稿箱'" class="tool-select move-select" v-model="moveToValue" @change="handleMoveToChange">
           <option value="" disabled selected style="display: none;">移动...</option>
           <!-- 自定义文件夹选项 -->
           <option v-for="folder in props.customFolders" :key="folder.id" :value="folder.id">
@@ -292,7 +292,7 @@
       </div>
       <!-- 移动到... 悬浮子菜单 -->
       <div 
-        v-if="!isDeletedFolder && !isTrashFolder"
+        v-if="!isDeletedFolder && !isTrashFolder && folderName !== '草稿箱'"
         class="context-menu-item"
         style="position: relative;"
         @mouseenter="contextMenu.showMoveSubmenu = true"
@@ -866,9 +866,21 @@ function getDateLabel(dateStr: string) {
   return '更早'  // 上周之后直接归为"更早"
 }
 // 邮件分组计算
+// 分页相关
+const pageSize = ref(15)
+const currentPage = ref(1)
+const totalPages = computed(() => Math.ceil(props.emails.length / pageSize.value))
+
+// 计算当前页的邮件
+const paginatedEmails = computed(() => {
+  const start = (currentPage.value - 1) * pageSize.value
+  const end = start + pageSize.value
+  return props.emails.slice(start, end)
+})
+
 const groupedEmails = computed(() => {
   const groups: Record<string, any[]> = {}
-  props.emails.forEach(email => {
+  paginatedEmails.value.forEach(email => {
     let dateForGrouping: string
     if (props.isDeletedFolder && email.deletedAt) {
       dateForGrouping = email.deletedAt
@@ -904,11 +916,6 @@ const groupedEmails = computed(() => {
     }) 
   })).filter(g=>g.emails.length)
 })
-
-// 分页相关
-const pageSize = ref(15)
-const currentPage = ref(1)
-const totalPages = computed(() => Math.ceil(props.emails.length / pageSize.value))
 
 watch([() => props.emails, pageSize], () => {
   currentPage.value = 1

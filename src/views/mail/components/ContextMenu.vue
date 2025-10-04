@@ -1,20 +1,16 @@
 <template>
-  <div 
-    v-if="visible"
-    class="context-menu"
-    :style="{ left: x + 'px', top: y + 'px' }"
-    @click.stop
-  >
-    <div class="context-menu-item" @click="handleToggleStar">
+  <BaseContextMenu :visible="visible" :x="x" :y="y">
+    <div class="menu-item" @click="handleToggleStar">
       <el-icon><Star /></el-icon>
       <span>{{ isStarred ? '取消星标' : '添加星标' }}</span>
     </div>
-  </div>
+  </BaseContextMenu>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Star } from '@element-plus/icons-vue'
+import BaseContextMenu from './BaseContextMenu.vue'
 import type { LetterContactStarRespVO } from '@/api/mail/letter'
 
 interface Props {
@@ -58,35 +54,4 @@ const handleToggleStar = () => {
 }
 </script>
 
-<style scoped>
-.context-menu {
-  position: fixed;
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 9999;
-  min-width: 120px;
-  overflow: hidden;
-}
-
-.context-menu-item {
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #303133;
-  transition: background-color 0.2s;
-}
-
-.context-menu-item:hover {
-  background-color: #f5f7fa;
-}
-
-.context-menu-item .el-icon {
-  margin-right: 8px;
-  font-size: 16px;
-}
-</style>
 
