@@ -323,8 +323,8 @@
 import { ref, watch, computed } from 'vue'
 import topImage from '@/views/mail/image/top.png'
 import { getUserByIdCard } from '@/api/system/user'
-import { formatFileSizeFromString, getFileExtension, downloadAttachment } from '@/api/system/mail/attachment'
-import { getLetterDetail } from '@/api/system/mail/letter'
+import { formatFileSizeFromString, getFileExtension, downloadAttachment } from '@/api/mail/attachment'
+import { getLetterDetail } from '@/api/mail/letter'
  
 
 interface Email {

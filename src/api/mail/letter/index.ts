@@ -1,6 +1,6 @@
 import request from '@/config/axios'
 import type {PageParam} from '@/api/supervision'
-import type { LetterAttachmentRespVO } from '@/api/system/mail/attachment'
+import type { LetterAttachmentRespVO } from '@/api/mail/attachment'
 
 // ==================== 信件内容相关VO ====================
 

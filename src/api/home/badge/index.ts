@@ -2,7 +2,7 @@ import { getHomeToDoPage } from '@/api/home/todo'
 import { SupervisionTaskApi } from '@/api/supervision'
 import { getSealTodoPage } from '@/api/seal'
 import { RegisterApi } from '@/api/leave/create/createForm'
-import { getMailStats } from '@/api/system/mail/letter'
+import { getMailStats } from '@/api/mail/letter'
 
 // Badge数据接口
 export interface BadgeData {

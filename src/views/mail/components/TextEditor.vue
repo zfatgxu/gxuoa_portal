@@ -22,7 +22,7 @@ import '@wangeditor/editor/dist/css/style.css'
 import { onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import { ElMessage } from 'element-plus'
-import { uploadImage } from '@/api/system/mail/upload'
+import { uploadImage } from '@/api/mail/upload'
 
 // 编辑器实例，必须用 shallowRef
 const editorRef = shallowRef()

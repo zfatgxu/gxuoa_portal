@@ -161,11 +161,11 @@ import {
   restoreFromTrashFlag,
   type MailListItemVO,
   type MailStatsVO
-} from '@/api/system/mail/letter'
+} from '@/api/mail/letter'
 import {
   // 邮件附件相关API
   getLetterAttachmentsByLetterId
-} from '@/api/system/mail/attachment/index'
+} from '@/api/mail/attachment/index'
 import { 
   getFolderTree,
   getFolderMails, 
@@ -179,7 +179,7 @@ import {
   type FolderRespVO,
   type FolderCreateReqVO,
   type FolderUpdateReqVO
-} from '@/api/system/mail/folder'
+} from '@/api/mail/folder'
 import { getUserByIdCard } from '@/api/system/user'
 import { useUserStoreWithOut } from '@/store/modules/user'
 
