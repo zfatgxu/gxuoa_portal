@@ -56,7 +56,7 @@
           <option v-if="folderName !== '星标邮件'" value="star">星标邮件</option>
           <option value="unstar">取消星标</option>
         </select>
-        <select v-if="!isDeletedFolder && !isTrashFolder && folderName !== '草稿箱'" class="tool-select move-select" v-model="moveToValue" @change="handleMoveToChange">
+        <select v-if="!isDeletedFolder && !isTrashFolder && !isDraftFolder" class="tool-select move-select" v-model="moveToValue" @change="handleMoveToChange">
           <option value="" disabled selected style="display: none;">移动...</option>
           <!-- 自定义文件夹选项 -->
           <option v-for="folder in props.customFolders" :key="folder.id" :value="folder.id">
@@ -292,7 +292,7 @@
       </div>
       <!-- 移动到... 悬浮子菜单 -->
       <div 
-        v-if="!isDeletedFolder && !isTrashFolder && folderName !== '草稿箱'"
+        v-if="!isDeletedFolder && !isTrashFolder && !isDraftFolder"
         class="context-menu-item"
         style="position: relative;"
         @mouseenter="contextMenu.showMoveSubmenu = true"
@@ -367,6 +367,7 @@ const props = defineProps<{
   emails: Array<Email>,
   isDeletedFolder: boolean,
   isTrashFolder?: boolean,
+  isDraftFolder?: boolean,
   isCustomFolder?: boolean,
   currentCustomFolderId?: number,
   mailStats?: {
