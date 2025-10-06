@@ -184,9 +184,11 @@ async function handleSelectFolder(folder: string | number) {
     await loadFolderEmailsById(folder)
   }
   
-  // 预加载当前分页的邮件详情
-  const currentEmails = getCurrentEmails()
-  await preloadEmailDetails(currentEmails)
+  // 预加载当前分页的邮件详情（草稿箱除外，因为草稿不是正式邮件）
+  if (selectedFolder.value !== 'drafts') {
+    const currentEmails = getCurrentEmails()
+    await preloadEmailDetails(currentEmails)
+  }
 }
 
 // 显示文件夹右键上下文菜单
@@ -602,14 +604,8 @@ async function handleSyncMails() {
 
 // 处理查看邮件详情
 async function handleViewEmailDetail(emailId: number) {
-  // 草稿箱点击直接跳转到写信界面，而不是查看详情
-  if (selectedFolder.value === 'drafts') {
-    await router.push({ path: '/mail/write', query: { draftId: String(emailId) } })
-    return
-  }
-  
-  // 检查邮件是否已读，如果未读则标记为已读
-  // 首先在系统文件夹中查找
+  // 首先检查邮件是否是草稿
+  // 在系统文件夹中查找邮件
   let currentEmail = Object.values(allEmails).flat().find(email => email.id === emailId)
   
   // 如果在系统文件夹中没找到，在自定义文件夹中查找
@@ -617,6 +613,13 @@ async function handleViewEmailDetail(emailId: number) {
     currentEmail = Object.values(folderEmails).flat().find(email => email.id === emailId)
   }
   
+  // 如果是草稿邮件，跳转到写信界面编辑
+  if (currentEmail?.isDraft || selectedFolder.value === 'drafts') {
+    await router.push({ path: '/mail/write', query: { draftId: String(emailId) } })
+    return
+  }
+  
+  // 正式邮件：检查是否已读，如果未读则标记为已读
   if (currentEmail && !currentEmail.isRead) {
     try {
       await setFolderMailsReadState([emailId], true)

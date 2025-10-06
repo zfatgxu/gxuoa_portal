@@ -625,6 +625,19 @@
     font-weight: bold; /* 未读邮件加粗显示 */
 }
 
+/* 草稿标签样式 */
+.draft-label {
+    display: inline-block;
+    margin-left: 0.5em;
+    padding: 2px 6px;
+    background-color: #fff3cd;
+    color: #856404;
+    font-size: 11px;
+    border-radius: 3px;
+    font-weight: 500;
+    border: 1px solid #ffeeba;
+}
+
 .time {
     width: 80px;
     color: var(--color-text-secondary);

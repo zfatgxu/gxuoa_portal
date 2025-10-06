@@ -9,6 +9,7 @@ import {
   getTrashMails
 } from '@/api/mail/letter'
 import { getFolderMails } from '@/api/mail/folder'
+import { getStarredDrafts } from '@/api/mail/draft'
 import { convertMailToEmail, formatEmailContent, parseRecipients, type Email } from '../utils/mailFormatter'
 import { useUserStoreWithOut } from '@/store/modules/user'
 
@@ -51,7 +52,36 @@ export function useMailData(getUserDetailByIdCard: (idCard: string) => Promise<a
           response = await getDraftMails({ pageNo: 1, pageSize: 100 })
           break
         case 'starred':
-          response = await getStarredMails({ pageNo: 1, pageSize: 100 })
+          // 星标邮件需要合并正式邮件和草稿的星标
+          const [starredMailsResponse, starredDraftsResponse] = await Promise.all([
+            getStarredMails({ pageNo: 1, pageSize: 100 }),
+            getStarredDrafts()
+          ])
+          
+          // 合并两个列表
+          const starredMailsList = starredMailsResponse?.list || []
+          const starredDraftsList = starredDraftsResponse || []
+          
+          // 将草稿转换为MailListItemVO格式
+          const draftsAsMailItems = starredDraftsList.map((draft: any) => ({
+            id: draft.id,
+            subject: draft.subject,
+            content: draft.content,
+            fromUserName: draft.senderName,
+            // 提取所有收件人（包括主收件人、抄送、密送）
+            toUserNames: draft.recipients?.map((r: any) => r.recipientName || r.recipientIdCard).filter(Boolean).join(',') || '',
+            sendTime: draft.lastSaveTime,
+            isRead: true, // 草稿默认已读
+            isStarred: draft.isStarred,
+            starredAt: draft.updateTime,
+            isDraft: true,
+            isTrash: false
+          }))
+          
+          response = {
+            list: [...starredMailsList, ...draftsAsMailItems],
+            total: starredMailsList.length + draftsAsMailItems.length
+          }
           break
         case 'deleted':
           response = await getDeletedMails({ pageNo: 1, pageSize: 100 })
@@ -74,6 +104,7 @@ export function useMailData(getUserDetailByIdCard: (idCard: string) => Promise<a
             })
           )
         )
+        
         allEmails[folder] = convertedEmails
       } else {
         allEmails[folder] = []

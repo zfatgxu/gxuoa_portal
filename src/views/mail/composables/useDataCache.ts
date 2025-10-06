@@ -30,7 +30,9 @@ export function useDataCache() {
   }
   
   const preloadEmailDetails = async (emails: Email[], pageSize: number = 15) => {
-    const pageEmails = emails.slice(0, pageSize)
+    // 过滤掉草稿邮件，草稿没有详情API
+    const validEmails = emails.filter(email => !email.isDraft)
+    const pageEmails = validEmails.slice(0, pageSize)
     
     const preloadPromises = pageEmails.map(async (email) => {
       if (emailDetailsCache.value[email.id]) {

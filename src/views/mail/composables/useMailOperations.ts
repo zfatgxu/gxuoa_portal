@@ -12,6 +12,7 @@ import {
   setFolderMailsReadState,
   toggleFolderMailsStar
 } from '@/api/mail/folder'
+import { toggleDraftStar } from '@/api/mail/draft'
 
 interface UseMailOperationsOptions {
   allEmails: Record<string, Email[]>
@@ -255,7 +256,39 @@ export function useMailOperations(options: UseMailOperationsOptions) {
   }
   
   const toggleStar = async (emailId: number) => {
-    await toggleFolderMailsStar([emailId])
+    // 查找邮件对象，判断是否是草稿
+    // 草稿邮件只会出现在草稿箱中，不会出现在自定义文件夹
+    let targetEmail: Email | undefined
+    let isDraft = false
+    
+    // 在系统文件夹中查找
+    Object.keys(options.allEmails).forEach(folderKey => {
+      if (!targetEmail) {
+        targetEmail = options.allEmails[folderKey].find(e => e.id === emailId)
+        if (targetEmail && folderKey === 'drafts') {
+          isDraft = true
+        }
+      }
+    })
+    
+    // 如果在系统文件夹中没找到，在自定义文件夹中查找（只会是正式邮件）
+    if (!targetEmail) {
+      Object.keys(options.folderEmails).forEach(folderId => {
+        if (!targetEmail) {
+          targetEmail = options.folderEmails[folderId].find(e => e.id === emailId)
+        }
+      })
+    }
+    
+    // 根据邮件类型调用不同的API
+    if (isDraft) {
+      // 草稿邮件：调用草稿标星API（草稿只会在草稿箱中）
+      const newStarredState = !targetEmail?.isStarred
+      await toggleDraftStar(emailId, newStarredState)
+    } else {
+      // 正式邮件：调用正式邮件标星API（包括自定义文件夹中的邮件）
+      await toggleFolderMailsStar([emailId])
+    }
     
     // 更新系统文件夹中的邮件状态
     Object.keys(options.allEmails).forEach(folderKey => {

@@ -134,7 +134,7 @@ export async function convertMailToEmail(
   const fromUserIdCard = (mail as any).fromUserIdCard || (mail as any).fromIdCard || ''
   const isSelfSent = fromUserIdCard && options.currentUserIdCard && fromUserIdCard === options.currentUserIdCard
   
-  return {
+  const result = {
     id: mail.id,
     sender: mail.fromUserName,
     subject: mail.subject,
@@ -152,5 +152,7 @@ export async function convertMailToEmail(
     trashTime: mail.trashTime ? new Date(mail.trashTime).toISOString().split('T')[0] : undefined,
     isSelfSent
   }
+  
+  return result
 }
 

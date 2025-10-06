@@ -23,7 +23,7 @@
         <div class="mail-form">
           <!-- 收件人 -->
           <RecipientSelector
-            v-model="mailForm.recipients"
+            :model-value="mailForm.recipients"
             type="recipients"
             :user-options="contactsState.userOptions.value"
             :loading="contactsState.loading.value"
@@ -32,28 +32,31 @@
             @toggle-bcc="showBcc = !showBcc"
             @focus="activeRecipientField = 'recipients'"
             @remote-search="contactsState.searchUsers"
+            @update:model-value="(value) => handleRecipientUpdate('recipients', value)"
           />
           
           <!-- 抄送 -->
           <RecipientSelector
             v-if="showCc"
-            v-model="mailForm.cc"
+            :model-value="mailForm.cc"
             type="cc"
             :user-options="contactsState.userOptions.value"
             :loading="contactsState.loading.value"
             @focus="activeRecipientField = 'cc'"
             @remote-search="contactsState.searchUsers"
+            @update:model-value="(value) => handleRecipientUpdate('cc', value)"
           />
           
           <!-- 密送 -->
           <RecipientSelector
             v-if="showBcc"
-            v-model="mailForm.bcc"
+            :model-value="mailForm.bcc"
             type="bcc"
             :user-options="contactsState.userOptions.value"
             :loading="contactsState.loading.value"
             @focus="activeRecipientField = 'bcc'"
             @remote-search="contactsState.searchUsers"
+            @update:model-value="(value) => handleRecipientUpdate('bcc', value)"
           />
           
           <!-- 主题行 -->
@@ -446,34 +449,104 @@ const handleSaveDraft = async () => {
   await draftState.saveDraft()
 }
 
+const handleRecipientUpdate = (field: 'recipients' | 'cc' | 'bcc', newValue: string[]) => {
+  const oldValue = mailForm.value[field]
+  
+  // 找出新增的联系人（在 newValue 中但不在 oldValue 中）
+  const addedContacts = newValue.filter(name => !oldValue.includes(name))
+  
+  // 找出删除的联系人（在 oldValue 中但不在 newValue 中）
+  const removedContacts = oldValue.filter(name => !newValue.includes(name))
+  
+  // 如果只是删除操作，直接更新
+  if (addedContacts.length === 0) {
+    mailForm.value[field] = newValue
+    return
+  }
+  
+  // 检查新增的联系人是否在其他字段中已存在
+  const duplicates: string[] = []
+  const validContacts: string[] = []
+  
+  addedContacts.forEach(name => {
+    let existsInOtherField = false
+    let existingFieldName = ''
+    
+    if (field !== 'recipients' && mailForm.value.recipients.includes(name)) {
+      existsInOtherField = true
+      existingFieldName = '收件人'
+    } else if (field !== 'cc' && mailForm.value.cc.includes(name)) {
+      existsInOtherField = true
+      existingFieldName = '抄送人'
+    } else if (field !== 'bcc' && mailForm.value.bcc.includes(name)) {
+      existsInOtherField = true
+      existingFieldName = '密送人'
+    }
+    
+    if (existsInOtherField) {
+      duplicates.push(`${name}（已在${existingFieldName}中）`)
+    } else {
+      validContacts.push(name)
+    }
+  })
+  
+  // 构建最终的值：保留旧值中未被删除的项，加上有效的新增项
+  const keptContacts = oldValue.filter(name => !removedContacts.includes(name))
+  const finalValue = [...keptContacts, ...validContacts]
+  
+  // 更新表单值
+  mailForm.value[field] = finalValue
+  
+  // 如果有重复项，显示警告
+  if (duplicates.length > 0) {
+    ElMessage.warning(`以下联系人已存在，不能重复添加：${duplicates.join('、')}`)
+  }
+}
+
 const handleSelectContact = (data: any) => {
   const field = activeRecipientField.value
   const name = data.name
   
-  if (name && !mailForm.value[field].includes(name)) {
-    mailForm.value[field].push(name)
+  if (!name) return
+  
+  // 检查是否在所有字段中已存在
+  const existsInRecipients = mailForm.value.recipients.includes(name)
+  const existsInCc = mailForm.value.cc.includes(name)
+  const existsInBcc = mailForm.value.bcc.includes(name)
+  
+  if (existsInRecipients || existsInCc || existsInBcc) {
+    let existingFieldName = ''
+    if (existsInRecipients) existingFieldName = '收件人'
+    else if (existsInCc) existingFieldName = '抄送人'
+    else if (existsInBcc) existingFieldName = '密送人'
     
-    // 将联系人添加到 userOptions 列表，以便能够正常删除
-    const existsInOptions = contactsState.userOptions.value.some(opt => opt.name === name)
-    if (!existsInOptions) {
-      const user = contactsState.allUsers.value.find((u: any) => u.nickname === name)
-      if (user) {
-        contactsState.userOptions.value.push({
-          value: user.id.toString(),
-          label: name,
-          avatar: user.avatar || '',
-          name: user.nickname || name,
-          userId: user.id,
-          deptName: user.deptNames ? user.deptNames.join(', ') : '',
-          workId: user.workId || '',
-          email: user.email || ''
-        })
-      }
-    }
-    
-    const fieldName = field === 'recipients' ? '收件人' : field === 'cc' ? '抄送人' : '密送人'
-    ElMessage.success(`已添加${fieldName}: ${name}`)
+    ElMessage.warning(`${name} 已在${existingFieldName}中，不能重复添加`)
+    return
   }
+  
+  // 添加到当前字段
+  mailForm.value[field].push(name)
+  
+  // 将联系人添加到 userOptions 列表，以便能够正常删除
+  const existsInOptions = contactsState.userOptions.value.some(opt => opt.name === name)
+  if (!existsInOptions) {
+    const user = contactsState.allUsers.value.find((u: any) => u.nickname === name)
+    if (user) {
+      contactsState.userOptions.value.push({
+        value: user.id.toString(),
+        label: name,
+        avatar: user.avatar || '',
+        name: user.nickname || name,
+        userId: user.id,
+        deptName: user.deptNames ? user.deptNames.join(', ') : '',
+        workId: user.workId || '',
+        email: user.email || ''
+      })
+    }
+  }
+  
+  const fieldName = field === 'recipients' ? '收件人' : field === 'cc' ? '抄送人' : '密送人'
+  ElMessage.success(`已添加${fieldName}: ${name}`)
 }
 
 const handleContextMenu = (event: MouseEvent, contact: any, type: 'recent' | 'starred') => {
@@ -764,6 +837,29 @@ onMounted(async () => {
         mailForm.value.bcc = bccList
         showCc.value = ccList.length > 0
         showBcc.value = bccList.length > 0
+        
+        // 将草稿中的收件人添加到 userOptions，确保能够通过 backspace 删除
+        const allRecipientNames = [...toList, ...ccList, ...bccList]
+        for (const recipientName of allRecipientNames) {
+          // 检查是否已在 userOptions 中
+          const existsInOptions = contactsState.userOptions.value.some(opt => opt.name === recipientName)
+          if (!existsInOptions) {
+            // 从 allUsers 中查找对应的用户信息
+            const user = contactsState.allUsers.value.find((u: any) => u.nickname === recipientName)
+            if (user) {
+              contactsState.userOptions.value.push({
+                value: user.id.toString(),
+                label: recipientName,
+                avatar: user.avatar || '',
+                name: user.nickname || recipientName,
+                userId: user.id,
+                deptName: user.deptNames ? user.deptNames.join(', ') : '',
+                workId: user.workId || '',
+                email: user.email || ''
+              })
+            }
+          }
+        }
         
         const draftAttachmentIds = (draft as any).attachmentIds
         if (draftAttachmentIds && Array.isArray(draftAttachmentIds)) {
