@@ -138,9 +138,17 @@
                 <span class="sender-name">{{ selectedEmailDetail.sender || '未知' }}</span>
               </div>
               <div class="sender-meta">
-                <div class="meta-item">
+                <div class="meta-item" v-if="selectedEmailDetail.toRecipients">
                   <span class="meta-label">收件人</span>
-                  <span class="meta-value">{{ selectedEmailDetail.toMail || '无' }}</span>
+                  <span class="meta-value">{{ selectedEmailDetail.toRecipients || '无' }}</span>
+                </div>
+                <div class="meta-item" v-if="selectedEmailDetail.ccRecipients">
+                  <span class="meta-label">抄送人</span>
+                  <span class="meta-value">{{ selectedEmailDetail.ccRecipients }}</span>
+                </div>
+                <div class="meta-item" v-if="selectedEmailDetail.bccRecipients">
+                  <span class="meta-label">密送人</span>
+                  <span class="meta-value">{{ selectedEmailDetail.bccRecipients }}</span>
                 </div>
                 <div class="meta-item">
                   <span class="meta-label">时间</span>
@@ -204,8 +212,18 @@
               <div style="font-size: 13px; color: #606266; display:grid; grid-template-columns: 72px 1fr; row-gap:6px; column-gap:8px; align-items:start;">
                 <div style="color:#909399;">发件人：</div>
                 <div>{{ originalMail.fromUserName || '' }}</div>
-                <div style="color:#909399;">收件人：</div>
-                <div>{{ originalMail.toUserNames || '' }}</div>
+                <template v-if="originalMail.toRecipients || originalMail.toUserNames">
+                  <div style="color:#909399;">收件人：</div>
+                  <div>{{ originalMail.toRecipients || originalMail.toUserNames || '' }}</div>
+                </template>
+                <template v-if="originalMail.ccRecipients">
+                  <div style="color:#909399;">抄送人：</div>
+                  <div>{{ originalMail.ccRecipients }}</div>
+                </template>
+                <template v-if="originalMail.bccRecipients">
+                  <div style="color:#909399;">密送人：</div>
+                  <div>{{ originalMail.bccRecipients }}</div>
+                </template>
                 <div style="color:#909399;">发件时间：</div>
                 <div>{{ formatDisplayTime(originalMail.sendTime) }}</div>
                 <div style="color:#909399;">主题：</div>
@@ -340,6 +358,9 @@ interface Email {
   content?: string // 新增：邮件内容字段
   isRead?: boolean // 新增：是否已读字段
   toMail?: string // 新增：收件人字段
+  toRecipients?: string // 新增：主收件人字段
+  ccRecipients?: string // 新增：抄送人字段
+  bccRecipients?: string // 新增：密送人字段
   priority?: number // 新增：优先级字段
   requestReadReceipt?: boolean // 新增：已读回执字段
   originalSendTime?: string // 新增：原始发送时间字段
@@ -421,6 +442,9 @@ const originalMail = ref<null | {
   subject: string
   fromUserName?: string
   toUserNames?: string
+  toRecipients?: string
+  ccRecipients?: string
+  bccRecipients?: string
   sendTime?: string
   attachments?: any[]
 }>(null)
@@ -935,15 +959,58 @@ async function updateEmailDetail(emailDetail: any) {
       isLoadingAttachments.value = true
     }
     
-    // 先解析收件人信息，确保数据完整
-    let parsedToMail = currentDetail.toMail || '无'
-    const recipientsStr = emailDetail.recipients?.map((r: any) => r.recipientIdCard).join(', ') || emailDetail.toMail || ''
-    if (recipientsStr && recipientsStr !== currentDetail.toMail) {
+    // 先解析收件人信息，按类型分组
+    let parsedToRecipients = ''
+    let parsedCcRecipients = ''
+    let parsedBccRecipients = ''
+    
+    if (emailDetail.recipients && Array.isArray(emailDetail.recipients)) {
+      // 按 recipientType 分组
+      const toRecipients: string[] = []
+      const ccRecipients: string[] = []
+      const bccRecipients: string[] = []
+      
+      emailDetail.recipients.forEach((r: any) => {
+        const idCard = r.recipientIdCard
+        if (!idCard) return
+        
+        const recipientType = r.recipientType || 1 // 默认为主收件人
+        if (recipientType === 1) {
+          toRecipients.push(idCard)
+        } else if (recipientType === 2) {
+          ccRecipients.push(idCard)
+        } else if (recipientType === 3) {
+          bccRecipients.push(idCard)
+        }
+      })
+      
+      // 解析每组收件人的姓名
       try {
-        parsedToMail = await parseRecipients(recipientsStr)
+        if (toRecipients.length > 0) {
+          parsedToRecipients = await parseRecipients(toRecipients.join(', '))
+        }
+        if (ccRecipients.length > 0) {
+          parsedCcRecipients = await parseRecipients(ccRecipients.join(', '))
+        }
+        if (bccRecipients.length > 0) {
+          parsedBccRecipients = await parseRecipients(bccRecipients.join(', '))
+        }
       } catch (error) {
-        // 保持原有值，不更新
-        parsedToMail = currentDetail.toMail || '无'
+        console.error('解析收件人失败:', error)
+      }
+    }
+    
+    // 兼容旧数据：如果没有 recipients 数组，尝试使用 toMail
+    let parsedToMail = currentDetail.toMail || '无'
+    if (!parsedToRecipients && !parsedCcRecipients && !parsedBccRecipients) {
+      const recipientsStr = emailDetail.toMail || ''
+      if (recipientsStr && recipientsStr !== currentDetail.toMail) {
+        try {
+          parsedToMail = await parseRecipients(recipientsStr)
+          parsedToRecipients = parsedToMail
+        } catch (error) {
+          parsedToMail = currentDetail.toMail || '无'
+        }
       }
     }
     
@@ -957,6 +1024,9 @@ async function updateEmailDetail(emailDetail: any) {
       attachments: emailDetail.attachments || [],
       originalSendTime: originalSendTime,
       toMail: parsedToMail,
+      toRecipients: parsedToRecipients || undefined,
+      ccRecipients: parsedCcRecipients || undefined,
+      bccRecipients: parsedBccRecipients || undefined,
       isLoading: false // 移除加载状态
     }
     
@@ -1018,19 +1088,36 @@ async function updateEmailDetail(emailDetail: any) {
             }
           } catch {}
 
-          // 收件人：从 recipients[].recipientIdCard 获取姓名并拼接
+          // 收件人：从 recipients[].recipientIdCard 获取姓名并拼接，按类型分组
           try {
             const recipientsArr = (detail as any)?.recipients
             if (Array.isArray(recipientsArr) && recipientsArr.length > 0) {
               const toNames: string[] = []
+              const ccNames: string[] = []
+              const bccNames: string[] = []
+              
               for (const r of recipientsArr) {
                 const idCard = (r?.recipientIdCard || '').toString().trim()
+                const recipientType = r?.recipientType || 1
                 if (idCard) {
                   const u = await getUserDetailByIdCard(idCard)
-                  toNames.push(u?.nickname || idCard)
+                  const displayName = u?.nickname || idCard
+                  
+                  if (recipientType === 1) {
+                    toNames.push(displayName)
+                  } else if (recipientType === 2) {
+                    ccNames.push(displayName)
+                  } else if (recipientType === 3) {
+                    bccNames.push(displayName)
+                  }
                 }
               }
-              if (originalMail.value) originalMail.value.toUserNames = toNames.join('、')
+              if (originalMail.value) {
+                originalMail.value.toUserNames = toNames.join('、')
+                originalMail.value.toRecipients = toNames.join('、') || undefined
+                originalMail.value.ccRecipients = ccNames.join('、') || undefined
+                originalMail.value.bccRecipients = bccNames.join('、') || undefined
+              }
             }
           } catch {}
         }

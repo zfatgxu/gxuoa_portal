@@ -40,8 +40,18 @@
         <div class="original-info-grid">
           <div class="info-label">发件人：</div>
           <div class="info-value">{{ originalMail.fromUserName || '' }}</div>
-          <div class="info-label">收件人：</div>
-          <div class="info-value">{{ originalMail.toUserNames || '' }}</div>
+          <template v-if="originalMail.toRecipients || originalMail.toUserNames">
+            <div class="info-label">收件人：</div>
+            <div class="info-value">{{ originalMail.toRecipients || originalMail.toUserNames || '' }}</div>
+          </template>
+          <template v-if="originalMail.ccRecipients">
+            <div class="info-label">抄送人：</div>
+            <div class="info-value">{{ originalMail.ccRecipients }}</div>
+          </template>
+          <template v-if="originalMail.bccRecipients">
+            <div class="info-label">密送人：</div>
+            <div class="info-value">{{ originalMail.bccRecipients }}</div>
+          </template>
           <div class="info-label">发件时间：</div>
           <div class="info-value">{{ originalMail.sendTime || '' }}</div>
           <div class="info-label">主题：</div>

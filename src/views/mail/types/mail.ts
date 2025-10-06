@@ -22,6 +22,9 @@ export interface OriginalMailInfo {
   subject: string
   fromUserName?: string
   toUserNames?: string
+  toRecipients?: string      // 主收件人（新增）
+  ccRecipients?: string       // 抄送人（新增）
+  bccRecipients?: string      // 密送人（新增）
   sendTime?: string
   content?: string
   attachments?: LetterAttachmentRespVO[]

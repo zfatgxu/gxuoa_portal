@@ -8,8 +8,6 @@
         filterable
         remote
         reserve-keyword
-        allow-create
-        default-first-option
         :placeholder="placeholder"
         :remote-method="handleRemoteSearch"
         :loading="loading"

@@ -160,9 +160,17 @@
           <div class="sender-details">
             <div class="sender-name">{{ originalDetail.sender || '未知' }}</div>
             <div class="sender-meta">
-              <div>
+              <div v-if="originalDetail.toRecipients">
                 <span>收件人</span>
-                <span>{{ originalDetail.toMail || '无' }}</span>
+                <span>{{ originalDetail.toRecipients }}</span>
+              </div>
+              <div v-if="originalDetail.ccRecipients">
+                <span>抄送人</span>
+                <span>{{ originalDetail.ccRecipients }}</span>
+              </div>
+              <div v-if="originalDetail.bccRecipients">
+                <span>密送人</span>
+                <span>{{ originalDetail.bccRecipients }}</span>
               </div>
               <div>
                 <span>时间</span>
@@ -577,22 +585,45 @@ const openOriginalDetail = async (id: number) => {
       }
 
       let toUserNames = ''
+      let ccUserNames = ''
+      let bccUserNames = ''
       try {
         const recipientsArr = (detail as any)?.recipients
         if (Array.isArray(recipientsArr) && recipientsArr.length > 0) {
           const toNames: string[] = []
+          const ccNames: string[] = []
+          const bccNames: string[] = []
+          
           for (const r of recipientsArr) {
             const idCard = (r?.recipientIdCard || '').toString().trim()
+            const recipientType = r?.recipientType || 1
             if (idCard) {
               try {
                 const u = await getUserByIdCard(idCard)
-                toNames.push(u?.nickname || idCard)
+                const displayName = u?.nickname || idCard
+                
+                if (recipientType === 1) {
+                  toNames.push(displayName)
+                } else if (recipientType === 2) {
+                  ccNames.push(displayName)
+                } else if (recipientType === 3) {
+                  bccNames.push(displayName)
+                }
               } catch {
-                toNames.push(idCard)
+                const displayName = idCard
+                if (recipientType === 1) {
+                  toNames.push(displayName)
+                } else if (recipientType === 2) {
+                  ccNames.push(displayName)
+                } else if (recipientType === 3) {
+                  bccNames.push(displayName)
+                }
               }
             }
           }
           toUserNames = toNames.join('、')
+          ccUserNames = ccNames.join('、')
+          bccUserNames = bccNames.join('、')
         }
       } catch {}
 
@@ -609,6 +640,9 @@ const openOriginalDetail = async (id: number) => {
         subject,
         sender: senderName || '未知',
         toMail: toUserNames || '无',
+        toRecipients: toUserNames || undefined,
+        ccRecipients: ccUserNames || undefined,
+        bccRecipients: bccUserNames || undefined,
         originalSendTime: sendTime,
         attachments: atts,
         content: html
@@ -810,15 +844,30 @@ onMounted(async () => {
               const recipientsArr = (detail as any)?.recipients
               if (Array.isArray(recipientsArr) && recipientsArr.length > 0) {
                 const toNames: string[] = []
+                const ccNames: string[] = []
+                const bccNames: string[] = []
+                
                 for (const r of recipientsArr) {
                   const idCard = (r?.recipientIdCard || '').toString().trim()
+                  const recipientType = r?.recipientType || 1
                   if (idCard) {
                     const u = await getUserByIdCard(idCard)
-                    toNames.push(u?.nickname || idCard)
+                    const displayName = u?.nickname || idCard
+                    
+                    if (recipientType === 1) {
+                      toNames.push(displayName)
+                    } else if (recipientType === 2) {
+                      ccNames.push(displayName)
+                    } else if (recipientType === 3) {
+                      bccNames.push(displayName)
+                    }
                   }
                 }
                 if (replyOriginal.value) {
                   replyOriginal.value.toUserNames = toNames.join('、')
+                  replyOriginal.value.toRecipients = toNames.join('、') || undefined
+                  replyOriginal.value.ccRecipients = ccNames.join('、') || undefined
+                  replyOriginal.value.bccRecipients = bccNames.join('、') || undefined
                 }
               }
             } catch (e) {}
@@ -877,14 +926,29 @@ onMounted(async () => {
                 const recipientsArr = (d as any)?.recipients
                 if (Array.isArray(recipientsArr) && recipientsArr.length > 0) {
                   const toNames: string[] = []
+                  const ccNames: string[] = []
+                  const bccNames: string[] = []
+                  
                   for (const r of recipientsArr) {
                     const idCard = (r?.recipientIdCard || '').toString().trim()
+                    const recipientType = r?.recipientType || 1
                     if (idCard) {
                       const u = await getUserByIdCard(idCard)
-                      toNames.push(u?.nickname || idCard)
+                      const displayName = u?.nickname || idCard
+                      
+                      if (recipientType === 1) {
+                        toNames.push(displayName)
+                      } else if (recipientType === 2) {
+                        ccNames.push(displayName)
+                      } else if (recipientType === 3) {
+                        bccNames.push(displayName)
+                      }
                     }
                   }
                   item.toUserNames = toNames.join('、')
+                  item.toRecipients = toNames.join('、') || undefined
+                  item.ccRecipients = ccNames.join('、') || undefined
+                  item.bccRecipients = bccNames.join('、') || undefined
                 }
               } catch (e) {}
               
