@@ -31,7 +31,7 @@ export interface LetterRecipientRespVO {
   userId: number               // 用户ID
   userName: string             // 用户姓名
   recipientIdCard: string      // 收件人身份证号
-  recipientType: number        // 收件人类型(1-主收件人,2-抄送人)
+  recipientType: number        // 收件人类型(1-主收件人,2-抄送人,3-密送人)
   isRead: boolean              // 是否已读
   isDeleted: boolean           // 是否丢弃
   isStarred: boolean           // 是否标星
@@ -127,7 +127,7 @@ export interface LetterContactStarPageReqVO extends PageParam {
 // 用户信件状态VO - 对应后端 UserLetterStatusVO
 export interface UserLetterStatusVO {
   userIdCard: string           // 用户身份证号
-  userRole: number             // 用户角色(1-发件人,2-收件人,3-抄送人)
+  userRole: number             // 用户角色(1-发件人,2-主收件人,3-抄送人,4-密送人)
   isRead: boolean              // 是否已读
   isDeleted: boolean           // 是否丢弃
   isStarred: boolean           // 是否标星
