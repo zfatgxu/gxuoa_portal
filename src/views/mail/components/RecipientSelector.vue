@@ -3,11 +3,11 @@
     <div class="form-label">{{ labelText }}：</div>
     <div class="form-field">
       <el-select
+        ref="selectRef"
         :model-value="modelValue"
         multiple
         filterable
         remote
-        reserve-keyword
         :placeholder="placeholder"
         :remote-method="handleRemoteSearch"
         :loading="loading"
@@ -19,8 +19,8 @@
         <el-option
           v-for="item in userOptions"
           :key="item.value"
-          :label="item.label"
-          :value="item.value"
+          :label="item.name"
+          :value="item.name"
         >
           <div class="user-option">
             <el-avatar :size="24" :src="item.avatar">
@@ -48,7 +48,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, nextTick } from 'vue'
 import type { UserOption } from '../types/mail'
 
 interface Props {
@@ -75,6 +75,9 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>()
 
+// el-select ref
+const selectRef = ref()
+
 // 标签文本
 const labelText = computed(() => {
   switch (props.type) {
@@ -89,6 +92,18 @@ const labelText = computed(() => {
 
 const handleUpdate = (value: string[]) => {
   emit('update:modelValue', value)
+  
+  // 选择后清空搜索框，避免显示输入的搜索文本
+  nextTick(() => {
+    if (selectRef.value) {
+      // 通过 blur 和 focus 来清空搜索文本
+      selectRef.value.blur()
+      // 延迟一点再聚焦，让用户可以继续添加
+      setTimeout(() => {
+        selectRef.value?.focus()
+      }, 100)
+    }
+  })
 }
 
 const handleFocus = () => {

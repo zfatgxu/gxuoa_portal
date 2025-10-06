@@ -28,8 +28,8 @@
             :user-options="contactsState.userOptions.value"
             :loading="contactsState.loading.value"
             :show-actions="true"
-            @toggle-cc="showCc = true"
-            @toggle-bcc="showBcc = true"
+            @toggle-cc="showCc = !showCc"
+            @toggle-bcc="showBcc = !showBcc"
             @focus="activeRecipientField = 'recipients'"
             @remote-search="contactsState.searchUsers"
           />
@@ -452,6 +452,24 @@ const handleSelectContact = (data: any) => {
   
   if (name && !mailForm.value[field].includes(name)) {
     mailForm.value[field].push(name)
+    
+    // 将联系人添加到 userOptions 列表，以便能够正常删除
+    const existsInOptions = contactsState.userOptions.value.some(opt => opt.name === name)
+    if (!existsInOptions) {
+      const user = contactsState.allUsers.value.find((u: any) => u.nickname === name)
+      if (user) {
+        contactsState.userOptions.value.push({
+          value: user.id.toString(),
+          label: name,
+          avatar: user.avatar || '',
+          name: user.nickname || name,
+          userId: user.id,
+          deptName: user.deptNames ? user.deptNames.join(', ') : '',
+          workId: user.workId || '',
+          email: user.email || ''
+        })
+      }
+    }
     
     const fieldName = field === 'recipients' ? '收件人' : field === 'cc' ? '抄送人' : '密送人'
     ElMessage.success(`已添加${fieldName}: ${name}`)
