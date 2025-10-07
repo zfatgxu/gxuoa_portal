@@ -98,6 +98,10 @@ export const getSimpleUserList = (): Promise<UserVO[]> => {
   return request.get({ url: '/app/user/list-all-simple' })
 }
 
+// 根据角色code获取用户列表
+export const getUserListByRoleCode = (roleCode: string) => {
+  return request.get({ url: '/app/user/list-by-role-code', params: { roleCode } })
+}
 
 //根据部门id获取用户列表
 export const getUserListByDeptId = (deptId: number): Promise<UserVO[]> => {

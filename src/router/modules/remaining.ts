@@ -188,6 +188,28 @@ const remainingRouter: AppRouteRecordRaw[] = [
     ]
   },
   {
+    path: '/schedulelist',
+    name: 'Schedule',
+    component:Layout,
+    meta: {
+      hidden: true
+    },
+    children: [
+      {
+        path: 'add',
+        component: () => import('@/views/schedulelist/add.vue'),
+        name: 'ScheduleAdd',
+        meta: {
+          noCache: true,
+          hidden: true,
+          canTo: true,
+          title: '添加活动内容',
+          activeMenu: '/schedulelist'
+        }
+      }
+    ]
+  },
+  {
     path: '/job',
     component: Layout,
     name: 'JobL',
