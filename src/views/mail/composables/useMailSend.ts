@@ -8,6 +8,7 @@ import {
   type LetterReplyReqVO,
   type LetterForwardReqVO
 } from '@/api/mail/letter'
+import { sendDraft as sendDraftAPI } from '@/api/mail/draft'
 import type { MailForm } from '../types/mail'
 import { isIdCardFormat } from '../utils/mailHelpers'
 
@@ -20,6 +21,7 @@ export function useMailSend(options: {
   editorInstance: Ref<any>
   attachmentIds: Ref<number[]>
   allUsers: Ref<any[]>
+  currentDraftId?: Ref<number | null>
 }) {
   // 状态
   const sending = ref(false)
@@ -30,39 +32,40 @@ export function useMailSend(options: {
    */
   const processRecipients = async (recipients: string[]): Promise<string[]> => {
     const processedIdCards: string[] = []
+    const errors: string[] = []
     
-    try {
-      const users = options.allUsers.value
-      console.log('📋 使用用户列表处理收件人:', users)
+    const users = options.allUsers.value
+    
+    if (!users || users.length === 0) {
+      throw new Error('用户列表未加载，无法处理收件人')
+    }
+    
+    for (const recipient of recipients) {
+      const isIdCard = isIdCardFormat(recipient)
       
-      for (const recipient of recipients) {
-        console.log(`🔍 处理收件人: "${recipient}"`)
+      if (isIdCard) {
+        processedIdCards.push(recipient)
+      } else {
+        const user = users.find((u: any) => 
+          u.nickname === recipient || 
+          u.id?.toString() === recipient ||
+          (u.nickname && u.nickname.toLowerCase().includes(recipient.toLowerCase()))
+        )
         
-        // 检查是否已经是身份证号格式
-        if (isIdCardFormat(recipient)) {
-          console.log(`✅ 身份证号格式，直接添加: ${recipient}`)
-          processedIdCards.push(recipient)
-        } else {
-          // 如果是姓名或用户ID，尝试查找对应的身份证号
-          const user = users.find((u: any) => 
-            u.nickname === recipient || 
-            u.id?.toString() === recipient ||
-            (u.nickname && u.nickname.toLowerCase().includes(recipient.toLowerCase()))
-          )
-          if (user && user.idCard) {
-            console.log(`✅ 通过姓名/ID找到用户身份证号: ${user.idCard}`)
+        if (user) {
+          if (user.idCard) {
             processedIdCards.push(user.idCard)
           } else {
-            console.log(`⚠️ 通过姓名/ID未找到用户，使用原始值: ${recipient}`)
-            processedIdCards.push(recipient)
+            errors.push(`用户 "${recipient}" 缺少身份证号信息`)
           }
+        } else {
+          errors.push(`找不到用户 "${recipient}"`)
         }
       }
-      
-      console.log('📤 处理后的收件人身份证号列表:', processedIdCards)
-    } catch (error) {
-      console.error('❌ 处理收件人失败，使用原始信息:', error)
-      return recipients
+    }
+    
+    if (errors.length > 0) {
+      throw new Error(errors.join('\n'))
     }
     
     return processedIdCards
@@ -95,6 +98,14 @@ export function useMailSend(options: {
         return false
       }
       
+      // 检查是否是从草稿发送
+      const draftId = options.currentDraftId?.value
+      if (draftId) {
+        await sendDraftAPI({ id: draftId, sendNow: true })
+        ElMessage.success('草稿发送成功')
+        return true
+      }
+      
       // 获取编辑器内容
       const editorContent = options.editorInstance.value?.getHtml() || options.mailForm.value.content
       
@@ -119,8 +130,6 @@ export function useMailSend(options: {
         attachmentIds: options.attachmentIds.value.length > 0 ? options.attachmentIds.value : undefined
       }
       
-      console.log('📧 构造发送数据:', base)
-      
       // 根据类型调用不同的API
       if (type === 'reply' && replyId) {
         const data: LetterReplyReqVO = {
@@ -144,7 +153,6 @@ export function useMailSend(options: {
       
       return true
     } catch (error: any) {
-      console.error('发送邮件失败:', error)
       const errorMsg = error?.response?.data?.message || error?.message || '网络错误，请稍后重试'
       ElMessage.error(`发送失败: ${errorMsg}`)
       return false

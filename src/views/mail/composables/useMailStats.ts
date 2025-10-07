@@ -23,7 +23,7 @@ export function useMailStats() {
         mailStats.value = response
       }
     } catch (error: any) {
-      console.error('加载邮件统计失败:', error)
+      // 忽略加载失败
     }
   }
   

@@ -63,10 +63,8 @@ export function useContacts() {
    */
   const getStarredContactDisplayName = async (contact: LetterContactStarRespVO): Promise<string> => {
     try {
-      // 直接使用统一缓存服务获取用户昵称
       return await getUserNickname(contact.contactIdCard)
     } catch (error) {
-      console.error('获取星标联系人用户信息失败:', error)
       return '未知用户'
     }
   }
@@ -76,12 +74,9 @@ export function useContacts() {
    */
   const loadRecentContacts = async () => {
     try {
-      console.log('📡 开始加载最近联系人...')
       const response = await getSentMails({ pageNo: 1, pageSize: 50 })
       
       if (response && Array.isArray(response.list)) {
-        console.log(`📊 获取到 ${response.list.length} 封已发送邮件`)
-        
         // 提取收件人信息并去重
         const contactMap = new Map()
         
@@ -114,8 +109,6 @@ export function useContacts() {
           .sort((a, b) => new Date(b.lastSendTime).getTime() - new Date(a.lastSendTime).getTime())
           .slice(0, 20) // 只显示最近20个联系人
         
-        console.log(`✅ 最近联系人加载成功，共 ${recentContacts.value.length} 个联系人`)
-        
         // 确保用户列表已加载
         if (allUsers.value.length === 0) {
           await loadAllUsers()
@@ -132,11 +125,9 @@ export function useContacts() {
           }
         })
       } else {
-        console.log('⚠️ 已发送邮件响应格式异常')
         recentContacts.value = []
       }
     } catch (error: any) {
-      console.error('❌ 加载最近联系人失败:', error)
       recentContacts.value = []
     }
   }
@@ -146,17 +137,12 @@ export function useContacts() {
    */
   const loadStarredContacts = async () => {
     try {
-      console.log('📡 开始加载星标联系人...')
       const response = await getLetterContactStarPage({ pageNo: 1, pageSize: 50 })
       
       if (response && Array.isArray(response.list)) {
-        console.log(`📊 获取到 ${response.list.length} 个星标联系人`)
-        
         starredContacts.value = response.list
           .sort((a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime())
           .slice(0, 20) // 只显示最近20个星标联系人
-        
-        console.log(`✅ 星标联系人加载成功，共 ${starredContacts.value.length} 个联系人`)
         
         // 异步加载每个联系人的显示名称和部门信息
         for (const contact of starredContacts.value) {
@@ -169,17 +155,14 @@ export function useContacts() {
             const department = userInfo?.deptNamesStr || userInfo?.deptNames?.join('、') || '未知部门'
             starredContactDepartments.value.set(contact.id, department)
           } catch (error) {
-            console.error(`获取联系人 ${contact.contactIdCard} 的显示名称失败:`, error)
             starredContactDisplayNames.value.set(contact.id, '未知用户')
             starredContactDepartments.value.set(contact.id, '未知部门')
           }
         }
       } else {
-        console.log('⚠️ 星标联系人响应格式异常')
         starredContacts.value = []
       }
     } catch (error: any) {
-      console.error('❌ 加载星标联系人失败:', error)
       starredContacts.value = []
     }
   }
@@ -189,10 +172,8 @@ export function useContacts() {
    */
   const loadAllUsers = async () => {
     try {
-      console.log('📡 加载用户列表...')
       const users = await getSimpleUserList()
       if (users && Array.isArray(users)) {
-        console.log(`✅ 用户列表加载成功，共 ${users.length} 个用户`)
         allUsers.value = users
         
         // 初始化用户选项列表（显示前20个）
@@ -206,7 +187,6 @@ export function useContacts() {
         }))
       }
     } catch (error) {
-      console.error('❌ 加载用户列表失败:', error)
       allUsers.value = []
     }
   }
@@ -215,14 +195,11 @@ export function useContacts() {
    * 搜索用户（基于预加载的用户列表）
    */
   const searchUsers = async (query: string) => {
-    console.log(`🔍 开始搜索联系人，关键词: "${query}"`)
-    
     try {
       loading.value = true
       
       // 如果输入为空，清空联想选项
       if (!query || !query.trim()) {
-        console.log('🔍 输入为空，清空联想选项')
         userOptions.value = []
         return
       }
@@ -236,7 +213,6 @@ export function useContacts() {
       
       // 搜索词太短，不进行过滤
       if (searchTerm.length < 1) {
-        console.log('🔍 搜索词太短，清空联想选项')
         userOptions.value = []
         return
       }
@@ -258,8 +234,6 @@ export function useContacts() {
         const bName = (b.nickname || '').toLowerCase()
         return aName.localeCompare(bName)
       })
-      
-      console.log(`🔍 过滤后找到 ${filteredUsers.length} 个匹配用户`)
       
       // 转换为前端需要的格式
       userOptions.value = filteredUsers.slice(0, 50).map((user: any) => {
@@ -284,10 +258,7 @@ export function useContacts() {
           email: email
         }
       })
-      
-      console.log('🔄 更新用户选项列表:', userOptions.value)
     } catch (error: any) {
-      console.error('❌ 搜索联系人失败:', error)
       userOptions.value = []
     } finally {
       loading.value = false
@@ -324,9 +295,6 @@ export function useContacts() {
         }
       } else {
         // 添加星标
-        console.log('🔍 开始添加星标联系人...')
-        console.log('📋 当前联系人信息:', contact)
-        
         let contactIdCard = contact.idCard
         if (!contactIdCard) {
           const user = allUsers.value.find((u: any) => u.nickname === contact.name)
@@ -357,8 +325,6 @@ export function useContacts() {
       
       return true
     } catch (error: any) {
-      console.error('❌ 切换星标状态失败:', error)
-      
       let errorMsg = '操作失败，请稍后重试'
       if (error?.response?.data?.message) {
         errorMsg = error.response.data.message
@@ -379,31 +345,14 @@ export function useContacts() {
    * 初始化所有联系人数据（并发加载）
    */
   const initContacts = async () => {
-    console.log('🚀 开始并发加载所有联系人数据...')
-    
     try {
-      const results = await Promise.allSettled([
+      await Promise.allSettled([
         loadAllUsers(),
         loadRecentContacts(),
         loadStarredContacts()
       ])
-      
-      results.forEach((result, index) => {
-        if (result.status === 'fulfilled') {
-          console.log(`✅ 并发加载任务 ${index + 1} 成功`)
-        } else {
-          console.error(`❌ 并发加载任务 ${index + 1} 失败:`, result.reason)
-        }
-      })
-      
-      const hasFailures = results.some(result => result.status === 'rejected')
-      if (hasFailures) {
-        console.warn('⚠️ 部分并发加载任务失败')
-      }
-      
-      console.log('🏁 联系人数据加载完成')
     } catch (error) {
-      console.error('❌ 并发加载过程中发生错误:', error)
+      // 忽略错误
     }
   }
   

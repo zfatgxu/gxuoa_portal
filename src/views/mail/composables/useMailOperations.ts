@@ -12,7 +12,7 @@ import {
   setFolderMailsReadState,
   toggleFolderMailsStar
 } from '@/api/mail/folder'
-import { toggleDraftStar } from '@/api/mail/draft'
+import { toggleDraftStar, deleteDraft } from '@/api/mail/draft'
 
 interface UseMailOperationsOptions {
   allEmails: Record<string, Email[]>
@@ -25,7 +25,47 @@ interface UseMailOperationsOptions {
 export function useMailOperations(options: UseMailOperationsOptions) {
   // 方法
   const deleteEmails = async (emailIds: number[], selectedFolder: string, selectedFolderId: number | null) => {
-    await moveToTrash({ ids: emailIds })
+    // 判断是否在草稿箱
+    const isDraftFolder = selectedFolder === 'drafts'
+    
+    // 分离草稿邮件和正式邮件
+    let draftIds: number[] = []
+    let regularIds: number[] = []
+    
+    if (isDraftFolder) {
+      // 在草稿箱中，所有邮件都是草稿
+      draftIds = emailIds
+    } else if (selectedFolder === 'starred') {
+      // 在星标邮件中，需要区分草稿和正式邮件
+      const currentEmails = options.allEmails[selectedFolder]
+      if (currentEmails && currentEmails.length > 0) {
+        emailIds.forEach(id => {
+          const email = currentEmails.find(e => e.id === id)
+          if (email?.isDraft) {
+            draftIds.push(id)
+          } else {
+            regularIds.push(id)
+          }
+        })
+      } else {
+        // 找不到邮件，默认当作正式邮件处理
+        regularIds = emailIds
+      }
+    } else {
+      // 其他文件夹，默认都是正式邮件
+      regularIds = emailIds
+    }
+    
+    // 分别删除草稿邮件和正式邮件
+    if (draftIds.length > 0) {
+      // 删除草稿邮件（deleteDraft 支持单个或批量）
+      await deleteDraft(draftIds)
+    }
+    
+    if (regularIds.length > 0) {
+      // 删除正式邮件（移到已删除）
+      await moveToTrash({ ids: regularIds })
+    }
     
     // 根据当前文件夹类型选择正确的邮件列表
     if (selectedFolder === 'custom' && selectedFolderId) {
@@ -52,9 +92,19 @@ export function useMailOperations(options: UseMailOperationsOptions) {
       }
     }
     
-    // 重新加载已删除文件夹（如果需要）
-    if (selectedFolder !== 'deleted') {
-      await options.loadFolderEmails('deleted')
+    // 重新加载相关文件夹
+    if (draftIds.length > 0) {
+      // 如果删除了草稿，重新加载草稿箱
+      if (selectedFolder !== 'drafts') {
+        await options.loadFolderEmails('drafts')
+      }
+    }
+    
+    if (regularIds.length > 0) {
+      // 如果删除了正式邮件，重新加载已删除文件夹
+      if (selectedFolder !== 'deleted') {
+        await options.loadFolderEmails('deleted')
+      }
     }
   }
   
@@ -77,7 +127,47 @@ export function useMailOperations(options: UseMailOperationsOptions) {
   }
   
   const permanentDeleteEmails = async (emailIds: number[], selectedFolder: string, selectedFolderId: number | null) => {
-    await permanentDelete({ ids: emailIds })
+    // 判断是否在草稿箱
+    const isDraftFolder = selectedFolder === 'drafts'
+    
+    // 分离草稿邮件和正式邮件
+    let draftIds: number[] = []
+    let regularIds: number[] = []
+    
+    if (isDraftFolder) {
+      // 在草稿箱中，所有邮件都是草稿
+      draftIds = emailIds
+    } else if (selectedFolder === 'starred') {
+      // 在星标邮件中，需要区分草稿和正式邮件
+      const currentEmails = options.allEmails[selectedFolder]
+      if (currentEmails && currentEmails.length > 0) {
+        emailIds.forEach(id => {
+          const email = currentEmails.find(e => e.id === id)
+          if (email?.isDraft) {
+            draftIds.push(id)
+          } else {
+            regularIds.push(id)
+          }
+        })
+      } else {
+        // 找不到邮件，默认当作正式邮件处理
+        regularIds = emailIds
+      }
+    } else {
+      // 其他文件夹，默认都是正式邮件
+      regularIds = emailIds
+    }
+    
+    // 分别彻底删除草稿邮件和正式邮件
+    if (draftIds.length > 0) {
+      // 彻底删除草稿邮件（deleteDraft 支持单个或批量）
+      await deleteDraft(draftIds)
+    }
+    
+    if (regularIds.length > 0) {
+      // 彻底删除正式邮件
+      await permanentDelete({ ids: regularIds })
+    }
     
     // 根据当前文件夹类型选择正确的邮件列表
     if (selectedFolder === 'custom' && selectedFolderId) {
@@ -104,8 +194,9 @@ export function useMailOperations(options: UseMailOperationsOptions) {
       }
     }
     
-    // 重新加载已删除文件夹（如果需要）
-    if (selectedFolder !== 'deleted') {
+    // 重新加载相关文件夹
+    if (regularIds.length > 0 && selectedFolder !== 'deleted') {
+      // 如果删除了正式邮件，重新加载已删除文件夹
       await options.loadFolderEmails('deleted')
     }
   }

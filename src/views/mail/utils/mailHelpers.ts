@@ -8,14 +8,21 @@
 export function formatMailTime(dateStr: string): string {
   const date = new Date(dateStr)
   const today = new Date()
-  const mailDate = new Date(date)
   
-  const todayStr = today.toISOString().split('T')[0]
-  const mailDateStr = mailDate.toISOString().split('T')[0]
+  // 使用本地时间而不是UTC时间来获取日期字符串
+  const getLocalDateStr = (d: Date) => {
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  
+  const todayStr = getLocalDateStr(today)
+  const mailDateStr = getLocalDateStr(date)
   
   const yesterday = new Date(today)
   yesterday.setDate(yesterday.getDate() - 1)
-  const yesterdayStr = yesterday.toISOString().split('T')[0]
+  const yesterdayStr = getLocalDateStr(yesterday)
   
   const timeStr = date.toTimeString().slice(0, 5)
   
@@ -25,16 +32,16 @@ export function formatMailTime(dateStr: string): string {
     return `昨天 ${timeStr}`
   } else {
     const currentYear = today.getFullYear()
-    const mailYear = mailDate.getFullYear()
+    const mailYear = date.getFullYear()
     
     if (mailYear === currentYear) {
-      const month = mailDate.getMonth() + 1
-      const day = mailDate.getDate()
+      const month = date.getMonth() + 1
+      const day = date.getDate()
       return `${month}月${day}日`
     } else {
-      const year = mailDate.getFullYear()
-      const month = String(mailDate.getMonth() + 1).padStart(2, '0')
-      const day = String(mailDate.getDate()).padStart(2, '0')
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
       return `${year}/${month}/${day}`
     }
   }

@@ -251,7 +251,6 @@ async function handleCreateFolder() {
         await createNewFolder(folderName.trim())
         ElMessage.success(`文件夹"${folderName.trim()}"创建成功`)
       } catch (error: any) {
-        console.error('❌ 创建文件夹失败:', error)
         const errorMsg = error?.response?.data?.msg || error?.message || '创建文件夹失败'
         ElMessage.error(errorMsg)
       } finally {
@@ -260,7 +259,7 @@ async function handleCreateFolder() {
     }
   } catch (error: any) {
     if (error !== 'cancel') {
-      console.error('❌ 新建文件夹操作失败:', error)
+      ElMessage.error('创建文件夹失败')
     }
   }
 }
@@ -292,7 +291,6 @@ async function handleRenameFolder(folderId: number) {
         await renameFolder(folderId, newFolderName.trim())
         ElMessage.success(`文件夹重命名为"${newFolderName.trim()}"成功`)
       } catch (error: any) {
-        console.error('❌ 重命名文件夹失败:', error)
         const errorMsg = error?.response?.data?.msg || error?.message || '重命名文件夹失败'
         ElMessage.error(errorMsg)
       } finally {
@@ -303,7 +301,7 @@ async function handleRenameFolder(folderId: number) {
     }
   } catch (error: any) {
     if (error !== 'cancel') {
-      console.error('❌ 重命名文件夹操作失败:', error)
+      ElMessage.error('重命名文件夹失败')
     }
   }
 }
@@ -348,7 +346,6 @@ async function handleDeleteFolder(folderId: number) {
       await loadMailStats()
       ElMessage.success(`文件夹"${folder.folderName}"删除成功`)
     } catch (error: any) {
-      console.error('删除文件夹失败:', error)
       const errorMsg = error?.response?.data?.msg || error?.message || '删除文件夹失败'
       ElMessage.error(`删除文件夹失败: ${errorMsg}`)
     } finally {
@@ -358,7 +355,6 @@ async function handleDeleteFolder(folderId: number) {
     if (error === 'cancel') {
       return
     }
-    console.error('删除文件夹操作失败:', error)
     ElMessage.error('删除文件夹失败')
   }
 }
@@ -375,12 +371,11 @@ async function handleDeleteEmails(emailIds: number[]) {
     loading.value = true
     await deleteEmails(emailIds, selectedFolder.value, selectedFolderId.value)
     
-    await loadCustomFolders()
+    await loadCustomFolders()    
     await loadMailStats()
     
     ElMessage.success(`成功删除 ${emailIds.length} 封邮件`)
   } catch (error: any) {
-    console.error('删除邮件失败:', error)
     ElMessage.error('删除邮件失败')
   } finally {
     loading.value = false
@@ -396,7 +391,6 @@ async function handleRestoreEmails(emailIds: number[]) {
     await loadMailStats()
     ElMessage.success(`成功恢复 ${emailIds.length} 封邮件`)
   } catch (error: any) {
-    console.error('恢复邮件失败:', error)
     ElMessage.error('恢复邮件失败')
   } finally {
     loading.value = false
@@ -429,7 +423,6 @@ async function handlePermanentDeleteEmails(emailIds: number[]) {
     if (error === 'cancel') {
       return
     }
-    console.error('彻底删除邮件失败:', error)
     ElMessage.error('彻底删除邮件失败')
   } finally {
     loading.value = false
@@ -492,7 +485,6 @@ async function handleMoveEmails(data: { folderId: number, emailIds: number[] }) 
     await loadMailStats()
     ElMessage.success(`成功移动 ${emailIds.length} 封邮件到文件夹"${targetFolderName}"`)
   } catch (error: any) {
-    console.error('移动邮件失败:', error)
     const errorMsg = error?.response?.data?.msg || error?.message || '移动邮件失败'
     ElMessage.error(`移动邮件失败: ${errorMsg}`)
   } finally {
@@ -513,7 +505,6 @@ async function handleRemoveFromFolder(data: { folderId: number, emailIds: number
 
     ElMessage.success(`已从当前文件夹移除 ${emailIds.length} 封邮件`)
   } catch (error: any) {
-    console.error('从文件夹移除失败:', error)
     ElMessage.error('从文件夹移除失败')
   } finally {
     loading.value = false
@@ -563,7 +554,6 @@ async function handleMarkEmails(data: { action: string, emailIds: number[] }) {
     await loadMailStats()
     ElMessage.success(successMessage)
   } catch (error: any) {
-    console.error('标记邮件失败:', error)
     ElMessage.error('标记邮件失败')
   } finally {
     loading.value = false
@@ -576,7 +566,6 @@ async function handleToggleStar(emailId: number) {
     await toggleStar(emailId)
     await loadMailStats()
   } catch (error: any) {
-    console.error('切换星标失败:', error)
     ElMessage.error('操作失败')
   }
 }
@@ -597,7 +586,6 @@ async function handleSyncMails() {
     ElMessage.success('邮件同步成功')
     loadingInstance.close()
   } catch (error: any) {
-    console.error('同步邮件失败:', error)
     ElMessage.error('同步邮件失败')
   }
 }
@@ -632,8 +620,7 @@ async function handleViewEmailDetail(emailId: number) {
       // 重新加载邮件统计
       await loadMailStats()
     } catch (markError: any) {
-      console.error('标记邮件为已读失败:', markError)
-      // 即使标记失败，仍然显示邮件详情
+      // 标记失败不影响邮件详情显示
     }
   }
 }
@@ -641,70 +628,38 @@ async function handleViewEmailDetail(emailId: number) {
 // 处理获取邮件详情
 async function handleGetEmailDetail(emailId: number) {
   try {
-    console.log('🔍 开始获取邮件详情，邮件ID:', emailId)
-    
     let emailDetail: any = null
     
     // 优先从缓存中获取
     if (emailDetailsCache.value[emailId]) {
-      console.log('📦 从缓存中获取邮件详情')
       emailDetail = emailDetailsCache.value[emailId]
     } else {
-      console.log('🌐 从服务器获取邮件详情')
       emailDetail = await getLetterDetail(emailId)
-      console.log('📨 服务器返回的邮件详情:', emailDetail)
       
       // 缓存邮件详情
       if (emailDetail) {
         emailDetailsCache.value[emailId] = emailDetail
-        console.log('💾 邮件详情已缓存')
       }
     }
     
     // 验证返回的数据结构
     if (!emailDetail) {
-      console.error('❌ 邮件详情数据为空，邮件ID:', emailId)
       throw new Error(`邮件详情数据为空，邮件ID: ${emailId}`)
-    }
-    
-    // 验证数据结构完整性
-    if (!emailDetail.content) {
-      console.warn('⚠️ 邮件详情缺少content字段:', emailDetail)
     }
     
     // 获取邮件附件列表
     try {
-      console.log('📎 开始获取邮件附件')
       const attachments = await getLetterAttachmentsByLetterId(emailId)
-      console.log('📎 获取到的附件:', attachments)
-      
-      // 将附件信息添加到邮件详情中
       emailDetail.attachments = attachments || []
     } catch (attachmentError: any) {
-      console.error('❌ 获取邮件附件失败:', attachmentError)
-      // 附件获取失败不影响邮件详情显示，设置为空数组
       emailDetail.attachments = []
     }
     
     // 将详细数据传递给子组件
     if (mainContentRef.value) {
-      console.log('📤 将邮件详情传递给子组件')
       mainContentRef.value.updateEmailDetail(emailDetail)
-    } else {
-      console.warn('⚠️ mainContentRef 为空，无法传递邮件详情')
     }
-    
-    console.log('✅ 邮件详情获取成功')
   } catch (error: any) {
-    console.error('❌ 获取邮件详情失败:', error)
-    console.error('错误详情:', {
-      message: error?.message,
-      response: error?.response,
-      status: error?.response?.status,
-      data: error?.response?.data
-    })
-    
-    // 更详细的错误信息处理
     let errorMsg = '获取邮件详情失败'
     
     if (error?.response?.status === 404) {
@@ -758,7 +713,7 @@ onMounted(async () => {
     await loadCustomFolders()
     await loadFolderEmails('inbox')
   } catch (error: any) {
-    console.error('邮件组件初始化失败:', error)
+    ElMessage.error('邮件组件初始化失败')
   }
 })
 

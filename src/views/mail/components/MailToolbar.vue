@@ -25,7 +25,7 @@
       </el-dropdown>
     </div>
     <div class="toolbar-right">
-      <span class="time">已于{{ currentTime }}保存至草稿</span>
+      <span v-if="lastSaveTime" class="time">已于{{ lastSaveTime }}保存至草稿</span>
       <div class="tool-btn" @click="handleSaveDraft">
         <span>保存草稿</span>
       </div>
@@ -38,7 +38,7 @@ import { Position, Setting, ArrowDown } from '@element-plus/icons-vue'
 
 interface Props {
   sending: boolean
-  currentTime: string
+  lastSaveTime?: string
 }
 
 interface Emits {
@@ -46,7 +46,9 @@ interface Emits {
   (e: 'save-draft'): void
 }
 
-defineProps<Props>()
+withDefaults(defineProps<Props>(), {
+  lastSaveTime: ''
+})
 const emit = defineEmits<Emits>()
 
 const handleSend = () => {

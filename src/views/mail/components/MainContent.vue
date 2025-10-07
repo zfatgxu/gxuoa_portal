@@ -31,7 +31,7 @@
           回复
         </button>
         <button 
-          v-if="(folderName === '收件箱' || folderName === '星标邮件' || folderName === '已发送')"
+          v-if="(folderName === '收件箱' || folderName === '星标邮件' || folderName === '已发送') && !shouldRestrictDraftOperations"
           class="tool-btn"
           @click="handleForward"
         >
@@ -51,12 +51,12 @@
         </button>
         <select class="tool-select" v-model="markAsValue" @change="handleMarkAsChange">
           <option value="" disabled selected style="display: none;">标记为...</option>
-          <option v-if="folderName !== '草稿箱' && !selectedEmailDetail" value="read">已读邮件</option>
-          <option v-if="folderName !== '草稿箱' && !selectedEmailDetail" value="unread">未读邮件</option>
+          <option v-if="folderName !== '草稿箱' && !selectedEmailDetail && !shouldRestrictDraftOperations" value="read">已读邮件</option>
+          <option v-if="folderName !== '草稿箱' && !selectedEmailDetail && !shouldRestrictDraftOperations" value="unread">未读邮件</option>
           <option v-if="folderName !== '星标邮件'" value="star">星标邮件</option>
           <option value="unstar">取消星标</option>
         </select>
-        <select v-if="!isDeletedFolder && !isTrashFolder && !isDraftFolder" class="tool-select move-select" v-model="moveToValue" @change="handleMoveToChange">
+        <select v-if="!isDeletedFolder && !isTrashFolder && !isDraftFolder && !shouldRestrictDraftOperations" class="tool-select move-select" v-model="moveToValue" @change="handleMoveToChange">
           <option value="" disabled selected style="display: none;">移动...</option>
           <!-- 自定义文件夹选项 -->
           <option v-for="folder in props.customFolders" :key="folder.id" :value="folder.id">
@@ -82,7 +82,7 @@
           <input type="checkbox" class="email-checkbox" v-model="selectedEmails" :value="email.id" @click.stop />
           <span class="email-icon">✉️</span>
           <span class="sender">
-            <template v-if="folderName === '已发送' || folderName === '草稿箱'">
+            <template v-if="email.isDraft || email.isSelfSent">
               {{ formatRecipientsForList(email) }}
             </template>
             <template v-else>
@@ -90,9 +90,9 @@
             </template>
           </span>
           <span class="subject">
-            {{ email.subject }}
+            {{ email.subject ? email.subject : '(无主题)' }}
             <span v-if="email.content" class="email-content"> - {{ stripHtml(email.content) }}</span>
-            <span v-if="email.isDraft" class="draft-label">[草稿]</span>
+            <span v-if="email.isDraft" class="draft-label">草稿</span>
           </span>
           <span class="time">{{ email.time }}</span>
           <span class="star-btn" :class="{starred: email.isStarred}" @click.stop="toggleStar(email.id)">
@@ -280,10 +280,10 @@
     <!-- 右键上下文菜单 -->
     <div v-if="contextMenu.visible" class="context-menu" :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }" @click.stop>
       <!-- 根据邮件状态显示不同的菜单选项 -->
-      <div v-if="contextMenu.email && folderName !== '草稿箱' && !contextMenu.email.isRead" class="context-menu-item" @click="markAsRead">
+      <div v-if="contextMenu.email && folderName !== '草稿箱' && !contextMenu.email.isRead && !(folderName === '星标邮件' && contextMenu.email.isDraft)" class="context-menu-item" @click="markAsRead">
         标记为已读
       </div>
-      <div v-if="contextMenu.email && folderName !== '草稿箱' && contextMenu.email.isRead" class="context-menu-item" @click="markAsUnread">
+      <div v-if="contextMenu.email && folderName !== '草稿箱' && contextMenu.email.isRead && !(folderName === '星标邮件' && contextMenu.email.isDraft)" class="context-menu-item" @click="markAsUnread">
         标记为未读
       </div>
       <div v-if="contextMenu.email && !contextMenu.email.deletedAt && !isTrashFolder" class="context-menu-item" @click="deleteEmail">
@@ -310,7 +310,7 @@
       </div>
       <!-- 移动到... 悬浮子菜单 -->
       <div 
-        v-if="!isDeletedFolder && !isTrashFolder && !isDraftFolder"
+        v-if="!isDeletedFolder && !isTrashFolder && !isDraftFolder && !(contextMenu.email && folderName === '星标邮件' && contextMenu.email.isDraft)"
         class="context-menu-item"
         style="position: relative;"
         @mouseenter="contextMenu.showMoveSubmenu = true"
@@ -339,6 +339,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import topImage from '@/views/mail/image/top.png'
 import { getUserByIdCard } from '@/api/system/user'
 import { formatFileSizeFromString, getFileExtension, downloadAttachment } from '@/api/mail/attachment'
@@ -351,6 +352,7 @@ interface Email {
   subject: string
   time: string
   date: string
+  sendTime?: string // 新增：原始发送时间用于排序
   deletedAt?: string
   isDraft?: boolean
   isStarred?: boolean
@@ -465,6 +467,27 @@ const allSelected = computed({
   }
 })
 
+// 计算属性 - 判断当前选中的邮件是否包含草稿（用于在星标邮件中限制操作）
+const hasSelectedDrafts = computed(() => {
+  // 如果正在查看详情
+  if (selectedEmailDetail.value) {
+    return selectedEmailDetail.value.isDraft || false
+  }
+  // 如果是多选
+  if (selectedEmails.value.length > 0) {
+    return selectedEmails.value.some(emailId => {
+      const email = props.emails.find(e => e.id === Number(emailId))
+      return email?.isDraft || false
+    })
+  }
+  return false
+})
+
+// 计算属性 - 在星标邮件中且选中了草稿，需要限制某些操作
+const shouldRestrictDraftOperations = computed(() => {
+  return props.folderName === '星标邮件' && hasSelectedDrafts.value
+})
+
 // 监听邮件列表变化，重置选择状态
 watch(() => props.emails, () => {
   selectedEmails.value = []
@@ -521,17 +544,65 @@ function markAsUnread() {
   }
 }
 
-function deleteEmail() {
+async function deleteEmail() {
   if (contextMenu.value.email) {
-    emit('deleteEmails', [contextMenu.value.email.id])
+    const emailId = contextMenu.value.email.id
+    const isDraft = contextMenu.value.email.isDraft || props.isDraftFolder
+    
+    // 先关闭右键菜单
     hideContextMenu()
+    
+    // 如果是草稿邮件，弹出确认框
+    if (isDraft) {
+      try {
+        await ElMessageBox.confirm(
+          '删除草稿后将无法恢复，是否要删除？',
+          '确认删除',
+          {
+            confirmButtonText: '删除',
+            cancelButtonText: '取消',
+            type: 'warning',
+            confirmButtonClass: 'el-button--danger'
+          }
+        )
+      } catch (error) {
+        // 用户点击取消
+        return
+      }
+    }
+    
+    emit('deleteEmails', [emailId])
   }
 }
 
-function permanentDeleteEmail() {
+async function permanentDeleteEmail() {
   if (contextMenu.value.email) {
-    emit('permanentDeleteEmails', [contextMenu.value.email.id])
+    const emailId = contextMenu.value.email.id
+    const isDraft = contextMenu.value.email.isDraft || props.isDraftFolder
+    
+    // 先关闭右键菜单
     hideContextMenu()
+    
+    // 如果是草稿邮件，弹出确认框
+    if (isDraft) {
+      try {
+        await ElMessageBox.confirm(
+          '删除草稿后将无法恢复，是否要删除？',
+          '确认删除',
+          {
+            confirmButtonText: '删除',
+            cancelButtonText: '取消',
+            type: 'warning',
+            confirmButtonClass: 'el-button--danger'
+          }
+        )
+      } catch (error) {
+        // 用户点击取消
+        return
+      }
+    }
+    
+    emit('permanentDeleteEmails', [emailId])
   }
 }
 
@@ -584,6 +655,11 @@ const emailCountText = computed(() => {
   const totalCount = props.emails.length
   const unreadCount = props.emails.filter(email => !email.isRead).length
   
+  // 草稿箱不显示未读邮件数
+  if (props.folderName === '草稿箱') {
+    return `(共 ${totalCount} 封)`
+  }
+  
   if (props.mailStats && props.folderName === '收件箱') {
     const stats = props.mailStats
     return stats.inboxUnreadCount > 0 
@@ -611,9 +687,35 @@ function clearSelection() {
 }
 
 // 邮件操作函数
-function deleteSelectedEmails() {
+async function deleteSelectedEmails() {
   const ids = getCurrentEmailIds()
   if (ids.length === 0) return
+  
+  // 检查是否包含草稿邮件
+  const isDraft = props.isDraftFolder || (selectedEmailDetail.value?.isDraft) || 
+    selectedEmails.value.some(emailId => {
+      const email = props.emails.find(e => e.id === Number(emailId))
+      return email?.isDraft
+    })
+  
+  // 如果是草稿邮件，弹出确认框
+  if (isDraft) {
+    try {
+      await ElMessageBox.confirm(
+        '删除草稿后将无法恢复，是否要删除？',
+        '确认删除',
+        {
+          confirmButtonText: '删除',
+          cancelButtonText: '取消',
+          type: 'warning',
+          confirmButtonClass: 'el-button--danger'
+        }
+      )
+    } catch (error) {
+      // 用户点击取消
+      return
+    }
+  }
   
   if (props.isDeletedFolder || props.isTrashFolder) {
     emit('permanentDeleteEmails', ids)
@@ -717,6 +819,13 @@ function handleForward() {
 // 邮件详情操作
 function viewEmailDetail(emailId: number) {
   const localEmail = props.emails.find(email => email.id === emailId)
+  
+  // 如果是草稿邮件，只触发跳转事件，不获取详情
+  if (localEmail?.isDraft || props.folderName === '草稿箱') {
+    emit('viewEmailDetail', emailId)
+    return
+  }
+  
   if (localEmail) {
     // 设置加载状态，不立即显示详情
     selectedEmailDetail.value = {
@@ -874,16 +983,24 @@ function stripHtml(html: string): string {
 function formatRecipientsForList(email: Email): string {
   const recipients = (email.toMail || '').split(',').map(s => s.trim()).filter(Boolean)
   if (recipients.length === 0) {
-    return '（收件人未填写）'
+    return '(收件人未填写)'
   }
   return recipients.join('、')
 }
 
 // 日期处理函数
 function getDateLabel(dateStr: string) {
+  // 获取今天的日期（只保留年月日，清零时分秒）
   const today = new Date()
-  const d = new Date(dateStr)
-  const diffDays = Math.floor((today.getTime()-d.getTime())/86400000)
+  today.setHours(0, 0, 0, 0)
+  
+  // 获取邮件的日期（只保留年月日，清零时分秒）
+  const mailDate = new Date(dateStr)
+  mailDate.setHours(0, 0, 0, 0)
+  
+  // 计算天数差（使用日期比较，而不是时间戳差值）
+  const diffDays = Math.floor((today.getTime() - mailDate.getTime()) / 86400000)
+  
   if (diffDays === 0) return '今天'
   if (diffDays === 1) return '昨天'
   if (diffDays < 7) return '本周'
@@ -925,19 +1042,16 @@ const groupedEmails = computed(() => {
   return order.map(label => ({ 
     label, 
     emails: (groups[label]||[]).sort((a,b)=> {
-      if (props.isDeletedFolder) {
-        const aDate = a.deletedAt || a.date
-        const bDate = b.deletedAt || b.date
-        if (aDate !== bDate) return bDate.localeCompare(aDate)
-        return b.time.localeCompare(a.time)
-      } else if (props.folderName === '星标邮件') {
-        const aDate = a.starredAt || a.date
-        const bDate = b.starredAt || b.date
-        if (aDate !== bDate) return bDate.localeCompare(aDate)
-        return b.time.localeCompare(a.time)
-      } else {
-        return b.date.localeCompare(a.date)||b.time.localeCompare(a.time)
-      }
+      // 使用原始的sendTime字段进行排序，确保最新的在最上面
+      const aTime = a.sendTime || a.date
+      const bTime = b.sendTime || b.date
+      
+      // 将时间字符串转换为Date对象进行比较
+      const aDate = new Date(aTime)
+      const bDate = new Date(bTime)
+      
+      // 降序排列：更新的时间在前面
+      return bDate.getTime() - aDate.getTime()
     }) 
   })).filter(g=>g.emails.length)
 })
@@ -996,7 +1110,7 @@ async function updateEmailDetail(emailDetail: any) {
           parsedBccRecipients = await parseRecipients(bccRecipients.join(', '))
         }
       } catch (error) {
-        console.error('解析收件人失败:', error)
+        // 忽略解析失败
       }
     }
     

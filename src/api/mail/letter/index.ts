@@ -145,14 +145,12 @@ export interface LetterDetailRespVO {
   originalLetterId?: number                    // 原始信件ID（仅回复/转发）
 }
 
-
-
-
 // 邮件列表项接口
 export interface MailListItemVO {
   id: number                    // 邮件ID
   fromUserId: number            // 发件人用户ID
   fromUserName: string          // 发件人姓名
+  fromUserIdCard: string        // 发件人身份证号
   toUserIds: string             // 收件人用户ID列表
   toUserNames: string           // 收件人姓名列表
   subject: string               // 邮件主题
@@ -243,33 +241,7 @@ export interface LetterForwardReqVO {
  * @returns Promise<LetterDetailRespVO>
  */
 export const getLetterDetail = async (id: number): Promise<LetterDetailRespVO> => {
-  try {
-    console.log('🌐 API调用: 获取信件详情，ID:', id)
-    const result = await request.get({url: `/letter/detail?id=${id}`})
-    console.log('📨 API返回结果:', result)
-    
-    // 验证返回的数据结构
-    if (!result) {
-      console.error('❌ API返回空数据')
-      throw new Error('服务器返回空数据')
-    }
-    
-    // 验证必要字段
-    if (!result.content) {
-      console.warn('⚠️ API返回数据缺少content字段:', result)
-    }
-    
-    return result
-  } catch (error: any) {
-    console.error('❌ getLetterDetail API调用失败:', error)
-    console.error('错误详情:', {
-      message: error?.message,
-      response: error?.response,
-      status: error?.response?.status,
-      data: error?.response?.data
-    })
-    throw error
-  }
+  return await request.get({url: `/letter/detail?id=${id}`})
 }
 
 /**

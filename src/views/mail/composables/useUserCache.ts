@@ -39,7 +39,7 @@ export function useUserCache(options = { usePersistCache: false }) {
       // 设置1小时过期
       wsCache.set(`${CACHE_PREFIX}${idCard}`, user, { exp: 3600 })
     } catch (error) {
-      console.warn('写入持久化缓存失败:', error)
+      // 忽略写入失败
     }
   }
   
@@ -75,7 +75,6 @@ export function useUserCache(options = { usePersistCache: false }) {
       
       return userDetail
     } catch (error: any) {
-      console.error('获取用户详情失败:', error)
       return null
     }
   }
@@ -126,10 +125,7 @@ export function useUserCache(options = { usePersistCache: false }) {
   const clearPersistCache = () => {
     if (!options.usePersistCache) return
     
-    // 清除所有用户详情缓存
-    // 注意：这需要枚举所有 key，性能较差
-    // 实际使用中可以考虑其他方案
-    console.warn('清除持久化缓存功能暂未实现')
+    // 清除所有用户详情缓存功能暂未实现
   }
   
   /**

@@ -81,14 +81,11 @@ export const updateDraft = async (data: LetterDraftUpdateReqVO): Promise<boolean
   return await request.put({ url: '/letter/draft/update', data })
 }
 
-// 3) 删除草稿
-export const deleteDraft = async (id: number): Promise<boolean> => {
-  return await request.delete({ url: `/letter/draft/delete?id=${id}` })
-}
-
-// 4) 批量删除草稿
-export const batchDeleteDrafts = async (ids: number[]): Promise<boolean> => {
-  return await request.delete({ url: '/letter/draft/batch-delete', data: ids })
+// 3) 删除草稿（支持单个或批量）
+export const deleteDraft = async (ids: number | number[]): Promise<boolean> => {
+  // 统一转换为数组格式
+  const idsArray = Array.isArray(ids) ? ids : [ids]
+  return await request.delete({ url: '/letter/draft/delete', data: idsArray })
 }
 
 // 5) 获取草稿详情

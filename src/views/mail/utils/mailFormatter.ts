@@ -10,6 +10,7 @@ export interface Email {
   subject: string
   time: string
   date: string
+  sendTime?: string // 添加原始发送时间用于排序
   deletedAt?: string
   isDraft?: boolean
   isStarred?: boolean
@@ -31,7 +32,7 @@ export async function parseRecipients(
   recipients: string,
   getUserDetailByIdCard: (idCard: string) => Promise<any>
 ): Promise<string> {
-  if (!recipients) return '无'
+  if (!recipients) return ''
   
   const recipientList = recipients.split(',').map(r => r.trim())
   const parsedNames: string[] = []
@@ -108,6 +109,18 @@ export function formatEmailContent(content: string): string {
 }
 
 /**
+ * 将Date对象转换为本地日期字符串（YYYY-MM-DD）
+ * 避免使用 toISOString() 导致的时区问题
+ */
+function toLocalDateString(date: Date | string): string {
+  const d = new Date(date)
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
  * 转换后端邮件数据为前端格式
  */
 export async function convertMailToEmail(
@@ -119,7 +132,7 @@ export async function convertMailToEmail(
   }
 ): Promise<Email> {
   const date = mail.sendTime
-  const dateStr = new Date(date).toISOString().split('T')[0]
+  const dateStr = toLocalDateString(date)
   
   // 使用统一的时间格式化函数
   const displayTime = formatMailTime(date)
@@ -130,26 +143,27 @@ export async function convertMailToEmail(
   // 解析邮件内容
   const formattedContent = options.formatEmailContent(mail.content || '')
   
-  // 识别是否自己发送
+  // 识别是否自己发送（通过比较身份证号）
   const fromUserIdCard = (mail as any).fromUserIdCard || (mail as any).fromIdCard || ''
   const isSelfSent = fromUserIdCard && options.currentUserIdCard && fromUserIdCard === options.currentUserIdCard
   
   const result = {
     id: mail.id,
     sender: mail.fromUserName,
-    subject: mail.subject,
+    subject: (mail.subject && mail.subject.trim()) ? mail.subject.trim() : '(无主题)',
     time: displayTime,
     date: dateStr,
-    deletedAt: mail.deletedAt ? new Date(mail.deletedAt).toISOString().split('T')[0] : undefined,
+    sendTime: mail.sendTime, // 保存原始发送时间用于排序
+    deletedAt: mail.deletedAt ? toLocalDateString(mail.deletedAt) : undefined,
     isDraft: (mail as any).isDraft || false,
     isStarred: mail.isStarred,
-    starredAt: mail.starredAt ? new Date(mail.starredAt).toISOString().split('T')[0] : undefined,
+    starredAt: mail.starredAt ? toLocalDateString(mail.starredAt) : undefined,
     fromMail: mail.fromUserName,
     toMail: parsedToMail,
     content: formattedContent,
     isRead: mail.isRead,
     isTrash: mail.isTrash || false,
-    trashTime: mail.trashTime ? new Date(mail.trashTime).toISOString().split('T')[0] : undefined,
+    trashTime: mail.trashTime ? toLocalDateString(mail.trashTime) : undefined,
     isSelfSent
   }
   

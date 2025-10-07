@@ -41,8 +41,6 @@
     <div v-if="showActions" class="form-actions">
       <span class="action-link" @click="handleToggleCc">抄送</span>
       <span class="action-link" @click="handleToggleBcc">密送</span>
-      <span>|</span>
-      <span class="action-link">分别发送</span>
     </div>
   </div>
 </template>

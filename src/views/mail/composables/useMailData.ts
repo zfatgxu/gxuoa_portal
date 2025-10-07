@@ -27,11 +27,27 @@ export function useMailData(getUserDetailByIdCard: (idCard: string) => Promise<a
   const folderEmails = reactive<Record<number, Email[]>>({})
   const loading = ref(false)
   
+  // 缓存当前用户身份证号
+  let cachedUserIdCard: string | null = null
+  
   // 获取当前用户身份证号
-  const getCurrentUserIdCard = () => {
-    const userStore = useUserStoreWithOut()
-    const currentUser = userStore.getUser
-    return (currentUser as any)?.idCard || ''
+  const getCurrentUserIdCard = async (): Promise<string> => {
+    // 如果已缓存，直接返回
+    if (cachedUserIdCard) {
+      return cachedUserIdCard
+    }
+    
+    try {
+      // 从 API 获取用户信息
+      const userInfo = await import('@/api/login').then(m => m.getInfo())
+      const idCard = userInfo?.user?.idCard || ''
+      
+      // 缓存起来
+      cachedUserIdCard = idCard
+      return idCard
+    } catch (error) {
+      return ''
+    }
   }
   
   // 方法
@@ -50,6 +66,17 @@ export function useMailData(getUserDetailByIdCard: (idCard: string) => Promise<a
           break
         case 'drafts':
           response = await getDraftMails({ pageNo: 1, pageSize: 100 })
+          // 草稿箱的邮件标记为草稿，并使用 updateTime 作为排序时间
+          if (response && Array.isArray(response.list)) {
+            response.list.forEach((mail: any) => {
+              mail.isDraft = true
+              // 草稿应该使用 updateTime（最后更新时间）作为排序和分组的依据
+              // 因为 updateTime 代表了草稿最后一次保存的时间
+              if (mail.updateTime) {
+                mail.sendTime = mail.updateTime
+              }
+            })
+          }
           break
         case 'starred':
           // 星标邮件需要合并正式邮件和草稿的星标
@@ -65,7 +92,7 @@ export function useMailData(getUserDetailByIdCard: (idCard: string) => Promise<a
           // 将草稿转换为MailListItemVO格式
           const draftsAsMailItems = starredDraftsList.map((draft: any) => ({
             id: draft.id,
-            subject: draft.subject,
+            subject: (draft.subject && draft.subject.trim()) ? draft.subject.trim() : '(无主题)',
             content: draft.content,
             fromUserName: draft.senderName,
             // 提取所有收件人（包括主收件人、抄送、密送）
@@ -94,7 +121,7 @@ export function useMailData(getUserDetailByIdCard: (idCard: string) => Promise<a
       }
       
       if (response && Array.isArray(response.list)) {
-        const currentUserIdCard = getCurrentUserIdCard()
+        const currentUserIdCard = await getCurrentUserIdCard()
         const convertedEmails = await Promise.all(
           response.list.map(mail =>
             convertMailToEmail(mail, {
@@ -110,8 +137,6 @@ export function useMailData(getUserDetailByIdCard: (idCard: string) => Promise<a
         allEmails[folder] = []
       }
     } catch (error: any) {
-      console.error(`加载${folder}邮件失败:`, error)
-      
       const folderLabels: Record<string, string> = {
         inbox: '收件箱',
         starred: '星标邮件',
@@ -146,7 +171,7 @@ export function useMailData(getUserDetailByIdCard: (idCard: string) => Promise<a
       const response = await getFolderMails(folderId, 1, 100)
       
       if (response && Array.isArray(response.list)) {
-        const currentUserIdCard = getCurrentUserIdCard()
+        const currentUserIdCard = await getCurrentUserIdCard()
         const convertedEmails = await Promise.all(
           response.list.map(mail =>
             convertMailToEmail(mail, {
@@ -161,7 +186,6 @@ export function useMailData(getUserDetailByIdCard: (idCard: string) => Promise<a
         folderEmails[folderId] = []
       }
     } catch (error: any) {
-      console.error(`加载文件夹 ${folderId} 邮件失败:`, error)
       ElMessage.error(`加载文件夹邮件失败: ${error?.response?.data?.msg || error?.message || '未知错误'}`)
       folderEmails[folderId] = []
     }

@@ -195,9 +195,7 @@ export function useAttachments() {
           
           // 更新进度
           uploadProgress.value = Math.round(((i + 1) / newFiles.length) * 100)
-          console.log(`📤 上传进度: ${i + 1}/${newFiles.length} (${uploadProgress.value}%)`)
         } catch (error: any) {
-          console.error(`上传文件 "${file.name}" 失败:`, error)
           ElMessage.error(`文件 "${file.name}" 上传失败`)
         }
       }
@@ -210,8 +208,6 @@ export function useAttachments() {
       
       return attachmentIds
     } catch (error: any) {
-      console.error('文件上传失败:', error)
-      
       let errorMessage = '上传失败'
       if (error.message) {
         if (error.message.includes('网络')) {
@@ -243,7 +239,7 @@ export function useAttachments() {
         attachmentList.value.push(info)
       }
     } catch (error) {
-      console.error('加载附件信息失败:', error)
+      // 忽略加载失败
     }
   }
   
@@ -266,7 +262,6 @@ export function useAttachments() {
       ElMessage.success('附件删除成功')
       return true
     } catch (error: any) {
-      console.error('删除附件失败:', error)
       ElMessage.error(`删除失败: ${error.message || '网络错误'}`)
       return false
     }
@@ -288,7 +283,6 @@ export function useAttachments() {
       ElMessage.success(`成功删除 ${attachmentIds.length} 个附件`)
       return true
     } catch (error: any) {
-      console.error('批量删除附件失败:', error)
       ElMessage.error(`删除失败: ${error.message || '网络错误'}`)
       return false
     }

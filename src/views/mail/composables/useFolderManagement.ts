@@ -41,7 +41,6 @@ export function useFolderManagement() {
         customFolders.value = []
       }
     } catch (error: any) {
-      console.error('加载自定义文件夹失败:', error)
       customFolders.value = []
     }
   }

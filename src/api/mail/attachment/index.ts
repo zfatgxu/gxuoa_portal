@@ -159,10 +159,8 @@ export const formatFileSize = (bytes: number): string => {
 export const formatFileSizeFromString = (sizeStr: string): string => {
   if (!sizeStr) return '0 B'
   
-  // 解析为数字（字节数）
   const bytes = parseInt(sizeStr, 10)
   if (isNaN(bytes)) {
-    console.warn('无法解析文件大小:', sizeStr)
     return '未知大小'
   }
   

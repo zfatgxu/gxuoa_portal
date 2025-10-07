@@ -14,7 +14,7 @@
         <!-- 工具栏 -->
         <MailToolbar
           :sending="mailSendState.sending.value"
-          :current-time="currentTime"
+          :last-save-time="lastDraftSaveTime"
           @send="handleSend"
           @save-draft="handleSaveDraft"
         />
@@ -138,94 +138,17 @@
   </div>
   
   <!-- 原始邮件详情弹窗 -->
-  <el-dialog
+  <OriginalMailDetailDialog
     v-model="originalDetailDialogVisible"
-    width="1200px"
-    top="5vh"
-    :style="{ height: '85vh' }"
-    destroy-on-close
-  >
-    <div v-if="originalDetailLoading" class="loading-state">
-      <span class="loading-spinner"></span>
-      正在加载邮件详情...
-    </div>
-    <div v-else-if="originalDetail" class="original-detail-content">
-      <!-- 顶部：主题与发件人信息 -->
-      <div class="detail-header">
-        <div class="detail-subject">
-          <h3>{{ originalDetail.subject || '无主题' }}</h3>
-        </div>
-        <div class="detail-sender-info">
-          <div class="sender-avatar">
-            <img v-if="originalSenderAvatar" :src="originalSenderAvatar" :alt="originalDetail.sender || '发件人'" />
-            <span v-else>{{ getAvatarText(originalDetail.sender) }}</span>
-          </div>
-          <div class="sender-details">
-            <div class="sender-name">{{ originalDetail.sender || '未知' }}</div>
-            <div class="sender-meta">
-              <div v-if="originalDetail.toRecipients">
-                <span>收件人</span>
-                <span>{{ originalDetail.toRecipients }}</span>
-              </div>
-              <div v-if="originalDetail.ccRecipients">
-                <span>抄送人</span>
-                <span>{{ originalDetail.ccRecipients }}</span>
-              </div>
-              <div v-if="originalDetail.bccRecipients">
-                <span>密送人</span>
-                <span>{{ originalDetail.bccRecipients }}</span>
-              </div>
-              <div>
-                <span>时间</span>
-                <span>{{ originalDetail.originalSendTime || '未知' }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 底部：可滚动正文区域 -->
-      <div class="detail-body">
-        <!-- 附件列表 -->
-        <div v-if="originalDetail.attachments && originalDetail.attachments.length > 0" class="detail-attachments">
-          <div class="attachments-list">
-            <div 
-              v-for="att in originalDetail.attachments" 
-              :key="att.id" 
-              class="attachment-item"
-            >
-              <div class="attachment-info">
-                <div class="attachment-name">{{ att.fileName }}</div>
-                <div class="attachment-actions">
-                  <el-link 
-                    type="primary"
-                    :underline="false"
-                    :title="`下载 ${att.fileName}`"
-                    @click.prevent="handleDownloadAttachment(att)"
-                  >下载</el-link>
-                </div>
-              </div>
-              <div class="attachment-details">
-                <span class="file-size">{{ formatFileSizeFromString(att.fileSize) }}</span>
-                <span v-if="getFileExtension(att.fileName)" class="file-type">
-                  {{ getFileExtension(att.fileName).toUpperCase() }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 正文内容 -->
-        <div class="detail-content">
-          <div v-if="!originalDetail.content" class="loading-state">
-            <span class="loading-spinner"></span>
-            正在加载邮件内容...
-          </div>
-          <div v-else class="content-body" v-html="originalDetail.content"></div>
-        </div>
-      </div>
-    </div>
-  </el-dialog>
+    :loading="originalDetailLoading"
+    :detail="originalDetail"
+    :sender-avatar="originalSenderAvatar"
+    :current-index="currentOriginalIndex"
+    :total-count="replyOriginalList.length"
+    @prev="switchToPrevOriginal"
+    @next="switchToNextOriginal"
+    @download-attachment="handleDownloadAttachment"
+  />
 </template>
 
 <script setup lang="ts">
@@ -241,6 +164,7 @@ import RecipientSelector from './components/RecipientSelector.vue'
 import AttachmentManager from './components/AttachmentManager.vue'
 import ContactPanel from './components/ContactPanel.vue'
 import OriginalMailDisplay from './components/OriginalMailDisplay.vue'
+import OriginalMailDetailDialog from './components/OriginalMailDetailDialog.vue'
 import ContextMenu from './components/ContextMenu.vue'
 import { Editor } from '@/components/Editor'
 
@@ -258,8 +182,6 @@ import { formatDateTimeCn, getAvatarText } from './utils/mailHelpers'
 import { getLetterDetail } from '@/api/mail/letter'
 import { formatFileSizeFromString, getFileExtension, downloadAttachment } from '@/api/mail/attachment'
 import type { LetterAttachmentRespVO } from '@/api/mail/attachment'
-import type { LetterDraftRespVO } from '@/api/mail/draft'
-import { getDraft } from '@/api/mail/draft'
 import { getUserByIdCard } from '@/api/system/user'
 
 // 导入图片
@@ -277,7 +199,6 @@ const mailForm = ref<MailForm>({
   bcc: [],
   subject: '',
   content: '',
-  attachments: [],
   attachmentIds: []
 })
 
@@ -287,7 +208,6 @@ const showBcc = ref(false)
 const activeRecipientField = ref<'recipients' | 'cc' | 'bcc'>('recipients')
 
 // 编辑器实例
-const editorRef = ref<any>(null)
 const editorInstance = ref<any>(null)
 const editorReady = ref(false)
 
@@ -379,28 +299,95 @@ const originalDetailDialogVisible = ref(false)
 const originalDetailLoading = ref(false)
 const originalDetail = ref<any>(null)
 const originalSenderAvatar = ref<string>('')
+const currentOriginalIndex = ref(0) // 当前查看的原始邮件在列表中的索引
 
-// 当前时间
-const currentTime = computed(() => {
-  const now = new Date()
-  const hours = now.getHours().toString().padStart(2, '0')
-  const minutes = now.getMinutes().toString().padStart(2, '0')
-  return `${hours}:${minutes}`
+// 上次保存草稿的时间
+const lastDraftSaveTime = ref<string>('')
+
+// 格式化草稿保存时间：今天显示时间，其他显示日期
+const formatDraftSaveTime = (dateTimeStr: string): string => {
+  try {
+    const saveTime = new Date(dateTimeStr)
+    const now = new Date()
+    
+    // 判断是否是今天
+    const isToday = saveTime.getFullYear() === now.getFullYear() &&
+                    saveTime.getMonth() === now.getMonth() &&
+                    saveTime.getDate() === now.getDate()
+    
+    if (isToday) {
+      // 今天：显示时间 "20:47"
+      const hours = saveTime.getHours().toString().padStart(2, '0')
+      const minutes = saveTime.getMinutes().toString().padStart(2, '0')
+      return `${hours}:${minutes}`
+    } else {
+      // 判断是否是昨天
+      const yesterday = new Date(now)
+      yesterday.setDate(yesterday.getDate() - 1)
+      const isYesterday = saveTime.getFullYear() === yesterday.getFullYear() &&
+                          saveTime.getMonth() === yesterday.getMonth() &&
+                          saveTime.getDate() === yesterday.getDate()
+      
+      if (isYesterday) {
+        // 昨天：显示 "昨天"
+        return '昨天'
+      } else {
+        // 更早：显示日期
+        const year = saveTime.getFullYear()
+        const month = (saveTime.getMonth() + 1).toString().padStart(2, '0')
+        const day = saveTime.getDate().toString().padStart(2, '0')
+        
+        // 如果是今年，只显示月-日
+        if (year === now.getFullYear()) {
+          return `${month}-${day}`
+        } else {
+          // 如果是往年，显示完整日期
+          return `${year}-${month}-${day}`
+        }
+      }
+    }
+    } catch (e) {
+    // 如果解析失败，尝试直接从字符串中提取时间部分
+    const timeMatch = dateTimeStr.match(/(\d{2}):(\d{2})/)
+    if (timeMatch) {
+      return `${timeMatch[1]}:${timeMatch[2]}`
+    }
+    return ''
+  }
+}
+
+// 原始邮件ID列表（用于草稿保存）
+const replyOriginalIds = computed(() => {
+  return replyOriginalList.value.map(item => item.id)
 })
+
+// 关系类型（1-回复，2-转发）
+const relationType = ref<number | null>(null)
 
 // 使用 Composables
 const contactsState = useContacts()
 const attachmentState = useAttachments()
+
+// 创建一个共享的 currentDraftId ref
+const sharedCurrentDraftId = ref<number | null>(null)
+
+// 先初始化 mailSendState（它包含真正的 processRecipients 函数）
 const mailSendState = useMailSend({
   mailForm,
   editorInstance,
   attachmentIds: computed(() => mailForm.value.attachmentIds),
-  allUsers: contactsState.allUsers
+  allUsers: contactsState.allUsers,
+  currentDraftId: sharedCurrentDraftId
 })
+
+// 然后初始化 draftState，直接使用 mailSendState 的 processRecipients 和共享的 currentDraftId
 const draftState = useDraft({
   mailForm,
   editorInstance,
-  processRecipients: mailSendState.processRecipients
+  processRecipients: mailSendState.processRecipients, // 使用真正的函数
+  replyOriginalIds,
+  relationType,
+  sharedCurrentDraftId // 传入共享的 ref
 })
 
 // 事件处理器
@@ -408,7 +395,6 @@ const handleEditorChange = async (editor: any) => {
   if (!editorReady.value) {
     editorInstance.value = editor
     editorReady.value = true
-    console.log('Editor 创建完成:', editor)
   }
 }
 
@@ -436,6 +422,8 @@ const handleSend = async () => {
   const success = await mailSendState.sendMail(typeParam, replyIdParam)
   if (success) {
     const currentRoute = router.currentRoute.value
+    // 清除草稿状态
+    draftState.clearDraft()
     resetForm()
     await nextTick()
     await nextTick()
@@ -446,7 +434,11 @@ const handleSend = async () => {
 }
 
 const handleSaveDraft = async () => {
-  await draftState.saveDraft()
+  const result = await draftState.saveDraft()
+  if (result.success && result.lastSaveTime) {
+    // 使用从数据库返回的真实保存时间，并根据日期智能格式化
+    lastDraftSaveTime.value = formatDraftSaveTime(result.lastSaveTime)
+  }
 }
 
 const handleRecipientUpdate = (field: 'recipients' | 'cc' | 'bcc', newValue: string[]) => {
@@ -635,18 +627,24 @@ const handleDownloadAttachment = async (att: LetterAttachmentRespVO) => {
   try {
     await downloadAttachment(att.id, att.fileName)
   } catch (error: any) {
-    console.error('下载附件失败:', error)
     ElMessage.error(`下载失败: ${error?.message || '网络错误'}`)
   }
 }
 
 const openOriginalDetail = async (id: number) => {
-  try {
-    const numericId = Number(id)
-    if (!id || Number.isNaN(numericId)) {
-      console.warn('[openOriginalDetail] 无效的原始邮件ID:', id)
-      ElMessage?.warning?.('无法打开原始邮件：ID 无效')
-      return
+    try {
+      const numericId = Number(id)
+      if (!id || Number.isNaN(numericId)) {
+        ElMessage?.warning?.('无法打开原始邮件：ID 无效')
+        return
+      }
+
+    // 如果是多封邮件转发，找到当前邮件在列表中的索引
+    if (replyOriginalList.value.length > 0) {
+      const index = replyOriginalList.value.findIndex(item => item.id === numericId)
+      if (index !== -1) {
+        currentOriginalIndex.value = index
+      }
     }
 
     originalDetailDialogVisible.value = true
@@ -753,6 +751,36 @@ const removeOriginalFromList = (id: number) => {
   }
 }
 
+// 切换到上一封原始邮件
+const switchToPrevOriginal = () => {
+  if (replyOriginalList.value.length === 0) return
+  
+  if (currentOriginalIndex.value > 0) {
+    currentOriginalIndex.value--
+  } else {
+    // 循环到最后一封
+    currentOriginalIndex.value = replyOriginalList.value.length - 1
+  }
+  
+  const emailId = replyOriginalList.value[currentOriginalIndex.value].id
+  openOriginalDetail(emailId)
+}
+
+// 切换到下一封原始邮件
+const switchToNextOriginal = () => {
+  if (replyOriginalList.value.length === 0) return
+  
+  if (currentOriginalIndex.value < replyOriginalList.value.length - 1) {
+    currentOriginalIndex.value++
+  } else {
+    // 循环到第一封
+    currentOriginalIndex.value = 0
+  }
+  
+  const emailId = replyOriginalList.value[currentOriginalIndex.value].id
+  openOriginalDetail(emailId)
+}
+
 const resetForm = () => {
   mailForm.value = {
     recipients: [],
@@ -760,7 +788,6 @@ const resetForm = () => {
     bcc: [],
     subject: '',
     content: '',
-    attachments: [],
     attachmentIds: []
   }
   
@@ -772,7 +799,7 @@ const resetForm = () => {
         editorInstance.value.setHtml('')
       }
     } catch (e) {
-      console.warn('清空编辑器内容失败:', e)
+      // 忽略清空失败
     }
   }
   
@@ -784,8 +811,6 @@ const resetForm = () => {
 
 // 生命周期
 onMounted(async () => {
-  console.log('🚀 页面初始化开始')
-  
   // 强制重置状态
   mailForm.value = {
     recipients: [],
@@ -793,7 +818,6 @@ onMounted(async () => {
     bcc: [],
     subject: '',
     content: '',
-    attachments: [],
     attachmentIds: []
   }
   attachmentState.resetAttachments()
@@ -807,69 +831,122 @@ onMounted(async () => {
     const draftId = Number(draftIdParam)
     if (!Number.isNaN(draftId)) {
       try {
-        const draft: LetterDraftRespVO = await getDraft(draftId)
-        draftState.currentDraftId.value = draft.id
-        mailForm.value.subject = draft.subject || ''
-        mailForm.value.content = draft.content || ''
+        // 使用 draftState.loadDraft() 方法加载草稿
+        const result = await draftState.loadDraft(draftId)
         
-        if (editorReady.value && editorInstance.value && mailForm.value.content) {
-          await nextTick()
-          try {
-            editorInstance.value.setHtml(mailForm.value.content)
-          } catch (e) {
-            console.warn('设置编辑器内容失败:', e)
+        if (result.success) {
+          // 设置上次保存时间，根据日期智能格式化
+          if (result.lastSaveTime) {
+            lastDraftSaveTime.value = formatDraftSaveTime(result.lastSaveTime)
           }
-        }
-        
-        const toList: string[] = []
-        const ccList: string[] = []
-        const bccList: string[] = []
-        if (Array.isArray(draft.recipients)) {
-          draft.recipients.forEach(r => {
-            const display = r.recipientName || r.recipientIdCard
-            if (r.recipientType === 1) toList.push(display)
-            else if (r.recipientType === 2) ccList.push(display)
-            else if (r.recipientType === 3) bccList.push(display)
-          })
-        }
-        mailForm.value.recipients = toList
-        mailForm.value.cc = ccList
-        mailForm.value.bcc = bccList
-        showCc.value = ccList.length > 0
-        showBcc.value = bccList.length > 0
-        
-        // 将草稿中的收件人添加到 userOptions，确保能够通过 backspace 删除
-        const allRecipientNames = [...toList, ...ccList, ...bccList]
-        for (const recipientName of allRecipientNames) {
-          // 检查是否已在 userOptions 中
-          const existsInOptions = contactsState.userOptions.value.some(opt => opt.name === recipientName)
-          if (!existsInOptions) {
-            // 从 allUsers 中查找对应的用户信息
-            const user = contactsState.allUsers.value.find((u: any) => u.nickname === recipientName)
-            if (user) {
-              contactsState.userOptions.value.push({
-                value: user.id.toString(),
-                label: recipientName,
-                avatar: user.avatar || '',
-                name: user.nickname || recipientName,
-                userId: user.id,
-                deptName: user.deptNames ? user.deptNames.join(', ') : '',
-                workId: user.workId || '',
-                email: user.email || ''
-              })
+          
+          // 处理显示抄送和密送
+          showCc.value = mailForm.value.cc.length > 0
+          showBcc.value = mailForm.value.bcc.length > 0
+          
+          // 将草稿中的收件人添加到 userOptions，确保能够通过 backspace 删除
+          const allRecipientNames = [...mailForm.value.recipients, ...mailForm.value.cc, ...mailForm.value.bcc]
+          for (const recipientName of allRecipientNames) {
+            const existsInOptions = contactsState.userOptions.value.some(opt => opt.name === recipientName)
+            if (!existsInOptions) {
+              const user = contactsState.allUsers.value.find((u: any) => u.nickname === recipientName)
+              if (user) {
+                contactsState.userOptions.value.push({
+                  value: user.id.toString(),
+                  label: recipientName,
+                  avatar: user.avatar || '',
+                  name: user.nickname || recipientName,
+                  userId: user.id,
+                  deptName: user.deptNames ? user.deptNames.join(', ') : '',
+                  workId: user.workId || '',
+                  email: user.email || ''
+                })
+              }
+            }
+          }
+          
+          // 加载附件信息
+          if (mailForm.value.attachmentIds.length > 0) {
+            await attachmentState.loadAttachmentInfo(mailForm.value.attachmentIds)
+          }
+          
+          // 如果草稿中保存了原始邮件ID列表（多选转发场景），重新加载这些邮件
+          if (result.replyOriginalIds && result.replyOriginalIds.length > 0) {
+            // 恢复关系类型
+            if (result.relationType) {
+              relationType.value = result.relationType
+            }
+            
+            replyOriginalList.value = []
+            
+            const details = await Promise.allSettled(result.replyOriginalIds.map(id => getLetterDetail(id)))
+            for (let i = 0; i < details.length; i++) {
+              const res = details[i]
+              if (res.status === 'fulfilled' && res.value) {
+                const d: any = res.value
+                const item: OriginalMailInfo = {
+                  id: Number(result.replyOriginalIds[i]),
+                  subject: (d?.content?.subject) || d.subject || '',
+                  fromUserName: '',
+                  toUserNames: '',
+                  sendTime: formatDateTimeCn(d?.content?.sendTime),
+                  attachments: Array.isArray(d.attachments) ? d.attachments : []
+                }
+                
+                // 获取发件人信息
+                try {
+                  let firstSenderIdCard = ''
+                  if (Array.isArray((d as any).senders)) {
+                    firstSenderIdCard = (d as any).senders
+                      .map((s: any) => (s?.senderIdCard || '').toString().trim())
+                      .find((v: string) => !!v) || ''
+                  }
+                  if (!firstSenderIdCard) {
+                    firstSenderIdCard = (d as any).fromUserIdCard || (d as any).fromIdCard || ''
+                  }
+                  if (firstSenderIdCard) {
+                    const u = await getUserByIdCard(firstSenderIdCard)
+                    item.fromUserName = (u && u.nickname) ? u.nickname : ''
+                  }
+                } catch (e) {}
+                
+                // 获取收件人信息
+                try {
+                  const recipientsArr = (d as any)?.recipients
+                  if (Array.isArray(recipientsArr) && recipientsArr.length > 0) {
+                    const toNames: string[] = []
+                    const ccNames: string[] = []
+                    const bccNames: string[] = []
+                    
+                    for (const r of recipientsArr) {
+                      const idCard = (r?.recipientIdCard || '').toString().trim()
+                      const recipientType = r?.recipientType || 1
+                      if (idCard) {
+                        const u = await getUserByIdCard(idCard)
+                        const displayName = u?.nickname || idCard
+                        
+                        if (recipientType === 1) {
+                          toNames.push(displayName)
+                        } else if (recipientType === 2) {
+                          ccNames.push(displayName)
+                        } else if (recipientType === 3) {
+                          bccNames.push(displayName)
+                        }
+                      }
+                    }
+                    item.toUserNames = toNames.join('、')
+                    item.toRecipients = toNames.join('、') || undefined
+                    item.ccRecipients = ccNames.join('、') || undefined
+                    item.bccRecipients = bccNames.join('、') || undefined
+                  }
+                } catch (e) {}
+                
+              replyOriginalList.value.push(item)
             }
           }
         }
-        
-        const draftAttachmentIds = (draft as any).attachmentIds
-        if (draftAttachmentIds && Array.isArray(draftAttachmentIds)) {
-          mailForm.value.attachmentIds = draftAttachmentIds
-          await attachmentState.loadAttachmentInfo(draftAttachmentIds)
-        }
-        
-        ElMessage.success('已加载草稿')
+      }
       } catch (error: any) {
-        console.error('加载草稿失败:', error)
         ElMessage.error(error?.response?.data?.message || error?.message || '加载草稿失败')
       }
     }
@@ -910,6 +987,9 @@ onMounted(async () => {
             }
 
             const typeParam = (route.query.type || '').toString()
+            // 设置关系类型：1-回复，2-转发
+            relationType.value = typeParam === 'reply' ? 1 : 2
+            
             if (typeParam === 'reply') {
               let replySenderIdCards: string[] = []
               if (Array.isArray((detail as any).senders)) {
@@ -1005,6 +1085,9 @@ onMounted(async () => {
           }
         } else {
           // 多封转发
+          // 设置关系类型为转发
+          relationType.value = 2
+          
           const details = await Promise.allSettled(ids.map(id => getLetterDetail(id)))
           replyOriginalList.value = []
           for (let i = 0; i < details.length; i++) {
@@ -1078,7 +1161,7 @@ onMounted(async () => {
           }
         }
       } catch (e) {
-        console.error('加载回复原邮件失败:', e)
+        ElMessage.error('加载回复原邮件失败')
       }
     }
   }
@@ -1092,7 +1175,7 @@ onBeforeUnmount(() => {
           editorInstance.value.clear()
         }
       } catch (e) {
-        console.warn('清空编辑器内容失败:', e)
+        // 忽略清空失败
       }
       
       nextTick(() => {
@@ -1101,7 +1184,7 @@ onBeforeUnmount(() => {
             editorInstance.value.destroy()
           }
         } catch (e) {
-          console.warn('销毁编辑器实例失败:', e)
+          // 忽略销毁失败
         } finally {
           editorInstance.value = null
           editorReady.value = false
@@ -1111,7 +1194,6 @@ onBeforeUnmount(() => {
       editorReady.value = false
     }
   } catch (e) {
-    console.warn('清理编辑器实例失败:', e)
     editorInstance.value = null
     editorReady.value = false
   }
@@ -1218,164 +1300,4 @@ onBeforeUnmount(() => {
   line-height: 1.5;
   color: #303133;
 }
-
-/* 原始邮件详情弹窗样式 */
-.loading-state {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #606266;
-  padding: 20px;
-}
-
-.loading-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid #e5e5e5;
-  border-top-color: #409eff;
-  border-radius: 50%;
-  display: inline-block;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.original-detail-content {
-  display: flex;
-  flex-direction: column;
-  height: calc(85vh - 40px);
-}
-
-.detail-header {
-  flex-shrink: 0;
-}
-
-.detail-subject h3 {
-  margin: 0 0 10px 0;
-  font-size: 18px;
-  color: #303133;
-}
-
-.detail-sender-info {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.sender-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #f2f3f5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  color: #606266;
-  font-weight: 600;
-}
-
-.sender-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.sender-details {
-  flex: 1;
-}
-
-.sender-name {
-  font-size: 14px;
-  color: #303133;
-  font-weight: 500;
-}
-
-.sender-meta {
-  display: flex;
-  gap: 14px;
-  margin-top: 4px;
-  font-size: 12px;
-  color: #606266;
-}
-
-.sender-meta > div {
-  display: flex;
-  gap: 6px;
-}
-
-.sender-meta > div > span:first-child {
-  color: #909399;
-}
-
-.detail-body {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding-right: 2px;
-}
-
-.detail-attachments {
-  padding: 0;
-  margin-bottom: 12px;
-}
-
-.attachments-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.attachment-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  background: #fff;
-}
-
-.attachment-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-
-.attachment-name {
-  font-size: 13px;
-  color: #303133;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-}
-
-.attachment-details {
-  display: flex;
-  gap: 10px;
-  font-size: 12px;
-  color: #909399;
-}
-
-.detail-content {
-  background: #fff;
-  border: none;
-  border-radius: 6px;
-  padding: 12px;
-}
-
-.content-body {
-  font-size: 14px;
-  color: #303133;
-  line-height: 1.8;
-}
 </style>
-
