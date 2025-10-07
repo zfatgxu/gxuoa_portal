@@ -31,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import type { FolderRespVO } from '@/api/system/mail/folder/index'
+import type { FolderRespVO } from '@/api/mail/folder/index'
 
 // 定义props
 interface Props {

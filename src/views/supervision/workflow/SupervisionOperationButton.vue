@@ -80,6 +80,12 @@
         :rules="rejectReasonRule"
         label-width="100px"
       >
+        <el-form-item v-if="isSupervisorReviewNode" label="驳回目标" prop="rejectTarget">
+          <el-radio-group v-model="rejectReasonForm.rejectTarget">
+            <el-radio label="implement_plan">仅驳回修改的请求（回 implement_plan）</el-radio>
+            <el-radio label="upload_plan">驳回整套工作计划（回 upload_plan）</el-radio>
+          </el-radio-group>
+        </el-form-item>
         <el-form-item label="审批意见" prop="reason">
           <el-input
             v-model="rejectReasonForm.reason"
@@ -221,6 +227,12 @@
           :rules="rejectReasonRule"
           label-width="100px"
         >
+          <el-form-item v-if="isSupervisorReviewNode" label="驳回目标" prop="rejectTarget">
+            <el-radio-group v-model="rejectReasonForm.rejectTarget">
+              <el-radio label="implement_plan">仅驳回修改的请求（回 implement_plan）</el-radio>
+              <el-radio label="upload_plan">驳回整套工作计划（回 upload_plan）</el-radio>
+            </el-radio-group>
+          </el-form-item>
           <el-form-item label="审批意见" prop="reason">
             <el-input
               v-model="rejectReasonForm.reason"
@@ -834,13 +846,25 @@ const approveReasonRule = computed(() => {
 // 拒绝表单
 const rejectFormRef = ref<FormInstance>()
 const rejectReasonForm = reactive({
-  reason: ''
+  reason: '',
+  rejectTarget: null as 'upload_plan' | 'implement_plan' | null
 })
 const rejectReasonRule = computed(() => {
   return {
-    reason: [{ required: reasonRequire.value, message: '审批意见不能为空', trigger: 'blur' }]
+    reason: [{ required: reasonRequire.value, message: '审批意见不能为空', trigger: 'blur' }],
+    rejectTarget: [{ required: isSupervisorReviewNode.value, message: '请选择驳回目标', trigger: 'change' }]
   }
 })
+
+// 判断当前是否为三节点之一（supervisor_review、de_director_check、director_check）
+// 这三个节点在 upload_plan 变更场景下需要统一支持驳回目标选择
+const isTriadNode = computed(() => {
+  const triadNodes = ['supervisor_review', 'de_director_check', 'director_check']
+  return triadNodes.includes(runningTask.value?.taskDefinitionKey)
+})
+
+// 兼容旧代码：保留 isSupervisorReviewNode 别名
+const isSupervisorReviewNode = isTriadNode
 
 // 抄送表单
 const copyFormRef = ref<FormInstance>()
@@ -1058,6 +1082,8 @@ const closePopover = (type: string, formRef: FormInstance | undefined) => {
     approveVirtualRef.value = null
   } else if (type === 'reject') {
     rejectVirtualRef.value = null
+    // 清理驳回目标选择
+    rejectReasonForm.rejectTarget = null
   }
 }
 
@@ -1068,6 +1094,12 @@ const handleDialogCancel = (type: string) => {
     formRef.resetFields()
   }
   nextAssigneesActivityNode.value = []
+  
+  // 清理驳回目标选择
+  if (type === 'reject') {
+    rejectReasonForm.rejectTarget = null
+  }
+  
   emit('dialog-cancel')
 }
 
@@ -1278,6 +1310,12 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
       
       // 添加当前审批人ID，用于审计记录
       rejectVariables.auditUserId = currentUserId
+      
+      // supervisor_review 节点：添加驳回目标变量（若用户选择了）
+      if (isSupervisorReviewNode.value && rejectReasonForm.rejectTarget) {
+        rejectVariables.rejectTarget = rejectReasonForm.rejectTarget
+        console.log('[handleAudit] supervisor_review 驳回目标:', rejectReasonForm.rejectTarget)
+      }
       
       const data = {
         id: runningTask.value?.id,

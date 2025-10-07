@@ -591,6 +591,30 @@ export interface PlanEntryAuditResultVO {
   nextPeriodEntry?: PlanEntryRespVO // 下一期记录（顺延时）
 }
 
+// 督办计划记录批量提交请求
+export interface PlanEntryBatchSubmitReqVO {
+  processInstanceId: string // 流程实例ID
+  targetUserId: number // 办理人用户ID
+  targetUserName: string // 办理人用户名
+  targetDeptName: string // 办理人部门名称
+  entries: PlanEntryBatchItem[] // 计划记录列表
+}
+
+// 批量提交的计划记录项
+export interface PlanEntryBatchItem {
+  periodDate: string // 期次日期 (YYYY-MM-DD)
+  summary?: string // 计划内容摘要
+  fileList?: AttachmentFileInfo[] // 附件列表
+}
+
+// 督办计划记录批量提交结果
+export interface PlanEntryBatchSubmitResultVO {
+  submittedEntries: PlanEntryRespVO[] // 成功提交的记录列表
+  totalCount: number // 总记录数
+  successCount: number // 成功提交数
+  allSuccess: boolean // 是否全部成功
+}
+
 // 督办计划记录 API
 export const PlanEntryApi = {
   // 提交计划记录
@@ -627,6 +651,11 @@ export const PlanEntryApi = {
   // 审核计划记录
   audit: async (data: PlanEntryAuditReqVO) => {
     return await request.post({ url: '/supervision/plan/entry/audit', data })
+  },
+  
+  // 批量提交模板版计划记录
+  submitBatchTemplate: async (data: PlanEntryBatchSubmitReqVO) => {
+    return await request.post({ url: '/supervision/plan/entry/submit-batch-template', data })
   }
 }
 

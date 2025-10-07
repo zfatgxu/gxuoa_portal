@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { PropType } from 'vue'
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
-import { i18nChangeLanguage, IDomEditor, IEditorConfig } from '@wangeditor/editor'
+import { i18nChangeLanguage, IDomEditor, IEditorConfig, IToolbarConfig } from '@wangeditor/editor'
 import { propTypes } from '@/utils/propTypes'
 import { isNumber } from '@/utils/is'
 import { ElMessage } from 'element-plus'
@@ -24,6 +24,10 @@ const props = defineProps({
   height: propTypes.oneOfType([Number, String]).def('500px'),
   editorConfig: {
     type: Object as PropType<Partial<IEditorConfig>>,
+    default: () => undefined
+  },
+  toolbarConfig: {
+    type: Object as PropType<Partial<IToolbarConfig>>,
     default: () => undefined
   },
   readonly: propTypes.bool.def(false),
@@ -60,34 +64,47 @@ const handleCreated = (editor: IDomEditor) => {
   editorRef.value = editor
 }
 
+// 深度合并配置对象
+const deepMerge = (target: any, source: any) => {
+  if (!source) return target
+  const result = { ...target }
+  for (const key in source) {
+    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+      result[key] = deepMerge(target[key] || {}, source[key])
+    } else {
+      result[key] = source[key]
+    }
+  }
+  return result
+}
+
 // 编辑器配置
 const editorConfig = computed((): IEditorConfig => {
-  return Object.assign(
-    {
-      placeholder: '请输入内容...',
-      readOnly: props.readonly,
-      customAlert: (s: string, t: string) => {
-        switch (t) {
-          case 'success':
-            ElMessage.success(s)
-            break
-          case 'info':
-            ElMessage.info(s)
-            break
-          case 'warning':
-            ElMessage.warning(s)
-            break
-          case 'error':
-            ElMessage.error(s)
-            break
-          default:
-            ElMessage.info(s)
-            break
-        }
-      },
-      autoFocus: false,
-      scroll: true,
-      MENU_CONF: {
+  const defaultConfig = {
+    placeholder: '请输入内容...',
+    readOnly: props.readonly,
+    customAlert: (s: string, t: string) => {
+      switch (t) {
+        case 'success':
+          ElMessage.success(s)
+          break
+        case 'info':
+          ElMessage.info(s)
+          break
+        case 'warning':
+          ElMessage.warning(s)
+          break
+        case 'error':
+          ElMessage.error(s)
+          break
+        default:
+          ElMessage.info(s)
+          break
+      }
+    },
+    autoFocus: false,
+    scroll: true,
+    MENU_CONF: {
         ['uploadImage']: {
           server: getUploadUrl(),
           // 单个文件的最大体积限制，默认为 2M
@@ -186,9 +203,10 @@ const editorConfig = computed((): IEditorConfig => {
         }
       },
       uploadImgShowBase64: true
-    },
-    props.editorConfig || {}
-  )
+    }
+  
+  // 使用深度合并，确保自定义配置不会覆盖默认的上传配置
+  return deepMerge(defaultConfig, props.editorConfig || {})
 })
 
 const editorStyle = computed(() => {
@@ -226,6 +244,7 @@ defineExpose({
     <Toolbar
       :editor="editorRef"
       :editorId="editorId"
+      :defaultConfig="toolbarConfig"
       class="border-0 b-b-1 border-solid border-[var(--tags-view-border-color)]"
     />
     <!-- 编辑器 -->
