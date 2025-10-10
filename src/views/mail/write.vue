@@ -16,6 +16,7 @@
           :sending="mailSendState.sending.value"
           :last-save-time="lastDraftSaveTime"
           :scheduled-send-time="mailForm.scheduledSendTime"
+          :auto-save-status="autoSaveState.autoSaveStatus.value"
           v-model:request-read-receipt="mailForm.requestReadReceipt"
           v-model:priority="mailForm.priority"
           @send="handleSend"
@@ -237,6 +238,7 @@ import { useContacts } from './composables/useContacts'
 import { useAttachments } from './composables/useAttachments'
 import { useMailSend } from './composables/useMailSend'
 import { useDraft } from './composables/useDraft'
+import { useAutoSave } from './composables/useAutoSave'
 
 // 导入类型
 import type { MailForm, ContextMenuState, OriginalMailInfo } from './types/mail'
@@ -483,6 +485,18 @@ const draftState = useDraft({
   sharedCurrentDraftId // 传入共享的 ref
 })
 
+// 初始化自动保存功能
+const autoSaveState = useAutoSave({
+  mailForm,
+  editorInstance,
+  currentDraftId: sharedCurrentDraftId,
+  config: {
+    interval: 30000, // 30秒自动保存一次
+    debounceDelay: 3000, // 3秒防抖
+    enabled: true // 启用自动保存
+  }
+})
+
 // 事件处理器
 const handleEditorChange = async (editor: any) => {
   if (!editorReady.value) {
@@ -557,6 +571,14 @@ const handleSaveDraft = async () => {
   if (result.success && result.lastSaveTime) {
     // 使用从数据库返回的真实保存时间，并根据日期智能格式化
     lastDraftSaveTime.value = formatDraftSaveTime(result.lastSaveTime)
+    
+    // 更新自动保存快照，避免重复保存相同内容
+    autoSaveState.updateSnapshot(result.lastSaveTime)
+    
+    // 如果是首次创建草稿，启动自动保存
+    if (sharedCurrentDraftId.value && !autoSaveState.autoSaveStatus.value) {
+      autoSaveState.startAutoSave()
+    }
   }
 }
 
@@ -974,7 +996,13 @@ onMounted(async () => {
           // 设置上次保存时间，根据日期智能格式化
           if (result.lastSaveTime) {
             lastDraftSaveTime.value = formatDraftSaveTime(result.lastSaveTime)
+            // 更新自动保存快照
+            autoSaveState.updateSnapshot(result.lastSaveTime)
           }
+          
+          // 启动自动保存
+          await nextTick()
+          autoSaveState.startAutoSave()
           
           // 处理显示抄送和密送
           showCc.value = mailForm.value.cc.length > 0
@@ -1304,6 +1332,16 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  // 停止自动保存
+  autoSaveState.stopAutoSave()
+  
+  // 如果有未保存的更改，触发最后一次保存
+  if (autoSaveState.hasUnsavedChanges.value && sharedCurrentDraftId.value) {
+    autoSaveState.triggerAutoSave().catch(e => {
+      console.error('页面卸载前自动保存失败:', e)
+    })
+  }
+  
   try {
     if (editorInstance.value) {
       try {

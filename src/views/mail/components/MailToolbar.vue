@@ -69,7 +69,16 @@
         <el-icon><Clock /></el-icon>
         <span>定时发送: {{ formatScheduledTime(scheduledSendTime) }}</span>
       </span>
-      <span v-if="lastSaveTime" class="time">已于{{ lastSaveTime }}保存至草稿</span>
+      
+      <!-- 自动保存状态显示 -->
+      <span v-if="autoSaveStatus && autoSaveStatus !== 'idle'" class="auto-save-status" :class="autoSaveStatus">
+        <el-icon v-if="autoSaveStatus === 'saving'" class="rotating"><Loading /></el-icon>
+        <el-icon v-else-if="autoSaveStatus === 'saved'"><CircleCheck /></el-icon>
+        <el-icon v-else-if="autoSaveStatus === 'error'"><CircleClose /></el-icon>
+        <span>{{ getAutoSaveStatusText(autoSaveStatus) }}</span>
+      </span>
+      
+      <span v-if="lastSaveTime && autoSaveStatus !== 'saving'" class="time">已于{{ lastSaveTime }}保存至草稿</span>
       <div class="tool-btn" @click="handleSaveDraft">
         <span>保存草稿</span>
       </div>
@@ -78,8 +87,10 @@
 </template>
 
 <script setup lang="ts">
-import { Position, Setting, ArrowDown, ArrowRight, Check, Clock } from '@element-plus/icons-vue'
+import { Position, Setting, ArrowDown, ArrowRight, Check, Clock, Loading, CircleCheck, CircleClose } from '@element-plus/icons-vue'
 import { formatMailTime } from '../utils/mailHelpers'
+
+type AutoSaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
 interface Props {
   sending: boolean
@@ -87,6 +98,7 @@ interface Props {
   requestReadReceipt: boolean
   priority: number
   scheduledSendTime?: string
+  autoSaveStatus?: AutoSaveStatus
 }
 
 interface Emits {
@@ -100,7 +112,8 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {
   lastSaveTime: '',
   priority: 1,
-  scheduledSendTime: ''
+  scheduledSendTime: '',
+  autoSaveStatus: 'idle'
 })
 const emit = defineEmits<Emits>()
 
@@ -144,6 +157,20 @@ const formatScheduledTime = (timeStr: string): string => {
     return formatMailTime(timeStr)
   } catch (e) {
     return timeStr
+  }
+}
+
+// 获取自动保存状态文本
+const getAutoSaveStatusText = (status: AutoSaveStatus): string => {
+  switch (status) {
+    case 'saving':
+      return '正在保存...'
+    case 'saved':
+      return '已自动保存'
+    case 'error':
+      return '保存失败'
+    default:
+      return ''
   }
 }
 </script>
@@ -292,6 +319,52 @@ const formatScheduledTime = (timeStr: string): string => {
 
 .priority-item span.urgent {
   color: #f56c6c;
+}
+
+/* 自动保存状态 */
+.auto-save-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  margin-right: 8px;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+}
+
+.auto-save-status.saving {
+  color: #409eff;
+  background-color: #ecf5ff;
+}
+
+.auto-save-status.saved {
+  color: #67c23a;
+  background-color: #f0f9ff;
+}
+
+.auto-save-status.error {
+  color: #f56c6c;
+  background-color: #fef0f0;
+}
+
+.auto-save-status .el-icon {
+  font-size: 14px;
+}
+
+/* 旋转动画 */
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rotating {
+  animation: rotate 1s linear infinite;
 }
 </style>
 

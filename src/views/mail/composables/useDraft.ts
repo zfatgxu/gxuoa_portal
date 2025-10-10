@@ -4,6 +4,7 @@ import {
   createDraft,
   updateDraft,
   getDraft,
+  autoSaveDraft as autoSaveDraftAPI,
   type LetterDraftCreateReqVO,
   type LetterDraftUpdateReqVO,
   type LetterDraftRespVO
@@ -194,6 +195,54 @@ export function useDraft(options: {
   }
   
   /**
+   * 自动保存草稿（轻量级保存，只保存内容，不保存收件人和附件）
+   * 返回保存是否成功以及最后保存时间
+   */
+  const autoSaveDraft = async (): Promise<{ success: boolean; lastSaveTime?: string }> => {
+    // 必须有草稿ID才能自动保存
+    if (!currentDraftId.value) {
+      console.warn('[useDraft] 自动保存失败：无草稿ID')
+      return { success: false }
+    }
+    
+    try {
+      // 获取编辑器内容
+      let editorContent = ''
+      try {
+        if (options.editorInstance.value && typeof options.editorInstance.value.getHtml === 'function') {
+          editorContent = options.editorInstance.value.getHtml() || ''
+        } else {
+          editorContent = options.mailForm.value.content || ''
+        }
+      } catch (e) {
+        editorContent = options.mailForm.value.content || ''
+      }
+      
+      // 调用自动保存 API（只保存基本内容）
+      const success = await autoSaveDraftAPI({
+        id: currentDraftId.value,
+        subject: options.mailForm.value.subject || '',
+        content: editorContent,
+        priority: options.mailForm.value.priority || 1,
+        requestReadReceipt: options.mailForm.value.requestReadReceipt || false
+      })
+      
+      if (success) {
+        // 获取草稿详情以获取真实的保存时间
+        const draftDetail = await getDraft(currentDraftId.value)
+        const lastSaveTime = draftDetail.lastSaveTime || ''
+        
+        return { success: true, lastSaveTime }
+      } else {
+        return { success: false }
+      }
+    } catch (error: any) {
+      console.error('[useDraft] 自动保存失败:', error)
+      return { success: false }
+    }
+  }
+  
+  /**
    * 清除草稿状态
    */
   const clearDraft = () => {
@@ -204,6 +253,7 @@ export function useDraft(options: {
     currentDraftId,
     saveDraft,
     loadDraft,
+    autoSaveDraft,
     clearDraft
   }
 }
