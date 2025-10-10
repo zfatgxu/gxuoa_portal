@@ -18,12 +18,12 @@
               type="text" 
               placeholder="搜索" 
               v-model="quickSearchKeyword"
-              @keyup.enter="handleQuickSearch"
+              @keyup.enter="handleQuickSearchWrapper"
             />
             <span 
               v-if="quickSearchKeyword" 
               class="clear-search-icon" 
-              @click="clearQuickSearch"
+              @click="clearQuickSearchWrapper"
               title="清除搜索"
             >✕</span>
           </div>
@@ -50,7 +50,7 @@
         <span class="toolbar-inbox-label" v-show="!selectedEmailDetail">
           {{ displayFolderName }}
         </span>
-        <button class="tool-btn" v-if="!selectedEmailDetail && activeSearchCriteria" @click="handleBackFromSearch">← 返回</button>
+        <button class="tool-btn" v-if="!selectedEmailDetail && activeSearchCriteria" @click="handleBackFromSearchWrapper">← 返回</button>
         <button class="tool-btn" @click="deleteSelectedEmails" :disabled="!hasOperationTarget">
           {{ (isDeletedFolder || isTrashFolder) ? '彻底删除' : '删除' }}
         </button>
@@ -105,12 +105,12 @@
           <div class="group-label-bar">
             <span class="group-label">{{ group.label }}({{ group.emails.length }}封)</span>
           </div>
-        <div v-for="email in group.emails" :key="email.id" class="email-item" :class="{draft: email.isDraft, deleted: email.deletedAt, unread: !email.isDraft && folderName !== '草稿箱' && !email.isRead}" @click="viewEmailDetail(email.id)" @contextmenu.prevent="showContextMenu($event, email)">
+        <div v-for="email in group.emails" :key="email.id" class="email-item" :class="{draft: email.isDraft, deleted: email.deletedAt, unread: !email.isDraft && folderName !== '草稿箱' && !email.isRead}" @click="viewEmailDetailWrapper(email.id)" @contextmenu.prevent="showContextMenu($event, email)">
           <input type="checkbox" class="email-checkbox" v-model="selectedEmails" :value="email.id" @click.stop />
           <span class="email-icon">✉️</span>
           <span class="sender">
             <template v-if="email.isDraft || email.isSelfSent">
-              {{ formatRecipientsForList(email) }}
+              {{ formatRecipientsForList(email.toMail) }}
             </template>
             <template v-else>
               {{ email.sender }}
@@ -314,123 +314,55 @@
     </div>
     </div>
 
-    <!-- 右键上下文菜单 -->
-    <div v-if="contextMenu.visible" class="context-menu" :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }" @click.stop>
-      <!-- 根据邮件状态显示不同的菜单选项 -->
-      <div v-if="contextMenu.email && folderName !== '草稿箱' && !contextMenu.email.isRead && !(folderName === '星标邮件' && contextMenu.email.isDraft)" class="context-menu-item" @click="markAsRead">
-        标记为已读
-      </div>
-      <div v-if="contextMenu.email && folderName !== '草稿箱' && contextMenu.email.isRead && !(folderName === '星标邮件' && contextMenu.email.isDraft)" class="context-menu-item" @click="markAsUnread">
-        标记为未读
-      </div>
-      <div v-if="contextMenu.email && !contextMenu.email.deletedAt && !isTrashFolder" class="context-menu-item" @click="deleteEmail">
-        删除
-      </div>
-      <div v-if="contextMenu.email && (contextMenu.email.deletedAt || isTrashFolder)" class="context-menu-item" @click="permanentDeleteEmail">
-        彻底删除
-      </div>
-      <div v-if="contextMenu.email && isDeletedFolder" class="context-menu-item" @click="restoreEmail">
-        恢复
-      </div>
-      <!-- 垃圾邮件相关选项 -->
-      <div v-if="contextMenu.email && folderName === '收件箱'" class="context-menu-item" @click="markAsSpamFromContext">
-        这是垃圾邮件
-      </div>
-      <div v-if="contextMenu.email && isTrashFolder" class="context-menu-item" @click="markAsSpamFromContext">
-        这不是垃圾邮件
-      </div>
-      <div 
-        v-if="contextMenu.email && !isDeletedFolder && props.isCustomFolder && props.currentCustomFolderId"
-        class="context-menu-item"
-        @click="removeFromCurrentFolder">
-        从当前文件夹移除
-      </div>
-      <!-- 移动到... 悬浮子菜单 -->
-      <div 
-        v-if="!isDeletedFolder && !isTrashFolder && !isDraftFolder && !(contextMenu.email && folderName === '星标邮件' && contextMenu.email.isDraft)"
-        class="context-menu-item"
-        style="position: relative;"
-        @mouseenter="contextMenu.showMoveSubmenu = true"
-        @mouseleave="contextMenu.showMoveSubmenu = false">
-        移动到...
-        <div
-          v-if="contextMenu.showMoveSubmenu"
-          class="context-menu context-submenu"
-          :style="{ left: '100%', top: '0px', position: 'absolute', zIndex: 2000 }"
-          @mouseenter.stop="contextMenu.showMoveSubmenu = true"
-          @mouseleave="contextMenu.showMoveSubmenu = false"
-          @click.stop>
-          <div
-            v-for="item in moveTargetFolders"
-            :key="item.id"
-            class="context-menu-item"
-            :style="{ paddingLeft: (8 + item.level * 12) + 'px' }"
-            @click="moveEmailToFolder(item.id)">
-            {{ item.folderName }}
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- 邮件右键菜单 -->
+    <EmailContextMenu
+      :visible="contextMenu.visible"
+      :x="contextMenu.x"
+      :y="contextMenu.y"
+      :email="contextMenu.email"
+      :folder-name="folderName"
+      :is-deleted-folder="isDeletedFolder"
+      :is-trash-folder="isTrashFolder"
+      :is-draft-folder="isDraftFolder"
+      :is-custom-folder="isCustomFolder"
+      :current-custom-folder-id="currentCustomFolderId"
+      :custom-folders="customFolders"
+      @mark-as-read="markAsRead"
+      @mark-as-unread="markAsUnread"
+      @delete="deleteEmail"
+      @permanent-delete="permanentDeleteEmail"
+      @restore="restoreEmail"
+      @mark-as-spam="markAsSpamFromContext"
+      @remove-from-folder="removeFromCurrentFolder"
+      @move-to-folder="moveEmailToFolder"
+      @close="hideContextMenu"
+    />
 
     <!-- 高级搜索弹窗 -->
     <AdvancedSearchDialog
       v-model="showAdvancedSearch"
-      @search="handleAdvancedSearch"
+      @search="handleAdvancedSearchWrapper"
     />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { ElMessageBox, ElMessage } from 'element-plus'
+import { ElMessageBox } from 'element-plus'
 import topImage from '@/views/mail/image/top.png'
-import { getUserByIdCard } from '@/api/system/user'
 import { formatFileSizeFromString, getFileExtension, downloadAttachment } from '@/api/mail/attachment'
-import { getLetterDetail, sendReadReceipt } from '@/api/mail/letter'
-import { useUserStore } from '@/store/modules/user'
+import type { Email } from '../types/mail'
+import { 
+  stripHtml, 
+  formatRecipientsForList, 
+  getDateLabel,
+  getAvatarText,
+  formatDisplayTime
+} from '../utils/mailHelpers'
+import { useMailSearch } from '../composables/useMailSearch'
+import { useMailDetail } from '../composables/useMailDetail'
 import AdvancedSearchDialog, { type SearchCriteria } from './AdvancedSearchDialog.vue'
- 
-
-interface Email {
-  id: number
-  sender: string
-  subject: string
-  time: string
-  date: string
-  sendTime?: string // 新增：原始发送时间用于排序
-  deletedAt?: string
-  isDraft?: boolean
-  isStarred?: boolean
-  starredAt?: string // 新增：星标日期字段
-  content?: string // 新增：邮件内容字段
-  isRead?: boolean // 新增：是否已读字段
-  toMail?: string // 新增：收件人字段
-  toRecipients?: string // 新增：主收件人字段
-  ccRecipients?: string // 新增：抄送人字段
-  bccRecipients?: string // 新增：密送人字段
-  priority?: number // 新增：优先级字段
-  requestReadReceipt?: boolean // 新增：已读回执字段
-  originalSendTime?: string // 新增：原始发送时间字段
-  isLoading?: boolean // 新增：加载状态字段
-  attachments?: Array<{
-    id: number, 
-    fileName: string, 
-    fileSize: string, 
-    fileType: string,
-    fileExtension: string,
-    url?: string,
-    fileUrl?: string,
-    uploadUserIdCard: string,
-    uploadTime: string,
-    downloadCount: number,
-    isTemp: boolean,
-    tempExpireTime?: string,
-    createTime: string
-  }> // 新增：附件字段
-  isSelfSent?: boolean
-  folderSource?: string // 新增：搜索结果中显示的文件夹来源标签
-  hasAttachment?: boolean // 新增：是否有附件
-}
+import EmailContextMenu from './EmailContextMenu.vue'
 
 const props = defineProps<{ 
   folderName: string, 
@@ -473,47 +405,39 @@ const emit = defineEmits<{
   loadSpecificFolderForSearch: [folderKey: string]  // 新增：加载指定文件夹用于搜索
 }>()
 
+// 使用邮件搜索 composable
+const {
+  quickSearchKeyword,
+  showAdvancedSearch,
+  activeSearchCriteria,
+  filteredEmails,
+  handleOpenAdvancedSearch,
+  handleQuickSearch,
+  clearQuickSearch,
+  handleBackFromSearch,
+  handleAdvancedSearch
+} = useMailSearch({
+  allFoldersEmails: props.allFoldersEmails,
+  currentEmails: () => props.emails || []  // 传递函数以确保响应式，添加默认值保护
+})
+
+// 使用邮件详情 composable
+const {
+  selectedEmailDetail,
+  senderAvatar,
+  avatarLoading,
+  isLoadingAttachments,
+  originalMail,
+  originalMailHtml,
+  updateEmailDetail,
+  closeEmailDetail,
+  viewEmailDetail: setEmailDetailLoading
+} = useMailDetail()
+
 // 邮件选择和操作相关
 const selectedEmails = ref<(string|number)[]>([])
 const markAsValue = ref('')
 const moveToValue = ref('')
-
-// 搜索相关
-const quickSearchKeyword = ref('') // 快速搜索关键词
-const showAdvancedSearch = ref(false) // 是否显示高级搜索弹窗
-const activeSearchCriteria = ref<SearchCriteria | null>(null) // 当前激活的搜索条件
-const isLoadingAllFolders = ref(false) // 是否正在加载所有文件夹
-const allFoldersLoaded = ref(false) // 是否已加载所有文件夹
-
-// 附件加载状态
-const isLoadingAttachments = ref<boolean>(false)
-
-// 邮件详情显示相关
-const selectedEmailDetail = ref<Email | null>(null)
-const senderAvatar = ref<string>('')
-const avatarLoading = ref<boolean>(false)
-const userDetailsCache = ref<Record<string, any>>({})
- 
-
-// 已读回执：记录已经显示过弹窗的邮件ID
-const readReceiptShownIds = ref<Set<number>>(new Set())
-
-// 获取用户信息
-const userStore = useUserStore()
-
-// 原始邮件详情（用于回复/转发时展示）
-const originalMail = ref<null | {
-  id: number
-  subject: string
-  fromUserName?: string
-  toUserNames?: string
-  toRecipients?: string
-  ccRecipients?: string
-  bccRecipients?: string
-  sendTime?: string
-  attachments?: any[]
-}>(null)
-const originalMailHtml = ref<string>('')
 
 // 计算属性
 const hasOperationTarget = computed(() => !!selectedEmailDetail.value || selectedEmails.value.length > 0)
@@ -583,12 +507,16 @@ watch(() => props.emails, () => {
 })
 
 // 右键上下文菜单
-const contextMenu = ref({
+const contextMenu = ref<{
+  visible: boolean
+  x: number
+  y: number
+  email: Email | null
+}>({
   visible: false,
   x: 0,
   y: 0,
-  email: null as Email | null,
-  showMoveSubmenu: false
+  email: null
 })
 
 // 上下文菜单操作
@@ -600,8 +528,7 @@ function showContextMenu(event: MouseEvent, email: Email) {
     visible: true,
     x: event.clientX,
     y: event.clientY,
-    email: email,
-    showMoveSubmenu: false
+    email: email
   }
   
   // 点击其他地方隐藏菜单
@@ -614,7 +541,6 @@ function showContextMenu(event: MouseEvent, email: Email) {
 function hideContextMenu() {
   contextMenu.value.visible = false
   contextMenu.value.email = null
-  contextMenu.value.showMoveSubmenu = false
 }
 
 // 右键菜单操作函数
@@ -715,21 +641,6 @@ function restoreEmail() {
     hideContextMenu()
   }
 }
-
-// 计算移动目标文件夹列表
-const moveTargetFolders = computed(() => {
-  const build = (folders: any[], level = 0, acc: any[] = []) => {
-    folders.forEach((f) => {
-      acc.push({ ...f, level })
-      if (f.children && f.children.length) {
-        build(f.children, level + 1, acc)
-      }
-    })
-    return acc
-  }
-  const roots = (props.customFolders || []).filter((f: any) => f.parentId === 0)
-  return build(roots)
-})
 
 function moveEmailToFolder(folderId: number) {
   if (contextMenu.value.email) {
@@ -914,7 +825,7 @@ function handleForward() {
 }
 
 // 邮件详情操作
-function viewEmailDetail(emailId: number) {
+function viewEmailDetailWrapper(emailId: number) {
   // 优先从过滤后的邮件列表中查找（支持搜索结果）
   let localEmail = filteredEmails.value.find(email => email.id === emailId)
   
@@ -930,455 +841,53 @@ function viewEmailDetail(emailId: number) {
   }
   
   if (localEmail) {
-    // 设置加载状态，不立即显示详情
-    selectedEmailDetail.value = {
-      ...localEmail,
-      content: '',
-      originalSendTime: localEmail.time,
-      toMail: localEmail.toMail || '无',
-      attachments: [],
-      priority: undefined,
-      requestReadReceipt: undefined,
-      isLoading: true // 添加加载状态标识
-    }
-    
-    senderAvatar.value = ''
-    avatarLoading.value = false
+    setEmailDetailLoading(localEmail)
   }
   
   emit('getEmailDetail', emailId)
   emit('viewEmailDetail', emailId)
 }
 
-function closeEmailDetail() {
-  
-  selectedEmailDetail.value = null
-  senderAvatar.value = ''
-  avatarLoading.value = false
-}
 
-
-// 搜索相关函数
-// 打开高级搜索弹窗
-function handleOpenAdvancedSearch() {
-  console.log('打开高级搜索弹窗')
-  showAdvancedSearch.value = true
-}
-
-// 快速搜索（按回车触发）
-async function handleQuickSearch() {
-  if (quickSearchKeyword.value.trim()) {
-    // 如果还没有加载所有文件夹，先触发加载
-    if (!allFoldersLoaded.value && !isLoadingAllFolders.value) {
-      isLoadingAllFolders.value = true
-      emit('loadAllFoldersForSearch')
-      // 等待一小段时间让父组件加载数据
-      await new Promise(resolve => setTimeout(resolve, 100))
-      allFoldersLoaded.value = true
-      isLoadingAllFolders.value = false
-    }
-    
-    activeSearchCriteria.value = {
-      keyword: quickSearchKeyword.value.trim(),
-      keywordLocation: '', // 全部位置
-      sender: '',
-      recipient: '',
-      timeRange: '',
-      folder: '',
-      hasAttachment: '',
-      readStatus: ''
-    }
-    currentPage.value = 1
-  }
-}
-
-function clearQuickSearch() {
-  quickSearchKeyword.value = ''
-  activeSearchCriteria.value = null
+// 包装搜索函数以传递回调
+async function handleQuickSearchWrapper() {
+  await handleQuickSearch(() => emit('loadAllFoldersForSearch'))
   currentPage.value = 1
 }
 
-// 从搜索结果返回到先前的文件夹
-function handleBackFromSearch() {
-  quickSearchKeyword.value = ''
-  activeSearchCriteria.value = null
+function clearQuickSearchWrapper() {
+  clearQuickSearch()
   currentPage.value = 1
+}
+
+function handleBackFromSearchWrapper() {
+  handleBackFromSearch()
   selectedEmails.value = []
-}
-
-// 高级搜索（通过弹窗提交）
-async function handleAdvancedSearch(criteria: SearchCriteria) {
-  if (!criteria.folder) {
-    // 没有指定文件夹，需要加载所有文件夹
-    if (!allFoldersLoaded.value && !isLoadingAllFolders.value) {
-      isLoadingAllFolders.value = true
-      emit('loadAllFoldersForSearch')
-      // 等待一小段时间让父组件加载数据
-      await new Promise(resolve => setTimeout(resolve, 100))
-      allFoldersLoaded.value = true
-      isLoadingAllFolders.value = false
-    }
-  } else {
-    // 指定了文件夹，需要确保该文件夹数据已加载
-    const folderKey = criteria.folder
-    if (!props.allFoldersEmails || !props.allFoldersEmails[folderKey] || props.allFoldersEmails[folderKey].length === 0) {
-      // 该文件夹数据未加载，触发加载
-      emit('loadSpecificFolderForSearch', folderKey)
-      // 等待一小段时间让父组件加载数据
-      await new Promise(resolve => setTimeout(resolve, 200))
-    }
-  }
-  
-  activeSearchCriteria.value = criteria
   currentPage.value = 1
 }
 
-// 工具函数
-
-function formatDisplayTime(timeStr?: string): string {
-  if (!timeStr) return '未知时间'
-  
-  try {
-    const date = new Date(timeStr)
-    if (isNaN(date.getTime())) {
-      return timeStr || '未知时间'
-    }
-    
-    const year = date.getFullYear()
-    const month = date.getMonth() + 1
-    const day = date.getDate()
-    const hours = String(date.getHours()).padStart(2, '0')
-    const minutes = String(date.getMinutes()).padStart(2, '0')
-    
-    return `${year}年${month}月${day}日 ${hours}:${minutes}`
-  } catch (error) {
-    return timeStr || '未知时间'
-  }
-}
-
-function getAvatarText(senderName?: string): string {
-  if (!senderName) return '?'
-  return senderName.charAt(0).toUpperCase()
+async function handleAdvancedSearchWrapper(criteria: SearchCriteria) {
+  await handleAdvancedSearch(criteria, {
+    loadAllFolders: () => emit('loadAllFoldersForSearch'),
+    loadSpecificFolder: (folderKey: string) => emit('loadSpecificFolderForSearch', folderKey)
+  })
+  currentPage.value = 1
 }
 
 function handleAvatarError() {
   senderAvatar.value = ''
 }
 
-// 用户信息相关函数
-async function getUserDetailByIdCard(idCard: string): Promise<any> {
-  if (!idCard) return null
-  
-  if (userDetailsCache.value[idCard]) {
-    return userDetailsCache.value[idCard]
-  }
-  
-  try {
-    const userDetail = await getUserByIdCard(idCard)
-    userDetailsCache.value[idCard] = userDetail
-    return userDetail
-  } catch (error: any) {
-    return null
-  }
-}
-
-async function loadSenderAvatar(emailDetail: any) {
-  if (senderAvatar.value) {
-    return
-  }
-  
-  try {
-    avatarLoading.value = true
-    
-    let senderIdCard = ''
-    
-    if (emailDetail.senders && emailDetail.senders.length > 0) {
-      senderIdCard = emailDetail.senders[0].senderIdCard
-    }
-    
-    if (!senderIdCard) {
-      senderIdCard = emailDetail.fromUserIdCard || emailDetail.fromIdCard || ''
-    }
-    
-    if (senderIdCard) {
-      const userDetail = await getUserDetailByIdCard(senderIdCard)
-      senderAvatar.value = userDetail && userDetail.avatar ? userDetail.avatar : ''
-    } else {
-      senderAvatar.value = ''
-    }
-  } catch (error: any) {
-    senderAvatar.value = ''
-  } finally {
-    avatarLoading.value = false
-  }
-}
-
-
-// 收件人信息处理
-async function parseRecipients(recipients: string): Promise<string> {
-  if (!recipients) return ''
-  
-  const recipientList = recipients.split(',').map(r => r.trim())
-  
-  const idCardRecipients: string[] = []
-  const otherRecipients: string[] = []
-  
-  recipientList.forEach(recipient => {
-    if (!recipient) return
-    
-    if (/^\d{18}$/.test(recipient)) {
-      idCardRecipients.push(recipient)
-    } else {
-      otherRecipients.push(recipient)
-    }
-  })
-  
-  const userDetailPromises = idCardRecipients.map(async (idCard) => {
-    try {
-      const userDetail = await getUserDetailByIdCard(idCard)
-      return userDetail && userDetail.nickname ? userDetail.nickname : null
-    } catch (error) {
-      return null
-    }
-  })
-  
-  const parsedIdCardNames = await Promise.all(userDetailPromises)
-  const validNames = parsedIdCardNames.filter(name => name !== null)
-  
-  const allNames = [...otherRecipients, ...validNames]
-  return allNames.join(', ')
-}
-
-// 文本处理函数
-function stripHtml(html: string): string {
-  if (!html) return ''
-  const temp = document.createElement('div')
-  temp.innerHTML = html
-  const text = temp.textContent || temp.innerText || ''
-  return text.replace(/\s+/g, ' ').trim()
-}
-
-function formatRecipientsForList(email: Email): string {
-  const recipients = (email.toMail || '').split(',').map(s => s.trim()).filter(Boolean)
-  if (recipients.length === 0) {
-    return '(收件人未填写)'
-  }
-  return recipients.join('、')
-}
-
-// 日期处理函数
-function getDateLabel(dateStr: string) {
-  // 获取今天的日期（只保留年月日，清零时分秒）
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  
-  // 获取邮件的日期（只保留年月日，清零时分秒）
-  const mailDate = new Date(dateStr)
-  mailDate.setHours(0, 0, 0, 0)
-  
-  // 计算天数差（使用日期比较，而不是时间戳差值）
-  const diffDays = Math.floor((today.getTime() - mailDate.getTime()) / 86400000)
-  
-  if (diffDays === 0) return '今天'
-  if (diffDays === 1) return '昨天'
-  if (diffDays < 7) return '本周'
-  if (diffDays < 14) return '上周'
-  return '更早'  // 上周之后直接归为"更早"
-}
-
-// 邮件分组计算
 // 分页相关
 const pageSize = ref(15)
 const currentPage = ref(1)
 
-// 过滤后的邮件列表（根据搜索关键词和类型）
-const filteredEmails = computed(() => {
-  if (!activeSearchCriteria.value) {
-    return props.emails
-  }
-  
-  const criteria = activeSearchCriteria.value
-  
-  // 确定搜索范围：如果没有指定文件夹且提供了所有文件夹的邮件，则搜索所有文件夹
-  let emailsToSearch: Email[] = props.emails
-  
-  if (!criteria.folder && props.allFoldersEmails) {
-    // 没有指定文件夹，搜索所有文件夹（排除星标邮件文件夹）
-    const emailMap = new Map<number, Email>()
-    // 文件夹标签映射
-    const folderLabels: Record<string, string> = {
-      inbox: '收件箱',
-      sent: '已发送',
-      drafts: '草稿箱',
-      deleted: '已删除',
-      trash: '垃圾箱'
-    }
-    
-    Object.entries(props.allFoldersEmails).forEach(([folderKey, folderEmails]) => {
-      // 排除星标邮件文件夹
-      if (folderKey === 'starred') {
-        return
-      }
-      const folderLabel = folderLabels[folderKey] || ''
-      folderEmails.forEach(email => {
-        // 使用 Map 去重，同一封邮件只保留一次
-        if (!emailMap.has(email.id)) {
-          // 为邮件添加文件夹来源标签
-          emailMap.set(email.id, {
-            ...email,
-            folderSource: folderLabel
-          })
-        }
-      })
-    })
-    emailsToSearch = Array.from(emailMap.values())
-  } else if (criteria.folder) {
-    // 指定了文件夹，只搜索该文件夹，但也要添加文件夹标签
-    const folderKey = criteria.folder
-    const folderLabels: Record<string, string> = {
-      inbox: '收件箱',
-      sent: '已发送',
-      drafts: '草稿箱',
-      deleted: '已删除',
-      trash: '垃圾箱'
-    }
-    const folderLabel = folderLabels[folderKey] || ''
-    
-    // 如果有 allFoldersEmails 且该文件夹已加载，使用该文件夹的数据
-    // 否则使用当前 props.emails（假设用户在该文件夹中搜索）
-    let folderEmails: Email[] = []
-    if (props.allFoldersEmails && props.allFoldersEmails[folderKey]) {
-      folderEmails = props.allFoldersEmails[folderKey]
-    } else {
-      // 使用当前文件夹的邮件
-      folderEmails = props.emails
-    }
-    
-    // 为每封邮件添加文件夹标签
-    emailsToSearch = folderEmails.map(email => ({
-      ...email,
-      folderSource: folderLabel
-    }))
-  }
-  
-  return emailsToSearch.filter(email => {
-    // 1. 关键字过滤
-    if (criteria.keyword) {
-      const keyword = criteria.keyword.toLowerCase().trim()
-      let keywordMatch = false
-      
-      if (criteria.keywordLocation) {
-        // 指定位置搜索
-        switch (criteria.keywordLocation) {
-          case 'sender':
-            keywordMatch = email.sender?.toLowerCase().includes(keyword) || false
-            break
-          case 'subject':
-            keywordMatch = email.subject?.toLowerCase().includes(keyword) || false
-            break
-          case 'content':
-            keywordMatch = email.content ? stripHtml(email.content).toLowerCase().includes(keyword) : false
-            break
-          case 'recipient':
-            keywordMatch = email.toMail?.toLowerCase().includes(keyword) || false
-            break
-        }
-      } else {
-        // 全部位置搜索
-        const senderMatch = email.sender?.toLowerCase().includes(keyword) || false
-        const subjectMatch = email.subject?.toLowerCase().includes(keyword) || false
-        const contentMatch = email.content ? stripHtml(email.content).toLowerCase().includes(keyword) : false
-        const recipientMatch = email.toMail?.toLowerCase().includes(keyword) || false
-        keywordMatch = senderMatch || subjectMatch || contentMatch || recipientMatch
-      }
-      
-      if (!keywordMatch) return false
-    }
-    
-    // 2. 发件人过滤
-    if (criteria.sender) {
-      const senderKeyword = criteria.sender.toLowerCase().trim()
-      if (!email.sender?.toLowerCase().includes(senderKeyword)) {
-        return false
-      }
-    }
-    
-    // 3. 收件人过滤
-    if (criteria.recipient) {
-      const recipientKeyword = criteria.recipient.toLowerCase().trim()
-      if (!email.toMail?.toLowerCase().includes(recipientKeyword)) {
-        return false
-      }
-    }
-    
-    // 4. 时间范围过滤
-    if (criteria.timeRange) {
-      const emailDate = new Date(email.date || email.sendTime || email.time)
-      const now = new Date()
-      
-      // 自定义时间范围
-      if (criteria.timeRange === 'custom' && criteria.customStartDate && criteria.customEndDate) {
-        const startDate = new Date(criteria.customStartDate)
-        startDate.setHours(0, 0, 0, 0)
-        const endDate = new Date(criteria.customEndDate)
-        endDate.setHours(23, 59, 59, 999)
-        
-        if (emailDate < startDate || emailDate > endDate) return false
-      } else {
-        // 预设时间范围
-        switch (criteria.timeRange) {
-          case 'oneDay':
-            // 一天内（24小时）
-            const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-            if (emailDate < oneDayAgo) return false
-            break
-          case 'oneWeek':
-            // 一周内（7天）
-            const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-            if (emailDate < oneWeekAgo) return false
-            break
-          case 'oneMonth':
-            // 一个月内（30天）
-            const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-            if (emailDate < oneMonthAgo) return false
-            break
-          case 'sixMonths':
-            // 六个月内（180天）
-            const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000)
-            if (emailDate < sixMonthsAgo) return false
-            break
-          case 'oneYear':
-            // 一年内（365天）
-            const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
-            if (emailDate < oneYearAgo) return false
-            break
-        }
-      }
-    }
-    
-    // 5. 附件过滤
-    if (criteria.hasAttachment) {
-      const hasAttachments = email.hasAttachment || false
-      if (criteria.hasAttachment === 'true' && !hasAttachments) return false
-      if (criteria.hasAttachment === 'false' && hasAttachments) return false
-    }
-    
-    // 6. 已读/未读过滤
-    if (criteria.readStatus) {
-      if (criteria.readStatus === 'read' && !email.isRead) return false
-      if (criteria.readStatus === 'unread' && email.isRead) return false
-    }
-    
-    // 文件夹过滤已在上面的 emailsToSearch 选择中处理
-    
-    // 所有条件都通过
-    return true
-  })
-})
-
 // 排序后的邮件列表（按时间降序）
 const sortedEmails = computed(() => {
-  return [...filteredEmails.value].sort((a, b) => {
+  const emails = filteredEmails.value || []
+  if (!emails.length) return []
+  
+  return [...emails].sort((a, b) => {
     // 使用原始的sendTime字段进行排序，确保最新的在最上面
     const aTime = a.sendTime || a.date || a.time
     const bTime = b.sendTime || b.date || b.time
@@ -1402,8 +911,13 @@ const paginatedEmails = computed(() => {
 })
 
 const groupedEmails = computed(() => {
+  const emails = paginatedEmails.value || []
+  if (!emails.length) return []
+  
   const groups: Record<string, any[]> = {}
-  paginatedEmails.value.forEach(email => {
+  emails.forEach(email => {
+    if (!email) return
+    
     let dateForGrouping: string
     if (props.isDeletedFolder && email.deletedAt) {
       dateForGrouping = email.deletedAt
@@ -1430,256 +944,6 @@ watch([() => props.emails, pageSize], () => {
   currentPage.value = 1
 })
 
-// 邮件详情更新
-async function updateEmailDetail(emailDetail: any) {
-  if (emailDetail && selectedEmailDetail.value) {
-    
-    const currentDetail = selectedEmailDetail.value
-    const rawContent = emailDetail.content?.content || emailDetail.content || ''
-    const originalSendTime = emailDetail.content?.sendTime || emailDetail.sendTime || currentDetail.originalSendTime
-    const hasAttachments = emailDetail.attachments && emailDetail.attachments.length > 0
-    
-    if (hasAttachments && !currentDetail.attachments?.length) {
-      isLoadingAttachments.value = true
-    }
-    
-    // 先解析收件人信息，按类型分组
-    let parsedToRecipients = ''
-    let parsedCcRecipients = ''
-    let parsedBccRecipients = ''
-    
-    if (emailDetail.recipients && Array.isArray(emailDetail.recipients)) {
-      // 按 recipientType 分组
-      const toRecipients: string[] = []
-      const ccRecipients: string[] = []
-      const bccRecipients: string[] = []
-      
-      emailDetail.recipients.forEach((r: any) => {
-        const idCard = r.recipientIdCard
-        if (!idCard) return
-        
-        const recipientType = r.recipientType || 1 // 默认为主收件人
-        if (recipientType === 1) {
-          toRecipients.push(idCard)
-        } else if (recipientType === 2) {
-          ccRecipients.push(idCard)
-        } else if (recipientType === 3) {
-          bccRecipients.push(idCard)
-        }
-      })
-      
-      // 解析每组收件人的姓名
-      try {
-        if (toRecipients.length > 0) {
-          parsedToRecipients = await parseRecipients(toRecipients.join(', '))
-        }
-        if (ccRecipients.length > 0) {
-          parsedCcRecipients = await parseRecipients(ccRecipients.join(', '))
-        }
-        if (bccRecipients.length > 0) {
-          parsedBccRecipients = await parseRecipients(bccRecipients.join(', '))
-        }
-      } catch (error) {
-        // 忽略解析失败
-      }
-    }
-    
-    // 兼容旧数据：如果没有 recipients 数组，尝试使用 toMail
-    let parsedToMail = currentDetail.toMail || '无'
-    if (!parsedToRecipients && !parsedCcRecipients && !parsedBccRecipients) {
-      const recipientsStr = emailDetail.toMail || ''
-      if (recipientsStr && recipientsStr !== currentDetail.toMail) {
-        try {
-          parsedToMail = await parseRecipients(recipientsStr)
-          parsedToRecipients = parsedToMail
-        } catch (error) {
-          parsedToMail = currentDetail.toMail || '无'
-        }
-      }
-    }
-    
-    // 数据准备完成后，一次性更新所有信息，移除加载状态
-    selectedEmailDetail.value = {
-      ...currentDetail,
-      ...emailDetail,
-      content: rawContent,
-      priority: emailDetail.content?.priority,
-      requestReadReceipt: emailDetail.content?.requestReadReceipt,
-      attachments: emailDetail.attachments || [],
-      originalSendTime: originalSendTime,
-      toMail: parsedToMail,
-      toRecipients: parsedToRecipients || undefined,
-      ccRecipients: parsedCcRecipients || undefined,
-      bccRecipients: parsedBccRecipients || undefined,
-      isLoading: false // 移除加载状态
-    }
-    
-    if (hasAttachments) {
-      isLoadingAttachments.value = false
-    }
-    
-    if (emailDetail.senders && emailDetail.senders.length > 0) {
-      const sender = emailDetail.senders[0]
-      const senderIdCard = sender.senderIdCard
-      
-      if (senderIdCard) {
-        try {
-          const userDetail = await getUserDetailByIdCard(senderIdCard)
-          if (userDetail && userDetail.nickname && selectedEmailDetail.value) {
-            selectedEmailDetail.value.sender = userDetail.nickname
-          }
-        } catch (error) {
-          // 获取失败时保持原有值
-        }
-      }
-    }
-    
-    loadSenderAvatar(emailDetail)
-
-    // 如果是回复/转发场景，尝试加载原始邮件详情展示
-    try {
-      const maybeOriginalId = emailDetail.originalLetterId || emailDetail.content?.originalLetterId || emailDetail.content?.originalId
-      if (maybeOriginalId) {
-        const detail = await getLetterDetail(Number(maybeOriginalId))
-        if (detail) {
-          // 构造原始邮件展示数据
-          const oSubject = (detail?.content?.subject) || (detail as any).subject || ''
-          const oSendTime = detail?.content?.sendTime || ''
-          originalMail.value = {
-            id: Number(maybeOriginalId),
-            subject: oSubject,
-            fromUserName: '',
-            toUserNames: '',
-            sendTime: oSendTime,
-            attachments: Array.isArray((detail as any).attachments) ? (detail as any).attachments : []
-          }
-          // 计算原始正文 HTML
-          try {
-            const c: any = (detail as any)?.content
-            const html = (c && (c.content || c.html)) ? (c.content || c.html) : (typeof c === 'string' ? c : '')
-            originalMailHtml.value = html || ''
-          } catch { originalMailHtml.value = '' }
-
-          // 发件人：从 senders 取第一个的身份证号查询姓名
-          try {
-            let firstSenderId = ''
-            if (Array.isArray((detail as any).senders) && (detail as any).senders.length > 0) {
-              firstSenderId = (detail as any).senders[0]?.senderIdCard || ''
-            }
-            if (firstSenderId) {
-              const u = await getUserDetailByIdCard(firstSenderId)
-              if (originalMail.value) originalMail.value.fromUserName = (u && u.nickname) ? u.nickname : ''
-            }
-          } catch {}
-
-          // 收件人：从 recipients[].recipientIdCard 获取姓名并拼接，按类型分组
-          try {
-            const recipientsArr = (detail as any)?.recipients
-            if (Array.isArray(recipientsArr) && recipientsArr.length > 0) {
-              const toNames: string[] = []
-              const ccNames: string[] = []
-              const bccNames: string[] = []
-              
-              for (const r of recipientsArr) {
-                const idCard = (r?.recipientIdCard || '').toString().trim()
-                const recipientType = r?.recipientType || 1
-                if (idCard) {
-                  const u = await getUserDetailByIdCard(idCard)
-                  const displayName = u?.nickname || idCard
-                  
-                  if (recipientType === 1) {
-                    toNames.push(displayName)
-                  } else if (recipientType === 2) {
-                    ccNames.push(displayName)
-                  } else if (recipientType === 3) {
-                    bccNames.push(displayName)
-                  }
-                }
-              }
-              if (originalMail.value) {
-                originalMail.value.toUserNames = toNames.join('、')
-                originalMail.value.toRecipients = toNames.join('、') || undefined
-                originalMail.value.ccRecipients = ccNames.join('、') || undefined
-                originalMail.value.bccRecipients = bccNames.join('、') || undefined
-              }
-            }
-          } catch {}
-        }
-      } else {
-        originalMail.value = null
-        originalMailHtml.value = ''
-      }
-    } catch (e) {
-      originalMail.value = null
-      originalMailHtml.value = ''
-    }
-    
-    // 检查是否需要显示已读回执弹窗
-    const letterId = emailDetail.id || emailDetail.content?.id
-    const requestReadReceipt = emailDetail.content?.requestReadReceipt
-    
-    if (letterId && requestReadReceipt && !readReceiptShownIds.value.has(letterId)) {
-      // 检查当前用户是否是发件人
-      const currentUserIdCard = userStore.getUser?.idCard
-      const senders = emailDetail.senders || []
-      const isSender = senders.some((sender: any) => sender.senderIdCard === currentUserIdCard)
-      
-      // 如果当前用户是发件人，不显示回执弹窗
-      if (isSender) {
-        // 标记为已显示，避免下次还判断
-        readReceiptShownIds.value.add(letterId)
-        return
-      }
-      
-      // 检查当前用户是否是主收件人（recipientType=1）
-      // 只有主收件人才需要发送已读回执，抄送人和密送人不需要
-      const recipients = emailDetail.recipients || []
-      const isMainRecipient = recipients.some((recipient: any) => 
-        recipient.recipientIdCard === currentUserIdCard && recipient.recipientType === 1
-      )
-      
-      if (!isMainRecipient) {
-        // 当前用户不是主收件人，不显示回执弹窗
-        readReceiptShownIds.value.add(letterId)
-        return
-      }
-      
-      // 标记为已显示，避免重复弹窗
-      readReceiptShownIds.value.add(letterId)
-      
-      // 延迟一下显示弹窗，让邮件内容先加载完成
-      setTimeout(async () => {
-        try {
-          await ElMessageBox.confirm(
-            '发件人请求已读回执。是否向发件人发送已读回执通知？',
-            '已读回执',
-            {
-              confirmButtonText: '发送',
-              cancelButtonText: '不发送',
-              type: 'info',
-              distinguishCancelAndClose: true
-            }
-          )
-          
-          // 用户同意发送回执
-          try {
-            await sendReadReceipt(letterId)
-            ElMessage.success('已发送已读回执')
-          } catch (error: any) {
-            const errorMsg = error?.response?.data?.message || error?.message || '发送已读回执失败'
-            ElMessage.error(errorMsg)
-          }
-        } catch (action) {
-          // 用户取消或关闭弹窗，不做任何操作
-          if (action === 'cancel') {
-            ElMessage.info('已取消发送已读回执')
-          }
-        }
-      }, 500)
-    }
-  }
-}
-
 // 暴露方法给父组件调用
 defineExpose({
   updateEmailDetail,
@@ -1699,7 +963,7 @@ function handleDownloadAttachment(att: { id: number; fileName: string }) {
 }
 </script>
 
-<style scoped>
+<style>
 /* 原始邮件标题行：与 write.vue 保持一致并增加灰色细线 */
 .orig-mail-title {
   display: flex;

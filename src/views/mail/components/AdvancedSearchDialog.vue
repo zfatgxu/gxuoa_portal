@@ -18,11 +18,8 @@
       <div class="search-form-row">
         <label class="search-label">关键字位置</label>
         <el-select v-model="formData.keywordLocation" placeholder="不限" clearable>
-          <el-option label="不限" value="" />
           <el-option label="主题" value="subject" />
-          <el-option label="正文" value="content" />
-          <el-option label="收件人" value="recipient" />
-          <el-option label="发件人" value="sender" />
+          <el-option label="邮件正文" value="content" />
         </el-select>
       </div>
 

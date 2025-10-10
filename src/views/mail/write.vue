@@ -180,8 +180,8 @@
       />
     </div>
     
-    <!-- 右键菜单 -->
-    <ContextMenu
+    <!-- 联系人右键菜单 -->
+    <ContactContextMenu
       v-model:visible="contextMenu.visible"
       :x="contextMenu.x"
       :y="contextMenu.y"
@@ -228,7 +228,7 @@ import AttachmentManager from './components/AttachmentManager.vue'
 import ContactPanel from './components/ContactPanel.vue'
 import OriginalMailDisplay from './components/OriginalMailDisplay.vue'
 import OriginalMailDetailDialog from './components/OriginalMailDetailDialog.vue'
-import ContextMenu from './components/ContextMenu.vue'
+import ContactContextMenu from './components/ContactContextMenu.vue'
 import ScheduleSendDialog from './components/ScheduleSendDialog.vue'
 import { Editor } from '@/components/Editor'
 

@@ -257,6 +257,15 @@ export const searchLetters = async (params: SearchLetterReqVO): Promise<{list: L
   return await request.get({url: '/letter/search', params})
 }
 
+/**
+ * 根据附件名称搜索信件
+ * @param params 搜索参数
+ * @returns Promise<{list: MailListItemVO[], total: number}>
+ */
+export const searchLettersByAttachment = async (params: { attachmentName: string; pageNo?: number; pageSize?: number }): Promise<{list: MailListItemVO[], total: number}> => {
+  return await request.get({url: '/letter/search/by-attachment', params})
+}
+
 // ==================== 收件人相关API ====================
 
 /**

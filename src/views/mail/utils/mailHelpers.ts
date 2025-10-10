@@ -126,3 +126,72 @@ export function getAvatarText(senderName?: string): string {
   return senderName.charAt(0).toUpperCase()
 }
 
+/**
+ * 去除HTML标签，提取纯文本
+ */
+export function stripHtml(html: string): string {
+  if (!html) return ''
+  const temp = document.createElement('div')
+  temp.innerHTML = html
+  const text = temp.textContent || temp.innerText || ''
+  return text.replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * 格式化详细时间显示（yyyy年m月d日 hh:mm）
+ */
+export function formatDisplayTime(timeStr?: string): string {
+  if (!timeStr) return '未知时间'
+  
+  try {
+    const date = new Date(timeStr)
+    if (isNaN(date.getTime())) {
+      return timeStr || '未知时间'
+    }
+    
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    
+    return `${year}年${month}月${day}日 ${hours}:${minutes}`
+  } catch (error) {
+    return timeStr || '未知时间'
+  }
+}
+
+/**
+ * 格式化收件人列表显示
+ */
+export function formatRecipientsForList(toMail?: string): string {
+  if (!toMail) return '(收件人未填写)'
+  const recipients = toMail.split(',').map(s => s.trim()).filter(Boolean)
+  if (recipients.length === 0) {
+    return '(收件人未填写)'
+  }
+  return recipients.join('、')
+}
+
+/**
+ * 获取日期标签（今天/昨天/本周/上周/更早）
+ */
+export function getDateLabel(dateStr: string): string {
+  // 获取今天的日期（只保留年月日，清零时分秒）
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  
+  // 获取邮件的日期（只保留年月日，清零时分秒）
+  const mailDate = new Date(dateStr)
+  mailDate.setHours(0, 0, 0, 0)
+  
+  // 计算天数差（使用日期比较，而不是时间戳差值）
+  const diffDays = Math.floor((today.getTime() - mailDate.getTime()) / 86400000)
+  
+  if (diffDays === 0) return '今天'
+  if (diffDays === 1) return '昨天'
+  if (diffDays < 7) return '本周'
+  if (diffDays < 14) return '上周'
+  return '更早'  // 上周之后直接归为"更早"
+}
+
