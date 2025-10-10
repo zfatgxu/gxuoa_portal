@@ -387,6 +387,7 @@ import topImage from '@/views/mail/image/top.png'
 import { getUserByIdCard } from '@/api/system/user'
 import { formatFileSizeFromString, getFileExtension, downloadAttachment } from '@/api/mail/attachment'
 import { getLetterDetail, sendReadReceipt } from '@/api/mail/letter'
+import { useUserStore } from '@/store/modules/user'
 import AdvancedSearchDialog, { type SearchCriteria } from './AdvancedSearchDialog.vue'
  
 
@@ -496,6 +497,9 @@ const userDetailsCache = ref<Record<string, any>>({})
 
 // 已读回执：记录已经显示过弹窗的邮件ID
 const readReceiptShownIds = ref<Set<number>>(new Set())
+
+// 获取用户信息
+const userStore = useUserStore()
 
 // 原始邮件详情（用于回复/转发时展示）
 const originalMail = ref<null | {
@@ -1615,6 +1619,31 @@ async function updateEmailDetail(emailDetail: any) {
     const requestReadReceipt = emailDetail.content?.requestReadReceipt
     
     if (letterId && requestReadReceipt && !readReceiptShownIds.value.has(letterId)) {
+      // 检查当前用户是否是发件人
+      const currentUserIdCard = userStore.getUser?.idCard
+      const senders = emailDetail.senders || []
+      const isSender = senders.some((sender: any) => sender.senderIdCard === currentUserIdCard)
+      
+      // 如果当前用户是发件人，不显示回执弹窗
+      if (isSender) {
+        // 标记为已显示，避免下次还判断
+        readReceiptShownIds.value.add(letterId)
+        return
+      }
+      
+      // 检查当前用户是否是主收件人（recipientType=1）
+      // 只有主收件人才需要发送已读回执，抄送人和密送人不需要
+      const recipients = emailDetail.recipients || []
+      const isMainRecipient = recipients.some((recipient: any) => 
+        recipient.recipientIdCard === currentUserIdCard && recipient.recipientType === 1
+      )
+      
+      if (!isMainRecipient) {
+        // 当前用户不是主收件人，不显示回执弹窗
+        readReceiptShownIds.value.add(letterId)
+        return
+      }
+      
       // 标记为已显示，避免重复弹窗
       readReceiptShownIds.value.add(letterId)
       

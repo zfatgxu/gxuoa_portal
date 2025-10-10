@@ -277,6 +277,7 @@ const activeRecipientField = ref<'recipients' | 'cc' | 'bcc'>('recipients')
 // 编辑器实例
 const editorInstance = ref<any>(null)
 const editorReady = ref(false)
+const editorRef = ref<any>(null) // Editor 组件的 ref
 
 // 邮件编辑器配置
 const mailToolbarConfig = {
@@ -494,6 +495,32 @@ const handleSend = async () => {
   if (mailSendState.sending.value) {
     ElMessage.warning('正在发送中，请稍候...')
     return
+  }
+  
+  // 在发送前，确保从编辑器获取最新内容
+  try {
+    if (editorRef.value) {
+      const editor = await editorRef.value.getEditorRef()
+      if (editor && typeof editor.getHtml === 'function') {
+        const latestContent = editor.getHtml()
+        if (latestContent) {
+          mailForm.value.content = latestContent
+          // 同时更新 editorInstance，确保后续逻辑能正常工作
+          if (!editorInstance.value) {
+            editorInstance.value = editor
+            editorReady.value = true
+          }
+        }
+      }
+    } else if (editorInstance.value && typeof editorInstance.value.getHtml === 'function') {
+      // 如果 editorRef 不可用，尝试使用 editorInstance
+      const latestContent = editorInstance.value.getHtml()
+      if (latestContent) {
+        mailForm.value.content = latestContent
+      }
+    }
+  } catch (e) {
+    console.warn('获取编辑器内容失败，使用当前表单内容', e)
   }
   
   if (!mailForm.value.subject) {
