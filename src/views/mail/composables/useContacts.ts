@@ -24,9 +24,11 @@ export function useContacts() {
   // 状态
   const recentContacts = ref<RecentContact[]>([])
   const recentContactDepartments = ref<Map<string, string>>(new Map())
+  const recentContactAvatars = ref<Map<string, string>>(new Map())
   const starredContacts = ref<LetterContactStarRespVO[]>([])
   const starredContactDisplayNames = ref<Map<number, string>>(new Map())
   const starredContactDepartments = ref<Map<number, string>>(new Map())
+  const starredContactAvatars = ref<Map<number, string>>(new Map())
   const allUsers = ref<any[]>([])
   const userOptions = ref<UserOption[]>([])
   const loading = ref(false)
@@ -114,16 +116,35 @@ export function useContacts() {
           await loadAllUsers()
         }
         
-        // 加载每个最近联系人的部门信息
-        recentContacts.value.forEach(contact => {
+        // 异步加载每个最近联系人的部门信息和头像（使用 getUserByIdCardCached 获取完整信息）
+        for (const contact of recentContacts.value) {
           const user = allUsers.value.find((u: any) => u.nickname === contact.name)
           if (user) {
-            const department = user.deptNamesStr || user.deptNames?.join('、') || '未知部门'
-            recentContactDepartments.value.set(contact.name, department)
+            contact.idCard = user.idCard || ''
+            
+            // 使用 getUserByIdCardCached 获取完整的用户信息（包括头像）
+            try {
+              const userDetail = await getUserByIdCardCached(user.idCard)
+              if (userDetail) {
+                const department = userDetail.deptNamesStr || userDetail.deptNames?.join('、') || '未知部门'
+                recentContactDepartments.value.set(contact.name, department)
+                // 从完整用户信息中获取头像
+                const avatar = userDetail.avatar || ''
+                recentContactAvatars.value.set(contact.name, avatar)
+              } else {
+                throw new Error('用户详情为空')
+              }
+            } catch (error) {
+              // API调用失败或获取详情失败时，使用简化信息
+              const department = user.deptNamesStr || user.deptNames?.join('、') || '未知部门'
+              recentContactDepartments.value.set(contact.name, department)
+              recentContactAvatars.value.set(contact.name, '')
+            }
           } else {
             recentContactDepartments.value.set(contact.name, '未知部门')
+            recentContactAvatars.value.set(contact.name, '')
           }
-        })
+        }
       } else {
         recentContacts.value = []
       }
@@ -144,19 +165,23 @@ export function useContacts() {
           .sort((a, b) => new Date(b.createTime).getTime() - new Date(a.createTime).getTime())
           .slice(0, 20) // 只显示最近20个星标联系人
         
-        // 异步加载每个联系人的显示名称和部门信息
+        // 异步加载每个联系人的显示名称、部门信息和头像
         for (const contact of starredContacts.value) {
           try {
             const displayName = await getStarredContactDisplayName(contact)
             starredContactDisplayNames.value.set(contact.id, displayName)
             
-            // 获取用户完整信息以获取部门
+            // 获取用户完整信息以获取部门和头像
             const userInfo = await getUserByIdCardCached(contact.contactIdCard)
             const department = userInfo?.deptNamesStr || userInfo?.deptNames?.join('、') || '未知部门'
             starredContactDepartments.value.set(contact.id, department)
+            // 获取头像
+            const avatar = userInfo?.avatar || ''
+            starredContactAvatars.value.set(contact.id, avatar)
           } catch (error) {
             starredContactDisplayNames.value.set(contact.id, '未知用户')
             starredContactDepartments.value.set(contact.id, '未知部门')
+            starredContactAvatars.value.set(contact.id, '')
           }
         }
       } else {
@@ -360,9 +385,11 @@ export function useContacts() {
     // 状态
     recentContacts,
     recentContactDepartments,
+    recentContactAvatars,
     starredContacts,
     starredContactDisplayNames,
     starredContactDepartments,
+    starredContactAvatars,
     allUsers,
     userOptions,
     loading,

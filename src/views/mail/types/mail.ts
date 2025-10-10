@@ -12,6 +12,9 @@ export interface MailForm {
   content: string             // 邮件内容（HTML）
   attachments: File[]         // 本地文件列表（待上传）
   attachmentIds: number[]     // 已上传的附件ID列表
+  requestReadReceipt: boolean // 是否请求已读回执
+  priority: number            // 优先级(1-普通,2-重要,3-紧急)
+  scheduledSendTime?: string  // 定时发送时间（可选）
 }
 
 /**
@@ -63,6 +66,7 @@ export interface RecentContact {
   lastSendTime: string       // 最后发送时间
   sendCount: number          // 发送次数
   idCard?: string            // 身份证号
+  avatar?: string            // 用户头像
 }
 
 /**

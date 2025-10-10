@@ -17,14 +17,58 @@
         </div>
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item>定时发送</el-dropdown-item>
-            <el-dropdown-item>请求已读回执</el-dropdown-item>
-            <el-dropdown-item>设置优先级</el-dropdown-item>
+            <el-dropdown-item @click="handleScheduleSend">定时发送</el-dropdown-item>
+            <el-dropdown-item @click="handleToggleReadReceipt">
+              <div class="dropdown-item-with-checkbox">
+                <el-checkbox 
+                  :model-value="requestReadReceipt" 
+                  @change="handleToggleReadReceipt"
+                  @click.stop
+                >
+                  请求已读回执
+                </el-checkbox>
+              </div>
+            </el-dropdown-item>
+            <el-dropdown-item divided>
+              <el-dropdown placement="right-start" @command="handlePriorityChange">
+                <div class="dropdown-submenu-trigger">
+                  <span>设置优先级</span>
+                  <span class="priority-label">{{ getPriorityLabel(priority) }}</span>
+                  <el-icon class="el-icon--right"><ArrowRight /></el-icon>
+                </div>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item :command="1">
+                      <div class="priority-item">
+                        <el-icon v-if="priority === 1" class="check-icon"><Check /></el-icon>
+                        <span :class="{ 'checked': priority === 1 }">普通</span>
+                      </div>
+                    </el-dropdown-item>
+                    <el-dropdown-item :command="2">
+                      <div class="priority-item">
+                        <el-icon v-if="priority === 2" class="check-icon"><Check /></el-icon>
+                        <span :class="{ 'checked': priority === 2, 'important': true }">重要</span>
+                      </div>
+                    </el-dropdown-item>
+                    <el-dropdown-item :command="3">
+                      <div class="priority-item">
+                        <el-icon v-if="priority === 3" class="check-icon"><Check /></el-icon>
+                        <span :class="{ 'checked': priority === 3, 'urgent': true }">紧急</span>
+                      </div>
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>
     </div>
     <div class="toolbar-right">
+      <span v-if="scheduledSendTime" class="scheduled-time">
+        <el-icon><Clock /></el-icon>
+        <span>定时发送: {{ formatScheduledTime(scheduledSendTime) }}</span>
+      </span>
       <span v-if="lastSaveTime" class="time">已于{{ lastSaveTime }}保存至草稿</span>
       <div class="tool-btn" @click="handleSaveDraft">
         <span>保存草稿</span>
@@ -34,20 +78,29 @@
 </template>
 
 <script setup lang="ts">
-import { Position, Setting, ArrowDown } from '@element-plus/icons-vue'
+import { Position, Setting, ArrowDown, ArrowRight, Check, Clock } from '@element-plus/icons-vue'
+import { formatMailTime } from '../utils/mailHelpers'
 
 interface Props {
   sending: boolean
   lastSaveTime?: string
+  requestReadReceipt: boolean
+  priority: number
+  scheduledSendTime?: string
 }
 
 interface Emits {
   (e: 'send'): void
   (e: 'save-draft'): void
+  (e: 'schedule-send'): void
+  (e: 'update:requestReadReceipt', value: boolean): void
+  (e: 'update:priority', value: number): void
 }
 
-withDefaults(defineProps<Props>(), {
-  lastSaveTime: ''
+const props = withDefaults(defineProps<Props>(), {
+  lastSaveTime: '',
+  priority: 1,
+  scheduledSendTime: ''
 })
 const emit = defineEmits<Emits>()
 
@@ -57,6 +110,41 @@ const handleSend = () => {
 
 const handleSaveDraft = () => {
   emit('save-draft')
+}
+
+const handleScheduleSend = () => {
+  emit('schedule-send')
+}
+
+const handleToggleReadReceipt = () => {
+  emit('update:requestReadReceipt', !props.requestReadReceipt)
+}
+
+const handlePriorityChange = (priority: number) => {
+  emit('update:priority', priority)
+}
+
+const getPriorityLabel = (priority: number): string => {
+  switch (priority) {
+    case 1:
+      return '普通'
+    case 2:
+      return '重要'
+    case 3:
+      return '紧急'
+    default:
+      return '普通'
+  }
+}
+
+// 格式化定时发送时间显示（复用模块的时间格式化函数）
+const formatScheduledTime = (timeStr: string): string => {
+  if (!timeStr) return ''
+  try {
+    return formatMailTime(timeStr)
+  } catch (e) {
+    return timeStr
+  }
 }
 </script>
 
@@ -131,6 +219,79 @@ const handleSaveDraft = () => {
   margin-right: 10px;
   min-width: 120px;
   white-space: nowrap;
+}
+
+.scheduled-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #409eff;
+  margin-right: 12px;
+  padding: 4px 12px;
+  background-color: #ecf5ff;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.scheduled-time .el-icon {
+  font-size: 14px;
+}
+
+.dropdown-item-with-checkbox {
+  width: 100%;
+}
+
+.dropdown-item-with-checkbox :deep(.el-checkbox) {
+  width: 100%;
+}
+
+.dropdown-item-with-checkbox :deep(.el-checkbox__label) {
+  width: 100%;
+}
+
+.dropdown-submenu-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.priority-label {
+  color: #909399;
+  font-size: 13px;
+  flex: 1;
+  text-align: right;
+}
+
+.priority-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 100px;
+}
+
+.priority-item .check-icon {
+  color: #409eff;
+  font-size: 16px;
+}
+
+.priority-item span {
+  flex: 1;
+}
+
+.priority-item span.checked {
+  color: #409eff;
+  font-weight: 500;
+}
+
+.priority-item span.important {
+  color: #e6a23c;
+}
+
+.priority-item span.urgent {
+  color: #f56c6c;
 }
 </style>
 

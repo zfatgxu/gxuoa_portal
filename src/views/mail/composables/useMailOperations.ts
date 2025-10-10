@@ -218,7 +218,49 @@ export function useMailOperations(options: UseMailOperationsOptions) {
         break
       
       case 'star':
-        await toggleFolderMailsStar(emailIds)
+        // 分离草稿邮件和正式邮件
+        const draftIdsToStar: number[] = []
+        const regularIdsToStar: number[] = []
+        
+        emailIds.forEach(id => {
+          // 在所有文件夹中查找邮件
+          let email: Email | undefined
+          Object.keys(options.allEmails).forEach(folderKey => {
+            if (!email) {
+              email = options.allEmails[folderKey].find(e => e.id === id)
+            }
+          })
+          
+          // 如果在系统文件夹中没找到，在自定义文件夹中查找
+          if (!email) {
+            Object.keys(options.folderEmails).forEach(folderId => {
+              if (!email) {
+                email = options.folderEmails[folderId].find(e => e.id === id)
+              }
+            })
+          }
+          
+          // 根据邮件的 isDraft 属性分类
+          if (email?.isDraft) {
+            draftIdsToStar.push(id)
+          } else {
+            regularIdsToStar.push(id)
+          }
+        })
+        
+        // 分别调用对应的API
+        if (draftIdsToStar.length > 0) {
+          // 草稿邮件：逐个调用草稿标星API
+          for (const draftId of draftIdsToStar) {
+            await toggleDraftStar(draftId, true)
+          }
+        }
+        
+        if (regularIdsToStar.length > 0) {
+          // 正式邮件：批量调用正式邮件标星API
+          await toggleFolderMailsStar(regularIdsToStar)
+        }
+        
         const today = new Date().toISOString().split('T')[0]
         options.updateEmailStatusInAllFolders(emailIds, (email) => {
           email.isStarred = true
@@ -228,7 +270,49 @@ export function useMailOperations(options: UseMailOperationsOptions) {
         break
       
       case 'unstar':
-        await toggleFolderMailsStar(emailIds)
+        // 分离草稿邮件和正式邮件
+        const draftIdsToUnstar: number[] = []
+        const regularIdsToUnstar: number[] = []
+        
+        emailIds.forEach(id => {
+          // 在所有文件夹中查找邮件
+          let email: Email | undefined
+          Object.keys(options.allEmails).forEach(folderKey => {
+            if (!email) {
+              email = options.allEmails[folderKey].find(e => e.id === id)
+            }
+          })
+          
+          // 如果在系统文件夹中没找到，在自定义文件夹中查找
+          if (!email) {
+            Object.keys(options.folderEmails).forEach(folderId => {
+              if (!email) {
+                email = options.folderEmails[folderId].find(e => e.id === id)
+              }
+            })
+          }
+          
+          // 根据邮件的 isDraft 属性分类
+          if (email?.isDraft) {
+            draftIdsToUnstar.push(id)
+          } else {
+            regularIdsToUnstar.push(id)
+          }
+        })
+        
+        // 分别调用对应的API
+        if (draftIdsToUnstar.length > 0) {
+          // 草稿邮件：逐个调用草稿标星API
+          for (const draftId of draftIdsToUnstar) {
+            await toggleDraftStar(draftId, false)
+          }
+        }
+        
+        if (regularIdsToUnstar.length > 0) {
+          // 正式邮件：批量调用正式邮件标星API
+          await toggleFolderMailsStar(regularIdsToUnstar)
+        }
+        
         options.updateEmailStatusInAllFolders(emailIds, (email) => {
           email.isStarred = false
           email.starredAt = undefined
@@ -348,7 +432,6 @@ export function useMailOperations(options: UseMailOperationsOptions) {
   
   const toggleStar = async (emailId: number) => {
     // 查找邮件对象，判断是否是草稿
-    // 草稿邮件只会出现在草稿箱中，不会出现在自定义文件夹
     let targetEmail: Email | undefined
     let isDraft = false
     
@@ -356,9 +439,6 @@ export function useMailOperations(options: UseMailOperationsOptions) {
     Object.keys(options.allEmails).forEach(folderKey => {
       if (!targetEmail) {
         targetEmail = options.allEmails[folderKey].find(e => e.id === emailId)
-        if (targetEmail && folderKey === 'drafts') {
-          isDraft = true
-        }
       }
     })
     
@@ -371,9 +451,14 @@ export function useMailOperations(options: UseMailOperationsOptions) {
       })
     }
     
+    // 判断是否是草稿：优先使用邮件对象的 isDraft 属性
+    if (targetEmail?.isDraft) {
+      isDraft = true
+    }
+    
     // 根据邮件类型调用不同的API
     if (isDraft) {
-      // 草稿邮件：调用草稿标星API（草稿只会在草稿箱中）
+      // 草稿邮件：调用草稿标星API
       const newStarredState = !targetEmail?.isStarred
       await toggleDraftStar(emailId, newStarredState)
     } else {

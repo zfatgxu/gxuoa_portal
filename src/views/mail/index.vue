@@ -27,6 +27,7 @@
         :currentCustomFolderId="selectedFolderId || undefined"
         :mailStats="mailStats"
         :customFolders="customFolders"
+        :allFoldersEmails="allEmails"
         @delete-emails="handleDeleteEmails"
         @permanent-delete-emails="handlePermanentDeleteEmails"
         @restore-emails="handleRestoreEmails"
@@ -41,6 +42,8 @@
         @delete-folder="handleDeleteFolder"
         @reply-email="handleReplyEmail"
         @forward-email="handleForwardEmail"
+        @load-all-folders-for-search="handleLoadAllFoldersForSearch"
+        @load-specific-folder-for-search="handleLoadSpecificFolderForSearch"
       />
     </div>
 
@@ -704,6 +707,50 @@ function handleForwardEmail(emailIdOrIds: number | number[]) {
 // 写信
 function goCompose() {
   router.push('/mail/write')
+}
+
+// 加载所有系统文件夹的邮件（用于跨文件夹搜索，排除星标邮件）
+async function handleLoadAllFoldersForSearch() {
+  try {
+    // 排除星标邮件文件夹
+    const folders = ['inbox', 'sent', 'drafts', 'deleted', 'trash']
+    const loadingInstance = ElLoading.service({ text: '正在加载邮件数据...' })
+    
+    try {
+      // 并行加载所有文件夹
+      await Promise.all(folders.map(folder => {
+        // 如果该文件夹还没有加载过，则加载
+        if (!allEmails[folder] || allEmails[folder].length === 0) {
+          return loadFolderEmails(folder)
+        }
+        return Promise.resolve()
+      }))
+    } finally {
+      loadingInstance.close()
+    }
+  } catch (error: any) {
+    console.error('加载所有文件夹失败:', error)
+    ElMessage.error('加载邮件数据失败')
+  }
+}
+
+// 加载指定文件夹的邮件（用于指定文件夹搜索）
+async function handleLoadSpecificFolderForSearch(folderKey: string) {
+  try {
+    const loadingInstance = ElLoading.service({ text: '正在加载邮件数据...' })
+    
+    try {
+      // 如果该文件夹还没有加载过，则加载
+      if (!allEmails[folderKey] || allEmails[folderKey].length === 0) {
+        await loadFolderEmails(folderKey)
+      }
+    } finally {
+      loadingInstance.close()
+    }
+  } catch (error: any) {
+    console.error(`加载文件夹 ${folderKey} 失败:`, error)
+    ElMessage.error('加载邮件数据失败')
+  }
 }
 
 // 组件挂载时初始化数据

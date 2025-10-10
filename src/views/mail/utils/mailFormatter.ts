@@ -23,6 +23,8 @@ export interface Email {
   trashTime?: string
   isSelfSent?: boolean
   isLoading?: boolean
+  priority?: number // 优先级(1-普通,2-重要,3-紧急)
+  hasAttachment?: boolean // 是否有附件
 }
 
 /**
@@ -164,7 +166,10 @@ export async function convertMailToEmail(
     isRead: mail.isRead,
     isTrash: mail.isTrash || false,
     trashTime: mail.trashTime ? toLocalDateString(mail.trashTime) : undefined,
-    isSelfSent
+    isSelfSent,
+    priority: (mail as any).priority || 1,
+    requestReadReceipt: (mail as any).requestReadReceipt || false,
+    hasAttachment: mail.hasAttachment || false
   }
   
   return result

@@ -61,8 +61,8 @@ export function useDraft(options: {
       const baseDraftData: LetterDraftCreateReqVO = {
         subject: options.mailForm.value.subject || '',
         content: editorContent,
-        priority: 1,
-        requestReadReceipt: false,
+        priority: options.mailForm.value.priority || 1,
+        requestReadReceipt: options.mailForm.value.requestReadReceipt || false,
         draftStatus: 1,
         scheduledSendTime: null,
         isStarred: false,
@@ -128,6 +128,8 @@ export function useDraft(options: {
       // 填充表单数据
       options.mailForm.value.subject = draft.subject || ''
       options.mailForm.value.content = draft.content || ''
+      options.mailForm.value.requestReadReceipt = draft.requestReadReceipt || false
+      options.mailForm.value.priority = draft.priority || 1
       
       // 设置编辑器内容
       if (options.editorInstance.value && draft.content) {
