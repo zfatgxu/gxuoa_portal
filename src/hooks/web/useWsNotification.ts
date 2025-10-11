@@ -46,23 +46,65 @@ export function useWsNotifications() {
       }
 
       // 通知封装
-      const notify = (msg: string) => {
+      const notify = (msg: string, messageId?: number) => {
         ElNotification({
           message: msg.replace(/\n/g, '<br/>'),
           dangerouslyUseHTMLString: true,
           type: 'success',
           duration: 10000,
-          offset: 50
+          offset: 50,
+          onClick: async () => {
+            try {
+              // 如果有messageId，通过API获取消息详情来获取documentId
+              if (messageId) {
+                const { getNotifyMessage } = await import('@/api/system/notify/message')
+                const messageDetail = await getNotifyMessage(messageId)
+
+                if (messageDetail && messageDetail.templateParams) {
+                  let templateParams = messageDetail.templateParams
+
+                  // 如果templateParams是字符串，需要解析
+                  if (typeof templateParams === 'string') {
+                    try {
+                      templateParams = JSON.parse(templateParams)
+                    } catch (e) {
+                      console.error('解析templateParams失败:', e)
+                    }
+                  }
+
+                  // 获取documentId
+                  const documentId = templateParams.documentId || templateParams.id
+
+                  if (documentId) {
+                    // 在新窗口打开 document_approval 页面，使用真实的文档ID
+                    const baseUrl = window.location.origin
+                    const documentUrl = `${baseUrl}/#/document_approval?id=${documentId}&type=3&isTodo=1`
+                    window.open(documentUrl, '_blank')
+                    return
+                  }
+                }
+              }
+
+              // 如果无法获取documentId，显示错误信息
+              console.error('无法获取文档ID')
+              // message.error('无法获取文档ID，请检查消息数据')
+            } catch (error) {
+              // console.error('跳转失败:', error)
+              // message.error('跳转失败，请重试')
+            }
+          }
         })
       }
 
       if (type === 'notice_document_reply') {
-        notify(typeof content === 'string' ? content : content.content)
+        const messageId = content.messageId || jsonMessage.messageId
+        notify(typeof content === 'string' ? content : content.content, messageId)
         return
       }
 
       if (type === 'notice_document_todo') {
-        notify(typeof content === 'string' ? content : content.content)
+        const messageId = content.messageId || jsonMessage.messageId
+        notify(typeof content === 'string' ? content : content.content, messageId)
         return
       }
 

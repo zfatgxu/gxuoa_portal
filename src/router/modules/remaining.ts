@@ -99,7 +99,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
           hidden: true,
           noTagsView: false,
           icon: 'ep:message',
-          title: '我的站内信'
+          title: '我的消息'
         }
       }
     ]
@@ -569,7 +569,7 @@ const remainingRouter: AppRouteRecordRaw[] = [
           noCache: true,
           hidden: true,
           canTo: true,
-          title: '查看印章详情',  
+          title: '查看印章详情',
           activeMenu: '/seal'
         }
       }

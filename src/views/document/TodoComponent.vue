@@ -1,11 +1,11 @@
 <template>
   <div class="content-section">
     <!-- <NavBar :modelValue="currentComponent" @update:modelValue="handleComponentChange" /> -->
-    
+
     <!-- 根据当前选中的组件显示不同的内容 -->
     <div v-if="currentComponent === 'TodoComponent'" class="content-body">
-     
-      
+
+
       <!-- 搜索组件 -->
       <SearchBar @search="handleSearch" @reset="handleReset" :loading="loading" />
 
@@ -13,10 +13,10 @@
       <div v-if="hasSearched && todoList.length === 0 && !loading" class="no-result">
         <el-empty description="暂无匹配的搜索结果" />
       </div>
-      
+
       <!-- 未搜索但待办列表为空 -->
       <el-empty description="暂无待办事项" v-else-if="!hasSearched && todoList.length === 0" />
-      
+
       <!-- 有待办事项时显示列表 -->
       <div v-else>
         <el-table :data="todoList" style="width: 100%" border stripe>
@@ -27,8 +27,8 @@
           </el-table-column>
           <el-table-column label="文件名称" min-width="180" show-overflow-tooltip>
             <template #default="scope">
-              <span 
-                style="cursor: pointer; color: #409EFF; text-decoration: underline;" 
+              <span
+                style="cursor: pointer; color: #409EFF; text-decoration: underline;"
                 @click="handleProcess(scope.row)"
               >
                 {{ scope.row.documentName }}
@@ -44,8 +44,8 @@
           <!-- 流转状态列已移除 -->
           <el-table-column label="流转类型" width="300" align="center">
             <template #default="scope">
-              <span 
-                style="cursor: pointer; color: #409EFF; text-decoration: underline;" 
+              <span
+                style="cursor: pointer; color: #409EFF; text-decoration: underline;"
                 @click="viewCirculationHistory(scope.row)"
               >
                 {{ scope.row.typeName || getCirculationTypeName(scope.row) }}
@@ -72,7 +72,7 @@
             </template>
           </el-table-column>
         </el-table>
-        
+
         <!-- 分页组件 -->
         <div class="pagination-container">
           <el-pagination
@@ -88,13 +88,13 @@
         </div>
       </div>
     </div>
-    
+
     <!-- 其他组件的占位内容 -->
     <div v-else class="content-body">
       <h3 class="component-title">{{ getComponentTitle() }}</h3>
       <el-empty :description="`暂无${getComponentTitle()}数据`" />
     </div>
-  </div>  
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -114,12 +114,12 @@ const currentComponent = ref('TodoComponent')
 // 处理组件切换
 const handleComponentChange = (componentName: string) => {
   console.log('切换到组件：', componentName)
-  
+
   // 如果是当前组件，不做任何操作
   if (componentName === currentComponent.value) {
     return
   }
-  
+
   // 根据组件名称进行路由跳转
   switch (componentName) {
     case 'TodoComponent':
@@ -208,7 +208,7 @@ const getCirculationTypeName = (row: any) => {
   if (row.typeName) {
     return row.typeName
   }
-  
+
   // 如果没有typeName，根据类型编码显示
   const typeMap: Record<number, string> = {
     0: '校党政领导批示',
@@ -248,16 +248,16 @@ const handleProcess = (row: any) => {
     name: 'documentApproval',
     query: { id: row.id, type: 3, isTodo: 1 }
   }).href
-  
+
   try {
     console.log('打开路径:', path)
-    
+
     const newWindow = window.open(
       path,
       '_blank',
       'width=1200,height=800,left=100,top=100,resizable=yes'
     )
-    
+
     if (!newWindow) {
       ElMessage.warning('请允许弹出窗口')
       // 备选方案：在当前页打开
@@ -272,30 +272,30 @@ const handleProcess = (row: any) => {
 // 查看流转历史记录
 const viewCirculationHistory = (row: any) => {
   console.log('查看流转历史:', row)
-  
+
   try {
     // 根据路由配置生成完整路径
     const fullPath = router.resolve({
       path: '/document/history',
-      query: { 
+      query: {
         documentId: row.id,
         circulationId: row.circulationId
       }
     }).href
-    
+
     // 在新窗口打开流转历史页面
     const newWindow = window.open(
-      fullPath, 
+      fullPath,
       '_blank',
       'width=1000,height=700,left=150,top=150,resizable=yes,scrollbars=yes'
     )
-    
+
     if (!newWindow) {
       ElMessage.warning('请允许弹出窗口或检查浏览器设置')
       // 备选方案：在当前窗口打开
-      router.push({ 
+      router.push({
         path: '/document/history',
-        query: { 
+        query: {
           documentId: row.id,
           circulationId: row.circulationId
         }
@@ -351,16 +351,16 @@ const handleSizeChange = (newSize: number) => {
 // 处理搜索
 const handleSearch = (params: any) => {
   console.log('搜索参数:', params)
-  
+
   // 更新搜索参数
   searchParams.value = { ...params }
-  
+
   // 标记已经搜索过
   hasSearched.value = true
-  
+
   // 重置分页到第一页
   pagination.value.currentPage = 1
-  
+
   // 加载数据（会带上搜索参数）
   fetchTodoList()
 }
@@ -368,7 +368,7 @@ const handleSearch = (params: any) => {
 // 处理重置
 const handleReset = () => {
   console.log('重置搜索')
-  
+
   // 重置搜索参数
   searchParams.value = {
     fileName: '',
@@ -377,13 +377,13 @@ const handleReset = () => {
     phone: '',
     searchType: 'fuzzy' // 默认为模糊搜索
   }
-  
+
   // 重置搜索状态
   hasSearched.value = false
-  
+
   // 重置分页
   pagination.value.currentPage = 1
-  
+
   // 重新加载数据
   fetchTodoList()
 }
@@ -404,40 +404,40 @@ const fetchTodoList = async () => {
       pageNo: pagination.value.currentPage,
       pageSize: pagination.value.pageSize
     }
-    
+
     // 添加搜索参数（如果有）
     if (searchParams.value.fileName) {
       params.documentName = searchParams.value.fileName
     }
-    
+
     if (searchParams.value.sourceUnit) {
       params.deptName = searchParams.value.sourceUnit
     }
-    
+
     if (searchParams.value.contact) {
       params.userName = searchParams.value.contact
     }
-    
+
     if (searchParams.value.phone) {
       params.mobile = searchParams.value.phone
     }
-    
+
     // // 如果需要，可以添加搜索类型参数
     // if (searchParams.value.searchType) {
     //   params.type = searchParams.value.searchType === 'exact' ? 3 : 1
     // }
-    
+
     console.log('发送请求参数:', params)
-    
+
     const res = await circulationApi.getTodoPage(params)
-    
+
     console.log('获取待办事项响应：', res)
-    
-   
+
+
       // 处理返回的数据
       todoList.value = res.list || []
       pagination.value.total = res.total || 0
-      
+
       // 处理日期格式
       todoList.value.forEach(item => {
         // 处理到达时间
@@ -447,15 +447,15 @@ const fetchTodoList = async () => {
         if (item.updateTime && typeof item.updateTime === 'number') {
           item.updateTime = formatDate(item.updateTime)
         }
-        
+
         // 添加紧急标记（如果后端没有返回）
         if (item.isUrgent === undefined) {
           item.isUrgent = false // 默认为非紧急
         }
       })
-      
+
       console.log('处理后的待办列表：', todoList.value)
-    
+
   } catch (error) {
     ElMessage.error('获取待办数据失败')
     console.error('获取待办数据失败:', error)
@@ -468,7 +468,7 @@ const fetchTodoList = async () => {
 
 onMounted(() => {
   fetchTodoList()
-  
+
   // 添加消息监听，用于接收子窗口的刷新请求
   window.addEventListener('message', handleWindowMessage)
 
@@ -490,7 +490,7 @@ onUnmounted(() => {
 // 处理窗口消息
 const handleWindowMessage = (event) => {
   console.log('收到窗口消息:', event.data)
-  
+
   // 检查消息类型
   if (event.data && event.data.type === 'refreshTodoList') {
     console.log('收到刷新待办列表的请求，正在刷新...')
