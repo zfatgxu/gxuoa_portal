@@ -214,38 +214,42 @@
               <div class="form-label required">办理单位</div>
               <div class="form-content half-width">
                 <el-select
-                  v-model="orderForm.leadDepts"
+                  v-model="orderForm.leadDeptIds"
                   placeholder="请选择办理单位（可多选）"
                   filterable
+                  remote
                   clearable
                   multiple
                   class="form-select"
+                  :remote-method="searchLeadDepts"
                   @change="handleLeadDeptsChange"
                 >
                   <el-option
-                    v-for="dept in deptList"
+                    v-for="dept in filteredLeadDepts"
                     :key="dept.id"
                     :label="dept.name"
-                    :value="dept.name"
+                    :value="dept.id"
                   />
                 </el-select>
               </div>
               <div class="form-label">协办单位</div>
               <div class="form-content half-width">
                 <el-select
-                  v-model="orderForm.collaborateDepts"
+                  v-model="orderForm.collaborateDeptIds"
                   multiple
                   placeholder="请选择协办单位（可选）"
                   filterable
+                  remote
                   clearable
                   class="form-select"
+                  :remote-method="searchCollaborateDepts"
                   @change="handleCollaborateDeptsChange"
                 >
                   <el-option
-                    v-for="dept in availableCollaborateDepts"
+                    v-for="dept in filteredCollaborateDepts"
                     :key="dept.id"
                     :label="dept.name"
-                    :value="dept.name"
+                    :value="dept.id"
                   />
                 </el-select>
               </div>
@@ -457,20 +461,33 @@ const manualChargeLeaderEdited = ref(false) // 用户是否手动编辑过“分
 
 // 计算属性：可选择的协办单位（排除办理单位）
 const availableCollaborateDepts = computed(() => {
-  return deptList.value.filter(dept => !orderForm.leadDepts.includes(dept.name))
+  return deptList.value.filter(dept => !orderForm.leadDeptIds.includes(dept.id))
 })
 
-// 使用自定义过滤逻辑确保搜索准确性
-const deptSearchKeyword = ref('')
+// 使用自定义过滤逻辑确保搜索准确性（前缀匹配）
+const leadDeptSearchKeyword = ref('')
+const collaborateDeptSearchKeyword = ref('')
 const userSearchKeyword = ref('')
 
-// 过滤后的部门列表
+// 过滤后的办理单位列表（前缀匹配）
+const filteredLeadDepts = computed(() => {
+  if (!leadDeptSearchKeyword.value) {
+    return deptList.value
+  }
+  const keyword = leadDeptSearchKeyword.value.toLowerCase()
+  return deptList.value.filter(dept =>
+    dept.name.toLowerCase().startsWith(keyword)
+  )
+})
+
+// 过滤后的协办单位列表（前缀匹配）
 const filteredCollaborateDepts = computed(() => {
-  if (!deptSearchKeyword.value) {
+  if (!collaborateDeptSearchKeyword.value) {
     return availableCollaborateDepts.value
   }
+  const keyword = collaborateDeptSearchKeyword.value.toLowerCase()
   return availableCollaborateDepts.value.filter(dept =>
-    dept.name.toLowerCase().includes(deptSearchKeyword.value.toLowerCase())
+    dept.name.toLowerCase().startsWith(keyword)
   )
 })
 
@@ -503,9 +520,14 @@ const sortedUserList = computed(() => {
   })
 })
 
-// 部门搜索方法
-const searchDepts = (query: string) => {
-  deptSearchKeyword.value = query
+// 办理单位搜索方法
+const searchLeadDepts = (query: string) => {
+  leadDeptSearchKeyword.value = query
+}
+
+// 协办单位搜索方法
+const searchCollaborateDepts = (query: string) => {
+  collaborateDeptSearchKeyword.value = query
 }
 
 // 用户搜索方法
@@ -618,10 +640,8 @@ const orderForm = reactive({
   urgencyLevel: undefined, // 紧急程度（数字类型）
   reportFrequency: undefined, // 办理单位进度报告频次 (对应数据库 report_frequency) 1=每日 2=每周 3=每月 4=阶段性
   deadline: '', // 完成期限
-  leadDepts: [] as string[], // 办理单位名称数组（用于显示）
-  leadDeptIds: [] as number[], // 办理单位ID数组（用于提交）
-  collaborateDepts: [] as string[], // 协办单位名称数组（用于显示）
-  collaborateDeptIds: [] as number[], // 协办单位ID数组（用于提交）
+  leadDeptIds: [] as number[], // 办理单位ID数组（用于显示和提交）
+  collaborateDeptIds: [] as number[], // 协办单位ID数组（用于显示和提交）
   supervisorNames: [] as string[], // 督办人姓名数组（用于显示，支持多选）
   supervisorIds: [] as number[], // 督办人ID数组（用于提交，支持多选）
   officePhone: '',
@@ -853,35 +873,14 @@ watch(selectedType, async () => {
   // 加载督办分类
   await loadSupervisionTypes()
 })
-
-// 搜索功能通过 remote-method 实现精确过滤
-// 用户在下拉框中输入时，会调用 searchDepts 或 searchUsers 方法
-// 这些方法会更新搜索关键词，计算属性会自动过滤选项
-
-const removeDept = (deptName: string) => {
-  const index = orderForm.collaborateDepts.indexOf(deptName)
-  if (index > -1) {
-    orderForm.collaborateDepts.splice(index, 1)
-    // 同时移除对应的ID
-    const dept = deptList.value.find(d => d.name === deptName)
-    if (dept) {
-      const idIndex = orderForm.collaborateDeptIds.indexOf(dept.id)
-      if (idIndex > -1) {
-        orderForm.collaborateDeptIds.splice(idIndex, 1)
-      }
-    }
-  }
-}
+// 搜索功能通过 remote-method 实现前缀匹配过滤
+// 用户在下拉框中输入时，会调用 searchLeadDepts、searchCollaborateDepts 或 searchUsers 方法
+// 这些方法会更新搜索关键词，计算属性会自动过滤选项（前缀匹配）
 
 // 处理办理单位变化（多选）
-const handleLeadDeptsChange = (deptNames: string[]) => {
-  orderForm.leadDeptIds = []
-  deptNames.forEach(name => {
-    const dept = deptList.value.find(d => d.name === name)
-    if (dept) {
-      orderForm.leadDeptIds.push(dept.id)
-    }
-  })
+const handleLeadDeptsChange = (deptIds: number[]) => {
+  // 直接使用ID，无需转换
+  orderForm.leadDeptIds = deptIds || []
   // 自动生成办理单位分管校领导显示内容
   updateUnitLeaderDisplay()
   // 重新合并默认分管校领导
@@ -889,14 +888,9 @@ const handleLeadDeptsChange = (deptNames: string[]) => {
 }
 
 // 处理协办单位变化
-const handleCollaborateDeptsChange = (deptNames: string[]) => {
-  orderForm.collaborateDeptIds = []
-  deptNames.forEach(name => {
-    const dept = deptList.value.find(d => d.name === name)
-    if (dept) {
-      orderForm.collaborateDeptIds.push(dept.id)
-    }
-  })
+const handleCollaborateDeptsChange = (deptIds: number[]) => {
+  // 直接使用ID，无需转换
+  orderForm.collaborateDeptIds = deptIds || []
 }
 
 // 处理督办人变化
@@ -1347,29 +1341,17 @@ const fillTestData = async () => {
   deadline.setHours(18, 0, 0, 0) // 设为下午6点
   orderForm.deadline = deadline.toISOString().slice(0, 19).replace('T', ' ')
   
-  // 设置办理单位（leadDept：1和122）
-  const leadDeptNames = []
-  const leadDeptIds = [1, 122]
-  leadDeptIds.forEach(id => {
-    const dept = deptList.value.find(d => d.id === id)
-    if (dept) {
-      leadDeptNames.push(dept.name)
-    }
-  })
-  orderForm.leadDepts = leadDeptNames
-  orderForm.leadDeptIds = leadDeptIds
+  // 设置办理单位（从实际部门列表中取前2个）
+  if (deptList.value.length >= 2) {
+    orderForm.leadDeptIds = [deptList.value[0].id, deptList.value[1].id]
+  } else if (deptList.value.length === 1) {
+    orderForm.leadDeptIds = [deptList.value[0].id]
+  }
   
-  // 设置协办单位（coDept：124）
-  const coDeptNames = []
-  const coDeptIds = [124]
-  coDeptIds.forEach(id => {
-    const dept = deptList.value.find(d => d.id === id)
-    if (dept) {
-      coDeptNames.push(dept.name)
-    }
-  })
-  orderForm.collaborateDepts = coDeptNames
-  orderForm.collaborateDeptIds = coDeptIds
+  // 设置协办单位（从实际部门列表中取第3个，如果存在）
+  if (deptList.value.length >= 3) {
+    orderForm.collaborateDeptIds = [deptList.value[2].id]
+  }
   
   // 设置督办人（supervisors：338和339）
   orderForm.supervisorIds = [338, 339]
@@ -1530,9 +1512,7 @@ const resetForm = async () => {
   orderForm.urgencyLevel = undefined
   orderForm.reportFrequency = undefined
   orderForm.deadline = ''
-  orderForm.leadDept = ''
-  orderForm.leadDeptId = 0
-  orderForm.collaborateDepts = []
+  orderForm.leadDeptIds = []
   orderForm.collaborateDeptIds = []
   orderForm.supervisorNames = []
   orderForm.supervisorIds = []

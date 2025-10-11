@@ -80,7 +80,7 @@
         :rules="rejectReasonRule"
         label-width="100px"
       >
-        <el-form-item v-if="isSupervisorReviewNode" label="驳回目标" prop="rejectTarget">
+        <el-form-item v-if="showRejectTarget" label="驳回目标" prop="rejectTarget">
           <el-radio-group v-model="rejectReasonForm.rejectTarget">
             <el-radio label="implement_plan">仅驳回修改的请求（回 implement_plan）</el-radio>
             <el-radio label="upload_plan">驳回整套工作计划（回 upload_plan）</el-radio>
@@ -227,7 +227,7 @@
           :rules="rejectReasonRule"
           label-width="100px"
         >
-          <el-form-item v-if="isSupervisorReviewNode" label="驳回目标" prop="rejectTarget">
+          <el-form-item v-if="showRejectTarget" label="驳回目标" prop="rejectTarget">
             <el-radio-group v-model="rejectReasonForm.rejectTarget">
               <el-radio label="implement_plan">仅驳回修改的请求（回 implement_plan）</el-radio>
               <el-radio label="upload_plan">驳回整套工作计划（回 upload_plan）</el-radio>
@@ -733,7 +733,7 @@ import * as TaskApi from '@/api/bpm/task'
 import * as ProcessInstanceApi from '@/api/bpm/processInstance'
 import { getNodeTempConfig } from './nodeTempConfig'
 import * as UserApi from '@/api/system/user'
-import { SupervisionIndexApi, SupervisionProcessApi, SupervisionTaskOperationApi, OrderApi } from '@/api/supervision/index'
+import { SupervisionIndexApi, SupervisionProcessApi, SupervisionTaskOperationApi, OrderApi, PlanEntryApi } from '@/api/supervision/index'
 import { checkRole } from '@/utils/permission'
 import { canSuspendResume } from '../components/permissions'
 import {
@@ -852,7 +852,8 @@ const rejectReasonForm = reactive({
 const rejectReasonRule = computed(() => {
   return {
     reason: [{ required: reasonRequire.value, message: '审批意见不能为空', trigger: 'blur' }],
-    rejectTarget: [{ required: isSupervisorReviewNode.value, message: '请选择驳回目标', trigger: 'change' }]
+    // 仅当展示“驳回目标”时才必填
+    rejectTarget: [{ required: showRejectTarget.value, message: '请选择驳回目标', trigger: 'change' }]
   }
 })
 
@@ -865,6 +866,38 @@ const isTriadNode = computed(() => {
 
 // 兼容旧代码：保留 isSupervisorReviewNode 别名
 const isSupervisorReviewNode = isTriadNode
+
+// 仅在已上传整套计划（template 版本记录存在）时，展示“驳回目标”
+const showRejectTarget = ref(false)
+const hasUploadedTemplatePlan = ref(false)
+
+// 通过流程实例ID检测是否存在 template 版本的整套计划
+const refreshTemplatePlanFlag = async () => {
+  try {
+    const pid = props.processInstance?.id
+    if (!pid) {
+      hasUploadedTemplatePlan.value = false
+      return
+    }
+    const list = await PlanEntryApi.listByVersionType(pid, 'template')
+    hasUploadedTemplatePlan.value = Array.isArray(list) && list.length > 0
+  } catch (e) {
+    hasUploadedTemplatePlan.value = false
+  }
+}
+
+const updateShowRejectTarget = () => {
+  showRejectTarget.value = isSupervisorReviewNode.value && hasUploadedTemplatePlan.value
+}
+
+// 监听流程实例变化与节点类型变化，更新展示逻辑
+watch(() => props.processInstance?.id, async () => {
+  await refreshTemplatePlanFlag()
+  updateShowRejectTarget()
+})
+watch(isSupervisorReviewNode, () => {
+  updateShowRejectTarget()
+})
 
 // 抄送表单
 const copyFormRef = ref<FormInstance>()
@@ -1053,6 +1086,9 @@ const openPopover = async (type: string) => {
   }
   if (type === 'reject') {
     rejectVirtualRef.value = null
+    // 刷新整套计划存在性标志，确保"驳回目标"显示逻辑实时
+    await refreshTemplatePlanFlag()
+    updateShowRejectTarget()
   }
   if (type === 'return') {
     // 获取退回节点
@@ -2737,8 +2773,12 @@ const openApproveAt = async (el: HTMLElement) => {
 }
 
 // 暴露方法：在指定元素旁边打开拒绝对话框
-const openRejectAt = (el: HTMLElement) => {
+const openRejectAt = async (el: HTMLElement) => {
   if (!runningTask.value || !isHandleTaskStatus()) return
+  
+  // 刷新 template 计划标志，确保"驳回目标"显示逻辑一致
+  await refreshTemplatePlanFlag()
+  updateShowRejectTarget()
   
   // 设置虚拟锚点
   rejectVirtualRef.value = el

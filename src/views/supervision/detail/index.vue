@@ -508,7 +508,7 @@
                       </el-button>
                       <el-button
                         v-if="isImplementPlanNode && isCurrentUserSupervisor"
-                        type="warning"
+                        type="primary"
                         size="default"
                         @click="openAuditDialog"
                       >
@@ -847,6 +847,10 @@
                   <el-tag v-else-if="row.status === 'pending_delay'" type="info" size="small">
                     顺延占位
                   </el-tag>
+                  <!-- 隐藏 pending/waiting 状态，不显示任何标签 -->
+                  <template v-else-if="row.status === 'pending' || row.status === 'waiting' || row.statusDisplay === 'pending' || row.statusDisplay === 'waiting'">
+                    <!-- 不渲染 -->
+                  </template>
                   <el-tag v-else type="info" size="small">
                     {{ row.statusDisplay || row.status || '未提交' }}
                   </el-tag>
@@ -967,7 +971,53 @@
             </el-form-item>
           </template>
 
-          <!-- upload_plan 节点：计划表格（无论是否能按时完成均显示；放在预计完成时间选择的下方） -->
+          <!-- upload_plan 节点：改为“总计划输入 + 附件上传” -->
+          <template v-if="isUploadPlanNode">
+            <el-form-item label="工作计划（总）" prop="deptDetail" class="form-item-custom form-item-no-label">
+              <el-input
+                v-model="progressForm.deptDetail"
+                type="textarea"
+                :rows="4"
+                placeholder="请输入总体工作计划..."
+                maxlength="500"
+                show-word-limit
+                class="textarea-custom"
+              />
+            </el-form-item>
+
+            <el-form-item label="相关附件" class="form-item-custom form-item-no-label upload-item">
+              <div class="upload-container">
+                <el-upload
+                  ref="progressUploadRef"
+                  v-model:file-list="progressForm.fileList"
+                  :http-request="customProgressUpload"
+                  :multiple="true"
+                  :auto-upload="true"
+                  :show-file-list="true"
+                  :on-error="handleProgressUploadError"
+                  :on-remove="handleProgressFileRemove"
+                  :before-upload="beforeProgressUpload"
+                  accept=".doc,.docx,.xls,.xlsx"
+                  action="#"
+                  class="upload-custom"
+                >
+                  <el-button type="primary" class="upload-btn">
+                    <Icon icon="ep:upload" class="upload-icon" />
+                    选择文件
+                  </el-button>
+                </el-upload>
+                <div class="upload-tip">
+                  <Icon icon="ep:info-filled" class="tip-icon" />
+                  仅支持 doc、docx、xls、xlsx 格式，单个文件不超过100MB，数量不限
+                </div>
+              </div>
+            </el-form-item>
+          </template>
+
+          <!-- 备份：upload_plan 旧版“按汇报频次生成表格”的 UI（保留以便快速切回）。
+               如需恢复旧版，将本注释块去掉，并把上面的 "总计划输入 + 附件上传" 模块临时注释。
+               注意：此表格依赖 progressForm.planRows、generatePlanRows 等方法。 -->
+          <!--
           <template v-if="isUploadPlanNode">
             <div class="plan-table-section">
               <div class="plan-table-title">工作计划安排</div>
@@ -991,7 +1041,6 @@
                       maxlength="200"
                       :disabled="getRowDisabled(row, $index)"
                     />
-                    <!-- 状态提示（upload_plan 节点不显示 future 状态） -->
                     <div v-if="row.status === 'submitted'" class="row-status-tip submitted">
                       ✓ 已提交
                     </div>
@@ -1028,6 +1077,7 @@
               </el-table>
             </div>
           </template>
+          -->
 
           <!-- 非 upload_plan 和 implement_plan 节点保持原有的预计完成时间字段 -->
           <el-form-item v-if="!isUploadPlanNode && !isImplementPlanNode" label="预计完成时间" prop="planTime" class="form-item-custom form-item-no-label">
@@ -1404,7 +1454,25 @@ const progressRules = computed(() => {
   const rules: any = {}
   
   if (isUploadPlanNode.value) {
-    // upload_plan 节点：始终校验计划表格
+    // upload_plan 节点：校验“总计划文本或附件”二选一
+    rules.deptDetail = [
+      {
+        validator: (rule: any, value: string, callback: any) => {
+          const hasText = !!(progressForm.deptDetail && progressForm.deptDetail.trim() !== '')
+          const hasFiles = Array.isArray(progressForm.fileList) && progressForm.fileList.length > 0
+          if (!hasText && !hasFiles) {
+            callback(new Error('请填写工作计划或上传附件'))
+          } else {
+            callback()
+          }
+        },
+        trigger: 'blur'
+      }
+    ]
+
+    // 备份：upload_plan 旧版“表格模式”的校验（保留以便快速切回）
+    // 如需恢复，将上面的 deptDetail 校验注释，并启用下方的 planRows 校验
+    /*
     rules.planRows = [
       {
         validator: (rule: any, value: any[], callback: any) => {
@@ -1412,12 +1480,10 @@ const progressRules = computed(() => {
             callback(new Error('请至少填写一行计划内容'))
             return
           }
-          
-          const hasValidRow = value.some(row => 
-            (row.summary && row.summary.trim() !== '') || 
+          const hasValidRow = value.some(row =>
+            (row.summary && row.summary.trim() !== '') ||
             (row.fileList && row.fileList.length > 0)
           )
-          
           if (!hasValidRow) {
             callback(new Error('请至少在一行中填写工作内容或上传文件'))
           } else {
@@ -1427,6 +1493,7 @@ const progressRules = computed(() => {
         trigger: 'blur'
       }
     ]
+    */
 
     // 选择“否”时，额外校验延期相关字段
     if (!progressForm.canFinishOnTime) {
@@ -2589,14 +2656,29 @@ const getSupervisionWorkflowUpdateData = async (startLeaderSelectAssignees?: Rec
 
   // 处理协办单位数据
   if (canEditCollaborateDepts.value) {
-    // 在 upload_plan 节点，总是提交协办单位数据（包括清空的情况）
-    const coDeptSource = editForm.value.coDept || ''
-    if (coDeptSource) {
-      const { coDeptString, coDeptArray } = ensureDataConsistency(coDeptSource)
-      updateData.coDept = coDeptString
+    // 仅在有差异时提交协办单位数据，避免无意清空导致误变更
+    // 归一化旧值（原始数据）
+    const oldCoDeptArray = ensureDataConsistency(orderDetail.value.coDept || '').coDeptArray
+    
+    // 归一化新值（优先使用 collaborateDeptIds 数组，否则解析 coDept 字符串）
+    let newCoDeptArray: number[] = []
+    if (editForm.value.collaborateDeptIds && editForm.value.collaborateDeptIds.length > 0) {
+      newCoDeptArray = editForm.value.collaborateDeptIds.filter(id => !isNaN(id))
     } else {
-      // 支持清空协办单位
-      updateData.coDept = ''
+      newCoDeptArray = ensureDataConsistency(editForm.value.coDept || '').coDeptArray
+    }
+    
+    // 忽略顺序比较数组是否相同
+    const arraysEqual = (arr1: number[], arr2: number[]) => {
+      if (arr1.length !== arr2.length) return false
+      const sorted1 = [...arr1].sort((a, b) => a - b)
+      const sorted2 = [...arr2].sort((a, b) => a - b)
+      return sorted1.every((val, index) => val === sorted2[index])
+    }
+    
+    // 仅在有差异时才提交（支持显式清空）
+    if (!arraysEqual(oldCoDeptArray, newCoDeptArray)) {
+      updateData.coDept = newCoDeptArray.join(',')
     }
     // 工作流审批人配置由后端自动设置，前端不需要处理
   } else if (orderDetail.value.coDept) {
@@ -3749,11 +3831,17 @@ const calculateChangePreview = async () => {
     // 归一化协办单位数据 - 旧值来自详情数据
     const oldCoDeptIds = normalizeToIdArray(originalData.coDept)
     
+    // 检查是否有部门变更标志（用于判断是否应优先使用临时变量）
+    const hasDeptChangeFlag = processVars.value.deptChangeFlag === 1 || 
+                              processVars.value.otherNodeDeptChangedFlag === 1 ||
+                              processVars.value.selectLeadDeptChangedFlag === 1
+    
     // 新值优先从流程变量获取（按优先级排序）
+    // 兜底逻辑：当无部门变更标志时，忽略 latestTempCoDeptIds 的优先级，避免空数组误判
     let newCoDeptIds: number[] = []
-    if (processVars.value.latestTempCoDeptIds && Array.isArray(processVars.value.latestTempCoDeptIds)) {
+    if (hasDeptChangeFlag && processVars.value.latestTempCoDeptIds && Array.isArray(processVars.value.latestTempCoDeptIds)) {
       newCoDeptIds = processVars.value.latestTempCoDeptIds
-    } else if (processVars.value.tempCoDeptIds && Array.isArray(processVars.value.tempCoDeptIds)) {
+    } else if (hasDeptChangeFlag && processVars.value.tempCoDeptIds && Array.isArray(processVars.value.tempCoDeptIds)) {
       newCoDeptIds = processVars.value.tempCoDeptIds
     } else if (processVars.value.tempDirectorCollaborateDepts && Array.isArray(processVars.value.tempDirectorCollaborateDepts)) {
       newCoDeptIds = processVars.value.tempDirectorCollaborateDepts
@@ -7299,92 +7387,112 @@ const submitAddProgress = async () => {
     let didSubmitViaNewApi = false
     
     if (isUploadPlanNode.value) {
-      // upload_plan 节点：始终批量提交整套计划到 supervision_plan_entry
-      if (progressForm.planRows.length > 0) {
-        // 获取当前用户信息
-        const currentUser = userStore.getUser
-        if (!currentUser) {
-          ElMessage.error('无法获取用户信息')
-          progressSubmitting.value = false
-          return
-        }
-        
-        // 多级兜底获取办理人部门名称
-        const deptNameFromUser = currentUser.deptName && currentUser.deptName.trim()
-        const deptNameFromId = typeof currentUser.deptId === 'number' ? getDeptName(currentUser.deptId) : ''
-        const deptNameFromLead = Array.isArray(editForm.value.leadDeptNames) && editForm.value.leadDeptNames.length > 0
-          ? editForm.value.leadDeptNames[0]
-          : ''
-
-        const targetDeptName = deptNameFromUser || 
-                              (deptNameFromId && deptNameFromId !== '待督办人选择' ? deptNameFromId : '') ||
-                              deptNameFromLead || ''
-
-        if (!targetDeptName) {
-          ElMessage.error('无法获取办理人部门名称，请先完善个人信息或选择办理单位')
-          progressSubmitting.value = false
-          return
-        }
-        
-        // 构建批量提交数据
-        const entries: PlanEntryBatchItem[] = progressForm.planRows
-          .filter(row => row.summary && row.summary.trim() !== '')
-          .map(row => ({
-            periodDate: row.date,
-            summary: row.summary || '',
-            fileList: row.fileList
-              .filter(file => file.url && file.url !== '')
-              .map(file => ({
-                id: file.id,
-                name: file.name,
-                url: file.url,
-                size: file.size || ''
-              }))
-          }))
-        
-        if (entries.length === 0) {
-          ElMessage.error('请至少填写一条计划内容')
-          progressSubmitting.value = false
-          return
-        }
-        
-        const batchSubmitData: PlanEntryBatchSubmitReqVO = {
-          processInstanceId: processInstanceId || '',
-          targetUserId: currentUser.id,
-          targetUserName: currentUser.nickname || '',
-          targetDeptName: targetDeptName,
-          entries: entries
-        }
-        
-        // 调用新的批量提交接口
-        await PlanEntryApi.submitBatchTemplate(batchSubmitData)
-        didSubmitViaNewApi = true
-        
-        console.log('[submitAddProgress] 批量提交模板版计划成功:', batchSubmitData)
+      // upload_plan 节点：总计划写入新表 supervision_plan_entry (template版本)，旧接口仅用于变量同步或延期说明
+      
+      // 获取当前用户信息（新旧接口都需要）
+      const currentUser = userStore.getUser
+      if (!currentUser) {
+        ElMessage.error('无法获取用户信息')
+        progressSubmitting.value = false
+        return
       }
+      
+      // 多级兜底获取办理人部门名称
+      const deptNameFromUser = currentUser.deptName && currentUser.deptName.trim()
+      const deptNameFromId = typeof currentUser.deptId === 'number' ? getDeptName(currentUser.deptId) : ''
+      const deptNameFromLead = Array.isArray(editForm.value.leadDeptNames) && editForm.value.leadDeptNames.length > 0
+        ? editForm.value.leadDeptNames[0]
+        : ''
 
-      // 若选择"否"或存在协办单位变更，则额外调用旧接口记录延期信息
-      if (!progressForm.canFinishOnTime || progressForm.coopUnitsChanged) {
-        // 选择"否"及协办变更时的原有逻辑，构造旧接口数据
-        progressData.canFinishOnTime = progressForm.canFinishOnTime
-        progressData.delayReason = progressForm.delayReason || undefined
-        progressData.coopUnitsChanged = progressForm.coopUnitsChanged
-        progressData.needExtraApprovalFlag = (!progressForm.canFinishOnTime || progressForm.coopUnitsChanged) ? 1 : 0
-        
-        if (progressForm.coopUnitsChanged && editForm.value.collaborateDeptIds) {
-          progressData.tempCoDeptIds = editForm.value.collaborateDeptIds
+      const targetDeptName = deptNameFromUser || 
+                            (deptNameFromId && deptNameFromId !== '待督办人选择' ? deptNameFromId : '') ||
+                            deptNameFromLead || ''
+
+      if (!targetDeptName) {
+        ElMessage.error('无法获取办理人部门名称，请先完善个人信息或选择办理单位')
+        progressSubmitting.value = false
+        return
+      }
+      
+      const baseProcessId = processInstanceId || ''
+      const textContent = (progressForm.deptDetail || '').trim()
+      const filesPayload = fileList.length > 0 ? fileList : undefined
+      
+      // 步骤1：始终向新表提交 template 版本的总计划
+      // upload_plan 节点现在只用"总计划文本+附件"方式，不再使用表格（planRows 始终为空）
+      
+      // periodDate 优先使用 deadline，无则用当天
+      const formatLocalDate = (timestamp: number) => {
+        const d = new Date(timestamp)
+        const year = d.getFullYear()
+        const month = String(d.getMonth() + 1).padStart(2, '0')
+        const day = String(d.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+      }
+      
+      const periodDate = orderDetail.value.deadline 
+        ? formatLocalDate(orderDetail.value.deadline)
+        : formatLocalDate(Date.now())
+      
+      // 将旧接口的 fileList 格式转换为新接口格式
+      const newApiFileList = filesPayload 
+        ? filesPayload.map(file => ({
+            id: file.id || '',
+            name: file.name || '',
+            url: file.url || '',
+            size: file.size || ''
+          }))
+        : []
+      
+      const entries: PlanEntryBatchItem[] = [{
+        periodDate: periodDate,
+        summary: textContent || '',
+        fileList: newApiFileList
+      }]
+      
+      // 调用新接口批量提交 template 版本
+      const batchSubmitData: PlanEntryBatchSubmitReqVO = {
+        processInstanceId: baseProcessId,
+        targetUserId: currentUser.id,
+        targetUserName: currentUser.nickname || '',
+        targetDeptName: targetDeptName,
+        entries: entries
+      }
+      await PlanEntryApi.submitBatchTemplate(batchSubmitData)
+      didSubmitViaNewApi = true
+      console.log('[submitAddProgress] 新表 template 提交成功:', batchSubmitData)
+      
+      // 步骤2：旧接口处理（按是否延期分支）
+      if (progressForm.canFinishOnTime) {
+        // 选择"是"（能按时完成）：旧接口仅同步流程变量，不写时间线记录
+        const variablesOnlyData: any = {
+          processInstanceId: baseProcessId,
+          canFinishOnTime: true,
+          needExtraApprovalFlag: 0,
+          coopUnitsChanged: progressForm.coopUnitsChanged || false
         }
-        
-        // 构造 deptDetail：若不能按时完成，增加前缀"已上传工作计划，但需要延期"
-        const deptDetailPrefix = !progressForm.canFinishOnTime ? '已上传工作计划，但需要延期，' : ''
-        const deptDetailBase = progressForm.deptDetail?.trim()
-        progressData.deptDetail = deptDetailBase ? `${deptDetailPrefix}；${deptDetailBase}` : deptDetailPrefix
-        
-        // 将 planTime 转为时间戳字符串，避免后端解析错误
-        progressData.planTime = progressForm.planTime ? String(new Date(progressForm.planTime).getTime()) : undefined
-        progressData.fileList = fileList.length > 0 ? fileList : undefined
-
-        await OrderApi.insertSupervisionOrderTaskNew(progressData)
+        if (progressForm.coopUnitsChanged && editForm.value.collaborateDeptIds) {
+          variablesOnlyData.tempCoDeptIds = editForm.value.collaborateDeptIds
+        }
+        await OrderApi.insertSupervisionOrderTaskNew(variablesOnlyData)
+        console.log('[submitAddProgress] 旧接口变量同步成功（按时完成）')
+      } else {
+        // 选择"否"（不能按时完成）：旧接口仅写延期说明一条记录
+        const delayLine = `已上传工作计划，但需要延期，`
+        const delayData: any = {
+          processInstanceId: baseProcessId,
+          deptDetail: delayLine,
+          canFinishOnTime: false,
+          needExtraApprovalFlag: 1,
+          coopUnitsChanged: progressForm.coopUnitsChanged || false,
+          delayReason: progressForm.delayReason || undefined,
+          planTime: progressForm.planTime ? String(new Date(progressForm.planTime).getTime()) : undefined
+        }
+        if (progressForm.coopUnitsChanged && editForm.value.collaborateDeptIds) {
+          delayData.tempCoDeptIds = editForm.value.collaborateDeptIds
+        }
+        await OrderApi.insertSupervisionOrderTaskNew(delayData)
+        console.log('[submitAddProgress] 旧接口延期说明提交成功')
       }
     } else if (isImplementPlanNode.value) {
       // implement_plan 节点：使用新的计划记录接口
@@ -7472,7 +7580,26 @@ const submitAddProgress = async () => {
     
     // 如果没有通过新接口提交，则使用旧接口提交
     if (!didSubmitViaNewApi) {
-      await OrderApi.insertSupervisionOrderTaskNew(progressData)
+      // 确保正常提交时也传递关键字段，避免后端变量残留
+      if (isUploadPlanNode.value) {
+        // upload_plan：上面分支已调用旧接口，这里仅补充字段不再次调用，避免重复落库
+        progressData.canFinishOnTime = progressForm.canFinishOnTime
+        progressData.needExtraApprovalFlag = (!progressForm.canFinishOnTime || progressForm.coopUnitsChanged) ? 1 : 0
+        progressData.coopUnitsChanged = progressForm.coopUnitsChanged
+        if (progressForm.coopUnitsChanged && editForm.value.collaborateDeptIds) {
+          progressData.tempCoDeptIds = editForm.value.collaborateDeptIds
+        }
+        if (!progressForm.canFinishOnTime) {
+          progressData.delayReason = progressForm.delayReason || undefined
+          progressData.planTime = progressForm.planTime ? String(new Date(progressForm.planTime).getTime()) : undefined
+        }
+        // 不调用 OrderApi.insertSupervisionOrderTaskNew，避免重复
+      } else {
+        // implement_plan 节点：正常提交
+        progressData.canFinishOnTime = true
+        progressData.needExtraApprovalFlag = 0
+        await OrderApi.insertSupervisionOrderTaskNew(progressData)
+      }
     }
     
     // 标记本会话已新增进度记录
@@ -7947,10 +8074,30 @@ defineExpose({
   cursor: default;
 }
 
-/* 响应式设计 */
+/* 响应式设计 - 中屏（≤1200px）：按钮和卡片变小 */
+@media (max-width: 1200px) {
+  .supervision-order-detail {
+    padding-right: 56px; /* 为右侧悬浮工具条预留空间 */
+  }
+
+  /* 按钮变小 */
+  .timeline-actions .el-button {
+    font-size: 13px;
+    padding: 6px 12px;
+  }
+
+  /* 预计完成时间在中屏换行 */
+  .progress-record-expected-time {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+/* 响应式设计 - 小屏（≤768px）：进一步缩小 */
 @media (max-width: 768px) {
   .supervision-order-detail {
     padding: 10px;
+    padding-right: 12px; /* 移动端悬浮条较小 */
   }
 
   .order-form-container, .attachment-section {
@@ -7987,6 +8134,30 @@ defineExpose({
   .form-content.half-width {
     flex: 1;
     border-right: none;
+  }
+
+  /* 按钮进一步变小 */
+  .timeline-actions .el-button {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  /* 时间线卡片紧凑化 */
+  .progress-record-item {
+    padding: 12px 12px 12px 28px;
+  }
+
+  .progress-record-dot {
+    left: 10px;
+  }
+
+  /* 最新动态卡片紧凑化 */
+  .latest-progress-item {
+    padding: 12px 12px 12px 28px;
+  }
+
+  .latest-progress-dot {
+    left: 10px;
   }
 }
 
@@ -8105,6 +8276,8 @@ defineExpose({
   align-items: center;
   gap: 6px;
   margin-bottom: 4px;
+  flex-wrap: wrap; /* 允许标题换行 */
+  row-gap: 4px; /* 行间距 */
 }
 
 .user-icon {
@@ -8133,11 +8306,19 @@ defineExpose({
   font-size: 12px;
 }
 
+.latest-progress-content {
+  width: 100%;
+  word-break: break-word; /* 强制断词 */
+  overflow-wrap: anywhere; /* 长词换行 */
+}
+
 .latest-progress-description {
   color: #495057;
   font-size: 14px;
   line-height: 1.5;
   margin-bottom: 8px;
+  word-break: break-word; /* 强制断词 */
+  overflow-wrap: anywhere; /* 长词换行 */
 }
 
 .latest-progress-attachments {
@@ -8189,6 +8370,8 @@ defineExpose({
   gap: 8px;
   justify-content: flex-start;
   align-items: center;
+  flex-wrap: wrap; /* 允许按钮换行 */
+  row-gap: 8px; /* 行间距 */
 }
 
 /* 进度时间线样式 - 与最新动态区域保持一致 */
@@ -8241,6 +8424,8 @@ defineExpose({
   align-items: center;
   gap: 6px;
   margin-bottom: 4px;
+  flex-wrap: wrap; /* 允许标题换行 */
+  row-gap: 4px; /* 行间距 */
 }
 
 .progress-record-handler {
@@ -8259,8 +8444,16 @@ defineExpose({
   margin-bottom: 8px;
 }
 
+.progress-record-content {
+  width: 100%;
+  word-break: break-word; /* 强制断词 */
+  overflow-wrap: anywhere; /* 长词换行 */
+}
+
 .progress-record-description {
   color: #495057;
+  word-break: break-word; /* 强制断词 */
+  overflow-wrap: anywhere; /* 长词换行 */
   font-size: 14px;
   line-height: 1.5;
   margin-bottom: 8px;
@@ -9065,6 +9258,8 @@ defineExpose({
 /* 简化计划摘要样式（纯文本） */
 .plan-summary-simple {
   margin: 8px 0;
+  word-break: break-word; /* 强制断词 */
+  overflow-wrap: anywhere; /* 长词换行 */
 }
 
 .summary-item {
@@ -9082,6 +9277,8 @@ defineExpose({
   font-size: 14px;
   color: #303133;
   line-height: 1.5;
+  word-break: break-word; /* 强制断词 */
+  overflow-wrap: anywhere; /* 长词换行 */
 }
 
 .summary-file-inline {
