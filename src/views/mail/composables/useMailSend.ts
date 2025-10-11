@@ -122,12 +122,13 @@ export function useMailSend(options: {
       const base = {
         subject: options.mailForm.value.subject || '(无主题)',
         content: editorContent,
-        priority: 1,
-        requestReadReceipt: false,
+        priority: options.mailForm.value.priority || 1,
+        requestReadReceipt: options.mailForm.value.requestReadReceipt || false,
         recipientIdCards: processedRecipients,
         ccIdCards: processedCc.length > 0 ? processedCc : undefined,
         bccIdCards: processedBcc.length > 0 ? processedBcc : undefined,
-        attachmentIds: options.attachmentIds.value.length > 0 ? options.attachmentIds.value : undefined
+        attachmentIds: options.attachmentIds.value.length > 0 ? options.attachmentIds.value : undefined,
+        scheduledSendTime: options.mailForm.value.scheduledSendTime || undefined
       }
       
       // 根据类型调用不同的API
@@ -137,18 +138,30 @@ export function useMailSend(options: {
           ...base
         }
         await replyLetter(data)
-        ElMessage.success('回复发送成功')
+        if (base.scheduledSendTime) {
+          ElMessage.success('回复已定时发送')
+        } else {
+          ElMessage.success('回复发送成功')
+        }
       } else if (type === 'forward' && replyId) {
         const data: LetterForwardReqVO = {
           originalLetterId: replyId,
           ...base
         }
         await forwardLetter(data)
-        ElMessage.success('转发发送成功')
+        if (base.scheduledSendTime) {
+          ElMessage.success('转发已定时发送')
+        } else {
+          ElMessage.success('转发发送成功')
+        }
       } else {
         const sendData: LetterSendReqVO = base
         await sendLetter(sendData)
-        ElMessage.success('邮件发送成功')
+        if (base.scheduledSendTime) {
+          ElMessage.success('邮件已定时发送')
+        } else {
+          ElMessage.success('邮件发送成功')
+        }
       }
       
       return true

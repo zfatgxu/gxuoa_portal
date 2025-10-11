@@ -1,29 +1,6 @@
 import type { MailListItemVO } from '@/api/mail/letter'
+import type { Email } from '../types/mail'
 import { formatMailTime } from './mailHelpers'
-
-/**
- * Email 类型定义
- */
-export interface Email {
-  id: number
-  sender: string
-  subject: string
-  time: string
-  date: string
-  sendTime?: string // 添加原始发送时间用于排序
-  deletedAt?: string
-  isDraft?: boolean
-  isStarred?: boolean
-  starredAt?: string
-  fromMail?: string
-  toMail?: string
-  content?: string
-  isRead?: boolean
-  isTrash?: boolean
-  trashTime?: string
-  isSelfSent?: boolean
-  isLoading?: boolean
-}
 
 /**
  * 解析收件人信息，将身份证号转换为真实姓名
@@ -164,7 +141,10 @@ export async function convertMailToEmail(
     isRead: mail.isRead,
     isTrash: mail.isTrash || false,
     trashTime: mail.trashTime ? toLocalDateString(mail.trashTime) : undefined,
-    isSelfSent
+    isSelfSent,
+    priority: (mail as any).priority || 1,
+    requestReadReceipt: (mail as any).requestReadReceipt || false,
+    hasAttachment: mail.hasAttachment || false
   }
   
   return result

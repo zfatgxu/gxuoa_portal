@@ -15,9 +15,64 @@
         <MailToolbar
           :sending="mailSendState.sending.value"
           :last-save-time="lastDraftSaveTime"
+          :scheduled-send-time="mailForm.scheduledSendTime"
+          :auto-save-status="autoSaveState.autoSaveStatus.value"
+          v-model:request-read-receipt="mailForm.requestReadReceipt"
+          v-model:priority="mailForm.priority"
           @send="handleSend"
           @save-draft="handleSaveDraft"
+          @schedule-send="handleOpenScheduleDialog"
         />
+        
+        <!-- 发信设置标签显示区域 -->
+        <div v-if="hasMailSettings" class="mail-settings-tags">
+          <span class="tags-label">已选设置：</span>
+          <el-tag 
+            v-if="mailForm.requestReadReceipt" 
+            type="info" 
+            size="small"
+            closable
+            @close="mailForm.requestReadReceipt = false"
+          >
+            要求已读回执
+          </el-tag>
+          <el-tag 
+            v-if="mailForm.priority === 2" 
+            type="warning" 
+            size="small"
+            closable
+            @close="mailForm.priority = 1"
+          >
+            优先级：重要
+          </el-tag>
+          <el-tag 
+            v-if="mailForm.priority === 3" 
+            type="danger" 
+            size="small"
+            closable
+            @close="mailForm.priority = 1"
+          >
+            优先级：紧急
+          </el-tag>
+          <el-tag 
+            v-if="mailForm.priority === 0" 
+            type="success" 
+            size="small"
+            closable
+            @close="mailForm.priority = 1"
+          >
+            优先级：普通
+          </el-tag>
+          <el-tag 
+            v-if="mailForm.scheduledSendTime" 
+            type="danger" 
+            size="small"
+            closable
+            @close="mailForm.scheduledSendTime = undefined"
+          >
+            定时发送：{{ formatScheduledTime(mailForm.scheduledSendTime) }}
+          </el-tag>
+        </div>
         
         <!-- 邮件表单区域 -->
         <div class="mail-form">
@@ -115,17 +170,19 @@
       <ContactPanel
         :filtered-recent-contacts="contactsState.filteredRecentContacts.value"
         :recent-contact-departments="contactsState.recentContactDepartments.value"
+        :recent-contact-avatars="contactsState.recentContactAvatars.value"
         :filtered-starred-contacts="contactsState.filteredStarredContacts.value"
         :starred-contact-display-names="contactsState.starredContactDisplayNames.value"
         :starred-contact-departments="contactsState.starredContactDepartments.value"
+        :starred-contact-avatars="contactsState.starredContactAvatars.value"
         v-model:contact-search="contactsState.contactSearch.value"
         @select-contact="handleSelectContact"
         @context-menu="handleContextMenu"
       />
     </div>
     
-    <!-- 右键菜单 -->
-    <ContextMenu
+    <!-- 联系人右键菜单 -->
+    <ContactContextMenu
       v-model:visible="contextMenu.visible"
       :x="contextMenu.x"
       :y="contextMenu.y"
@@ -149,6 +206,13 @@
     @next="switchToNextOriginal"
     @download-attachment="handleDownloadAttachment"
   />
+  
+  <!-- 定时发送对话框 -->
+  <ScheduleSendDialog
+    v-model="scheduleSendDialogVisible"
+    :initial-time="mailForm.scheduledSendTime"
+    @confirm="handleScheduleSendConfirm"
+  />
 </template>
 
 <script setup lang="ts">
@@ -165,7 +229,8 @@ import AttachmentManager from './components/AttachmentManager.vue'
 import ContactPanel from './components/ContactPanel.vue'
 import OriginalMailDisplay from './components/OriginalMailDisplay.vue'
 import OriginalMailDetailDialog from './components/OriginalMailDetailDialog.vue'
-import ContextMenu from './components/ContextMenu.vue'
+import ContactContextMenu from './components/ContactContextMenu.vue'
+import ScheduleSendDialog from './components/ScheduleSendDialog.vue'
 import { Editor } from '@/components/Editor'
 
 // 导入 Composables
@@ -173,6 +238,7 @@ import { useContacts } from './composables/useContacts'
 import { useAttachments } from './composables/useAttachments'
 import { useMailSend } from './composables/useMailSend'
 import { useDraft } from './composables/useDraft'
+import { useAutoSave } from './composables/useAutoSave'
 
 // 导入类型
 import type { MailForm, ContextMenuState, OriginalMailInfo } from './types/mail'
@@ -199,7 +265,10 @@ const mailForm = ref<MailForm>({
   bcc: [],
   subject: '',
   content: '',
-  attachmentIds: []
+  attachmentIds: [],
+  requestReadReceipt: false,
+  priority: 1,
+  scheduledSendTime: undefined
 })
 
 // UI 状态
@@ -210,6 +279,7 @@ const activeRecipientField = ref<'recipients' | 'cc' | 'bcc'>('recipients')
 // 编辑器实例
 const editorInstance = ref<any>(null)
 const editorReady = ref(false)
+const editorRef = ref<any>(null) // Editor 组件的 ref
 
 // 邮件编辑器配置
 const mailToolbarConfig = {
@@ -304,6 +374,9 @@ const currentOriginalIndex = ref(0) // 当前查看的原始邮件在列表中�
 // 上次保存草稿的时间
 const lastDraftSaveTime = ref<string>('')
 
+// 定时发送对话框
+const scheduleSendDialogVisible = ref(false)
+
 // 格式化草稿保存时间：今天显示时间，其他显示日期
 const formatDraftSaveTime = (dateTimeStr: string): string => {
   try {
@@ -364,6 +437,28 @@ const replyOriginalIds = computed(() => {
 // 关系类型（1-回复，2-转发）
 const relationType = ref<number | null>(null)
 
+// 计算属性：判断是否有任何发信设置
+const hasMailSettings = computed(() => {
+  return mailForm.value.requestReadReceipt || 
+         mailForm.value.priority !== 1 || 
+         !!mailForm.value.scheduledSendTime
+})
+
+// 格式化定时发送时间
+const formatScheduledTime = (timeStr: string): string => {
+  try {
+    const date = new Date(timeStr)
+    const year = date.getFullYear()
+    const month = (date.getMonth() + 1).toString().padStart(2, '0')
+    const day = date.getDate().toString().padStart(2, '0')
+    const hours = date.getHours().toString().padStart(2, '0')
+    const minutes = date.getMinutes().toString().padStart(2, '0')
+    return `${year}-${month}-${day} ${hours}:${minutes}`
+  } catch (e) {
+    return timeStr
+  }
+}
+
 // 使用 Composables
 const contactsState = useContacts()
 const attachmentState = useAttachments()
@@ -390,6 +485,18 @@ const draftState = useDraft({
   sharedCurrentDraftId // 传入共享的 ref
 })
 
+// 初始化自动保存功能
+const autoSaveState = useAutoSave({
+  mailForm,
+  editorInstance,
+  currentDraftId: sharedCurrentDraftId,
+  config: {
+    interval: 30000, // 30秒自动保存一次
+    debounceDelay: 3000, // 3秒防抖
+    enabled: true // 启用自动保存
+  }
+})
+
 // 事件处理器
 const handleEditorChange = async (editor: any) => {
   if (!editorReady.value) {
@@ -402,6 +509,32 @@ const handleSend = async () => {
   if (mailSendState.sending.value) {
     ElMessage.warning('正在发送中，请稍候...')
     return
+  }
+  
+  // 在发送前，确保从编辑器获取最新内容
+  try {
+    if (editorRef.value) {
+      const editor = await editorRef.value.getEditorRef()
+      if (editor && typeof editor.getHtml === 'function') {
+        const latestContent = editor.getHtml()
+        if (latestContent) {
+          mailForm.value.content = latestContent
+          // 同时更新 editorInstance，确保后续逻辑能正常工作
+          if (!editorInstance.value) {
+            editorInstance.value = editor
+            editorReady.value = true
+          }
+        }
+      }
+    } else if (editorInstance.value && typeof editorInstance.value.getHtml === 'function') {
+      // 如果 editorRef 不可用，尝试使用 editorInstance
+      const latestContent = editorInstance.value.getHtml()
+      if (latestContent) {
+        mailForm.value.content = latestContent
+      }
+    }
+  } catch (e) {
+    console.warn('获取编辑器内容失败，使用当前表单内容', e)
   }
   
   if (!mailForm.value.subject) {
@@ -438,7 +571,26 @@ const handleSaveDraft = async () => {
   if (result.success && result.lastSaveTime) {
     // 使用从数据库返回的真实保存时间，并根据日期智能格式化
     lastDraftSaveTime.value = formatDraftSaveTime(result.lastSaveTime)
+    
+    // 更新自动保存快照，避免重复保存相同内容
+    autoSaveState.updateSnapshot(result.lastSaveTime)
+    
+    // 如果是首次创建草稿，启动自动保存
+    if (sharedCurrentDraftId.value && !autoSaveState.autoSaveStatus.value) {
+      autoSaveState.startAutoSave()
+    }
   }
+}
+
+const handleOpenScheduleDialog = () => {
+  scheduleSendDialogVisible.value = true
+}
+
+const handleScheduleSendConfirm = (time: string) => {
+  mailForm.value.scheduledSendTime = time
+  ElMessage.success(`已设置定时发送时间`)
+  // 调用发送函数
+  handleSend()
 }
 
 const handleRecipientUpdate = (field: 'recipients' | 'cc' | 'bcc', newValue: string[]) => {
@@ -788,7 +940,10 @@ const resetForm = () => {
     bcc: [],
     subject: '',
     content: '',
-    attachmentIds: []
+    attachmentIds: [],
+    requestReadReceipt: false,
+    priority: 1,
+    scheduledSendTime: undefined
   }
   
   if (editorInstance.value) {
@@ -818,7 +973,10 @@ onMounted(async () => {
     bcc: [],
     subject: '',
     content: '',
-    attachmentIds: []
+    attachmentIds: [],
+    requestReadReceipt: false,
+    priority: 1,
+    scheduledSendTime: undefined
   }
   attachmentState.resetAttachments()
   
@@ -838,7 +996,13 @@ onMounted(async () => {
           // 设置上次保存时间，根据日期智能格式化
           if (result.lastSaveTime) {
             lastDraftSaveTime.value = formatDraftSaveTime(result.lastSaveTime)
+            // 更新自动保存快照
+            autoSaveState.updateSnapshot(result.lastSaveTime)
           }
+          
+          // 启动自动保存
+          await nextTick()
+          autoSaveState.startAutoSave()
           
           // 处理显示抄送和密送
           showCc.value = mailForm.value.cc.length > 0
@@ -1168,6 +1332,16 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  // 停止自动保存
+  autoSaveState.stopAutoSave()
+  
+  // 如果有未保存的更改，触发最后一次保存
+  if (autoSaveState.hasUnsavedChanges.value && sharedCurrentDraftId.value) {
+    autoSaveState.triggerAutoSave().catch(e => {
+      console.error('页面卸载前自动保存失败:', e)
+    })
+  }
+  
   try {
     if (editorInstance.value) {
       try {
@@ -1299,5 +1473,26 @@ onBeforeUnmount(() => {
   font-size: 14px;
   line-height: 1.5;
   color: #303133;
+}
+
+/* 发信设置标签区域 */
+.mail-settings-tags {
+  padding: 10px 15px;
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mail-settings-tags .tags-label {
+  font-size: 14px;
+  color: #606266;
+  font-weight: 500;
+}
+
+.mail-settings-tags :deep(.el-tag) {
+  margin-right: 8px;
 }
 </style>

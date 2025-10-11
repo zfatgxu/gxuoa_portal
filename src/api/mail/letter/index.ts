@@ -164,6 +164,9 @@ export interface MailListItemVO {
   sendTime: string              // 发送时间
   createTime: string            // 创建时间
   updateTime: string            // 更新时间
+  priority?: number             // 优先级：1-普通，2-重要，3-紧急
+  requestReadReceipt?: boolean  // 是否要求已读回执
+  hasAttachment?: boolean       // 是否有附件
 }
 
 
@@ -194,6 +197,7 @@ export interface LetterSendReqVO {
   ccIdCards?: string[]               // 抄送人身份证号列表，可选
   bccIdCards?: string[]              // 密送人身份证号列表，可选
   attachmentIds?: number[]           // 附件ID列表，可选
+  scheduledSendTime?: string         // 定时发送时间，可选
 }
 
 // 搜索信件请求VO
@@ -251,6 +255,15 @@ export const getLetterDetail = async (id: number): Promise<LetterDetailRespVO> =
  */
 export const searchLetters = async (params: SearchLetterReqVO): Promise<{list: LetterContentRespVO[], total: number}> => {
   return await request.get({url: '/letter/search', params})
+}
+
+/**
+ * 根据附件名称搜索信件
+ * @param params 搜索参数
+ * @returns Promise<{list: MailListItemVO[], total: number}>
+ */
+export const searchLettersByAttachment = async (params: { attachmentName: string; pageNo?: number; pageSize?: number }): Promise<{list: MailListItemVO[], total: number}> => {
+  return await request.get({url: '/letter/search/by-attachment', params})
 }
 
 // ==================== 收件人相关API ====================
@@ -539,6 +552,15 @@ export const replyLetter = async (data: LetterReplyReqVO): Promise<number> => {
  */
 export const forwardLetter = async (data: LetterForwardReqVO): Promise<number> => {
   return await request.post({url: '/letter/forward', data})
+}
+
+/**
+ * 发送已读回执
+ * @param letterId 信件ID
+ * @returns Promise<boolean> 返回操作结果
+ */
+export const sendReadReceipt = async (letterId: number): Promise<boolean> => {
+  return await request.post({url: '/letter/send-read-receipt', params: { letterId }})
 }
 
 
