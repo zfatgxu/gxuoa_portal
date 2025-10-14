@@ -12,6 +12,9 @@ export interface MailForm {
   content: string             // 邮件内容（HTML）
   attachments: File[]         // 本地文件列表（待上传）
   attachmentIds: number[]     // 已上传的附件ID列表
+  requestReadReceipt: boolean // 是否请求已读回执
+  priority: number            // 优先级(1-普通,2-重要,3-紧急)
+  scheduledSendTime?: string  // 定时发送时间（可选）
 }
 
 /**
@@ -63,6 +66,7 @@ export interface RecentContact {
   lastSendTime: string       // 最后发送时间
   sendCount: number          // 发送次数
   idCard?: string            // 身份证号
+  avatar?: string            // 用户头像
 }
 
 /**
@@ -82,5 +86,60 @@ export interface AttachmentConfig {
   maxFileCount: number       // 最大文件数量
   allowedTypes: string[]     // 允许的MIME类型
   allowedExtensions: string[] // 允许的文件扩展名
+}
+
+/**
+ * 邮件列表项数据（统一的Email类型）
+ */
+export interface Email {
+  id: number
+  sender: string
+  subject: string
+  time: string
+  date: string
+  sendTime?: string           // 原始发送时间用于排序
+  deletedAt?: string
+  isDraft?: boolean
+  isStarred?: boolean
+  starredAt?: string          // 星标日期字段
+  content?: string            // 邮件内容字段
+  isRead?: boolean            // 是否已读字段
+  toMail?: string             // 收件人字段
+  toRecipients?: string       // 主收件人字段
+  ccRecipients?: string       // 抄送人字段
+  bccRecipients?: string      // 密送人字段
+  priority?: number           // 优先级字段(1-普通,2-重要,3-紧急)
+  requestReadReceipt?: boolean // 已读回执字段
+  originalSendTime?: string   // 原始发送时间字段
+  isLoading?: boolean         // 加载状态字段
+  attachments?: Array<{
+    id: number
+    fileName: string
+    fileSize: string
+    fileType: string
+    fileExtension: string
+    url?: string
+    fileUrl?: string
+    uploadUserIdCard: string
+    uploadTime: string
+    downloadCount: number
+    isTemp: boolean
+    tempExpireTime?: string
+    createTime: string
+  }>                          // 附件字段
+  isSelfSent?: boolean
+  folderSource?: string       // 搜索结果中显示的文件夹来源标签
+  hasAttachment?: boolean     // 是否有附件
+}
+
+/**
+ * 邮件右键菜单状态
+ */
+export interface EmailContextMenuState {
+  visible: boolean
+  x: number
+  y: number
+  email: Email | null
+  showMoveSubmenu: boolean
 }
 

@@ -10,7 +10,7 @@ export interface NotifyMessageVO {
   templateNickname: string
   templateContent: string
   templateType: number
-  templateParams: string
+  templateParams: Record<string, any>
   readStatus: boolean
   readTime: Date
   createTime: Date
@@ -23,7 +23,7 @@ export const getNotifyMessagePage = async (params: PageParam) => {
 
 // 获得我的站内信分页
 export const getMyNotifyMessagePage = async (params: PageParam) => {
-  return await request.get({ url: '/app/notify-message/my-page', params })
+  return await request.get({ url: '/app/notify-message/my-page', params })//
 }
 
 // 批量标记已读

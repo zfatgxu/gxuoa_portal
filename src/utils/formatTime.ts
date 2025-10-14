@@ -213,6 +213,17 @@ export function dateFormatter2(_row: any, _column: TableColumnCtx<any>, cellValu
 }
 
 /**
+ * element plus 的时间 Formatter 实现，使用 YY-MM-DD HH:mm 格式
+ *
+ * @param row 行数据
+ * @param column 字段
+ * @param cellValue 字段值
+ */
+export function dateFormatterShort(_row: any, _column: TableColumnCtx<any>, cellValue: any): string {
+  return cellValue ? formatDate(cellValue, 'YY-MM-DD HH:mm') : ''
+}
+
+/**
  * 设置起始日期，时间为00:00:00
  * @param param 传入日期
  * @returns 带时间00:00:00的日期

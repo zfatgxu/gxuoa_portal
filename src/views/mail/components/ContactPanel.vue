@@ -52,7 +52,17 @@
             @click="handleSelectContact(contact)"
             @contextmenu.prevent="handleContextMenu($event, contact, 'recent')"
           >
-            <el-avatar :size="24">{{ contact.name?.substring(0, 1) || '?' }}</el-avatar>
+            <el-avatar 
+              v-if="recentContactAvatars.get(contact.name)"
+              :size="24" 
+              :src="recentContactAvatars.get(contact.name)"
+            />
+            <el-avatar 
+              v-else
+              :size="24"
+            >
+              {{ contact.name?.substring(0, 1) || '?' }}
+            </el-avatar>
             <div class="contact-info">
               <div class="contact-name">{{ contact.name }}</div>
               <div class="contact-time">
@@ -96,7 +106,15 @@
             @click="handleSelectStarredContact(contact)"
             @contextmenu.prevent="handleContextMenu($event, contact, 'starred')"
           >
-            <el-avatar :size="24">
+            <el-avatar 
+              v-if="starredContactAvatars.get(contact.id)"
+              :size="24" 
+              :src="starredContactAvatars.get(contact.id)"
+            />
+            <el-avatar 
+              v-else
+              :size="24"
+            >
               {{ (starredContactDisplayNames.get(contact.id) || '?').substring(0, 1) }}
             </el-avatar>
             <div class="contact-info">
@@ -126,9 +144,11 @@ import { formatLastSendTime } from '../utils/mailHelpers'
 interface Props {
   filteredRecentContacts: RecentContact[]
   recentContactDepartments: Map<string, string>
+  recentContactAvatars: Map<string, string>
   filteredStarredContacts: LetterContactStarRespVO[]
   starredContactDisplayNames: Map<number, string>
   starredContactDepartments: Map<number, string>
+  starredContactAvatars: Map<number, string>
   contactSearch: string
 }
 

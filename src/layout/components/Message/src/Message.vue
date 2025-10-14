@@ -11,11 +11,11 @@ const userStore = useUserStoreWithOut()
 const activeName = ref('notice')
 const unreadCount = ref(0) // 未读消息数量
 const list = ref<any[]>([]) // 消息列表
-const messageDetailRef = ref() // 消息详情组件引用
+// const messageDetailRef = ref() // 消息详情组件引用
 
 // 获得消息列表
 const getList = async () => {
-  list.value = await NotifyMessageApi.getUnreadNotifyMessageList()
+  list.value = await NotifyMessageApi.getUnreadNotifyMessageList()//AppNotifyMessageController.java @GetMapping("/get-unread-list")
   // 强制设置 unreadCount 为 0，避免小红点因为轮询太慢，不消除
   unreadCount.value = 0
 }
@@ -37,9 +37,45 @@ const goMyList = () => {
 const detailRef = ref()
 const openDetail = (data: NotifyMessageApi.NotifyMessageVO) => {
   if (!data.readStatus) {
-    handleReadOne(data.id)
+    handleReadOne(data.id)//标记一条站内信已读
   }
-  detailRef.value.open(data)
+
+  try {
+    // 从消息的templateParams中获取documentId
+    let documentId = null
+
+    if (data.templateParams) {
+      let templateParams = data.templateParams
+
+      // 如果templateParams是字符串，需要解析
+      if (typeof templateParams === 'string') {
+        try {
+          templateParams = JSON.parse(templateParams)
+        } catch (e) {
+          console.error('解析templateParams失败:', e)
+        }
+      }
+
+      // 获取documentId
+      documentId = templateParams.documentId || templateParams.id
+    }
+
+    if (documentId) {
+      // 在新窗口打开 document_approval 页面，使用真实的文档ID
+      const baseUrl = window.location.origin
+      const documentUrl = `/document_approval?id=${documentId}&type=3&isTodo=1`
+      //"http://localhost/#/document_approval?id=391&type=3&isTodo=1"
+      window.open(documentUrl, '_blank')
+    } else {
+      console.error('无法获取文档ID，templateParams:', data.templateParams)
+      ElMessage.error('无法获取文档ID，请检查消息数据')
+      return
+    }
+  } catch (error) {
+    console.error('跳转失败:', error)
+    ElMessage.error('跳转失败，请重试')
+    return
+  }
 }
 
 /** 标记一条站内信已读 */
