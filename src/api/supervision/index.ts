@@ -602,7 +602,7 @@ export interface PlanEntryBatchSubmitReqVO {
 
 // 批量提交的计划记录项
 export interface PlanEntryBatchItem {
-  periodDate: string // 期次日期 (YYYY-MM-DD)
+  periodDate?: string // 期次日期 (YYYY-MM-DD)
   summary?: string // 计划内容摘要
   fileList?: AttachmentFileInfo[] // 附件列表
 }

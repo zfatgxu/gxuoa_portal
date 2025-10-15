@@ -69,9 +69,9 @@
                   <Icon icon="ep:clock" class="time-icon" />
                   {{ progressRecords[0].time }}
                 </div>
-                <!-- 原始 description 仅在非计划摘要时显示 -->
+                <!-- 非计划摘要：显示裁剪后的描述 -->
                 <div v-if="progressRecords[0].description && !shouldShowPlanSummary(progressRecords[0])" class="progress-record-description">
-                  {{ progressRecords[0].description }}
+                  {{ getDisplayDescription(progressRecords[0]).text }}
                 </div>
                 
                 <!-- 计划摘要显示（纯文本，无样式） -->
@@ -90,19 +90,6 @@
                       </div>
                     </div>
                   </div>
-                  <div v-if="hasMorePlans(progressRecords[0])" class="summary-more-simple">
-                    ...
-                    <el-link type="primary" @click="showViewAllPlansForRecord(progressRecords[0])" style="margin-left: 8px;">
-                      查看全部计划
-                    </el-link>
-                  </div>
-                </div>
-                
-                <!-- 单行计划记录（implement_plan）也显示查看全部计划链接 -->
-                <div v-if="isPlanLikeRecord(progressRecords[0])" class="single-plan-view-all">
-                  <el-link type="primary" @click="showViewAllPlansForRecord(progressRecords[0])">
-                    查看全部计划
-                  </el-link>
                 </div>
                 
                 <div class="progress-record-description" v-if="progressRecords[0].remark && progressRecords[0].recordType !== 'implement_plan_audit'">
@@ -117,6 +104,13 @@
                       <Icon icon="ep:download" class="attachment-download-btn" @click="downloadProgressFile(file)" title="下载文件" />
                     </div>
                   </div>
+                </div>
+                
+                <!-- 统一的"查看全部"链接（底部位置） -->
+                <div v-if="shouldShowViewAllLink(progressRecords[0])" class="view-all-link">
+                  <el-link type="primary" @click="showViewAllPlansForRecord(progressRecords[0])">
+                    {{ getViewAllLinkText(progressRecords[0]) }}
+                  </el-link>
                 </div>
               </div>
             </div>
@@ -558,9 +552,9 @@
                           {{ record.time }}
                         </div>
                         
-                        <!-- 原始 description 仅在非计划摘要时显示 -->
+                        <!-- 非计划摘要：显示裁剪后的描述 -->
                         <div v-if="record.description && !shouldShowPlanSummary(record)" class="progress-record-description">
-                          {{ record.description }}
+                          {{ getDisplayDescription(record).text }}
                         </div>
                         
                         <!-- 计划摘要显示（纯文本，无样式） -->
@@ -579,19 +573,6 @@
                               </div>
                             </div>
                           </div>
-                          <div v-if="hasMorePlans(record)" class="summary-more-simple">
-                            ...
-                            <el-link type="primary" @click="showViewAllPlansForRecord(record)" style="margin-left: 8px;">
-                              查看全部计划
-                            </el-link>
-                          </div>
-                        </div>
-                        
-                        <!-- 单行计划记录（implement_plan）也显示查看全部计划链接 -->
-                        <div v-if="isPlanLikeRecord(record)" class="single-plan-view-all">
-                          <el-link type="primary" @click="showViewAllPlansForRecord(record)">
-                            查看全部计划
-                          </el-link>
                         </div>
                         
                         <div class="progress-record-description" v-if="record.remark && record.recordType !== 'implement_plan_audit'">
@@ -607,6 +588,13 @@
                               <Icon icon="ep:download" class="attachment-download-btn" @click="downloadProgressFile(file)" title="下载文件" />
                             </div>
                           </div>
+                        </div>
+                        
+                        <!-- 统一的"查看全部"链接（底部位置） -->
+                        <div v-if="shouldShowViewAllLink(record)" class="view-all-link">
+                          <el-link type="primary" @click="showViewAllPlansForRecord(record)">
+                            {{ getViewAllLinkText(record) }}
+                          </el-link>
                         </div>
                       </div>
                     </div>
@@ -713,7 +701,6 @@
         <!-- 非 upload_plan 节点：直接显示工作计划表格 -->
         <div v-if="!isUploadPlanNode" class="plan-table-section">
           <div class="plan-table-header">
-            <div class="plan-table-title">工作计划安排</div>
             <!-- 审核模式：用户切换选择器 -->
             <div v-if="auditMode && auditUserOptions.length > 0" class="audit-user-selector">
               <span class="selector-label">当前上传人：</span>
@@ -731,12 +718,6 @@
                 />
               </el-select>
             </div>
-          </div>
-          <div class="plan-table-tip">
-            <Icon icon="ep:info-filled" class="tip-icon" />
-            <span v-if="auditMode">当前显示 {{ selectedAuditUserName || '所选用户' }} 的提交内容，可逐行审核</span>
-            <span v-else-if="isImplementPlanNode">当前显示计划执行状态，可通过"添加工作推进"提交新的计划内容</span>
-            <span v-else>请按顺序提交，上一行提交后才能填写下一行</span>
           </div>
           <el-table :data="auditMode ? planEntryRows : progressForm.planRows" border class="plan-table">
             <el-table-column prop="date" label="预计完成时间" width="150" align="center">
@@ -1079,8 +1060,8 @@
           </template>
           -->
 
-          <!-- 非 upload_plan 和 implement_plan 节点保持原有的预计完成时间字段 -->
-          <el-form-item v-if="!isUploadPlanNode && !isImplementPlanNode" label="预计完成时间" prop="planTime" class="form-item-custom form-item-no-label">
+          <!-- 非 upload_plan 和 implement_plan 节点保持原有的预计完成时间字段（审核模式下不显示） -->
+          <el-form-item v-if="!auditMode && !isUploadPlanNode && !isImplementPlanNode" label="预计完成时间" prop="planTime" class="form-item-custom form-item-no-label">
             <el-date-picker
               v-model="progressForm.planTime"
               type="datetime"
@@ -1204,7 +1185,7 @@
     <!-- 查看全部计划弹窗 -->
     <el-dialog
       v-model="viewAllPlansDialogVisible"
-      title="查看全部计划"
+      :title="getViewAllDialogTitle(currentViewingRecord)"
       width="1000px"
       class="view-all-plans-dialog"
       :close-on-click-modal="false"
@@ -1212,9 +1193,9 @@
     >
       <div class="view-all-plans-content">
         <el-table :data="viewAllPlansData" border class="plan-table">
-          <el-table-column prop="date" label="预计完成时间" width="150" align="center">
+          <el-table-column prop="date" :label="getViewAllDateColumnLabel()" width="150" align="center">
             <template #default="{ row }">
-              <span>{{ row.date }}</span>
+              <span>{{ getViewAllRowDate(row) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="工作内容概述" min-width="300">
@@ -1333,6 +1314,7 @@ import * as DefinitionApi from '@/api/bpm/definition'
 import { SupervisionProcessApi, SupervisionTaskOperationApi } from '@/api/supervision/index'
 import { canSuspendResume } from '../components/permissions'
 import { KKFileView } from '@/components/KKFileView'
+import dayjs from 'dayjs'
 
 defineOptions({ name: 'SupervisionOrderDetail' })
 
@@ -1408,8 +1390,9 @@ const getRowFileList = (row: any) => {
 }
 const addProgressDialogVisible = ref(false)     // 添加进度弹窗显示状态
 const addRemarkDialogVisible = ref(false)       // 添加批示弹窗状态
-const viewAllPlansDialogVisible = ref(false)    // 查看全部计划弹窗状态
+const viewAllPlansDialogVisible = ref(false)    // 查看全部计划弹窗显示状态
 const viewAllPlansData = ref<any[]>([])         // 查看全部计划弹窗数据
+const currentViewingRecord = ref<any>(null)     // 当前查看的记录（用于动态弹窗标题）
 const progressSubmitting = ref(false)           // 进度提交中状态
 const hasNewProgressInThisSession = ref(false)  // 本会话是否新增过进度记录
 const progressSortOrder = ref<'asc' | 'desc'>('desc') // 进度记录排序方式，默认倒序（最新在前）
@@ -4163,7 +4146,7 @@ const mergeSubmittedRecordsIntoPlanRows = () => {
   }
   
   // 查找所有单行计划记录（implement_plan 格式：YYYY-MM-DD：内容）
-  const singlePlanRecords = progressRecords.value.filter(record => isPlanLikeRecord(record))
+  const singlePlanRecords = progressRecords.value.filter(record => isExecRecord(record))
   
   singlePlanRecords.forEach(record => {
     mergeSingleRecordIntoPlanRows(record, progressForm.planRows)
@@ -4927,8 +4910,9 @@ const showAddRemarkDialog = () => {
 }
 
 // 显示查看全部计划弹窗
-const showViewAllPlansDialog = (planRows: any[]) => {
+const showViewAllPlansDialog = (planRows: any[], record?: any) => {
   viewAllPlansData.value = planRows || []
+  currentViewingRecord.value = record || null
   viewAllPlansDialogVisible.value = true
 }
 
@@ -4936,6 +4920,7 @@ const showViewAllPlansDialog = (planRows: any[]) => {
 const closeViewAllPlansDialog = () => {
   viewAllPlansDialogVisible.value = false
   viewAllPlansData.value = []
+  currentViewingRecord.value = null
 }
 
 // 取消添加批示
@@ -5756,22 +5741,7 @@ const shouldShowPlanSummary = (record: any) => {
   return lines.some(line => /^\d{4}-\d{2}-\d{2}：/.test(line))
 }
 
-// 判断是否为单行计划记录（implement_plan 节点）
-const isPlanLikeRecord = (record: any) => {
-  if (!record.description) return false
-  
-  // 单行且符合日期格式：YYYY-MM-DD：内容 或 YYYY-MM-DD: 内容（支持全角/半角冒号）
-  const lines = record.description.split('\n').filter(line => line.trim() !== '')
-  if (lines.length !== 1) return false
-  
-  // 支持全角冒号"："和半角冒号":"
-  return /^\d{4}-\d{2}-\d{2}[：:]/.test(lines[0].trim())
-}
-
-// 判断是否应该显示“查看全部计划”链接
-const shouldShowViewAllPlansLink = (record: any) => {
-  return shouldShowPlanSummary(record) || isPlanLikeRecord(record)
-}
+ 
 
 // 获取进度记录的计划摘要
 const getPlanSummaryForRecord = (record: any) => {
@@ -5781,13 +5751,19 @@ const getPlanSummaryForRecord = (record: any) => {
   
   // 直接从该记录的 description 还原计划，不使用缓存（避免展示时被当前用户缓存污染）
   const planRows = parsePlanRowsFromDeptDetail(record.description)
-  return generatePlanSummary(planRows)
+  const result = generatePlanSummary(planRows)
+  // template 模式：去除前缀日期
+  if (!isExecRecord(record) && result.summaryLines && result.summaryLines.length > 0) {
+    const regex = /^\s*\d{4}-\d{2}-\d{2}\s*[：:]+\s*/
+    result.summaryLines = result.summaryLines.map((line: string) => line.replace(regex, ''))
+  }
+  return result
 }
 
 // 显示进度记录对应的全部计划（严格按记录类型分流）
 const showViewAllPlansForRecord = async (record: any) => {
-  // implement_plan 执行进度记录：只看 exec
-  if (record.recordType === 'implement_plan') {
+  // 执行进度：只看 exec
+  if (isExecRecord(record)) {
     // 督办人：打开审核弹窗
     if (isCurrentUserSupervisor.value) {
       await openAuditDialog()
@@ -5796,31 +5772,33 @@ const showViewAllPlansForRecord = async (record: any) => {
 
     // 非督办：查看该用户的执行计划
     const targetUserId = record.targetUserId || record.creatorUserId
-    const hasDataInTable = await showStructuredViewAllPlans(targetUserId, false)
+    const hasDataInTable = await showStructuredViewAllPlans(targetUserId, false, record)
     if (hasDataInTable) return
 
     // 兜底：从单行描述合并到整套期次进行展示
     let planRows = generatePlanRows()
     mergeSingleRecordIntoPlanRows(record, planRows)
-    showViewAllPlansDialog(planRows)
+    showViewAllPlansDialog(planRows, record)
     return
   }
 
   // 其余（如 upload_plan 记录）：只看 template
   const targetUserId = record.targetUserId || record.creatorUserId
-  const hasDataInTable = await showStructuredViewAllPlans(targetUserId, true)
+  const hasDataInTable = await showStructuredViewAllPlans(targetUserId, true, record)
   if (hasDataInTable) return
 
   // 兜底：表中无数据时，从 deptDetail 还原模板
   console.log('🔍 [showViewAllPlansForRecord] 表中无数据，使用 deptDetail 兜底解析')
   let planRows = parsePlanRowsFromDeptDetail(record.description)
   planRows = ensureRowFilesFromAttachments(planRows, record.attachments || [], 'modal')
-  showViewAllPlansDialog(planRows)
+  // 为每行设置上传时间（template 模式优先显示上传时间）
+  planRows.forEach(row => { row.uploadTime = record.createTime })
+  showViewAllPlansDialog(planRows, record)
 }
 
 // 显示结构化的全部计划（implement_plan 节点专用）
 // 返回值：boolean - 是否成功从表中获取到数据
-const showStructuredViewAllPlans = async (targetUserId?: number, forceTemplate: boolean = false): Promise<boolean> => {
+const showStructuredViewAllPlans = async (targetUserId?: number, forceTemplate: boolean = false, record?: any): Promise<boolean> => {
   const processInstanceId = props.id?.toString() || 
                            route.query.processInstanceId as string || 
                            route.params.id as string || 
@@ -5864,76 +5842,99 @@ const showStructuredViewAllPlans = async (targetUserId?: number, forceTemplate: 
       return false
     }
     
-    // 生成基础计划行
-    const planRows = generatePlanRows()
+    // 检查是否所有 template 记录的 periodDate 都为 null
+    const allPeriodsNull = forceTemplate && planEntries.every(entry => !entry.periodDate)
     
-    // 按用户分组计划记录
-    const userPlanMap = new Map<number, PlanEntryRespVO[]>()
-    planEntries.forEach(entry => {
-      const userId = entry.targetUserId
-      if (!userPlanMap.has(userId)) {
-        userPlanMap.set(userId, [])
-      }
-      userPlanMap.get(userId)!.push(entry)
-    })
+    let planRows: any[] = []
     
-    // 为每个计划行填充数据
-    planRows.forEach(row => {
-      row.hasAnyContent = false
+    if (allPeriodsNull) {
+      // 如果所有 template 记录的 periodDate 都为 null,直接从 entries 创建行
+      console.log('🔍 [showStructuredViewAllPlans] 所有 template 记录的 periodDate 为 null,直接创建行')
+      planRows = planEntries.map(entry => ({
+        date: '', // 不显示期次日期
+        summary: entry.summary || '',
+        fileList: parseAttachmentInfo(entry.attachmentInfo) || [],
+        uploadTime: entry.createTime, // 使用上传时间
+        hasAnyContent: Boolean(entry.summary) || (parseAttachmentInfo(entry.attachmentInfo) || []).length > 0
+      }))
+    } else {
+      // 生成基础计划行
+      planRows = generatePlanRows()
       
-      if (forceTemplate) {
-        // 整套计划（template）：使用单用户模式，不设置 userPlans
-        // 这样模板会走单用户渲染分支，呈现简洁样式
-        userPlanMap.forEach((userEntries, userId) => {
-          const matchingEntry = userEntries.find(entry => normalizePeriodDate(entry.periodDate) === row.date)
-          
-          if (matchingEntry) {
-            row.summary = matchingEntry.summary || ''
-            row.fileList = parseAttachmentInfo(matchingEntry.attachmentInfo) || []
-            row.hasAnyContent = Boolean(row.summary) || row.fileList.length > 0
-          }
-        })
-      } else {
-        // 执行进度（exec）：使用多用户模式，设置 userPlans
-        row.userPlans = []
+      // 按用户分组计划记录
+      const userPlanMap = new Map<number, PlanEntryRespVO[]>()
+      planEntries.forEach(entry => {
+        const userId = entry.targetUserId
+        if (!userPlanMap.has(userId)) {
+          userPlanMap.set(userId, [])
+        }
+        userPlanMap.get(userId)!.push(entry)
+      })
+      
+      // 为每个计划行填充数据
+      planRows.forEach(row => {
+        row.hasAnyContent = false
         
-        // 遍历所有用户的计划记录
-        userPlanMap.forEach((userEntries, userId) => {
-          const matchingEntry = userEntries.find(entry => normalizePeriodDate(entry.periodDate) === row.date)
+        if (forceTemplate) {
+          // 整套计划（template）：使用单用户模式，不设置 userPlans
+          // 这样模板会走单用户渲染分支，呈现简洁样式
+          userPlanMap.forEach((userEntries, userId) => {
+            const normalizedRowDate = row.date || ''
+            const matchingEntry = userEntries.find(entry => {
+              const normalizedEntryDate = normalizePeriodDate(entry.periodDate)
+              // 如果 entry 的 periodDate 为 null (返回空字符串),也允许匹配空的 row.date
+              return normalizedEntryDate === normalizedRowDate
+            })
+            
+            if (matchingEntry) {
+              row.summary = matchingEntry.summary || ''
+              row.fileList = parseAttachmentInfo(matchingEntry.attachmentInfo) || []
+              row.uploadTime = matchingEntry.createTime
+              row.hasAnyContent = Boolean(row.summary) || row.fileList.length > 0
+            }
+          })
+        } else {
+          // 执行进度（exec）：使用多用户模式，设置 userPlans
+          row.userPlans = []
           
-          if (matchingEntry) {
-            const userPlan = {
-              userId: matchingEntry.targetUserId,
-              userName: matchingEntry.targetUserName,
-              deptName: matchingEntry.targetDeptName,
-              summary: matchingEntry.summary || '',
-              status: matchingEntry.status,
-              statusDisplay: matchingEntry.statusDisplay,
-              fileList: parseAttachmentInfo(matchingEntry.attachmentInfo) || [],
-              isDelayed: matchingEntry.isDelayedPlaceholder || false,
-              createTime: matchingEntry.createTime,
-              updateTime: matchingEntry.updateTime
-            }
+          // 遍历所有用户的计划记录
+          userPlanMap.forEach((userEntries, userId) => {
+            const matchingEntry = userEntries.find(entry => normalizePeriodDate(entry.periodDate) === row.date)
             
-            row.userPlans.push(userPlan)
-            
-            if (userPlan.summary || userPlan.fileList.length > 0) {
-              row.hasAnyContent = true
+            if (matchingEntry) {
+              const userPlan = {
+                userId: matchingEntry.targetUserId,
+                userName: matchingEntry.targetUserName,
+                deptName: matchingEntry.targetDeptName,
+                summary: matchingEntry.summary || '',
+                status: matchingEntry.status,
+                statusDisplay: matchingEntry.statusDisplay,
+                fileList: parseAttachmentInfo(matchingEntry.attachmentInfo) || [],
+                isDelayed: matchingEntry.isDelayedPlaceholder || false,
+                createTime: matchingEntry.createTime,
+                updateTime: matchingEntry.updateTime
+              }
+              
+              row.userPlans.push(userPlan)
+              
+              if (userPlan.summary || userPlan.fileList.length > 0) {
+                row.hasAnyContent = true
+              }
             }
-          }
-        })
-        
-        // 按用户名排序
-        row.userPlans.sort((a, b) => a.userName.localeCompare(b.userName))
-      }
-    })
+          })
+          
+          // 按用户名排序
+          row.userPlans.sort((a, b) => a.userName.localeCompare(b.userName))
+        }
+      })
+    }
     
     // 只显示有内容的行
     const rowsWithContent = planRows.filter(row => row.hasAnyContent)
     
     console.log('🔍 [showStructuredViewAllPlans] 处理完成，有内容的行数:', rowsWithContent.length)
     
-    showViewAllPlansDialog(rowsWithContent)
+    showViewAllPlansDialog(rowsWithContent, record)
     return true
   } catch (error) {
     console.error('🔍 [showStructuredViewAllPlans] 获取结构化计划数据失败:', error)
@@ -6112,8 +6113,9 @@ const getSimplePlanSummary = (record: any) => {
   const sortedRows = [...planRows].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
   const firstTwoRows = sortedRows.slice(0, 2)
   
+  const isExec = isExecRecord(record)
   return firstTwoRows.map(row => ({
-    text: `${row.date}：${row.summary || '工作进度更新'}`,
+    text: isExec ? `${row.date}：${row.summary || '工作进度更新'}` : `${row.summary || '工作进度更新'}`,
     file: row.fileList && row.fileList.length > 0 ? row.fileList[0] : null
   }))
 }
@@ -6134,6 +6136,75 @@ const hasMorePlans = (record: any) => {
   // 检查是否有超过两条计划，或者前两条中有多个文件
   const sortedRows = [...planRows].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
   return sortedRows.length > 2 || sortedRows.slice(0, 2).some(row => row.fileList && row.fileList.length > 1)
+}
+
+// 单条进度描述字数限制
+const SINGLE_PLAN_MAX_CHARS = 120
+
+// 获取记录的版本类型
+const getRecordVersionType = (record: any): string => {
+  return (record && (record.versionType || record.version_type)) || ''
+}
+
+// 是否为执行进度（exec 或 implement_plan）
+const isExecRecord = (record: any): boolean => {
+  const vt = getRecordVersionType(record)
+  return vt === 'exec' || record?.recordType === 'implement_plan'
+}
+
+// 获取裁剪后的描述文本
+const getDisplayDescription = (record: any) => {
+  if (!record?.description) {
+    return { text: '', truncated: false }
+  }
+  // template 模式隐藏日期前缀
+  const stripDatePrefix = (text: string) =>
+    text
+      .split('\n')
+      .map(line => line.replace(/^\s*\d{4}-\d{2}-\d{2}\s*[：:]+\s*/, ''))
+      .join('\n')
+
+  const raw = isExecRecord(record) ? record.description : stripDatePrefix(record.description)
+  if (raw.length <= SINGLE_PLAN_MAX_CHARS) {
+    return { text: raw, truncated: false }
+  }
+  return { text: raw.substring(0, SINGLE_PLAN_MAX_CHARS) + '...', truncated: true }
+}
+
+// 判断是否应该显示"查看全部"链接（底部统一位置）
+const shouldShowViewAllLink = (record: any) => {
+  // 执行进度：始终显示“查看全部进展”
+  if (isExecRecord(record)) return true
+  // 整体计划（摘要）：根据是否有更多
+  if (shouldShowPlanSummary(record)) return hasMorePlans(record)
+  // 整体计划（单段文本）：仅超出阈值时显示
+  return !!record?.description && record.description.length > SINGLE_PLAN_MAX_CHARS
+}
+
+// 获取"查看全部"链接的文案
+const getViewAllLinkText = (record: any) => {
+  return isExecRecord(record) ? '查看全部进展' : '查看全部计划'
+}
+
+// 获取弹窗标题
+const getViewAllDialogTitle = (record: any) => {
+  return record && isExecRecord(record) ? '查看全部进展' : '查看全部计划'
+}
+
+// 查看全部计划弹窗：根据记录类型返回行日期展示（template 用上传时间，exec 用期次日期）
+const getViewAllRowDate = (row: any) => {
+  const record = currentViewingRecord.value
+  if (record && !isExecRecord(record)) {
+    const ts = row?.uploadTime || record?.createTime
+    return ts ? formatDate(ts) : (row?.date || '')
+  }
+  return row?.date || ''
+}
+
+// 查看全部计划弹窗：根据记录类型返回日期列表头标签
+const getViewAllDateColumnLabel = () => {
+  const record = currentViewingRecord.value
+  return record && !isExecRecord(record) ? '上传时间' : '预计完成时间'
 }
 
 // 检测协办单位是否变更（upload_plan 节点专用）
@@ -6417,215 +6488,198 @@ const generateDailyRows = (startDate: Date, endDate: Date, rows: any[]) => {
   }
 }
 
-// 生成周报行
+// 生成周报行（按周五生成）
 const generateWeeklyRows = (startDate: Date, endDate: Date, rows: any[]) => {
-  const current = new Date(startDate)
+  // 首期：取发起日所在周的周五（含当日）
+  let current = getNextFriday(startDate)
   
-  // 始终包含创建日
+  // 如果首期超过截止日期，不生成任何行
+  if (current > endDate) {
+    return
+  }
+  
+  // 添加首期
   rows.push({
     date: formatDateForTable(current),
     summary: '',
     fileList: []
   })
   
-  // 每隔7天生成一行
-  current.setDate(current.getDate() + 7)
-  
-  while (current < endDate) {
+  // 后续期次：每个周五
+  while (true) {
+    current = getStrictNextFriday(current)
+    
+    if (current > endDate) {
+      break
+    }
+    
     rows.push({
       date: formatDateForTable(current),
-      summary: '',
-      fileList: []
-    })
-    current.setDate(current.getDate() + 7)
-  }
-  
-  // 始终包含截止日（如果不是同一天）
-  if (formatDateForTable(new Date(endDate)) !== rows[rows.length - 1].date) {
-    rows.push({
-      date: formatDateForTable(endDate),
       summary: '',
       fileList: []
     })
   }
 }
 
-// 生成半月报行
+// 生成半月报行（按半月末生成：15号、月末）
 const generateBiWeeklyRows = (startDate: Date, endDate: Date, rows: any[]) => {
-  const current = new Date(startDate)
+  // 首期：取发起日所在半月的最后一天（含当日）
+  let current = getEndOfHalfMonth(startDate)
   
-  // 始终包含创建日
+  // 如果首期超过截止日期，不生成任何行
+  if (current > endDate) {
+    return
+  }
+  
+  // 添加首期
   rows.push({
     date: formatDateForTable(current),
     summary: '',
     fileList: []
   })
   
-  // 每隔15天生成一行
-  current.setDate(current.getDate() + 15)
-  
-  while (current < endDate) {
+  // 后续期次：每个半月末
+  while (true) {
+    current = getStrictNextEndOfHalfMonth(current)
+    
+    if (current > endDate) {
+      break
+    }
+    
     rows.push({
       date: formatDateForTable(current),
       summary: '',
       fileList: []
     })
-    current.setDate(current.getDate() + 15)
-  }
-  
-  // 始终包含截止日（如果不是同一天）
-  if (formatDateForTable(new Date(endDate)) !== rows[rows.length - 1].date) {
-    rows.push({
-      date: formatDateForTable(endDate),
-      summary: '',
-      fileList: []
-    })
   }
 }
 
-// 生成月报行
+// 生成月报行（按月末生成）
 const generateMonthlyRows = (startDate: Date, endDate: Date, rows: any[]) => {
-  const current = new Date(startDate)
+  // 首期：取发起日所在月的最后一天（含当日）
+  let current = getEndOfMonth(startDate)
   
-  // 始终包含创建日
+  // 如果首期超过截止日期，不生成任何行
+  if (current > endDate) {
+    return
+  }
+  
+  // 添加首期
   rows.push({
     date: formatDateForTable(current),
     summary: '',
     fileList: []
   })
   
-  // 每个月生成一行
-  while (current < endDate) {
-    current.setMonth(current.getMonth() + 1)
+  // 后续期次：每个月末
+  while (true) {
+    current = getStrictNextEndOfMonth(current)
     
-    // 处理月末日期不存在的情况（如从31号到某月没有31号）
-    if (current.getDate() !== startDate.getDate()) {
-      current.setDate(0) // 设置为上个月的最后一天
+    if (current > endDate) {
+      break
     }
     
-    if (current < endDate) {
-      rows.push({
-        date: formatDateForTable(current),
-        summary: '',
-        fileList: []
-      })
-    }
-  }
-  
-  // 始终包含截止日（如果不是同一天）
-  if (formatDateForTable(new Date(endDate)) !== rows[rows.length - 1].date) {
     rows.push({
-      date: formatDateForTable(endDate),
+      date: formatDateForTable(current),
       summary: '',
       fileList: []
     })
   }
 }
 
-// 生成季报行
+// 生成季报行（按季末生成：3/31、6/30、9/30、12/31）
 const generateQuarterlyRows = (startDate: Date, endDate: Date, rows: any[]) => {
-  const current = new Date(startDate)
+  // 首期：取发起日所在季度的最后一天（含当日）
+  let current = getEndOfQuarter(startDate)
   
-  // 始终包含创建日
+  // 如果首期超过截止日期，不生成任何行
+  if (current > endDate) {
+    return
+  }
+  
+  // 添加首期
   rows.push({
     date: formatDateForTable(current),
     summary: '',
     fileList: []
   })
   
-  // 每3个月生成一行
-  while (current < endDate) {
-    current.setMonth(current.getMonth() + 3)
+  // 后续期次：每个季末
+  while (true) {
+    current = getStrictNextEndOfQuarter(current)
     
-    if (current.getDate() !== startDate.getDate()) {
-      current.setDate(0)
+    if (current > endDate) {
+      break
     }
     
-    if (current < endDate) {
-      rows.push({
-        date: formatDateForTable(current),
-        summary: '',
-        fileList: []
-      })
-    }
-  }
-  
-  if (formatDateForTable(new Date(endDate)) !== rows[rows.length - 1].date) {
     rows.push({
-      date: formatDateForTable(endDate),
+      date: formatDateForTable(current),
       summary: '',
       fileList: []
     })
   }
 }
 
-// 生成半年报行
+// 生成半年报行（按半年末生成：6/30、12/31）
 const generateHalfYearlyRows = (startDate: Date, endDate: Date, rows: any[]) => {
-  const current = new Date(startDate)
+  // 首期：取发起日所在半年的最后一天（含当日）
+  let current = getEndOfHalfYear(startDate)
   
+  // 如果首期超过截止日期，不生成任何行
+  if (current > endDate) {
+    return
+  }
+  
+  // 添加首期
   rows.push({
     date: formatDateForTable(current),
     summary: '',
     fileList: []
   })
   
-  while (current < endDate) {
-    current.setMonth(current.getMonth() + 6)
+  // 后续期次：每个半年末
+  while (true) {
+    current = getStrictNextEndOfHalfYear(current)
     
-    if (current.getDate() !== startDate.getDate()) {
-      current.setDate(0)
+    if (current > endDate) {
+      break
     }
     
-    if (current < endDate) {
-      rows.push({
-        date: formatDateForTable(current),
-        summary: '',
-        fileList: []
-      })
-    }
-  }
-  
-  if (formatDateForTable(new Date(endDate)) !== rows[rows.length - 1].date) {
     rows.push({
-      date: formatDateForTable(endDate),
+      date: formatDateForTable(current),
       summary: '',
       fileList: []
     })
   }
 }
 
-// 生成年报行
+// 生成年报行（按年末生成：12/31）
 const generateYearlyRows = (startDate: Date, endDate: Date, rows: any[]) => {
-  const current = new Date(startDate)
+  // 首期：取发起日所在年的最后一天（含当日）
+  let current = getEndOfYear(startDate)
   
+  // 如果首期超过截止日期，不生成任何行
+  if (current > endDate) {
+    return
+  }
+  
+  // 添加首期
   rows.push({
     date: formatDateForTable(current),
     summary: '',
     fileList: []
   })
   
-  while (current < endDate) {
-    current.setFullYear(current.getFullYear() + 1)
+  // 后续期次：每个年末
+  while (true) {
+    current = getStrictNextEndOfYear(current)
     
-    // 处理闰年情况（2月29日）
-    if (current.getMonth() === 1 && current.getDate() === 29) {
-      if (!isLeapYear(current.getFullYear())) {
-        current.setDate(28)
-      }
+    if (current > endDate) {
+      break
     }
     
-    if (current < endDate) {
-      rows.push({
-        date: formatDateForTable(current),
-        summary: '',
-        fileList: []
-      })
-    }
-  }
-  
-  if (formatDateForTable(new Date(endDate)) !== rows[rows.length - 1].date) {
     rows.push({
-      date: formatDateForTable(endDate),
+      date: formatDateForTable(current),
       summary: '',
       fileList: []
     })
@@ -6635,6 +6689,186 @@ const generateYearlyRows = (startDate: Date, endDate: Date, rows: any[]) => {
 // 判断是否为闰年
 const isLeapYear = (year: number) => {
   return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0)
+}
+
+/**
+ * 周期末日计算辅助函数（基于 dayjs）
+ * 用于按照新规则生成上传进度日期：周报取周五，其他取周期最后一天
+ */
+
+// 获取指定日期所在周的周五（含当日）
+const getNextFriday = (date: Date): Date => {
+  const d = dayjs(date)
+  const dayOfWeek = d.day() // 0=周日, 5=周五
+  
+  if (dayOfWeek === 5) {
+    // 当天就是周五
+    return d.toDate()
+  } else if (dayOfWeek === 6) {
+    // 周六，取下周五
+    return d.add(6, 'day').toDate()
+  } else if (dayOfWeek === 0) {
+    // 周日，取本周五（往后5天）
+    return d.add(5, 'day').toDate()
+  } else {
+    // 周一到周四，取本周五
+    return d.add(5 - dayOfWeek, 'day').toDate()
+  }
+}
+
+// 获取指定日期所在月的最后一天
+const getEndOfMonth = (date: Date): Date => {
+  return dayjs(date).endOf('month').toDate()
+}
+
+// 获取指定日期所在季度的最后一天（3/31、6/30、9/30、12/31）
+const getEndOfQuarter = (date: Date): Date => {
+  return dayjs(date).endOf('quarter').toDate()
+}
+
+// 获取指定日期所在半年的最后一天（6/30 或 12/31）
+const getEndOfHalfYear = (date: Date): Date => {
+  const d = dayjs(date)
+  const month = d.month() // 0-11
+  
+  if (month < 6) {
+    // 上半年，返回 6/30
+    return dayjs(d.year() + '-06-30').toDate()
+  } else {
+    // 下半年，返回 12/31
+    return dayjs(d.year() + '-12-31').toDate()
+  }
+}
+
+// 获取指定日期所在年的最后一天（12/31）
+const getEndOfYear = (date: Date): Date => {
+  return dayjs(date).endOf('year').toDate()
+}
+
+// 获取指定日期所在半月的最后一天（15号或当月最后一天）
+const getEndOfHalfMonth = (date: Date): Date => {
+  const d = dayjs(date)
+  const day = d.date()
+  
+  if (day <= 15) {
+    // 上半月，返回15号
+    return dayjs(d.year() + '-' + String(d.month() + 1).padStart(2, '0') + '-15').toDate()
+  } else {
+    // 下半月，返回月末
+    return d.endOf('month').toDate()
+  }
+}
+
+// 获取下一个周五（严格大于当前日期）
+const getStrictNextFriday = (date: Date): Date => {
+  const d = dayjs(date)
+  const dayOfWeek = d.day()
+  
+  if (dayOfWeek === 5) {
+    // 当天是周五，取下周五
+    return d.add(7, 'day').toDate()
+  } else if (dayOfWeek === 6) {
+    // 周六，取下周五（6天后）
+    return d.add(6, 'day').toDate()
+  } else if (dayOfWeek === 0) {
+    // 周日，取本周五（5天后）
+    return d.add(5, 'day').toDate()
+  } else {
+    // 周一到周四，取本周五
+    const daysToFriday = 5 - dayOfWeek
+    return d.add(daysToFriday, 'day').toDate()
+  }
+}
+
+// 获取下一个月末（严格大于当前日期）
+const getStrictNextEndOfMonth = (date: Date): Date => {
+  const d = dayjs(date)
+  const endOfCurrentMonth = d.endOf('month')
+  
+  if (d.isSame(endOfCurrentMonth, 'day')) {
+    // 当天就是月末，取下个月末
+    return d.add(1, 'month').endOf('month').toDate()
+  } else {
+    // 取当月末
+    return endOfCurrentMonth.toDate()
+  }
+}
+
+// 获取下一个季末（严格大于当前日期）
+const getStrictNextEndOfQuarter = (date: Date): Date => {
+  const d = dayjs(date)
+  const endOfCurrentQuarter = d.endOf('quarter')
+  
+  if (d.isSame(endOfCurrentQuarter, 'day')) {
+    // 当天就是季末，取下一季末
+    return d.add(1, 'quarter').endOf('quarter').toDate()
+  } else {
+    // 取当季末
+    return endOfCurrentQuarter.toDate()
+  }
+}
+
+// 获取下一个半年末（严格大于当前日期）
+const getStrictNextEndOfHalfYear = (date: Date): Date => {
+  const d = dayjs(date)
+  const month = d.month()
+  let nextHalfYearEnd: dayjs.Dayjs
+  
+  if (month < 6) {
+    // 上半年
+    nextHalfYearEnd = dayjs(d.year() + '-06-30')
+    if (d.isSame(nextHalfYearEnd, 'day')) {
+      // 当天是 6/30，取下一个半年末 12/31
+      nextHalfYearEnd = dayjs(d.year() + '-12-31')
+    }
+  } else {
+    // 下半年
+    nextHalfYearEnd = dayjs(d.year() + '-12-31')
+    if (d.isSame(nextHalfYearEnd, 'day')) {
+      // 当天是 12/31，取下一年 6/30
+      nextHalfYearEnd = dayjs((d.year() + 1) + '-06-30')
+    }
+  }
+  
+  return nextHalfYearEnd.toDate()
+}
+
+// 获取下一个年末（严格大于当前日期）
+const getStrictNextEndOfYear = (date: Date): Date => {
+  const d = dayjs(date)
+  const endOfCurrentYear = d.endOf('year')
+  
+  if (d.isSame(endOfCurrentYear, 'day')) {
+    // 当天就是年末，取下一年末
+    return d.add(1, 'year').endOf('year').toDate()
+  } else {
+    // 取当年末
+    return endOfCurrentYear.toDate()
+  }
+}
+
+// 获取下一个半月末（严格大于当前日期）
+const getStrictNextEndOfHalfMonth = (date: Date): Date => {
+  const d = dayjs(date)
+  const day = d.date()
+  
+  if (day < 15) {
+    // 当前在上半月，取15号
+    return dayjs(d.year() + '-' + String(d.month() + 1).padStart(2, '0') + '-15').toDate()
+  } else if (day === 15) {
+    // 当天是15号，取月末
+    return d.endOf('month').toDate()
+  } else {
+    // 当前在下半月
+    const endOfMonth = d.endOf('month')
+    if (d.isSame(endOfMonth, 'day')) {
+      // 当天是月末，取下个月15号
+      return d.add(1, 'month').date(15).toDate()
+    } else {
+      // 取当月末
+      return endOfMonth.toDate()
+    }
+  }
 }
 
 // 格式化日期为表格显示格式
@@ -6710,13 +6944,20 @@ const generateDailyRowsForPlan = (startDate: Date, endDate: Date, rows: any[]) =
   }
 }
 
-// 生成周报行（用于计划表格）
+// 生成周报行（用于计划表格，按周五生成）
 const generateWeeklyRowsForPlan = (startDate: Date, endDate: Date, rows: any[]) => {
-  const current = new Date(startDate)
   const endDateOnly = new Date(endDate)
   endDateOnly.setHours(0, 0, 0, 0) // 只比较日期部分
   
-  // 始终包含开始日
+  // 首期：取发起日所在周的周五（含当日）
+  let current = getNextFriday(startDate)
+  
+  // 如果首期超过截止日期，不生成任何行
+  if (current > endDateOnly) {
+    return
+  }
+  
+  // 添加首期
   rows.push({
     date: formatDateForPlan(current),
     summary: '',
@@ -6726,10 +6967,14 @@ const generateWeeklyRowsForPlan = (startDate: Date, endDate: Date, rows: any[]) 
     status: 'future'
   })
   
-  // 每隔7天生成一行
-  current.setDate(current.getDate() + 7)
-  
-  while (current <= endDateOnly) {
+  // 后续期次：每个周五
+  while (true) {
+    current = getStrictNextFriday(current)
+    
+    if (current > endDateOnly) {
+      break
+    }
+    
     rows.push({
       date: formatDateForPlan(current),
       summary: '',
@@ -6738,7 +6983,6 @@ const generateWeeklyRowsForPlan = (startDate: Date, endDate: Date, rows: any[]) 
       submittedAt: null,
       status: 'future'
     })
-    current.setDate(current.getDate() + 7)
   }
   
   // 始终包含截止日（如果不是同一天且未超过截止日）
@@ -6755,13 +6999,20 @@ const generateWeeklyRowsForPlan = (startDate: Date, endDate: Date, rows: any[]) 
   }
 }
 
-// 生成半月报行（用于计划表格）
+// 生成半月报行（用于计划表格，按半月末生成：15号、月末）
 const generateBiWeeklyRowsForPlan = (startDate: Date, endDate: Date, rows: any[]) => {
-  const current = new Date(startDate)
   const endDateOnly = new Date(endDate)
   endDateOnly.setHours(0, 0, 0, 0) // 只比较日期部分
   
-  // 始终包含开始日
+  // 首期：取发起日所在半月的最后一天（含当日）
+  let current = getEndOfHalfMonth(startDate)
+  
+  // 如果首期超过截止日期，不生成任何行
+  if (current > endDateOnly) {
+    return
+  }
+  
+  // 添加首期
   rows.push({
     date: formatDateForPlan(current),
     summary: '',
@@ -6771,10 +7022,14 @@ const generateBiWeeklyRowsForPlan = (startDate: Date, endDate: Date, rows: any[]
     status: 'future'
   })
   
-  // 每隔15天生成一行
-  current.setDate(current.getDate() + 15)
-  
-  while (current <= endDateOnly) {
+  // 后续期次：每个半月末
+  while (true) {
+    current = getStrictNextEndOfHalfMonth(current)
+    
+    if (current > endDateOnly) {
+      break
+    }
+    
     rows.push({
       date: formatDateForPlan(current),
       summary: '',
@@ -6783,7 +7038,6 @@ const generateBiWeeklyRowsForPlan = (startDate: Date, endDate: Date, rows: any[]
       submittedAt: null,
       status: 'future'
     })
-    current.setDate(current.getDate() + 15)
   }
   
   // 始终包含截止日（如果不是同一天且未超过截止日）
@@ -6800,13 +7054,20 @@ const generateBiWeeklyRowsForPlan = (startDate: Date, endDate: Date, rows: any[]
   }
 }
 
-// 生成月报行（用于计划表格）
+// 生成月报行（用于计划表格，按月末生成）
 const generateMonthlyRowsForPlan = (startDate: Date, endDate: Date, rows: any[]) => {
-  const current = new Date(startDate)
   const endDateOnly = new Date(endDate)
   endDateOnly.setHours(0, 0, 0, 0) // 只比较日期部分
   
-  // 始终包含开始日
+  // 首期：取发起日所在月的最后一天（含当日）
+  let current = getEndOfMonth(startDate)
+  
+  // 如果首期超过截止日期，不生成任何行
+  if (current > endDateOnly) {
+    return
+  }
+  
+  // 添加首期
   rows.push({
     date: formatDateForPlan(current),
     summary: '',
@@ -6816,25 +7077,22 @@ const generateMonthlyRowsForPlan = (startDate: Date, endDate: Date, rows: any[])
     status: 'future'
   })
   
-  // 每个月生成一行
-  while (current <= endDateOnly) {
-    current.setMonth(current.getMonth() + 1)
+  // 后续期次：每个月末
+  while (true) {
+    current = getStrictNextEndOfMonth(current)
     
-    // 处理月末日期不存在的情况（如从31号到某月没有31号）
-    if (current.getDate() !== startDate.getDate()) {
-      current.setDate(0) // 设置为上个月的最后一天
+    if (current > endDateOnly) {
+      break
     }
     
-    if (current <= endDateOnly) {
-      rows.push({
-        date: formatDateForPlan(current),
-        summary: '',
-        fileList: [],
-        submitted: false,
-        submittedAt: null,
-        status: 'future'
-      })
-    }
+    rows.push({
+      date: formatDateForPlan(current),
+      summary: '',
+      fileList: [],
+      submitted: false,
+      submittedAt: null,
+      status: 'future'
+    })
   }
   
   // 始终包含截止日（如果不是同一天且未超过截止日）
@@ -6851,12 +7109,20 @@ const generateMonthlyRowsForPlan = (startDate: Date, endDate: Date, rows: any[])
   }
 }
 
-// 生成季报行（用于计划表格）
+// 生成季报行（用于计划表格，按季末生成：3/31、6/30、9/30、12/31）
 const generateQuarterlyRowsForPlan = (startDate: Date, endDate: Date, rows: any[]) => {
-  const current = new Date(startDate)
   const endDateOnly = new Date(endDate)
   endDateOnly.setHours(0, 0, 0, 0)
   
+  // 首期：取发起日所在季度的最后一天（含当日）
+  let current = getEndOfQuarter(startDate)
+  
+  // 如果首期超过截止日期，不生成任何行
+  if (current > endDateOnly) {
+    return
+  }
+  
+  // 添加首期
   rows.push({
     date: formatDateForPlan(current),
     summary: '',
@@ -6866,23 +7132,25 @@ const generateQuarterlyRowsForPlan = (startDate: Date, endDate: Date, rows: any[
     status: 'future'
   })
   
-  while (current <= endDateOnly) {
-    current.setMonth(current.getMonth() + 3)
-    if (current.getDate() !== startDate.getDate()) {
-      current.setDate(0)
+  // 后续期次：每个季末
+  while (true) {
+    current = getStrictNextEndOfQuarter(current)
+    
+    if (current > endDateOnly) {
+      break
     }
-    if (current <= endDateOnly) {
-      rows.push({
-        date: formatDateForPlan(current),
-        summary: '',
-        fileList: [],
-        submitted: false,
-        submittedAt: null,
-        status: 'future'
-      })
-    }
+    
+    rows.push({
+      date: formatDateForPlan(current),
+      summary: '',
+      fileList: [],
+      submitted: false,
+      submittedAt: null,
+      status: 'future'
+    })
   }
   
+  // 始终包含截止日（如果不是同一天且未超过截止日）
   const endDateFormatted = formatDateForPlan(endDateOnly)
   if (rows.length > 0 && endDateFormatted !== rows[rows.length - 1].date) {
     rows.push({
@@ -6896,12 +7164,20 @@ const generateQuarterlyRowsForPlan = (startDate: Date, endDate: Date, rows: any[
   }
 }
 
-// 生成半年报行（用于计划表格）
+// 生成半年报行（用于计划表格，按半年末生成：6/30、12/31）
 const generateHalfYearlyRowsForPlan = (startDate: Date, endDate: Date, rows: any[]) => {
-  const current = new Date(startDate)
   const endDateOnly = new Date(endDate)
   endDateOnly.setHours(0, 0, 0, 0)
   
+  // 首期：取发起日所在半年的最后一天（含当日）
+  let current = getEndOfHalfYear(startDate)
+  
+  // 如果首期超过截止日期，不生成任何行
+  if (current > endDateOnly) {
+    return
+  }
+  
+  // 添加首期
   rows.push({
     date: formatDateForPlan(current),
     summary: '',
@@ -6911,23 +7187,25 @@ const generateHalfYearlyRowsForPlan = (startDate: Date, endDate: Date, rows: any
     status: 'future'
   })
   
-  while (current <= endDateOnly) {
-    current.setMonth(current.getMonth() + 6)
-    if (current.getDate() !== startDate.getDate()) {
-      current.setDate(0)
+  // 后续期次：每个半年末
+  while (true) {
+    current = getStrictNextEndOfHalfYear(current)
+    
+    if (current > endDateOnly) {
+      break
     }
-    if (current <= endDateOnly) {
-      rows.push({
-        date: formatDateForPlan(current),
-        summary: '',
-        fileList: [],
-        submitted: false,
-        submittedAt: null,
-        status: 'future'
-      })
-    }
+    
+    rows.push({
+      date: formatDateForPlan(current),
+      summary: '',
+      fileList: [],
+      submitted: false,
+      submittedAt: null,
+      status: 'future'
+    })
   }
   
+  // 始终包含截止日（如果不是同一天且未超过截止日）
   const endDateFormatted = formatDateForPlan(endDateOnly)
   if (rows.length > 0 && endDateFormatted !== rows[rows.length - 1].date) {
     rows.push({
@@ -6941,12 +7219,20 @@ const generateHalfYearlyRowsForPlan = (startDate: Date, endDate: Date, rows: any
   }
 }
 
-// 生成年报行（用于计划表格）
+// 生成年报行（用于计划表格，按年末生成：12/31）
 const generateYearlyRowsForPlan = (startDate: Date, endDate: Date, rows: any[]) => {
-  const current = new Date(startDate)
   const endDateOnly = new Date(endDate)
   endDateOnly.setHours(0, 0, 0, 0)
   
+  // 首期：取发起日所在年的最后一天（含当日）
+  let current = getEndOfYear(startDate)
+  
+  // 如果首期超过截止日期，不生成任何行
+  if (current > endDateOnly) {
+    return
+  }
+  
+  // 添加首期
   rows.push({
     date: formatDateForPlan(current),
     summary: '',
@@ -6956,25 +7242,25 @@ const generateYearlyRowsForPlan = (startDate: Date, endDate: Date, rows: any[]) 
     status: 'future'
   })
   
-  while (current <= endDateOnly) {
-    current.setFullYear(current.getFullYear() + 1)
-    if (current.getMonth() === 1 && current.getDate() === 29) {
-      if (!isLeapYear(current.getFullYear())) {
-        current.setDate(28)
-      }
+  // 后续期次：每个年末
+  while (true) {
+    current = getStrictNextEndOfYear(current)
+    
+    if (current > endDateOnly) {
+      break
     }
-    if (current <= endDateOnly) {
-      rows.push({
-        date: formatDateForPlan(current),
-        summary: '',
-        fileList: [],
-        submitted: false,
-        submittedAt: null,
-        status: 'future'
-      })
-    }
+    
+    rows.push({
+      date: formatDateForPlan(current),
+      summary: '',
+      fileList: [],
+      submitted: false,
+      submittedAt: null,
+      status: 'future'
+    })
   }
   
+  // 始终包含截止日（如果不是同一天且未超过截止日）
   const endDateFormatted = formatDateForPlan(endDateOnly)
   if (rows.length > 0 && endDateFormatted !== rows[rows.length - 1].date) {
     rows.push({
@@ -7445,7 +7731,6 @@ const submitAddProgress = async () => {
         : []
       
       const entries: PlanEntryBatchItem[] = [{
-        periodDate: periodDate,
         summary: textContent || '',
         fileList: newApiFileList
       }]
@@ -9129,15 +9414,6 @@ defineExpose({
   margin-top: 20px;
 }
 
-.plan-table-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 12px;
-  padding-left: 4px;
-  border-left: 4px solid #1890ff;
-}
-
 .plan-table {
   border: 1px solid #e8e8e8;
   border-radius: 6px;
@@ -9236,25 +9512,6 @@ defineExpose({
   border: 1px solid #f5dab1;
 }
 
-/* 计划表格提示样式 */
-.plan-table-tip {
-  font-size: 13px;
-  color: #606266;
-  margin-bottom: 12px;
-  padding: 8px 12px;
-  background-color: #f4f4f5;
-  border-radius: 4px;
-  border-left: 3px solid #409eff;
-  display: flex;
-  align-items: center;
-}
-
-.plan-table-tip .tip-icon {
-  margin-right: 6px;
-  color: #409eff;
-  font-size: 14px;
-}
-
 /* 简化计划摘要样式（纯文本） */
 .plan-summary-simple {
   margin: 8px 0;
@@ -9311,23 +9568,13 @@ defineExpose({
   font-size: 12px;
 }
 
-.summary-more-simple {
-  font-size: 13px;
-  color: #909399;
-  margin-top: 8px;
-}
-
-.summary-more-simple .el-link {
-  font-size: 13px;
-}
-
-/* 单行计划记录的查看全部计划链接样式 */
-.single-plan-view-all {
+/* 统一的"查看全部"链接样式（底部位置） */
+.view-all-link {
   margin-top: 8px;
   font-size: 13px;
 }
 
-.single-plan-view-all .el-link {
+.view-all-link .el-link {
   font-size: 13px;
 }
 
@@ -9499,7 +9746,6 @@ defineExpose({
   color: #909399;
 }
 
-
 /* 计划表格中的输入框样式 */
 .plan-table .el-textarea {
   width: 100%;
@@ -9572,10 +9818,6 @@ defineExpose({
     font-size: 14px;
   }
   
-  .plan-table-title {
-    font-size: 14px;
-  }
-  
   .plan-upload-container {
     gap: 6px;
   }
@@ -9587,12 +9829,6 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
-}
-
-.plan-table-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
 }
 
 .audit-user-selector {

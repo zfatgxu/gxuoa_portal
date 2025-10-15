@@ -54,7 +54,8 @@
           <div class="flex items-center justify-between px-6 pt-6 pb-0 header-scale" ref="headerRef">
             <div class="flex items-center -ml-3">
               <el-tabs v-model="activeTab" class="tabs-custom" @tab-change="handleTabChange">
-                <el-tab-pane label="全部事项" name="all-items" />
+                <el-tab-pane label="待阅事项" name="pending-read-items" />
+                <el-tab-pane label="已阅事项" name="read-items" />
                 <el-tab-pane label="已关注" name="attention-items" />
               </el-tabs>
             </div>
@@ -344,7 +345,7 @@
                             <!-- 按钮放在网格下面一行 -->
                             <div class="flex items-center gap-2 mt-3">
                               <el-button
-                                v-if="activeTab === 'all-items'"
+                                v-if="activeTab === 'pending-read-items'"
                                 :loading="followLoading[task.processInstanceId]"
                                 size="small"
                                 class="follow-btn action-btn"
@@ -422,9 +423,9 @@
                         }">
                         {{ getStatusText(task) }}
                       </span>
-                      <!-- 关注按钮 - 只在全部事项标签页显示 -->
+                      <!-- 关注按钮 - 只在待阅事项标签页显示 -->
                       <el-button
-                        v-if="activeTab === 'all-items'"
+                        v-if="activeTab === 'pending-read-items'"
                         :loading="followLoading[task.processInstanceId]"
                         size="small"
                         class="follow-btn ml-3"
@@ -607,7 +608,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, nextTick, onBeforeUnmount } from 'vue'
+import { ref, reactive, computed, onMounted, onActivated, nextTick, onBeforeUnmount } from 'vue'
 import {
   Search, DataAnalysis, Document, Clock, CircleCheck, Warning,
   OfficeBuilding, User, Filter
@@ -741,7 +742,7 @@ onBeforeUnmount(() => {
 })
 
 // Reactive data
-const activeTab = ref('all-items') // 默认激活"分管事项"
+const activeTab = ref('pending-read-items') // 默认激活"待阅事项"
 // 搜索和筛选相关变量
 const searchQuery = ref('')
 const selectedPriority = ref('')
@@ -982,7 +983,13 @@ const loadTaskList = async () => {
     console.log('API请求参数:', params) // 添加调试日志
 
     let result
-    if (activeTab.value === 'all-items') {
+    if (activeTab.value === 'pending-read-items') {
+      // 待阅事项：仅未读
+      params.readStatus = 0
+      result = await SupervisionTaskApi.getAllTasksPage(params)
+    } else if (activeTab.value === 'read-items') {
+      // 已阅事项：仅已读
+      params.readStatus = 1
       result = await SupervisionTaskApi.getAllTasksPage(params)
     } else if (activeTab.value === 'attention-items') {
       // 已关注标签页使用关注列表接口，传入筛选参数
@@ -1025,8 +1032,8 @@ const loadTaskList = async () => {
     taskList.value = tasks
     pagination.total = result.total || 0
     
-    // 如果是全部事项标签页，需要更新关注状态
-    if (activeTab.value === 'all-items') {
+    // 如果是待阅事项标签页，需要更新关注状态
+    if (activeTab.value === 'pending-read-items') {
       await updateFollowStatus(tasks)
     } else if (activeTab.value === 'attention-items') {
       // 已关注标签页中的所有任务都是已关注状态
@@ -1604,6 +1611,11 @@ onMounted(() => {
   // 加载统计数据
   loadStatistics()
   // 加载任务列表
+  loadTaskList()
+})
+
+// 从详情页返回时自动刷新列表（确保已读状态更新）
+onActivated(() => {
   loadTaskList()
 })
 </script>
