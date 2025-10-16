@@ -67,7 +67,8 @@ export function useDraft(options: {
         draftStatus: 1,
         scheduledSendTime: null,
         isStarred: false,
-        recipients
+        recipients,
+        attachmentIds: options.mailForm.value.attachmentIds || []
       }
       
       // 如果有原始邮件ID列表（回复/转发场景），构建关系数据

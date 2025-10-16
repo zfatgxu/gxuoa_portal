@@ -16,6 +16,7 @@ export interface LetterDraftCreateReqVO {
   scheduledSendTime?: string | null
   isStarred?: boolean
   recipients?: DraftRecipientItem[]
+  attachmentIds?: number[] // 附件ID列表
 }
 
 export interface LetterDraftUpdateReqVO extends LetterDraftCreateReqVO {
@@ -48,6 +49,7 @@ export interface LetterDraftRespVO {
     recipientTypeName?: string
     createTime: string
   }>
+  attachmentIds?: number[] // 附件ID列表
 }
 
 export interface PageParam {
