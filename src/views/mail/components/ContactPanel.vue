@@ -2,6 +2,9 @@
   <div class="contact-list">
     <div class="contact-header">
       <span>联系人</span>
+      <el-icon class="add-contact-btn" @click="handleOpenSelector" title="从部门选择联系人">
+        <UserFilled />
+      </el-icon>
     </div>
     
     <div class="contact-search">
@@ -137,6 +140,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { UserFilled } from '@element-plus/icons-vue'
 import type { LetterContactStarRespVO } from '@/api/mail/letter'
 import type { RecentContact } from '../types/mail'
 import { formatLastSendTime } from '../utils/mailHelpers'
@@ -156,6 +160,7 @@ interface Emits {
   (e: 'select-contact', contact: any): void
   (e: 'context-menu', event: MouseEvent, contact: any, type: 'recent' | 'starred'): void
   (e: 'update:contactSearch', value: string): void
+  (e: 'open-dept-selector'): void
 }
 
 const props = defineProps<Props>()
@@ -204,6 +209,10 @@ const handleContextMenu = (event: MouseEvent, contact: any, type: 'recent' | 'st
   emit('context-menu', event, contact, type)
 }
 
+const handleOpenSelector = () => {
+  emit('open-dept-selector')
+}
+
 const formatTime = (timeStr: string) => {
   return formatLastSendTime(timeStr)
 }
@@ -232,6 +241,18 @@ const formatTime = (timeStr: string) => {
   align-items: center;
   color: #4e73df;
   background-color: #f5faff;
+}
+
+.add-contact-btn {
+  font-size: 18px;
+  cursor: pointer;
+  color: #4e73df;
+  transition: all 0.2s;
+}
+
+.add-contact-btn:hover {
+  color: #2e59d9;
+  transform: scale(1.1);
 }
 
 .contact-search {

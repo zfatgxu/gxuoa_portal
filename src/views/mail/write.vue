@@ -178,6 +178,7 @@
         v-model:contact-search="contactsState.contactSearch.value"
         @select-contact="handleSelectContact"
         @context-menu="handleContextMenu"
+        @open-dept-selector="deptContactSelectorVisible = true"
       />
     </div>
     
@@ -213,6 +214,19 @@
     :initial-time="mailForm.scheduledSendTime"
     @confirm="handleScheduleSendConfirm"
   />
+  
+  <!-- 部门联系人选择器 -->
+  <DeptContactSelector
+    v-model="deptContactSelectorVisible"
+    :all-users="contactsState.allUsers.value"
+    :recipients="mailForm.recipients"
+    :cc="mailForm.cc"
+    :bcc="mailForm.bcc"
+    :starred-contacts="contactsState.starredContacts.value"
+    @add-recipient="handleAddRecipientFromSelector"
+    @remove-recipient="handleRemoveRecipientFromSelector"
+    @toggle-star="handleToggleStar"
+  />
 </template>
 
 <script setup lang="ts">
@@ -231,6 +245,7 @@ import OriginalMailDisplay from './components/OriginalMailDisplay.vue'
 import OriginalMailDetailDialog from './components/OriginalMailDetailDialog.vue'
 import ContactContextMenu from './components/ContactContextMenu.vue'
 import ScheduleSendDialog from './components/ScheduleSendDialog.vue'
+import DeptContactSelector from './components/DeptContactSelector.vue'
 import { Editor } from '@/components/Editor'
 
 // 导入 Composables
@@ -377,6 +392,9 @@ const lastDraftSaveTime = ref<string>('')
 // 定时发送对话框
 const scheduleSendDialogVisible = ref(false)
 
+// 部门联系人选择器对话框
+const deptContactSelectorVisible = ref(false)
+
 // 格式化草稿保存时间：今天显示时间，其他显示日期
 const formatDraftSaveTime = (dateTimeStr: string): string => {
   try {
@@ -431,7 +449,15 @@ const formatDraftSaveTime = (dateTimeStr: string): string => {
 
 // 原始邮件ID列表（用于草稿保存）
 const replyOriginalIds = computed(() => {
-  return replyOriginalList.value.map(item => item.id)
+  // 多个转发：从列表中提取
+  if (replyOriginalList.value.length > 0) {
+    return replyOriginalList.value.map(item => item.id)
+  }
+  // 单个转发或回复：从单个对象中提取
+  if (replyOriginal.value && replyOriginal.value.id) {
+    return [replyOriginal.value.id]
+  }
+  return []
 })
 
 // 关系类型（1-回复，2-转发）
@@ -593,6 +619,45 @@ const handleScheduleSendConfirm = (time: string) => {
   handleSend()
 }
 
+const handleAddRecipientFromSelector = (name: string, type: 'recipients' | 'cc' | 'bcc') => {
+  // 检查是否已存在（复用现有的重复检查逻辑）
+  if (!mailForm.value[type].includes(name)) {
+    mailForm.value[type].push(name)
+    
+    // 自动展开抄送人和密送人输入框
+    if (type === 'cc' && !showCc.value) {
+      showCc.value = true
+    } else if (type === 'bcc' && !showBcc.value) {
+      showBcc.value = true
+    }
+    
+    // 确保用户在 userOptions 中
+    const existsInOptions = contactsState.userOptions.value.some(opt => opt.name === name)
+    if (!existsInOptions) {
+      const user = contactsState.allUsers.value.find((u: any) => u.nickname === name)
+      if (user) {
+        contactsState.userOptions.value.push({
+          value: user.id.toString(),
+          label: name,
+          avatar: user.avatar || '',
+          name: user.nickname || name,
+          userId: user.id,
+          deptName: user.deptNames ? user.deptNames.join(', ') : '',
+          workId: user.workId || '',
+          email: user.email || ''
+        })
+      }
+    }
+  }
+}
+
+const handleRemoveRecipientFromSelector = (name: string, type: 'recipients' | 'cc' | 'bcc') => {
+  const index = mailForm.value[type].indexOf(name)
+  if (index > -1) {
+    mailForm.value[type].splice(index, 1)
+  }
+}
+
 const handleRecipientUpdate = (field: 'recipients' | 'cc' | 'bcc', newValue: string[]) => {
   const oldValue = mailForm.value[field]
   
@@ -722,26 +787,33 @@ const handleContextMenu = (event: MouseEvent, contact: any, type: 'recent' | 'st
   })
 }
 
-const handleToggleStar = async () => {
-  if (!contextMenu.value.contact) return
+const handleToggleStar = async (contact?: any) => {
+  // 支持两种调用方式：
+  // 1. 从 DeptContactSelector 传入 contact 参数
+  // 2. 从右键菜单使用 contextMenu.value.contact
+  const targetContact = contact || contextMenu.value.contact
+  const contactType = contact ? 'recent' : contextMenu.value.type
   
-  const isStarred = computed(() => {
-    if (!contextMenu.value.contact || !contextMenu.value.type) return false
-    
-    if (contextMenu.value.type === 'starred') return true
-    
-    return contactsState.starredContacts.value.some(starred => {
+  if (!targetContact) return
+  
+  // 判断是否已经星标
+  let isStarred = false
+  
+  if (contactType === 'starred') {
+    isStarred = true
+  } else {
+    isStarred = contactsState.starredContacts.value.some(starred => {
       const starredDisplayName = contactsState.starredContactDisplayNames.value.get(starred.id)
-      return starredDisplayName === contextMenu.value.contact.name || 
-             starred.contactIdCard === contextMenu.value.contact.idCard
+      return starredDisplayName === targetContact.name || 
+             starred.contactIdCard === targetContact.idCard
     })
-  })
+  }
   
   const currentUser = userStore.getUser
   const success = await contactsState.toggleContactStar(
-    contextMenu.value.contact,
-    isStarred.value,
-    contextMenu.value.type,
+    targetContact,
+    isStarred,
+    contactType,
     currentUser.id,
     currentUser.nickname
   )
@@ -1041,75 +1113,156 @@ onMounted(async () => {
               relationType.value = result.relationType
             }
             
-            replyOriginalList.value = []
-            
-            const details = await Promise.allSettled(result.replyOriginalIds.map(id => getLetterDetail(id)))
-            for (let i = 0; i < details.length; i++) {
-              const res = details[i]
-              if (res.status === 'fulfilled' && res.value) {
-                const d: any = res.value
-                const item: OriginalMailInfo = {
-                  id: Number(result.replyOriginalIds[i]),
-                  subject: (d?.content?.subject) || d.subject || '',
-                  fromUserName: '',
-                  toUserNames: '',
-                  sendTime: formatDateTimeCn(d?.content?.sendTime),
-                  attachments: Array.isArray(d.attachments) ? d.attachments : []
-                }
-                
-                // 获取发件人信息
-                try {
-                  let firstSenderIdCard = ''
-                  if (Array.isArray((d as any).senders)) {
-                    firstSenderIdCard = (d as any).senders
-                      .map((s: any) => (s?.senderIdCard || '').toString().trim())
-                      .find((v: string) => !!v) || ''
+            // 单个邮件：使用 replyOriginal（显示单个邮件界面）
+            if (result.replyOriginalIds.length === 1) {
+              const id = result.replyOriginalIds[0]
+              try {
+                const detail: any = await getLetterDetail(id)
+                if (detail) {
+                  replyOriginal.value = {
+                    id: id,  // 使用草稿中保存的ID
+                    subject: (detail?.content?.subject) || detail.subject || '',
+                    fromUserName: '',
+                    toUserNames: '',
+                    sendTime: formatDateTimeCn(detail?.content?.sendTime),
+                    content: detail.content || '',
+                    attachments: Array.isArray(detail.attachments) ? detail.attachments : []
                   }
-                  if (!firstSenderIdCard) {
-                    firstSenderIdCard = (d as any).fromUserIdCard || (d as any).fromIdCard || ''
+                  
+                  // 设置 HTML 内容
+                  try {
+                    const c = detail?.content
+                    const html = (c && (c.content || c.html)) ? (c.content || c.html) : (typeof c === 'string' ? c : '')
+                    replyOriginalHtml.value = html || ''
+                  } catch (e) {
+                    replyOriginalHtml.value = ''
                   }
-                  if (firstSenderIdCard) {
-                    const u = await getUserByIdCard(firstSenderIdCard)
-                    item.fromUserName = (u && u.nickname) ? u.nickname : ''
-                  }
-                } catch (e) {}
-                
-                // 获取收件人信息
-                try {
-                  const recipientsArr = (d as any)?.recipients
-                  if (Array.isArray(recipientsArr) && recipientsArr.length > 0) {
-                    const toNames: string[] = []
-                    const ccNames: string[] = []
-                    const bccNames: string[] = []
-                    
-                    for (const r of recipientsArr) {
-                      const idCard = (r?.recipientIdCard || '').toString().trim()
-                      const recipientType = r?.recipientType || 1
-                      if (idCard) {
-                        const u = await getUserByIdCard(idCard)
-                        const displayName = u?.nickname || idCard
-                        
-                        if (recipientType === 1) {
-                          toNames.push(displayName)
-                        } else if (recipientType === 2) {
-                          ccNames.push(displayName)
-                        } else if (recipientType === 3) {
-                          bccNames.push(displayName)
+                  
+                  // 获取发件人信息
+                  try {
+                    let firstSenderIdCard = ''
+                    if (Array.isArray((detail as any).senders)) {
+                      firstSenderIdCard = (detail as any).senders
+                        .map((s: any) => (s?.senderIdCard || '').toString().trim())
+                        .find((v: string) => !!v) || ''
+                    }
+                    if (!firstSenderIdCard) {
+                      firstSenderIdCard = (detail as any).fromUserIdCard || (detail as any).fromIdCard || ''
+                    }
+                    if (firstSenderIdCard) {
+                      const u = await getUserByIdCard(firstSenderIdCard)
+                      if (replyOriginal.value) replyOriginal.value.fromUserName = (u && u.nickname) ? u.nickname : ''
+                    }
+                  } catch (e) {}
+                  
+                  // 获取收件人信息
+                  try {
+                    const recipientsArr = (detail as any)?.recipients
+                    if (Array.isArray(recipientsArr) && recipientsArr.length > 0) {
+                      const toNames: string[] = []
+                      const ccNames: string[] = []
+                      const bccNames: string[] = []
+                      
+                      for (const r of recipientsArr) {
+                        const idCard = (r?.recipientIdCard || '').toString().trim()
+                        const recipientType = r?.recipientType || 1
+                        if (idCard) {
+                          const u = await getUserByIdCard(idCard)
+                          const displayName = u?.nickname || idCard
+                          
+                          if (recipientType === 1) {
+                            toNames.push(displayName)
+                          } else if (recipientType === 2) {
+                            ccNames.push(displayName)
+                          } else if (recipientType === 3) {
+                            bccNames.push(displayName)
+                          }
                         }
                       }
+                      if (replyOriginal.value) {
+                        replyOriginal.value.toUserNames = toNames.join('、')
+                        replyOriginal.value.toRecipients = toNames.join('、') || undefined
+                        replyOriginal.value.ccRecipients = ccNames.join('、') || undefined
+                        replyOriginal.value.bccRecipients = bccNames.join('、') || undefined
+                      }
                     }
-                    item.toUserNames = toNames.join('、')
-                    item.toRecipients = toNames.join('、') || undefined
-                    item.ccRecipients = ccNames.join('、') || undefined
-                    item.bccRecipients = bccNames.join('、') || undefined
+                  } catch (e) {}
+                }
+              } catch (e) {
+                console.error('加载单个原始邮件失败:', e)
+              }
+            } else {
+              // 多个邮件：使用 replyOriginalList（显示多个邮件列表界面）
+              replyOriginalList.value = []
+              
+              const details = await Promise.allSettled(result.replyOriginalIds.map(id => getLetterDetail(id)))
+              for (let i = 0; i < details.length; i++) {
+                const res = details[i]
+                if (res.status === 'fulfilled' && res.value) {
+                  const d: any = res.value
+                  const item: OriginalMailInfo = {
+                    id: Number(result.replyOriginalIds[i]),
+                    subject: (d?.content?.subject) || d.subject || '',
+                    fromUserName: '',
+                    toUserNames: '',
+                    sendTime: formatDateTimeCn(d?.content?.sendTime),
+                    attachments: Array.isArray(d.attachments) ? d.attachments : []
                   }
-                } catch (e) {}
-                
-              replyOriginalList.value.push(item)
+                  
+                  // 获取发件人信息
+                  try {
+                    let firstSenderIdCard = ''
+                    if (Array.isArray((d as any).senders)) {
+                      firstSenderIdCard = (d as any).senders
+                        .map((s: any) => (s?.senderIdCard || '').toString().trim())
+                        .find((v: string) => !!v) || ''
+                    }
+                    if (!firstSenderIdCard) {
+                      firstSenderIdCard = (d as any).fromUserIdCard || (d as any).fromIdCard || ''
+                    }
+                    if (firstSenderIdCard) {
+                      const u = await getUserByIdCard(firstSenderIdCard)
+                      item.fromUserName = (u && u.nickname) ? u.nickname : ''
+                    }
+                  } catch (e) {}
+                  
+                  // 获取收件人信息
+                  try {
+                    const recipientsArr = (d as any)?.recipients
+                    if (Array.isArray(recipientsArr) && recipientsArr.length > 0) {
+                      const toNames: string[] = []
+                      const ccNames: string[] = []
+                      const bccNames: string[] = []
+                      
+                      for (const r of recipientsArr) {
+                        const idCard = (r?.recipientIdCard || '').toString().trim()
+                        const recipientType = r?.recipientType || 1
+                        if (idCard) {
+                          const u = await getUserByIdCard(idCard)
+                          const displayName = u?.nickname || idCard
+                          
+                          if (recipientType === 1) {
+                            toNames.push(displayName)
+                          } else if (recipientType === 2) {
+                            ccNames.push(displayName)
+                          } else if (recipientType === 3) {
+                            bccNames.push(displayName)
+                          }
+                        }
+                      }
+                      item.toUserNames = toNames.join('、')
+                      item.toRecipients = toNames.join('、') || undefined
+                      item.ccRecipients = ccNames.join('、') || undefined
+                      item.bccRecipients = bccNames.join('、') || undefined
+                    }
+                  } catch (e) {}
+                  
+                  replyOriginalList.value.push(item)
+                }
+              }
             }
           }
         }
-      }
       } catch (error: any) {
         ElMessage.error(error?.response?.data?.message || error?.message || '加载草稿失败')
       }
@@ -1130,7 +1283,7 @@ onMounted(async () => {
           const detail: any = await getLetterDetail(ids[0])
           if (detail) {
             replyOriginal.value = {
-              id: detail.id,
+              id: ids[0],  // 使用路由参数中的ID，而不是detail.id
               subject: (detail?.content?.subject) || detail.subject || '',
               fromUserName: '',
               toUserNames: '',
