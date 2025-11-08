@@ -20,9 +20,9 @@
       
       <!-- 导出按钮 -->
       <div class="export-buttons">
-        <el-button type="primary" :loading="exportLoading" @click="handleExportExcel">
+        <el-button type="primary" :loading="exportLoading" @click="handleExportWord">
           <Download class="w-4 h-4 mr-1" />
-          导出 Excel
+          导出 Word
         </el-button>
       </div>
     </div>
@@ -140,7 +140,7 @@
                 </div>
                 <!-- 图表筛选区域移动到标题旁边 -->
                 <div class="chart-filters-inline">
-                  <el-select v-model="supervisionType" placeholder="督办类型" clearable size="small" style="width: 120px; margin-right: 8px" @change="onSupervisionTypeChange">
+                  <el-select v-model="supervisionType" placeholder="督办类型" clearable size="small" style="width: 120px; margin-right: 8px" @change="onSupervisionTypeChange as any">
                     <el-option label="工作督办" :value="1" />
                     <el-option label="专项督查" :value="2" />
                   </el-select>
@@ -263,6 +263,15 @@ import { SupervisionIndexApi } from '@/api/supervision/index'
 import Pagination from '@/components/Pagination/index.vue'
 import request from '@/config/axios'
 import { useRouter } from 'vue-router'
+
+// 类型定义
+interface MonthlyDataItem {
+  month: number
+  categoryType: string
+  categoryName: string
+  type?: number
+  count: number
+}
 
 const router = useRouter()
 
@@ -510,7 +519,7 @@ const loadStatisticsData = async () => {
     
     // 更新详细表格数据
     const data = listResponse.list || []
-    detailTableData.value = data.map((item: any, index: number) => {
+    detailTableData.value = (data as any[]).map((item: any, index: number) => {
       const formatOrderDate = (dateValue: number | string | null | undefined): string => {
         if (!dateValue) return ''
         try {
@@ -836,53 +845,39 @@ const viewDetail = (row: any) => {
   }
 }
 
-// 导出Excel功能
-const handleExportExcel = async () => {
+// 导出Word功能
+const handleExportWord = async () => {
   if (exportLoading.value) return
   
   try {
     exportLoading.value = true
     
-    // 构建导出参数 - 使用现有接口格式
-    const exportParams = {
-      pageSize: -1, // 导出全部数据
-      ...seniorFilterParams.value // 传递高级筛选参数
-    }
+    // 不传分页参数，后端会自动设置为导出全部
+    const exportParams = {}
     
-    console.log('发送导出请求:', {
-      url: '/supervision/order/export-excel',
-      params: exportParams
-    })
+    console.log('发送导出 Word 请求:', exportParams)
     
-    const response = await request.get({
-      url: '/supervision/order/export-excel',
-      params: exportParams,
-      responseType: 'blob'
-    })
+    // 获取 blob 响应（API返回的已经是Blob对象）
+    const blob: Blob = await SupervisionIndexApi.exportDocumentSupervisionWord(exportParams)
     
-    // 检查响应数据类型
-    if (response instanceof Blob) {
-      // 检查 Blob 是否为 JSON 错误响应
-      if (response.type === 'application/json') {
-        try {
-          const errorText = await response.text()
-          const errorData = JSON.parse(errorText)
-          console.error('服务器返回错误:', errorData)
-          ElMessage.error(`导出失败：${errorData.msg || '服务器错误'}`)
-          return
-        } catch (e) {
-          console.error('解析错误响应失败:', e)
-          ElMessage.error('导出失败：服务器返回了无效数据')
-          return
-        }
-      }
-      // 下载文件
-      downloadBlobSimple(response)
-      ElMessage.success('Excel 导出成功')
-    } else {
-      console.error('响应不是文件类型:', response)
-      ElMessage.error('导出失败：服务器返回了非文件数据')
-    }
+    // 调试：检查返回的数据
+    console.log('=== 导出Word调试信息 ===')
+    console.log('blob类型:', typeof blob)
+    console.log('是否为Blob:', blob instanceof Blob)
+    console.log('Blob size:', blob.size)
+    console.log('Blob type:', blob.type)
+    
+    // 直接使用返回的Blob创建下载链接
+    const downloadUrl = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = '督办公文统计汇总.doc'  // 修改为.doc，与后端一致
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(downloadUrl)
+    
+    ElMessage.success('Word 文档导出成功')
     
   } catch (error) {
     console.error('导出失败:', error)
@@ -890,20 +885,6 @@ const handleExportExcel = async () => {
   } finally {
     exportLoading.value = false
   }
-}
-
-// 简化的下载 Blob 文件
-const downloadBlobSimple = (blob: Blob) => {
-  const fileName = `OAS督办统计-明细-${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '').replace(/(\d{8})(\d{4})/, '$1_$2')}.xlsx`
-  
-  const url = window.URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = fileName
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  window.URL.revokeObjectURL(url)
 }
 
 // 处理表格行操作

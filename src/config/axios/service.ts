@@ -112,7 +112,9 @@ service.interceptors.response.use(
       response.request.responseType === 'arraybuffer'
     ) {
       // 注意：如果导出的响应为 json，说明可能失败了，不直接返回进行下载
-      if (response.data.type !== 'application/json') {
+      // 检查Blob类型，如果不是JSON就直接返回（支持带charset的Content-Type）
+      const blobType = response.data.type || ''
+      if (!blobType.includes('application/json')) {
         return response.data
       }
       data = await new Response(response.data).json()

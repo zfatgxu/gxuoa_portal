@@ -453,6 +453,15 @@ export const SupervisionIndexApi = {
   // 督办拒绝接口
   supervisionReject(processInstanceId: string): Promise<void> {
     return request.get({ url: `/bpm/supervision/supervision-reject/${processInstanceId}` })
+  },
+
+  // 导出督办公文统计汇总 Word
+  exportDocumentSupervisionWord: async (params: any) => {
+    // 使用 app-api 路径（request 会自动添加前缀和 token）
+    return await request.download({ 
+      url: `/supervision/document-supervision/export-word`, 
+      params 
+    })
   }
 }
 

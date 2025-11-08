@@ -37,11 +37,11 @@ export default {
   },
   download: async <T = any>(option: any) => {
     const res = await request({ method: 'GET', responseType: 'blob', ...option })
-    return res as unknown as Promise<T>
+    return res as unknown as T
   },
   upload: async <T = any>(option: any) => {
     option.headersType = 'multipart/form-data'
     const res = await request({ method: 'POST', ...option })
-    return res as unknown as Promise<T>
+    return res.data as unknown as T
   }
 }
