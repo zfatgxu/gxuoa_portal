@@ -16,12 +16,12 @@
         <el-row>
           <el-col :span="8" style="margin-right: 20px;">
             <el-form-item label="信访人:">
-              <el-input v-model="formData.petitioner" placeholder="请输入信访人" clearable/>
+              <el-input v-model="formData.name" placeholder="请输入信访人" clearable/>
             </el-form-item>
           </el-col>
           <el-col :span="10">
-            <el-form-item label="信访人身份类别:" label-width="150px!important">
-              <el-select v-model="formData.petitionerType" placeholder="请选择身份类别" clearable>
+            <el-form-item label="是否校内人员:" label-width="150px!important">
+              <el-select v-model="formData.inSchool" placeholder="是否校内人员" clearable>
                 <el-option
                   v-for="dict in getIntDictOptions(DICT_TYPE.PETITIONER_TYPE)"
                   :key="dict.value"
@@ -33,8 +33,8 @@
           </el-col>
         </el-row>
 
-        <el-row >
-          <el-col :span="8">
+        <el-row v-if="formData.inSchool === 1">
+          <el-col :span="16">
             <el-form-item label="信访人单位:" label-width="120px">
               <el-select v-model="formData.petitionerUnit" placeholder="请选择单位" clearable>
                 <el-option
@@ -47,15 +47,20 @@
               </el-select>
             </el-form-item>
           </el-col>
-          <el-col :span="8" style="margin-left: 20px;margin-right: 20px;">
-            <el-input v-model="inputPetitionerUnit" placeholder="输入单位名称" clearable @change="searchPetitionerDepts"/>
+        </el-row>
+
+        <el-row v-else>
+          <el-col :span="16">
+            <el-form-item label="信访人单位:" label-width="120px">
+              <el-input v-model="formData.petitionerUnit" placeholder="请输入单位名称" clearable/>
+            </el-form-item>
           </el-col>
         </el-row>
 
         <el-row>
           <el-col :span="18">
-            <el-form-item label="文件标题:">
-              <el-input v-model="formData.documentTitle" placeholder="请输入文件标题" clearable/>
+            <el-form-item label="标题:">
+              <el-input v-model="formData.title" placeholder="请输入标题" clearable/>
             </el-form-item>
           </el-col>
         </el-row>
@@ -76,7 +81,7 @@
           </el-col>
 
           <el-col :span="10">
-            <el-form-item label="目的分类:" label-width="100px!important">
+            <el-form-item label="信访原因:" label-width="100px!important">
               <el-select v-model="formData.purposeCategory" placeholder="请选择目的" clearable>
                 <el-option
                   v-for="dict in getIntDictOptions(DICT_TYPE.PURPOSE_CATEGORY)"
@@ -134,17 +139,36 @@
           </el-col>
         </el-row>
 
-        <el-row>
-          <el-col>
-            <el-form-item label="主题:">
-              <el-input type="textarea" v-model="formData.subject" :autosize="{ minRows: 4 }" placeholder="请输入主题" clearable/>
+        <el-row style="justify-content: space-between;">
+          <el-col :span="10">
+            <el-form-item label="信访日期:">
+              <el-date-picker
+                v-model="formData.petitionDate"
+                type="datetime"
+                placeholder="选择信访日期"
+                format="YYYY-MM-DD"
+                value-format="YYYY-MM-DD"
+                clearable
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="10">
+            <el-form-item label="截止日期:">
+              <el-date-picker
+                v-model="formData.deadline"
+                type="datetime"
+                placeholder="选择截止日期和时间"
+                format="YYYY-MM-DD HH:mm:ss"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                clearable
+              />
             </el-form-item>
           </el-col>
         </el-row>
 
         <el-row>
           <el-col>
-            <el-form-item label="具体内容:">
+            <el-form-item label="正文:">
               <el-input type="textarea" v-model="formData.content" :autosize="{ minRows: 4 }" placeholder="请输入具体内容" clearable/>
             </el-form-item>
           </el-col>
@@ -173,223 +197,8 @@
             </el-form-item>
           </el-col>
         </el-row>
-
-        <el-row>
-          <el-col>
-            <el-form-item label="拟办意见:">
-              <el-input type="textarea" v-model="formData.proposedOpinion" :autosize="{ minRows: 4 }" placeholder="请输入拟办意见" clearable/>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row>
-          <el-col :span="12">
-            <el-form-item label="督查办主任意见:" label-width="150px!important">
-              <el-select v-model="formData.directorOpinion" placeholder="请选择意见" clearable>
-                <el-option
-                  v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_OPINION)"
-                  :key="dict.value"
-                  :label="dict.label"
-                  :value="dict.value"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row style="justify-content: space-between;">
-          <el-col :span="10">
-            <el-form-item label="牵头单位:">
-              <el-select v-model="formData.acceptanceUnit" placeholder="请选择牵头单位" clearable>
-                <el-option
-                  v-for="dept in deptList"
-                  :key="dept.id"
-                  :label="dept.name"
-                  :value="dept.name"
-                  :data-id="dept.id"
-                />
-                <!-- 可以根据实际需要添加更多选项 -->
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="10">
-            <el-form-item label="要求完成时间:" label-width="150px!important">
-              <el-date-picker v-model="formData.requiredCompletionTime" type="date" placeholder="选择日期" value-format="YYYY-MM-DD HH:mm:ss"/>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row>
-          <el-col :span="10">
-            <el-form-item label="协办单位:">
-              <el-select v-model="cooperationUnit" placeholder="请选择协办单位" clearable>
-                <el-option
-                  v-for="dept in filteredCollaborateDepts"
-                  :key="dept.id"
-                  :label="dept.name"
-                  :value="dept.name"
-                  :data-id="dept.id"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="10" style="margin-left: 20px;margin-right: 20px;">
-            <el-input v-model="inputCollaborateUnit" placeholder="输入单位名称" clearable @change="searchCollaborateDepts"/>
-          </el-col>
-          <el-button type="primary" size="small" @click="addCooperationUnit(cooperationUnit)">添加</el-button>
-        </el-row>
-
-        <el-row>
-          <el-col>
-            <el-form-item label=" ">
-              <el-input v-model="cooperationUnits" type="textarea" :autosize="{ minRows: 4 }" placeholder="已添加部门"/>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row>
-          <el-col :span="10">
-            <el-form-item label="督办人:">
-              <el-select v-model="formData.supervisor" placeholder="请选择督办人" @change="handleSupervisorChange" clearable>
-                <el-option
-                  v-for="user in filteredSupervisorateUsers"
-                  :key="user.id"
-                  :label="user.nickname"
-                  :value="user.id"
-                  :data-id="user.id"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="10" style="margin-left: 20px;margin-right: 20px;">
-            <el-input v-model="inputSupervisor" placeholder="输入姓名" clearable @change="searchSupervisorateUsers"/>
-          </el-col>
-        </el-row>
-
-        <el-row style="justify-content: space-between;">
-          <el-col :span="10">
-            <el-form-item label="办公电话:">
-              <el-input v-model="formData.officePhone" placeholder="(自动生成)" clearable/>
-            </el-form-item>
-          </el-col>
-          <el-col :span="10">
-            <el-form-item label="分管领导:">
-              <el-input v-model="formData.responsibleLeader" placeholder="(自动生成)" clearable/>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row>
-          <el-col :span="10">
-            <el-form-item label="会签人:">
-              <el-select v-model="formData.counterSigner" placeholder="请选择会签人" clearable>
-                <el-option
-                  v-for="user in filteredCountersignerUsers"
-                  :key="user.id"
-                  :label="user.nickname"
-                  :value="user.nickname"
-                  :data-id="user.id"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="10" style="margin-left: 20px;margin-right: 20px;">
-            <el-input v-model="inputCountersigner" placeholder="输入姓名" clearable @change="searchCountersignerUsers"/>
-          </el-col>
-        </el-row>
-
-        <el-row>
-          <el-col :span="10">
-            <el-form-item label="阅批人:">
-              <el-select v-model="formData.reviewer" placeholder="请选择阅批人" clearable>
-                <el-option
-                  v-for="user in filteredReviewerUsers"
-                  :key="user.id"
-                  :label="user.nickname"
-                  :value="user.nickname"
-                  :data-id="user.id"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="10" style="margin-left: 20px;margin-right: 20px;">
-            <el-input v-model="inputReviewer" placeholder="输入姓名" clearable @change="searchReviewerUsers"/>
-          </el-col>
-        </el-row>
-
-        <div class="unit-processing-section">
-          <h3>单位部门办理情况：</h3>
-          <el-form-item label="信访处理:">
-            <el-input type="textarea" v-model="formData.petitionHandling" :autosize="{ minRows: 4 }" placeholder="请输入信访处理情况" clearable/>
-          </el-form-item>
-        </div>
-
-        <el-row>
-          <el-col>
-            <el-form-item label=" ">
-              <el-upload
-                ref="uploadRef"
-                :http-request="(options) => customUpload(options, 'petitionHandling')"
-                :on-preview="previewFile"
-                :before-remove="beforeRemove"
-                :before-upload="beforeUpload"
-                multiple
-                v-model:file-list="petitionHandlingFileList"
-                accept=".jpg,.png,.pdf,.doc,.docx,.xls,.xlsx"
-                :file-list-type="'petitionHandling'"
-              >
-                <el-button type="primary" :icon=Paperclip>上传处理报告附件</el-button>
-                <template #tip>
-                  <div>
-                    支持上传 doc、docx、pdf、xls、xlsx、jpg、jpeg、png、txt 格式文件，单个文件不超过20MB
-                  </div>
-                </template>
-              </el-upload>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row>
-          <el-col>
-            <el-form-item label=" ">
-              <el-upload
-                ref="uploadRef"
-                :http-request="(options) => customUpload(options, 'petitionReply')"
-                :on-preview="previewFile"
-                :before-remove="beforeRemove"
-                :before-upload="beforeUpload"
-                multiple
-                v-model:file-list="petitionReplyFileList"
-                accept=".jpg,.png,.pdf,.doc,.docx,.xls,.xlsx"
-                :file-list-type="'petitionReply'"
-              >
-                <el-button type="primary" :icon=Paperclip>上传答复意见附件</el-button>
-                <template #tip>
-                  <div>
-                    支持上传 doc、docx、pdf、xls、xlsx、jpg、jpeg、png、txt 格式文件，单个文件不超过20MB
-                  </div>
-                </template>
-              </el-upload>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row>
-          <el-col :span="12">
-            <el-form-item label="办结审核:">
-              <el-select v-model="formData.completionReview" placeholder="请选择审核结果" clearable>
-                <el-option
-                  v-for="dict in getIntDictOptions(DICT_TYPE.PETITION_COMPLETION)"
-                  :key="dict.value"
-                  :label="dict.label"
-                  :value="dict.value"
-                />
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
         <div class="form-actions">
+          <el-button type="info" @click="fillFormWithSampleData">一键填写</el-button>
           <el-button type="primary" @click="saveForm">保存</el-button>
           <el-button type="primary" @click="nextStep">下一步</el-button>
         </div>
@@ -402,10 +211,11 @@
 import { reactive, ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import * as DeptApi from '@/api/system/dept'
 import * as UserApi from '@/api/system/user'
 import { OrderApi } from '@/api/supervision'
+import * as PetitionApi from '@/api/petition'
 import { Paperclip } from '@element-plus/icons-vue'
 import { KKFileView } from '@/components/KKFileView'
 import type { UploadFile, UploadUserFile } from 'element-plus';
@@ -426,12 +236,17 @@ const generatePetitionNumber = () => {
   const day = String(now.getDate()).padStart(2, '0')
   
   // 生成4位随机序列号
-  const randomNum = Math.floor(1000 + Math.random() * 9000)
+  const id = getPetitionId()
   
   // 格式: XF-年月日-序列号，例如 XF-20250808-1234
-  const petitionNumber = `XF-${year}${month}${day}-${randomNum}`
+  const petitionNumber = `XF-${year}${month}${day}-${id}`
   
   return petitionNumber
+}
+
+const getPetitionId = () => {
+  // 生成2位随机数，范围从10到99
+  return Math.floor(Math.random() * 90) + 10;
 }
 
 const previewFile = (file: any) => {
@@ -563,32 +378,18 @@ const beforeUpload = (file: UploadFile) => {
 // 表单数据
 const formData = reactive({
   petitionNumber: '', // 信访编号
-  petitioner: '', // 信访人
-  petitionerType: '', // 信访人身份类别
+  name: '', // 信访人
+  inSchool: '', // 是否在校
   petitionerUnit: '', // 信访人单位
-  documentTitle: '', // 文件标题
   petitionChannel: '', // 信访渠道
-  purposeCategory: '', // 目的分类
+  purposeCategory: '', // 原因分类
   urgencyLevel: '', // 紧急程度
   contentCategory: '', // 内容分类
   isRepeat: '', // 重复信访
-  subject: '', // 主题
+  title: '', // 文件标题
   content: '', // 具体内容
-  proposedOpinion: '', // 拟办意见
-  directorOpinion: '', // 督查办主任意见
-  acceptanceUnit: '', // 牵头单位
-  requiredCompletionTime: '', // 要求完成时间
-  cooperationUnits: '', // 已选协办单位列表
-  supervisor: '', // 督办人
-  officePhone: '', // 办公电话
-  responsibleLeader: '', // 分管领导
-  counterSigner: '', // 会签人
-  reviewer: '', // 阅批人
-  petitionHandling: '', // 信访处理
-  completionReview: '', // 办结审核
-  petitionList: [],// 信访附件列表
-  petitionHandlingFileList: [], // 处理报告附件列表
-  petitionReplyFileList: [], // 答复意见附件列表
+  petitionDate:'',
+  deadline:'', //截止日期
 })
 
 // 表单验证规则
@@ -767,6 +568,26 @@ const handleSupervisorChange = async (userId: number) => {
   }
 }
 
+// 一键填写表单
+const fillFormWithSampleData = () => {
+    // 填充示例数据
+    formData.name = '张三'
+    formData.inSchool = 0
+    formData.petitionerUnit = '计算机学院'
+    formData.petitionChannel = 1
+    formData.purposeCategory = 1
+    formData.urgencyLevel = 1
+    formData.contentCategory = 1
+    formData.isRepeat = 0
+    formData.title = '关于校园网络问题的信访'
+    formData.content = '尊敬的领导：\n\n我是计算机学院的学生张三，近期发现校园网络存在不稳定问题，特别是在晚上高峰期，网速明显下降，影响学习和生活。希望学校能够关注并改善网络质量。\n\n谢谢！'
+    formData.petitionDate = dayjs().format('YYYY-MM-DD')
+    formData.deadline = dayjs().add(7, 'day').format('YYYY-MM-DD HH:mm:ss')
+    // 生成新的信访编号
+    formData.petitionNumber = generatePetitionNumber()
+    ElMessage.success('表单已一键填写完成！')
+}
+
 // 保存表单
 const saveForm = async () => {
 
@@ -805,12 +626,49 @@ const saveForm = async () => {
       ElMessage.success('表单保存成功')
 }
 
+// 获取router实例
+const router = useRouter()
+
 // 下一步
 const nextStep = () => {
   documentFormRef.value.validate((valid) => {
     if (valid) {
-      ElMessage.success('进入下一步')
-      // 这里可以添加跳转到下一步的逻辑
+      // 先提交表单数据
+      PetitionApi.createPetition(formData);
+      console.log(formData)
+      
+      // 弹出选择对话框
+      ElMessageBox.confirm(
+        '表单提交成功！请选择下一步操作：',
+        '操作成功',
+        {
+          distinguishCancelAndClose: true,
+          confirmButtonText: '跳转回首页',
+          cancelButtonText: '清空表单继续填写',
+          type: 'success'
+        }
+      ).then(() => {
+        // 用户选择跳转回首页
+        router.push('/xfgz/xf')
+      }).catch((action) => {
+        if (action === 'cancel') {
+          // 用户选择清空表单继续填写
+          // 清空表单数据
+          Object.keys(formData).forEach(key => {
+            formData[key] = ''
+          })
+          // 重新生成信访编号
+          formData.petitionNumber = generatePetitionNumber()
+          // 清空附件列表
+          petitionList.value = []
+          petitionHandlingFileList.value = []
+          petitionReplyFileList.value = []
+          // 清空协办单位
+          cooperationUnits.value = []
+          
+          ElMessage.success('表单已清空，可以继续填写新内容')
+        }
+      })
     } else {
       ElMessage.error('表单验证失败，请检查必填项')
       return false

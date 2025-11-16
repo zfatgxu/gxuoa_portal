@@ -1,37 +1,19 @@
 import request from '@/config/axios'
 
 export interface PetitionVO {
-  id: number
-  petitionNo: string
-  title: string
-  content: string
-  visitorName: string
-  visitorPhone: string
-  visitorEmail: string
-  visitorAddress: string
-  visitorIdentity: string
-  sourceType: number
-  petitionType: number
-  categoryType: number
-  urgencyLevel: number
-  status: number
-  isPublic: boolean
-  isAnonymous: boolean
-  isNational: boolean
-  isIllegal: boolean
-  isFake: boolean
-  satisfaction: number
-  deptId: number
-  deptName: string
-  userId: number
-  userName: string
-  processInstanceId: string
-  receiveTime: Date
-  deadline: Date
-  completeTime: Date
-  remark: string
-  createTime: Date
-  attachments: string[]
+  petitionNumber: string, // 信访编号
+  name: string, // 信访人
+  inSchool: number |string, // 是否在校
+  petitionerUnit: string, // 信访人单位
+  petitionChannel: number |string, // 信访渠道
+  purposeCategory: number |string, // 原因分类
+  urgencyLevel: number |string, // 紧急程度
+  contentCategory: number |string, // 内容分类
+  isRepeat: number |string, // 重复信访
+  title: string, // 文件标题
+  content: string, // 具体内容
+  petitionDate: Date[] | string, 
+  deadline: Date[] | string, //截止日期
 }
 
 export interface PetitionPageReqVO extends PageParam {
@@ -84,7 +66,7 @@ export interface PetitionHandleVO {
 
 // 创建信访
 export const createPetition = (data: PetitionVO) => {
-  return request.post({ url: '/petition/create', data })
+  return request.post({ url: '/petition/info/create', data })
 }
 
 // 更新信访
@@ -99,7 +81,7 @@ export const deletePetition = (id: number) => {
 
 // 获取信访
 export const getPetition = (id: number) => {
-  return request.get<PetitionVO>({ url: `/petition/get?id=${id}` })
+  return request.get<PetitionVO>({ url: `/petition/info/get?id=${id}` })
 }
 
 // 获取信访分页

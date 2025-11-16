@@ -1,555 +1,886 @@
 <template>
-  <div class="petition-page">
-    <!-- 白色顶栏：当前位置 -->
-    <div class="page-header">
-      <div class="header-inner">
-        <span class="location">当前位置：信访工作 >>书记校长信箱 </span>
+<div class="min-h-screen bg-gray-50 p-6">
+    <!-- Statistics Cards -->
+<div class="grid grid-cols-1 gap-6 mb-8">
+    <!-- Monthly Status Card -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center mb-4">
+          <div class="w-3 h-3 bg-blue-500 rounded-sm rotate-45 mr-2"></div>
+          <h3 class="text-gray-700 font-medium">本月信访情况</h3>
+        </div>
+      <div class="grid grid-cols-4 gap-4">
+        <div class="flex items-center p-4 justify-center rounded-lg" style="border: 1px solid #e5e7eb;">
+            <el-icon size="24"><Calendar color="blue"/></el-icon>
+            <div class="flex flex-col items-center ml-4">
+                <span class="text-md text-gray-600">本月新增</span>
+                <span class="text-2xl font-bold text-blue-600">{{ monthlyStats.newTasks }}</span>
+            </div>
+        </div>
+        <div class="flex items-center p-4 justify-center rounded-lg" style="border: 1px solid #e5e7eb;">
+            <el-icon size="24"><Clock color="orange"/></el-icon>
+            <div class="flex flex-col items-center ml-4">
+                <span class="text-sm text-gray-600">进行中</span>
+                <span class="text-2xl font-bold text-orange-600">{{ monthlyStats.inProgress }}</span>
+            </div>
+        </div>
+        <div class="flex items-center p-4 justify-center rounded-lg" style="border: 1px solid #e5e7eb;">
+            <el-icon size="24"><CheckCircle color="green"/></el-icon>
+            <div class="flex flex-col items-center ml-4">
+                <span class="text-sm text-gray-600">已完成</span>
+                <span class="text-2xl font-bold text-green-600">{{ monthlyStats.completed }}</span>
+            </div>
+        </div>
+        <div class="flex items-center p-4 justify-center rounded-lg" style="border: 1px solid #e5e7eb;">
+            <el-icon size="24"><TimerOff color="red"/></el-icon>
+            <div class="flex flex-col items-center ml-4">
+                <span class="text-sm text-gray-600">已超时</span>
+                <span class="text-2xl font-bold text-red-600">{{ monthlyStats.overdue }}</span>
+            </div>
+        </div>
       </div>
     </div>
+</div>
 
-    <!-- 标签 + 多筛选区（顶部标签字号28px） -->
-    <div class="page-toolbar">
-      <el-row :gutter="20">
-        <!-- 状态标签 -->
-        <el-col :span="8">
-          <el-tabs v-model="activeName" class="custom-tabs" @tab-click="handleClick">
-            <el-tab-pane label="待审核" name="pending"/>
-            <el-tab-pane label="处理中" name="processing"/>
-            <el-tab-pane label="已办结" name="completed"/>
-          </el-tabs>
-        </el-col>
-        <!-- 搜索 + 三筛选 -->
-        <el-col :span="16" class="flex justify-end items-center">
-          <el-input
-            v-model="searchKey"
-            placeholder="输入搜索关键词"
-            class="custom-input"
-            clearable
-            @keydown.enter="handleSearch"
-          >
-            <template #suffix>
-              <el-icon @click="handleSearch" class="search-icon">
-                <Search />
-              </el-icon>
-            </template>
-          </el-input>
-
-          <el-select
-            v-model="priorityFilter"
-            placeholder="全部优先级"
-            class="custom-select"
-            clearable
-            style="margin: 0 10px;"
-          >
-            <el-option label="一般" value="1"/>
-            <el-option label="紧急" value="2"/>
-          </el-select>
-
-          <el-select
-            v-model="categoryFilter"
-            placeholder="全部分类"
-            class="custom-select"
-            clearable
-            style="margin: 0 10px;"
-          >
-            <el-option label="咨询求助" value="咨询求助"/>
-            <el-option label="申诉投诉" value="申诉投诉"/>
-            <el-option label="建议赞扬" value="建议赞扬"/>
-            <el-option label="感恩表扬" value="感恩表扬"/>
-          </el-select>
-
-          <el-select
-            v-model="personTypeFilter"
-            placeholder="全部信访人类型"
-            class="custom-select"
-            clearable
-          >
-            <el-option label="学生" value="学生"/>
-            <el-option label="教职工" value="教职工"/>
-            <el-option label="社会人员" value="社会人员"/>
-            <el-option label="未知" value="未知"/>
-          </el-select>
-        </el-col>
-      </el-row>
+    <!-- Tabs and Filters -->
+    <div class="bg-white rounded-lg shadow-sm">
+    <div class="border-b border-gray-200">
+        <div class="flex items-center justify-between p-6 pb-0">
+        <div class="flex space-x-2">
+            <el-tabs v-model="activeTab" class="tabs-custom">
+            <el-tab-pane 
+                v-for="tab in tabs" 
+                :key="tab.key" 
+                :label="tab.label" 
+                :name="tab.key"
+            />
+            </el-tabs>
+        </div>
+        <div class="flex space-x-4 w-50%">
+            <el-input
+                v-model="searchQuery"
+                size="small"
+                placeholder="请输入搜索关键词"
+                :suffix-icon="Search"
+                style="width: 60%;"
+              />
+            <el-select v-model="selectedDepartment" placeholder="全部分类" clearable style="width: 30%;">
+            <el-option
+                v-for="dept in departments"
+                :key="dept"
+                :label="dept"
+                :value="dept"
+            />
+            </el-select>
+            <el-select v-model="selectedStatus" placeholder="全部状态" clearable style="width: 30%;">
+            <el-option
+                v-for="status in statuses"
+                :key="status"
+                :label="status"
+                :value="status"
+            />
+            </el-select>
+            <el-button :icon="Bell" @click="handleBellClick">一键提醒</el-button>
+            <div class="flex items-center w-20%" @click="handleMoreClick">
+              更多
+            <el-icon><ArrowRightBold /></el-icon>
+            </div>
+        </div>
+        </div>
     </div>
 
-    <!-- 数据表格（自适应布局 + 禁止横向滚动） -->
-    <el-table
-      :data="tableData"
-      border
-      stripe
-      :row-style="{ height: '68px' }"
-      style="width: 100%;"
-      :loading="loading"
-      empty-text="暂无数据"
-    >
-      <el-table-column label="序号" type="index" width="60" align="center" :resizable="false"/>
-      <el-table-column label="编号" prop="serialNo" width="100" align="center" :resizable="false"/>
-
-      <!-- 优先级标签（恢复一般状态样式） -->
-      <el-table-column label="优先级" width="100" align="center" :resizable="false">
-        <template #default="scope">
-          <span
-            class="priority-tag"
-            :class="{
-              'priority-urgent': scope.row.priority === 2,
-              'priority-normal': scope.row.priority === 1
-            }"
-          >{{ scope.row.priority === 2 ? '紧急' : '一般' }}</span>
-        </template>
-      </el-table-column>
-
-      <!-- 分类标签修复：椭圆边框 + 文字完整显示 -->
-      <el-table-column label="分类" width="120" align="center" :resizable="false">
-        <template #default="scope">
-          <span class="category-tag">{{ scope.row.category }}</span>
-        </template>
-      </el-table-column>
-
-      <!-- 信访内容（自适应收缩 + 文本截断） -->
-      <el-table-column label="信访内容" prop="title" min-width="160" align="center" :resizable="false">
-        <template #default="scope">
-          <div class="ellipsis" :title="scope.row.title">{{ scope.row.title }}</div>
-        </template>
-      </el-table-column>
-
-      <!-- 信访人（纯文本显示） -->
-      <el-table-column label="信访人" prop="petitioner" width="100" align="center" :resizable="false"/>
-
-      <!-- 信访人类型（纯文本显示） -->
-      <el-table-column label="信访人类型" width="100" align="center" :resizable="false">
-        <template #default="scope">
-          <span>{{ scope.row.personType }}</span>
-        </template>
-      </el-table-column>
-
-      <!-- 当前状态标签（自定义样式+文字居中） -->
-      <el-table-column label="当前状态" width="100" align="center" :resizable="false">
-        <template #default="scope">
-          <span
-            class="status-tag"
-            :class="{
-              'status-pending': scope.row.status === 1,
-              'status-processing': scope.row.status === 2,
-              'status-completed': scope.row.status === 3
-            }"
-          >{{ scope.row.status === 1 ? '待审核' : scope.row.status === 2 ? '处理中' : '已办结' }}</span>
-        </template>
-      </el-table-column>
-
-      <el-table-column label="接收日期" width="160" align="center" :resizable="false">
-        <template #default="scope">
-          {{ formatTime(scope.row.receiveTime) }}
-        </template>
-      </el-table-column>
-      <el-table-column label="上一操作人" prop="lastOperator" width="100" align="center" :resizable="false"/>
-      <el-table-column label="操作" width="100" align="center" :resizable="false">
-        <template #default="scope">
-          <el-button type="text" @click="handleDetail(scope.row)">详情</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+    <!-- Task List -->
+    <div class="p-6">
+        <!-- 加载状态 -->
+        <div v-if="loading" class="flex justify-center items-center py-8">
+            <el-icon class="is-loading" style="font-size: 24px;">
+                <Loading />
+            </el-icon>
+            <span class="ml-2">加载中...</span>
+        </div>
+        
+        <!-- 任务列表 -->
+        <div v-else>
+            <div 
+                v-for="task in tasks" 
+                :key="task.id" 
+                class="rounded-lg p-6 mb-4 hover:shadow-lg transition-shadow card-item cursor-pointer" 
+                style="border: 1px solid #e5e7eb;"
+                @click="openDetailDialog(task)"
+            >
+                <!-- 头部两行：第一行 优先级(左) | 状态(右)；第二行 标题 -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between">
+                        <!-- 优先级标签 -->
+                        <span 
+                            class="px-2 py-1 rounded text-xs font-medium w-20 text-center text-white"
+                            :style="{
+                                backgroundColor: task.urgencyLevel === 3 ? '#EF4444' : 
+                                               task.urgencyLevel === 2 ? '#F59E0B' : '#3B82F6'
+                            }"
+                        >
+                            {{ getDictLabel(DICT_TYPE.SUPERVISION_PRIORITY_TYPE, task.urgencyLevel) }}
+                        </span>
+                        
+                        <!-- 状态标签 -->
+                        <span 
+                            class="px-2 py-1 rounded text-xs font-medium w-20 text-center text-white"
+                            :style="{
+                                backgroundColor: task.status === '已超时' ? '#F59E0B' : 
+                                               task.status === '已结束' ? '#10B981' : '#22A4EF'
+                            }"
+                        >
+                            {{ task.status }}
+                        </span>
+                    </div>
+                    <div class="mt-2">
+                        <h4 class="text-xl font-bold text-gray-900">{{ task.title }}</h4>
+                    </div>
+                </div>
+                
+                <!-- 信访内容 -->
+                <div class="mb-4">
+                    <p class="text-gray-600 leading-relaxed line-clamp-2">{{ task.content }}</p>
+                </div>
+                
+                <!-- 基本信息网格 -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
+                    <div class="flex items-center">
+                        <el-icon class="w-4 h-4 text-gray-400 mr-2"><Users /></el-icon>
+                        <span class="text-gray-500">信访人：</span>
+                        <span class="text-gray-700">{{ task.name }}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <el-icon class="w-4 h-4 text-gray-400 mr-2"><OfficeBuilding /></el-icon>
+                        <span class="text-gray-500">信访单位：</span>
+                        <span class="text-gray-700">{{ task.petitionerUnit }}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <el-icon class="w-4 h-4 text-gray-400 mr-2"><Edit /></el-icon>
+                        <span class="text-gray-500">目的分类：</span>
+                        <span class="text-gray-700">{{ getDictLabel(DICT_TYPE.PURPOSE_CATEGORY, task.purposeCategory) }}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <el-icon class="w-4 h-4 text-gray-400 mr-2"><Edit /></el-icon>
+                        <span class="text-gray-500">内容分类：</span>
+                        <span class="text-gray-700">{{ getDictLabel(DICT_TYPE.CONTENT_CATEGORY, task.contentCategory) }}</span>
+                    </div>
+                </div>
+                
+                <!-- 时间信息网格 -->
+                <div class="grid items-start w-fit" style="grid-template-columns: max-content max-content; column-gap: 1.5rem; row-gap: 0.5rem;">
+                    <div class="flex items-center">
+                        <span class="text-gray-900 font-semibold inline-block w-24">信访时间：</span>
+                        <span class="text-gray-900">{{ task.petitionDate }}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="text-gray-900 font-semibold inline-block w-24">截止时间：</span>
+                        <span class="font-semibold text-red-600">{{ task.deadline }}</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="text-gray-900 font-semibold inline-block w-24">任务状态：</span>
+                        <span class="text-gray-900">已分配任务</span>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="text-gray-900 font-semibold inline-block w-24">时间状态：</span>
+                        <div class="flex items-center">
+                            <span v-if="task.daysRemaining" class="text-orange-600">
+                                剩余{{ task.daysRemaining }}天
+                            </span>
+                            <el-icon v-if="task.isOverdue" class="w-4 h-4 text-red-500 ml-1"><AlertTriangle /></el-icon>
+                            <span v-if="task.overdueDays" class="text-red-600 ml-1">
+                                超时{{ task.overdueDays }}天
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- 分页组件 -->
-    <div class="pagination-wrap flex justify-between items-center">
-      <div class="pagination-left flex items-center">
-        <span class="record-info">共{{ total }}条记录 第{{ page }}/{{ maxPage }}页</span>
-        <el-pagination
-          @size-change="handleSizeChange"
-          @current-change="handlePageChange"
-          :current-page="page"
-          :page-sizes="[10, 20, 50]"
-          :page-size="pageSize"
-          layout="prev, pager, next, sizes"
-          :total="total"
-          class="custom-pagination"
-        />
-      </div>
-      <div class="pagination-actions flex items-center">
-        <span class="mr-2">跳至</span>
-        <el-input
-          v-model.number="jumpPage"
-          type="number"
-          min="1"
-          :max="maxPage"
-          style="width: 80px; margin-right: 8px;"
-          clearable
-        />
-        <el-button type="primary" @click="handleConfirm">确定</el-button>
-        <el-button type="primary" style="margin-left: 8px;" @click="handleFirstPage">回到第一页</el-button>
-      </div>
+    <div class="flex justify-center mt-6">
+      <el-pagination
+        v-model:current-page="pagination.pageNo"
+        v-model:page-size="pagination.pageSize"
+        :page-sizes="[10, 20, 50, 100]"
+        :total="currentTabTotal"
+        layout="total, sizes, prev, pager, next, jumper"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+      />
     </div>
-  </div>
+    </div>
+
+    <!-- 督办详情弹框 -->
+    <SupervisionDetailDialog
+      v-model="detailDialogVisible"
+      :task-data="selectedTask"
+      :process-instance-id="selectedTask?.processInstanceId"
+      :supervision-status="selectedTask?.status"
+    />
+</div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import dayjs from 'dayjs'
-import type { TabsPaneContext } from 'element-plus'
+import { ref, computed, onMounted, watch } from 'vue'
+// 使用 Element Plus 图标替代 lucide-vue-next
 import {
-  ElTabs, ElTabPane, ElTable, ElTableColumn,
-  ElInput, ElSelect, ElOption, ElButton,
-  ElIcon, ElMessageBox
-} from 'element-plus'
-import { Search } from '@element-plus/icons-vue'
-
-// 数据类型定义
-interface PetitionItem {
-  id: number;
-  serialNo: string;
-  priority: 1 | 2;          // 1=一般，2=紧急
-  title: string;
-  content: string;
-  source: string;
-  status: 1 | 2 | 3;       // 1=待审核，2=处理中，3=已办结
-  receiveTime: string;
-  lastOperator: string;
-  category: string;        // 分类：咨询求助/申诉投诉等
-  petitioner: string;      // 信访人
-  personType: string;      // 信访人类型：学生/教职工等
+  Calendar,
+  Clock,
+  CircleCheck as CheckCircle,
+  Timer as TimerOff,
+  Search,
+  User as Users,
+  Bell,
+  TriangleAlert,
+  AlertTriangle
+} from 'lucide-vue-next'
+import { Loading } from '@element-plus/icons-vue'
+import { SupervisionIndexApi, SupervisionTaskApi } from '@/api/supervision/index'
+import { ElMessage } from 'element-plus'
+import { formatDate } from '@/utils/formatTime'
+import { useRouter } from 'vue-router'
+import { ArrowRightBold, OfficeBuilding, Edit } from '@element-plus/icons-vue'
+import { InfoApi } from '@/api/petition/info/index'
+import { DICT_TYPE, getDictLabel } from '@/utils/dict'
+const { push } = useRouter()
+// 定义任务数据类型
+interface TaskData {
+  id: number
+  petitionNumber: string, // 信访编号
+  name: string, // 信访人
+  inSchool: number |string, // 是否在校
+  petitionerUnit: string, // 信访人单位
+  petitionChannel: number |string, // 信访渠道
+  purposeCategory: number |string, // 原因分类
+  urgencyLevel: number |string, // 紧急程度
+  contentCategory: number |string, // 内容分类
+  isRepeat: number |string, // 重复信访
+  title: string, // 文件标题
+  content: string, // 具体内容
+  petitionDate: string,
+  deadline: string, //截止日期
+  status: string, // 任务状态
+  daysRemaining?: number, // 剩余天数
+  isOverdue?: boolean, // 是否超时
+  overdueDays?: number, // 超时天数
+  description?: string, // 任务描述
+  leadDepartment?: string, // 牵头部门
+  assistDepartments?: string[], // 协办部门
+  processInstanceId?: string // 流程实例ID
 }
 
-// 模拟数据
-const MOCK_DATA: PetitionItem[] = Array.from({ length: 140 }).map((_, i) => ({
-  id: i + 1,
-  serialNo: `serial_${i + 1}`,
-  priority: i % 3 === 0 ? 2 : 1,
-  title: '噶贝格',
-  content: 'dcajhvlkawvzfdsbdfffahhfrtshrl...',
-  source: '教育厅',
-  status: i % 3 === 0 ? 1 : i % 3 === 1 ? 2 : 3,
-  receiveTime: '2023-02-13 19:02:00',
-  lastOperator: '寅二',
-  category: ['咨询求助', '申诉投诉', '建议赞扬', '感恩表扬'][i % 4],
-  petitioner: ['黄三三', '王六六', '匿名'][i % 3],
-  personType: ['学生', '教职工', '社会人员', '未知'][i % 4],
-}));
+// 定义任务统计数据类型
+interface TaskStatsData {
+  total: number
+  workSupervision: number
+  specialSupervision: number
+}
 
-// 响应式数据
-const activeName = ref<string>('pending');
-const searchKey = ref<string>('');
-const priorityFilter = ref<string>('');
-const categoryFilter = ref<string>('');
-const personTypeFilter = ref<string>('');
-const tableData = ref<PetitionItem[]>([]);
-const page = ref<number>(1);
-const pageSize = ref<number>(10);
-const total = ref<number>(0);
-const loading = ref<boolean>(false);
-const jumpPage = ref<number>(1);
+// 定义状态统计数据类型
+interface StatusStatsData {
+  total: number
+  inProgress: number
+  overdue: number
+  completed: number
+}
 
-// 计算属性：最大页码
-const maxPage = computed(() =>
-  total.value === 0 ? 1 : Math.ceil(total.value / pageSize.value)
-);
+// 定义月度统计数据类型
+interface MonthlyStatsData {
+  newTasks: number
+  inProgress: number
+  completed: number
+  overdue: number
+}
 
-// 时间格式化
-const formatTime = (time: string): string =>
-  dayjs(time).format('YYYY-MM-DD HH:mm:ss');
+// 定义分页数据类型
+interface PaginationData {
+  pageNo: number
+  pageSize: number
+  total: number
+}
 
-// 数据获取（多条件筛选 + 分页）
-const fetchData = async (): Promise<void> => {
-  loading.value = true;
-  try {
-    const statusMap: Record<string, 1 | 2 | 3> = {
-      pending: 1,
-      processing: 2,
-      completed: 3
-    };
-    const targetStatus = statusMap[activeName.value];
+// Reactive data
+const activeTab = ref<string>('work')
+const searchQuery = ref<string>('')
+const selectedDepartment = ref<string>('')
+const selectedStatus = ref<string>('')
+const detailDialogVisible = ref<boolean>(false)
+const selectedTask = ref<TaskData | null>(null)
+const loading = ref<boolean>(false)
 
-    const filtered = MOCK_DATA.filter(item => {
-      if (item.status !== targetStatus) return false;
-      if (searchKey.value && !item.title.includes(searchKey.value)) return false;
-      if (priorityFilter.value && item.priority !== Number(priorityFilter.value)) return false;
-      if (categoryFilter.value && item.category !== categoryFilter.value) return false;
-      if (personTypeFilter.value && item.personType !== personTypeFilter.value) return false;
-      return true;
-    });
+// Static data
+const tabs = [
+{ key: 'work', label: '待办事项' },
+{ key: 'special', label: '已办事项' },
+{ key: 'todo', label: '我的申请' }
+]
 
-    const start = (page.value - 1) * pageSize.value;
-    tableData.value = filtered.slice(start, start + pageSize.value);
-    total.value = filtered.length;
-  } catch (error) {
-    console.error('数据获取失败：', error);
-  } finally {
-    loading.value = false;
-  }
-};
+const statuses: string[] = ['进行中', '已超时', '已结束']
 
-// 事件处理
-const handleClick = (tab: TabsPaneContext, event: Event): void => {
-  page.value = 1;
-  jumpPage.value = 1;
-  fetchData();
-};
+// 计算部门选项 - 从任务数据中提取部门名称
+const departments = computed(() => {
+  const deptSet = new Set<string>()
+  tasks.value.forEach(task => {
+    if (task.leadDepartment) {
+      deptSet.add(task.leadDepartment)
+    }
+    task.assistDepartments.forEach(dept => {
+      if (dept) deptSet.add(dept)
+    })
+  })
+  return Array.from(deptSet)
+})
 
-const handleSearch = (): void => {
-  page.value = 1;
-  jumpPage.value = 1;
-  fetchData();
-};
+const monthlyStats = ref<MonthlyStatsData>({
+  newTasks: 0,
+  inProgress: 0,
+  completed: 0,
+  overdue: 0
+})
 
-const handlePageChange = (val: number): void => {
-  page.value = val;
-  jumpPage.value = val;
-  fetchData();
-};
+// 任务列表数据
+const tasks = ref<TaskData[]>([])
 
-const handleSizeChange = (val: number): void => {
-  pageSize.value = val;
-  page.value = 1;
-  jumpPage.value = 1;
-  fetchData();
-};
+// 分页数据
+const pagination = ref<PaginationData>({
+  pageNo: 1,
+  pageSize: 10, // 默认显示10条数据
+  total: 0
+})
 
-const handleDetail = (row: PetitionItem): void =>
-  console.log('查看详情：', row);
+// 快捷入口列表
+const entryList = ref([
+  {
+    name: '新建信访',
+    icon: new URL('@/assets/imgs/petition/1.png', import.meta.url).href,
+    bgColor: '#4a7eff',
+    path: '/petition/create'
+  },
+  {
+    name: '导出报告',
+    icon: new URL('@/assets/imgs/petition/2.png', import.meta.url).href,
+    bgColor: '#4cd964',
+  },
+  {
+    name: '督办提醒',
+    icon: new URL('@/assets/imgs/petition/3.png', import.meta.url).href,
+    bgColor: '#9c88ff',
+  },
+  {
+    name: '统计查询',
+    icon: new URL('@/assets/imgs/petition/4.png', import.meta.url).href,
+    bgColor: '#5352ed',
+    path: '/petition/statistics'
+  },
+])
 
-const handleConfirm = (): void => {
-  if (jumpPage.value && jumpPage.value >= 1 && jumpPage.value <= maxPage.value) {
-    page.value = jumpPage.value;
-    fetchData();
+// 处理快捷入口点击
+const handleEntryClick = (item) => {
+  if (item.path) {
+    push(item.path)
   } else {
-    ElMessageBox.warning(`页码无效，请输入1~${maxPage.value}之间的数字`);
-  }
-};
-
-const handleFirstPage = (): void => {
-  page.value = 1;
-  jumpPage.value = 1;
-  fetchData();
-};
-
-onMounted(() => fetchData());
-</script>
-
-<style scoped lang="scss">
-// 主题色配置
-$primary-color: #2f86eb;
-$table-row-hover: #f8f9fc;
-$striped-color: #f5f7fa;
-$border-color: #e6e6e6;
-
-.petition-page {
-  background: #fff;
-  width: 100%;
-  max-width: 1920px;
-  margin: 0 auto;
-  overflow-x: hidden; /* 禁止横向滚动 */
-}
-
-// 顶部导航
-.page-header {
-  padding: 12px 20px;
-  border-bottom: 1px solid $border-color;
-  .header-inner .location {
-    font-size: 14px;
-    color: #333;
+    ElMessage.info(`功能 "${item.name}" 正在开发中`)
   }
 }
 
-// 标签栏
-.page-toolbar {
-  padding: 10px 20px;
-  background: $striped-color;
-  border: 1px solid $border-color;
-  border-top: none;
+// 处理更多点击
+const handleMoreClick = () => {
+  ElMessage.info('更多功能正在开发中')
+}
 
-  .custom-tabs {
-    :deep(.el-tabs__header) {
-      margin: 0;
-      .el-tabs__item {
-        color: #333;
-        font-size: 28px;
-        padding: 8px 20px;
-        &.is-active {
-          color: $primary-color;
-          border-bottom: 2px solid $primary-color;
-          &::before { content: none; }
-        }
+// 处理提醒点击
+const handleBellClick = () => {
+  ElMessage.info('提醒功能正在开发中')
+}
+
+// 处理流转点击
+const handleTransfer = (task: TaskData) => {
+  ElMessage.info('流转功能正在开发中')
+}
+
+// 解析协办部门（从API返回的coDeptNameMap中获取）
+const parseCoDepts = (coDeptNameMap: Record<string, string> | null | undefined): string[] => {
+  if (!coDeptNameMap) return []
+  return Object.values(coDeptNameMap)
+}
+
+// 根据任务状态获取截止时间颜色样式类
+const getDeadlineColorClass = (task: TaskData) => {
+  const status = task.status
+  if (status === '已超时') {
+    return 'text-red-600' // 红色
+  } else if (status === '已结束') {
+    return 'text-gray-900' // 黑色
+  } else if (status === '进行中') {
+    return 'text-orange-500' // 橙色
+  }
+  return 'text-gray-700' // 默认颜色
+}
+
+// 根据督办状态和截止时间计算显示状态
+const calculateDisplayStatus = (supervisionStatus: string, deadline: number | null): {
+  daysRemaining: number | null
+  isOverdue: boolean
+  overdueDays: number | null
+  status: string
+} => {
+  // 根据 supervisionStatus 判断基本状态
+  if (supervisionStatus === '办结文件' || supervisionStatus === '否决文件') {
+    return {
+      daysRemaining: null,
+      isOverdue: false,
+      overdueDays: null,
+      status: '已结束'
+    }
+  }
+
+  // 如果是"流程中"，需要进一步判断是否超时
+  if (supervisionStatus === '流程中') {
+    if (!deadline) {
+      return {
+        daysRemaining: null,
+        isOverdue: false,
+        overdueDays: null,
+        status: '进行中'
+      }
+    }
+
+    // 获取今天的日期（只保留年月日，忽略时分秒）
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    // 获取截止日期（只保留年月日，忽略时分秒）
+    const deadlineDate = new Date(deadline)
+    deadlineDate.setHours(0, 0, 0, 0)
+
+    // 计算天数差：正数表示还有剩余天数，负数表示已超时
+    const daysDiff = Math.floor((deadlineDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000))
+
+    if (daysDiff < 0) {
+      // 已超时
+      return {
+        daysRemaining: null,
+        isOverdue: true,
+        overdueDays: Math.abs(daysDiff),
+        status: '已超时'
+      }
+    } else if (daysDiff === 0) {
+      // 今天截止
+      return {
+        daysRemaining: 0,
+        isOverdue: false,
+        overdueDays: null,
+        status: '进行中'
+      }
+    } else {
+      // 还有剩余时间
+      return {
+        daysRemaining: daysDiff,
+        isOverdue: false,
+        overdueDays: null,
+        status: '进行中'
       }
     }
   }
 
-  .custom-input {
-    width: 200px; /* 紧凑化宽度 */
-    margin-right: 10px;
-    :deep(.el-input__wrapper) {
-      border-radius: 4px;
-      border: 1px solid #ccc;
-      &:hover { border-color: $primary-color; }
+  // 其他状态默认显示进行中
+  return {
+    daysRemaining: null,
+    isOverdue: false,
+    overdueDays: null,
+    status: '进行中'
+  }
+}
+
+// 获取优先级文本
+const getPriorityText = (priority: number | null | undefined): string => {
+  if (priority === null || priority === undefined) return '一般优先'
+  switch (priority) {
+    case 1: return '一般优先'
+    case 2: return '中优先级'
+    case 3: return '高优先级'
+    default: return '一般优先'
+  }
+}
+
+// 计算是否超时和超时天数
+const calculateOverdueInfo = (deadline) => {
+  if (!deadline) {
+    return { isOverdue: false, overdueDays: 0, daysRemaining: 0 }
+  }
+  
+  // 获取当前日期（只保留年月日，忽略时分秒）
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  
+  // 处理截止时间，支持时间戳和日期字符串
+  let deadlineDate: Date
+  
+  if (typeof deadline === 'number') {
+    // 如果是时间戳数字
+    deadlineDate = new Date(deadline)
+  } else if (typeof deadline === 'string') {
+    // 如果是时间戳字符串
+    if (/^\d+$/.test(deadline)) {
+      deadlineDate = new Date(parseInt(deadline))
+    } else {
+      // 如果是日期字符串
+      deadlineDate = new Date(deadline)
     }
+  } else {
+    // 其他类型，尝试直接创建日期对象
+    deadlineDate = new Date(deadline)
   }
-  :deep(.search-icon) {
-    cursor: pointer;
-    color: #666;
-    &:hover { color: $primary-color; }
+  
+  // 检查日期是否有效
+  if (isNaN(deadlineDate.getTime())) {
+    return { isOverdue: false, overdueDays: 0, daysRemaining: 0 }
   }
-  .custom-select {
-    width: 120px; /* 紧凑化宽度 */
-    margin: 0 10px;
-    :deep(.el-select__wrapper) {
-      border-radius: 4px;
-      border: 1px solid #ccc;
-      &:hover { border-color: $primary-color; }
+  
+  // 设置截止日期为当天00:00:00
+  deadlineDate.setHours(0, 0, 0, 0)
+  
+  // 计算天数差（精确到天）
+  const timeDiff = deadlineDate.getTime() - now.getTime()
+  const daysDiff = Math.floor(timeDiff / (1000 * 3600 * 24))
+  
+  if (daysDiff < 0) {
+    // 已超时
+    return { 
+      isOverdue: true, 
+      overdueDays: Math.abs(daysDiff),
+      daysRemaining: 0
+    }
+  } else {
+    // 未超时
+    return { 
+      isOverdue: false, 
+      overdueDays: 0,
+      daysRemaining: daysDiff
     }
   }
 }
 
-// 表格核心样式（自适应布局 + 禁止列调整）
-:deep(.el-table) {
-  border: 1px solid $border-color;
-  border-top: none;
-  table-layout: fixed; /* 固定布局，配合min-width实现自适应收缩 */
-  width: 100%;        /* 跟随父容器宽度 */
-  min-width: 1000px;  /* 保证基础可读性，避免过度收缩 */
-
-  // 禁止列宽调整
-  .el-table__header-wrapper .el-table__cell {
-    resize: none !important;
-  }
-
-  // 移除竖线
-  .el-table__cell {
-    border-right: none !important;
-  }
-
-  .el-table__header-wrapper { background: $striped-color; }
-  .el-table__row {
-    height: 68px;
-    &:hover { background: $table-row-hover; }
-  }
-  &.el-table--striped .el-table__body tr.el-table__row--striped td {
-    background: $striped-color;
-  }
-
-  // 优先级标签（修改一般状态为黄色背景）
-  .priority-tag {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 69px;
-    height: 31px;
-    border-radius: 50px;
-    font-size: 14px;
-    font-family: PingFangSC-regular;
-
-    &.priority-urgent {
-      background-color: rgba(255, 116, 116, 1);
-      color: rgba(255, 233, 233, 1);
+// 获取数据
+const fetchData = async () => {
+  loading.value = true
+  try {
+    // 根据当前标签页设置status参数
+    let statusParam = undefined
+    if (activeTab.value === 'work') {
+      // 待办事项：status=0
+      statusParam = 0
+    } else if (activeTab.value === 'special') {
+      // 已办事项：status=1
+      statusParam = 1
     }
-    &.priority-normal {
-      background-color: #FFD700; /* 黄色背景 */
-      color: rgba(255, 255, 255, 1); /* 白色文字 */
+    
+    // 先尝试调用API获取数据
+    const response = await InfoApi.getInfoPage({
+      pageSize: pagination.value.pageSize, 
+      pageNo: pagination.value.pageNo,
+      status: statusParam,
+      channel: 1
+    })
+    console.log('API返回的数据:', response.list)
+    
+    if (response) {
+      // 将API返回的数据转换为任务数据格式
+      tasks.value = response.list.map(item => {
+        const overdueInfo = calculateOverdueInfo(item.deadline)
+        
+        // 格式化截止时间，如果是时间戳则转换为日期字符串
+        const formatDeadline = (deadline: any) => {
+          if (!deadline) return '无截止日期'
+          
+          // 如果是时间戳（数字类型）
+          if (typeof deadline === 'number') {
+            const date = new Date(deadline)
+            return date.toLocaleDateString('zh-CN')
+          }
+          
+          // 如果是日期字符串，直接返回
+          if (typeof deadline === 'string') {
+            // 如果是时间戳字符串，转换为日期
+            if (/^\d+$/.test(deadline)) {
+              const date = new Date(parseInt(deadline))
+              return date.toLocaleDateString('zh-CN')
+            }
+            // 如果是日期字符串，直接返回
+            return deadline
+          }
+          
+          return '无截止日期'
+        }
+        
+        // 格式化信访时间
+        const formatPetitionDate = (date: any) => {
+          if (!date) return '未知日期'
+          
+          if (typeof date === 'number') {
+            const d = new Date(date)
+            return d.toLocaleDateString('zh-CN')
+          }
+          
+          if (typeof date === 'string') {
+            if (/^\d+$/.test(date)) {
+              const d = new Date(parseInt(date))
+              return d.toLocaleDateString('zh-CN')
+            }
+            return date
+          }
+          
+          return '未知日期'
+        }
+        
+        return {
+          id: item.id || 0,
+          petitionNumber: item.petitionNumber || '无编号',
+          name: item.name || '匿名',
+          inSchool: item.inSchool || 0,
+          petitionerUnit: item.petitionerUnit || '未知单位',
+          petitionChannel: item.petitionChannel || 0,
+          purposeCategory: item.purposeCategory || 0,
+          urgencyLevel: item.urgencyLevel || 1,
+          contentCategory: item.contentCategory || 0,
+          isRepeat: item.isRepeat || 0,
+          title: item.title || '无标题',
+          content: item.content || '无内容',
+          petitionDate: formatPetitionDate(item.petitionDate),
+          deadline: formatDeadline(item.deadline),
+          status: overdueInfo.isOverdue ? '已超时' : '进行中',
+          daysRemaining: overdueInfo.daysRemaining,
+          isOverdue: overdueInfo.isOverdue,
+          overdueDays: overdueInfo.overdueDays
+        }
+      })
+      
+      pagination.value.total = response.total || 0
+    } else {
+      // 如果API返回空数据，使用模拟数据
+      useMockData()
     }
-  }
-
-  // 分类标签终极修复：
-  .category-tag {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 91px;
-    height: 31px;
-    border-radius: 50px;
-    font-size: 14px;
-    font-family: PingFangSC-regular;
-    border: 1px solid rgba(108, 108, 108, 1);
-    background-color: rgba(255, 255, 255, 1);
-    color: rgba(16, 16, 16, 1);
-  }
-
-  // 当前状态标签（文字居中）
-  .status-tag {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 81px;
-    height: 26px;
-    border-radius: 11px;
-    font-size: 14px;
-    font-family: PingFangSC-regular;
-
-    &.status-pending {
-      background-color: rgba(252, 213, 162, 1);
-      color: rgba(155, 125, 49, 1);
-    }
-    &.status-processing {
-      background-color: rgba(165, 214, 167, 1);
-      color: rgba(52, 101, 54, 1);
-    }
-    &.status-completed {
-      background-color: rgba(129, 199, 212, 1);
-      color: rgba(29, 97, 111, 1);
-    }
+  } catch (error) {
+    console.error('获取任务数据失败，使用模拟数据:', error)
+    // API调用失败时使用模拟数据
+    useMockData()
+  } finally {
+    loading.value = false
   }
 }
 
-// 文本截断样式
-.ellipsis {
+// 使用模拟数据
+const useMockData = () => {
+  const mockTasks = [
+    {
+      id: 1,
+      petitionNumber: 'XF20240001',
+      name: '张三',
+      inSchool: 1,
+      petitionerUnit: '计算机学院',
+      petitionChannel: 1,
+      purposeCategory: 1,
+      urgencyLevel: 2,
+      contentCategory: 1,
+      isRepeat: 0,
+      title: '关于教学设备更新的建议',
+      content: '希望学校能够更新计算机实验室的教学设备，提高教学质量。',
+      petitionDate: '2024-01-15',
+      deadline: '2024-02-15'
+    },
+    {
+      id: 2,
+      petitionNumber: 'XF20240002',
+      name: '李四',
+      inSchool: 0,
+      petitionerUnit: '校友会',
+      petitionChannel: 2,
+      purposeCategory: 2,
+      urgencyLevel: 3,
+      contentCategory: 2,
+      isRepeat: 1,
+      title: '校园安全管理问题',
+      content: '反映校园夜间照明不足，存在安全隐患。',
+      petitionDate: '2024-01-10',
+      deadline: '2024-01-25'
+    },
+    {
+      id: 3,
+      petitionNumber: 'XF20240003',
+      name: '王五',
+      inSchool: 1,
+      petitionerUnit: '文学院',
+      petitionChannel: 1,
+      purposeCategory: 3,
+      urgencyLevel: 1,
+      contentCategory: 3,
+      isRepeat: 0,
+      title: '图书馆开放时间建议',
+      content: '建议延长图书馆周末开放时间，方便学生学习。',
+      petitionDate: '2024-01-20',
+      deadline: '2024-02-20'
+    }
+  ]
+  
+  // 使用相同的计算逻辑处理模拟数据
+  tasks.value = mockTasks.map(item => {
+    const overdueInfo = calculateOverdueInfo(item.deadline)
+    
+    return {
+      ...item,
+      status: overdueInfo.isOverdue ? '已超时' : '进行中',
+      daysRemaining: overdueInfo.daysRemaining,
+      isOverdue: overdueInfo.isOverdue,
+      overdueDays: overdueInfo.overdueDays
+    }
+  })
+  
+  pagination.value.total = tasks.value.length
+}
+
+
+
+// 分页事件处理
+const handleSizeChange = (newSize: number) => {
+  pagination.value.pageSize = newSize
+  pagination.value.pageNo = 1
+  fetchData()
+}
+
+const handleCurrentChange = (newPage: number) => {
+  pagination.value.pageNo = newPage
+  fetchData()
+}
+
+// 监听标签页切换，重新获取数据
+watch(activeTab, () => {
+  pagination.value.pageNo = 1 // 切换标签页时重置到第一页
+  fetchData()
+})
+
+// 页面加载时获取数据
+onMounted(() => {
+  fetchData()
+})
+
+// 计算当前标签页的总数量（用于分页显示）
+const currentTabTotal = computed(() => {
+  return pagination.value.total // 直接使用后端返回的总数
+})
+
+// 打开详情弹框
+const openDetailDialog = (task: TaskData) => {
+  push({
+    path: '/petition/detail',
+    query: {
+      id: task.id,
+      taskId: task.processInstanceId || ''
+    }
+  })
+}
+</script>
+
+<style scoped>
+/* 与督办页面一致的样式变量 */
+:root {
+  --gap-x: 2rem;
+  --sidebar-w: 12rem;
+  --grid-col-gap: 1.5rem;
+  --grid-row-gap: 0.5rem;
+  --left-max: clamp(28rem, 48vw, 42rem);
+  --header-gap: clamp(0.5rem, 1vw, 0.75rem);
+}
+
+/* Custom styles for better visual appeal */
+.transition-colors {
+transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out;
+}
+
+.transition-shadow {
+transition: box-shadow 0.2s ease-in-out;
+}
+
+/* Ensure proper spacing and alignment */
+.grid {
+gap: 1rem;
+}
+
+.tabs-custom {
+  padding: 0 16px;
+}
+.tabs-custom :deep(.el-tabs__item) {
+  font-weight: bold;
+  font-size: 24px;
+  padding: 0 8px;
+}
+.tabs-custom :deep(.el-tabs__header) {
+  margin: 0;
+}
+.tabs-custom :deep(.el-tabs__nav-wrap::after) {
+  height: 1px;
+  background-color: var(--el-border-color-light);
+}
+
+/* 与督办页面一致的卡片样式 */
+.card-item {
+  background-color: #FAFBFC; /* 调整为更浅的卡片底色 */
+}
+
+/* 文本截断样式 */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 单行省略统一样式 */
+.one-line-ellipsis {
+  display: inline-block;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 0 5px;
-  box-sizing: border-box;
+  min-width: 0; /* 在 flex 布局下允许收缩，确保省略号生效 */
 }
 
-// 分页样式
-.pagination-wrap {
-  padding: 10px 20px;
-  background: $striped-color;
-  border: 1px solid $border-color;
-  border-top: none;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+/* 校领导等标签固定宽度对齐样式 */
+.leader-field-label {
+  display: inline-block;
+  width: 4em;
+  text-align: justify;
+  text-align-last: justify;
+}
 
-  .pagination-left {
-    display: flex;
-    align-items: center;
-    .record-info {
-      color: #999;
-      font-size: 14px;
-      margin-right: 20px;
-    }
-    :deep(.el-pagination) {
-      .el-pagination__button {
-        border: 1px solid #ccc;
-        background: #fff;
-        &:hover { border-color: $primary-color; color: $primary-color; }
-        &.is-active {
-          background: $primary-color;
-          border-color: $primary-color;
-          color: #fff;
-        }
-      }
-    }
+/* 响应式：极窄屏时卡片上下堆叠兜底 */
+@media (max-width: 900px) {
+  .task-two-col {
+    flex-direction: column;
+    gap: 1rem;
   }
 
-  .pagination-actions {
-    display: flex;
-    align-items: center;
-    .el-input {
-      :deep(.el-input__wrapper) {
-        width: 80px;
-        padding-left: 6px;
-        padding-right: 6px;
-        border-radius: 4px;
-        border: 1px solid #ccc;
-        &:hover { border-color: $primary-color; }
-      }
-    }
-    .el-button {
-      padding: 6px 12px;
-      &:hover { opacity: 0.9; }
-    }
+  .right-col {
+    width: 100% !important;
   }
 }
 
-// 工具类
-.flex { display: flex; }
-.justify-between { justify-content: space-between; }
-.items-center { align-items: center; }
-.mr-2 { margin-right: 8px; }
+/* Custom scrollbar for better UX */
+::-webkit-scrollbar {
+width: 6px;
+}
+
+::-webkit-scrollbar-track {
+background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+background: #c1c1c1;
+border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+background: #a8a8a8;
+}
 </style>
