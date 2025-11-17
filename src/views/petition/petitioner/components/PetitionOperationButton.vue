@@ -868,7 +868,7 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
 
       popOverVisible.value.approve = false
       nextAssigneesActivityNode.value = []
-      message.success('审批通过成功')
+      message.success('审批通过')
     } else {
       // 移除了审批拒绝时清理待处理进度更新数据的逻辑，因为现在进度更新直接提交
 
@@ -880,13 +880,6 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
       
       // 添加当前审批人ID，用于审计记录
       rejectVariables.auditUserId = currentUserId
-      rejectVariables.pass = 0;
-      
-      // supervisor_review 节点：添加驳回目标变量（若用户选择了）
-      if (isSupervisorReviewNode.value && rejectReasonForm.rejectTarget) {
-        rejectVariables.rejectTarget = rejectReasonForm.rejectTarget
-        console.log('[handleAudit] supervisor_review 驳回目标:', rejectReasonForm.rejectTarget)
-      }
       
       const data = {
         id: runningTask.value?.id,
@@ -896,12 +889,12 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
       console.log('[submit] final payload =', data)
       await TaskApi.rejectTask(data)
       popOverVisible.value.reject = false
-      message.success('审批不通过成功')
+      message.error('审批不通过')
     }
     // 重置表单
     formRef.resetFields()
     // 加载最新数据
-    reload()
+    window.location.reload()
   } finally {
     formLoading.value = false
   }
@@ -1055,10 +1048,6 @@ const handlerDeleteSign = async () => {
   } finally {
     formLoading.value = false
   }
-}
-/** 重新加载数据 */
-const reload = () => {
-  emit('success')
 }
 
 /** 判断是否显示终止督办按钮 */
@@ -1870,91 +1859,10 @@ const isValidProcessedValue = (value: any): boolean => {
   return true
 }
 
-/** 验证牵头单位和协办单位负责人的必填项 */
-const validateLeadDeptRequirements = async (): Promise<boolean> => {
-  try {
-    // 检查 supervisionDetailRef 是否存在
-    if (!props.supervisionDetailRef) {
-      return true
-    }
-
-    // 检查当前用户身份
-    const isLeadDeptLeader = await props.supervisionDetailRef?.checkIsLeadDeptLeader?.()
-    const isCoDeptLeader = await props.supervisionDetailRef?.checkIsCoDeptLeader?.()
-
-    // 如果既不是牵头单位负责人也不是协办单位负责人，无需验证
-    if (!isLeadDeptLeader && !isCoDeptLeader) {
-      return true
-    }
-
-    // 获取当前督办单数据
-    const orderDetail = props.supervisionDetailRef?.getOrderDetailData?.()
-    const editForm = props.supervisionDetailRef?.getEditFormData?.()
-
-    if (!orderDetail) {
-      console.warn('无法获取督办单详情数据')
-      return true
-    }
-
-    // 检查工作推进情况是否已填写（牵头单位负责人和协办单位负责人都必须填写）
-    const leadDeptDetail = editForm?.leadDeptDetail || orderDetail.leadDeptDetail
-
-    console.log('牵头单位负责人验证:', {
-      isLeadDeptLeader,
-      isCoDeptLeader,
-      leadDeptDetail,
-      editFormLeadDeptDetail: editForm?.leadDeptDetail,
-      orderDetailLeadDeptDetail: orderDetail.leadDeptDetail
-    })
-
-    if (!leadDeptDetail || leadDeptDetail.trim() === '') {
-      if (isLeadDeptLeader) {
-        message.error('作为牵头单位负责人，您必须通过"添加工作推进"功能填写工作推进情况后才能通过审批')
-      } else if (isCoDeptLeader) {
-        message.error('作为协办单位负责人，您必须通过"添加工作推进"功能填写工作推进情况后才能通过审批')
-      }
-      return false
-    }
-
-    // 只有牵头单位负责人才需要检查协办单位选择（可选但需要提醒）
-    if (isLeadDeptLeader) {
-      const coDept = editForm?.coDept || orderDetail.coDept
-      if (!coDept || coDept.trim() === '') {
-        try {
-          await ElMessageBox.confirm(
-            '您还未选择协办单位。协办单位可以协助处理督办事项，建议根据实际情况选择相关部门。\n\n是否确认不选择协办单位并继续审批？',
-            '协办单位提醒',
-            {
-              confirmButtonText: '确认继续',
-              cancelButtonText: '取消审批',
-              type: 'warning',
-              dangerouslyUseHTMLString: false
-            }
-          )
-          return true // 用户确认继续
-        } catch {
-          return false // 用户取消审批
-        }
-      }
-    }
-
-    return true // 所有验证通过
-  } catch (error) {
-    console.error('验证牵头单位和协办单位负责人必填项时出错:', error)
-    return true // 出错时允许继续，避免阻塞正常流程
-  }
-}
-
 // ========== 中止/恢复功能 ==========
 const handleSignFinish = (url: string) => {
   approveReasonForm.signPicUrl = url
   approveSignFormRef.value.validate('change')
-}
-
-// ========== 中止/恢复功能 ==========
-/** 处理中止操作 */
-const handleSuspend = () => {
-  suspendDialogVisible.value = true
 }
 
 /** 重置中止弹窗 */
@@ -1994,11 +1902,6 @@ const confirmSuspend = async () => {
   } finally {
     suspendLoading.value = false
   }
-}
-
-/** 处理恢复操作 */
-const handleResume = () => {
-  resumeDialogVisible.value = true
 }
 
 /** 重置恢复弹窗 */
@@ -2060,29 +1963,6 @@ const getSupervisionNodeType = (): string => {
   // 其他节点（牵头单位、协办部门等）
   return 'other'
 }
-
-
-
-/** 标准的督办单数据更新流程 */
-const handleStandardSupervisionUpdate = async () => {
-  // 验证督办详情组件状态
-  if (!props.supervisionDetailRef) {
-    throw new Error('督办详情组件未加载')
-  }
-
-  // 验证牵头单位和协办单位负责人的必填项
-  const leadDeptValidation = await validateLeadDeptRequirements()
-  if (!leadDeptValidation) return
-
-  // 更新督办单数据（由详情页内部判断是否有实际变更）
-  const taskKey = runningTask.value?.taskDefinitionKey || ''
-  const updateResult = await props.supervisionDetailRef.updateSupervisionOrder(approveReasonForm.nextAssignees, taskKey)
-  if (!updateResult.success) {
-    throw new Error('更新督办单数据失败')
-  }
-}
-
-
 
 // 监听流程实例ID变化，重置本地覆盖状态，避免跨实例串值
 watch(

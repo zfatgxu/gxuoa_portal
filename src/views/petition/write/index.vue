@@ -141,6 +141,45 @@
 
         <el-row style="justify-content: space-between;">
           <el-col :span="10">
+            <el-form-item label="牵头单位:">
+              <el-select 
+                v-model="formData.leadDeptIds" 
+                placeholder="请选择牵头单位" 
+                multiple 
+                clearable 
+                filterable
+              >
+                <el-option
+                  v-for="dept in deptOptions"
+                  :key="dept.id"
+                  :label="dept.name"
+                  :value="dept.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="10">
+            <el-form-item label="协办单位:">
+              <el-select 
+                v-model="formData.assistDeptIds" 
+                placeholder="请选择协办单位" 
+                multiple 
+                clearable 
+                filterable
+              >
+                <el-option
+                  v-for="dept in deptOptions"
+                  :key="dept.id"
+                  :label="dept.name"
+                  :value="dept.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row style="justify-content: space-between;">
+          <el-col :span="10">
             <el-form-item label="信访日期:">
               <el-date-picker
                 v-model="formData.petitionDate"
@@ -386,6 +425,8 @@ const formData = reactive({
   urgencyLevel: '', // 紧急程度
   contentCategory: '', // 内容分类
   isRepeat: '', // 重复信访
+  leadDeptIds: [], // 牵头单位ID列表
+  assistDeptIds: [], // 协办单位ID列表
   title: '', // 文件标题
   content: '', // 具体内容
   petitionDate:'',
@@ -408,10 +449,14 @@ const documentFormRef = ref()
 const deptList = ref<DeptApi.DeptVO[]>([])
 const userList = ref<any[]>([])
 
+// 部门选项列表
+const deptOptions = ref<DeptApi.DeptVO[]>([])
+
 const loadDeptList = async () => {
   try {
     const result = await DeptApi.getSimpleDeptList()
     deptList.value = result || []
+    deptOptions.value = result || []
   } catch (error) {
     console.error('加载部门列表失败:', error)
     ElMessage.error('加载部门列表失败')
@@ -430,10 +475,6 @@ const loadUserList = async () => {
 
 // 使用自定义过滤逻辑确保搜索准确性
 const petitionerDeptSearchKeyword = ref('')
-const collaborateDeptSearchKeyword = ref('')
-const supervisorSearchKeyword = ref('')
-const countersignerSearchKeyword = ref('')
-const reviewerSearchKeyword = ref('')
 
 // 过滤后的信访人部门列表
 const filteredPetitionerDepts = computed(() => {
@@ -444,129 +485,6 @@ const filteredPetitionerDepts = computed(() => {
     dept.name.toLowerCase().includes(petitionerDeptSearchKeyword.value.toLowerCase())
   )
 })
-
-// 过滤后的协办部门列表
-const filteredCollaborateDepts = computed(() => {
-  // 首先过滤掉已选择的牵头单位
-  const filteredList = deptList.value.filter(dept => 
-    dept.name !== formData.acceptanceUnit
-  )
-  
-  if (!collaborateDeptSearchKeyword.value) {
-    return filteredList
-  }
-  
-  return filteredList.filter(dept =>
-    dept.name.toLowerCase().includes(collaborateDeptSearchKeyword.value.toLowerCase())
-  )
-})
-
-// 过滤后的督查用户列表
-const filteredSupervisorateUsers = computed(() => {
-  if (!supervisorSearchKeyword.value) {
-    return userList.value
-  }
-  return userList.value.filter(user => {
-    const name = user.nickname || user.username || ''
-    return name.toLowerCase().includes(supervisorSearchKeyword.value.toLowerCase())
-  })
-})
-
-// 过滤后的会签用户列表
-const filteredCountersignerUsers = computed(() => {
-  if (!countersignerSearchKeyword.value) {
-    return userList.value
-  }
-  return userList.value.filter(user => {
-    const name = user.nickname || user.username || ''
-    return name.toLowerCase().includes(countersignerSearchKeyword.value.toLowerCase())
-  })
-})
-
-// 过滤后的阅知用户列表
-const filteredReviewerUsers = computed(() => {
-  if (!reviewerSearchKeyword.value) {
-    return userList.value
-  }
-  return userList.value.filter(user => {
-    const name = user.nickname || user.username || ''
-    return name.toLowerCase().includes(reviewerSearchKeyword.value.toLowerCase())
-  })
-})
-
-// 信访人部门搜索方法
-const searchPetitionerDepts = (query: string) => {
-  petitionerDeptSearchKeyword.value = query
-}
-
-// 协办部门搜索方法
-const searchCollaborateDepts = (query: string) => {
-  collaborateDeptSearchKeyword.value = query
-}
-
-// 督查用户搜索方法
-const searchSupervisorateUsers = (query: string) => {
-  supervisorSearchKeyword.value = query
-}
-
-// 会签用户搜索方法
-const searchCountersignerUsers = (query: string) => {
-  countersignerSearchKeyword.value = query
-}
-
-// 阅知用户搜索方法
-const searchReviewerUsers = (query: string) => {
-  reviewerSearchKeyword.value = query
-}
-
-// 处理督办人变化
-const handleSupervisorChange = async (userId: number) => {
-  const user = userList.value.find(u => u.id === userId)
-  
-  if (user) {
-    formData.supervisor = user.id
-
-    // 调用API获取督办人手机号
-    try {
-      const phoneData = await OrderApi.getSupervisorPhone(user.id)
-
-      // 后端直接返回手机号字符串
-      if (phoneData && typeof phoneData === 'string' && phoneData.trim() !== '') {
-        formData.officePhone = phoneData.trim()
-      } else {
-        formData.officePhone = ''
-        ElMessage.warning('督办人未设置手机号，请手动填写办公电话')
-      }
-    } catch (error) {
-      formData.officePhone = ''
-      ElMessage.warning('无法获取督办人手机号，请手动填写办公电话')
-    }
-  } 
-
-  if (user.deptIds) {
-    const leaderNames: string[] = []
-    for (const deptId of user.deptIds) {
-      const dept = await DeptApi.getDept(deptId)
-      // 处理分管领导信息
-      if (dept.leaderUserId) {
-        const leader = userList.value.find(u => u.id === dept.leaderUserId)
-        if (leader) {
-          // 避免重复添加相同的领导
-          if (!leaderNames.includes(leader.nickname)) {
-            leaderNames.push(leader.nickname)
-          }
-        } else {
-          // 如果在当前用户列表中没找到，清空分管领导字段
-          ElMessage.warning('用户列表中没找到该用户,请手动输入')
-        } 
-      } else {
-      // 如果部门没有设置负责人，清空分管领导字段并提示用户
-      ElMessage.warning('所选部门未设置负责人,请手动输入')
-    }
-   }
-   formData.responsibleLeader = leaderNames.join(',')
-  }
-}
 
 // 一键填写表单
 const fillFormWithSampleData = () => {
@@ -583,6 +501,8 @@ const fillFormWithSampleData = () => {
     formData.content = '尊敬的领导：\n\n我是计算机学院的学生张三，近期发现校园网络存在不稳定问题，特别是在晚上高峰期，网速明显下降，影响学习和生活。希望学校能够关注并改善网络质量。\n\n谢谢！'
     formData.petitionDate = dayjs().format('YYYY-MM-DD')
     formData.deadline = dayjs().add(7, 'day').format('YYYY-MM-DD HH:mm:ss')
+    formData.leadDeptIds = [128]
+    formData.assistDeptIds = [219, 170]
     // 生成新的信访编号
     formData.petitionNumber = generatePetitionNumber()
     ElMessage.success('表单已一键填写完成！')

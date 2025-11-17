@@ -142,6 +142,45 @@
 
         <el-row style="justify-content: space-between;">
           <el-col :span="10">
+            <el-form-item label="牵头单位:">
+              <el-select 
+                v-model="formData.leadDeptIds" 
+                placeholder="请选择牵头单位" 
+                multiple 
+                clearable 
+                filterable
+              >
+                <el-option
+                  v-for="dept in deptOptions"
+                  :key="dept.id"
+                  :label="dept.name"
+                  :value="dept.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="10">
+            <el-form-item label="协办单位:">
+              <el-select 
+                v-model="formData.assistDeptIds" 
+                placeholder="请选择协办单位" 
+                multiple 
+                clearable 
+                filterable
+              >
+                <el-option
+                  v-for="dept in deptOptions"
+                  :key="dept.id"
+                  :label="dept.name"
+                  :value="dept.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row style="justify-content: space-between;">
+          <el-col :span="10">
             <el-form-item label="信访日期:">
               <el-date-picker
                 v-model="formData.petitionDate"
@@ -392,6 +431,8 @@ const formData = reactive({
   urgencyLevel: '', // 紧急程度
   contentCategory: '', // 内容分类
   isRepeat: '', // 重复信访
+  leadDeptIds: [], // 牵头单位ID列表
+  assistDeptIds: [], // 协办单位ID列表
   title: '', // 文件标题
   content: '', // 具体内容
   petitionDate: '', // 信访日期
@@ -419,10 +460,14 @@ const documentFormRef = ref()
 const deptList = ref<DeptApi.DeptVO[]>([])
 const userList = ref<any[]>([])
 
+// 部门选项列表
+const deptOptions = ref<DeptApi.DeptVO[]>([])
+
 const loadDeptList = async () => {
   try {
     const result = await DeptApi.getSimpleDeptList()
     deptList.value = result || []
+    deptOptions.value = result || []
   } catch (error) {
     console.error('加载部门列表失败:', error)
     ElMessage.error('加载部门列表失败')
@@ -472,6 +517,8 @@ const getDetail = () => {
     formData.deadline = dayjs(res.deadline).format('YYYY-MM-DD HH:mm:ss')
     // 生成新的信访编号
     formData.petitionNumber = res.petitionNumber
+    formData.assistDeptIds = res.assistDeptIds
+    formData.leadDeptIds = res.leadDeptIds
   })
 }
 
