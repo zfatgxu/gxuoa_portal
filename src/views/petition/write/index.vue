@@ -13,15 +13,15 @@
           </el-col>
         </el-row>
 
-        <el-row>
+        <el-row style="justify-content: space-between;">
           <el-col :span="8" style="margin-right: 20px;">
             <el-form-item label="信访人:">
               <el-input v-model="formData.name" placeholder="请输入信访人" clearable/>
             </el-form-item>
           </el-col>
           <el-col :span="10">
-            <el-form-item label="是否校内人员:" label-width="150px!important">
-              <el-select v-model="formData.inSchool" placeholder="是否校内人员" clearable>
+            <el-form-item label="身份类别:" label-width="150px!important">
+              <el-select v-model="formData.petitionerType" placeholder="请选择身份类别" clearable>
                 <el-option
                   v-for="dict in getIntDictOptions(DICT_TYPE.PETITIONER_TYPE)"
                   :key="dict.value"
@@ -33,34 +33,17 @@
           </el-col>
         </el-row>
 
-        <el-row v-if="formData.inSchool === 1">
+        <el-row>
           <el-col :span="16">
-            <el-form-item label="信访人单位:" label-width="120px">
-              <el-select v-model="formData.petitionerUnit" placeholder="请选择单位" clearable>
-                <el-option
-                  v-for="dept in filteredPetitionerDepts"
-                  :key="dept.id"
-                  :label="dept.name"
-                  :value="dept.name"
-                  :data-id="dept.id"
-                />
-              </el-select>
+            <el-form-item label="其他信息:" label-width="120px">
+              <el-input v-model="formData.petitionerInfo" placeholder="如信访人电话、地址等信息" clearable/>
             </el-form-item>
           </el-col>
         </el-row>
-
-        <el-row v-else>
+        <el-row>
           <el-col :span="16">
             <el-form-item label="信访人单位:" label-width="120px">
               <el-input v-model="formData.petitionerUnit" placeholder="请输入单位名称" clearable/>
-            </el-form-item>
-          </el-col>
-        </el-row>
-
-        <el-row>
-          <el-col :span="18">
-            <el-form-item label="标题:">
-              <el-input v-model="formData.title" placeholder="请输入标题" clearable/>
             </el-form-item>
           </el-col>
         </el-row>
@@ -123,7 +106,13 @@
             </el-form-item>
           </el-col>
         </el-row>
-
+        <el-row>
+          <el-col :span="16">
+            <el-form-item label="关键词:" label-width="120px">
+              <el-input v-model="formData.keywords" placeholder="请填写内容类别细分" clearable/>
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-row>
           <el-col :span="10">
             <el-form-item label="重复信访:">
@@ -139,6 +128,44 @@
           </el-col>
         </el-row>
 
+        <el-row style="justify-content: space-between;">
+          <el-col :span="10">
+            <el-form-item label="校领导:" label-width="120px">
+              <el-select 
+                v-model="formData.leaderIds" 
+                placeholder="请选择校领导" 
+                multiple 
+                clearable 
+                filterable
+              >
+                <el-option
+                  v-for="leader in leaderOptions"
+                  :key="leader.id"
+                  :label="leader.nickname || leader.name"
+                  :value="leader.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+          <el-col :span="10">
+            <el-form-item label="信访办员工:" label-width="120px">
+              <el-select 
+                v-model="formData.petitionDept" 
+                placeholder="请选择信访办员工" 
+                multiple 
+                clearable 
+                filterable
+              >
+                <el-option
+                  v-for="staff in petitionDept"
+                  :key="staff.id"
+                  :label="staff.nickname || staff.name"
+                  :value="staff.id"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-row style="justify-content: space-between;">
           <el-col :span="10">
             <el-form-item label="牵头单位:">
@@ -178,6 +205,7 @@
           </el-col>
         </el-row>
 
+
         <el-row style="justify-content: space-between;">
           <el-col :span="10">
             <el-form-item label="信访日期:">
@@ -205,6 +233,13 @@
           </el-col>
         </el-row>
 
+        <el-row>
+          <el-col :span="18">
+            <el-form-item label="标题:">
+              <el-input v-model="formData.title" placeholder="请输入标题" clearable/>
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-row>
           <el-col>
             <el-form-item label="正文:">
@@ -248,12 +283,11 @@
 
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import * as DeptApi from '@/api/system/dept'
 import * as UserApi from '@/api/system/user'
-import { OrderApi } from '@/api/supervision'
 import * as PetitionApi from '@/api/petition'
 import { Paperclip } from '@element-plus/icons-vue'
 import { KKFileView } from '@/components/KKFileView'
@@ -261,12 +295,6 @@ import type { UploadFile, UploadUserFile } from 'element-plus';
 import * as FileApi from '@/api/infra/file'
 import { InfoApi } from '@/api/petition/info'
 import dayjs from 'dayjs'
-// 各文本输入值
-const inputPetitionerUnit = ref('')
-const inputCollaborateUnit = ref('')
-const inputSupervisor = ref('')
-const inputCountersigner = ref('')
-const inputReviewer = ref('')
 // 生成信访编号
 const generatePetitionNumber = () => {
   const now = new Date()
@@ -418,7 +446,8 @@ const beforeUpload = (file: UploadFile) => {
 const formData = reactive({
   petitionNumber: '', // 信访编号
   name: '', // 信访人
-  inSchool: '', // 是否在校
+  petitionerType: '', // 是否在校
+  petitionerInfo: '', // 其他信息
   petitionerUnit: '', // 信访人单位
   petitionChannel: '', // 信访渠道
   purposeCategory: '', // 原因分类
@@ -427,10 +456,13 @@ const formData = reactive({
   isRepeat: '', // 重复信访
   leadDeptIds: [], // 牵头单位ID列表
   assistDeptIds: [], // 协办单位ID列表
+  leaderIds: [], // 校领导ID列表
+  petitionDept: [], // 信访办员工ID列表
   title: '', // 文件标题
   content: '', // 具体内容
   petitionDate:'',
   deadline:'', //截止日期
+  keywords: '', // 关键词
 })
 
 // 表单验证规则
@@ -452,6 +484,12 @@ const userList = ref<any[]>([])
 // 部门选项列表
 const deptOptions = ref<DeptApi.DeptVO[]>([])
 
+// 校领导选项列表
+const leaderOptions = ref<any[]>([])
+
+// 信访办员工选项列表
+const petitionDept = ref<any[]>([])
+
 const loadDeptList = async () => {
   try {
     const result = await DeptApi.getSimpleDeptList()
@@ -467,6 +505,15 @@ const loadUserList = async () => {
   try {
     const result = await UserApi.getSimpleUserList()
     userList.value = result || []
+    console.log(userList.value)
+    leaderOptions.value = userList.value.filter(user => {
+      return user.deptNames.includes('校领导')
+    })
+    
+    // 筛选信访办员工
+    petitionDept.value = userList.value.filter(user => {
+      return user.deptNames.includes('信访办')
+    })
   } catch (error) {
     console.error('加载用户列表失败:', error)
     ElMessage.error('加载用户列表失败')
@@ -490,7 +537,7 @@ const filteredPetitionerDepts = computed(() => {
 const fillFormWithSampleData = () => {
     // 填充示例数据
     formData.name = '张三'
-    formData.inSchool = 0
+    formData.petitionerType = 0
     formData.petitionerUnit = '计算机学院'
     formData.petitionChannel = 1
     formData.purposeCategory = 1
@@ -501,8 +548,11 @@ const fillFormWithSampleData = () => {
     formData.content = '尊敬的领导：\n\n我是计算机学院的学生张三，近期发现校园网络存在不稳定问题，特别是在晚上高峰期，网速明显下降，影响学习和生活。希望学校能够关注并改善网络质量。\n\n谢谢！'
     formData.petitionDate = dayjs().format('YYYY-MM-DD')
     formData.deadline = dayjs().add(7, 'day').format('YYYY-MM-DD HH:mm:ss')
+    formData.keywords = '校园网络, 不稳定, 晚上高峰期'
+    formData.petitionerInfo = '其他信息'
     formData.leadDeptIds = [128]
     formData.assistDeptIds = [219, 170]
+    formData.leaderIds = [344]
     // 生成新的信访编号
     formData.petitionNumber = generatePetitionNumber()
     ElMessage.success('表单已一键填写完成！')

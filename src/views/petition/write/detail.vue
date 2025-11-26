@@ -387,6 +387,19 @@ onMounted(async () => {
   getDetail()
   // 获得用户列表
   userOptions.value = await UserApi.getSimpleUserList()
+  
+  // 监听全局事件，当detail.vue保存数据后触发刷新
+  const handlePetitionDataUpdated = (event: CustomEvent) => {
+    console.log('收到信访数据更新事件，刷新数据', event.detail)
+    getDetail()
+  }
+  
+  window.addEventListener('petition-data-updated', handlePetitionDataUpdated as EventListener)
+})
+
+// 组件卸载时移除事件监听器
+onUnmounted(() => {
+  window.removeEventListener('petition-data-updated', handlePetitionDataUpdated as EventListener)
 })
 </script>
 

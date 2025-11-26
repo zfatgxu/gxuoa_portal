@@ -106,6 +106,39 @@
         </el-form-item>
       </el-form>
     </div>
+    
+    <!-- 批示意见表单 -->
+    <div v-if="props.dialogType === 'comment'" class="flex flex-col flex-1 pt-20px px-20px" v-loading="formLoading">
+      <el-form
+        label-position="top"
+        class="mb-auto"
+        ref="commentFormRef"
+        :model="commentForm"
+        :rules="commentFormRule"
+        label-width="100px"
+      >
+        <el-form-item label="批示意见" prop="commentContent">
+          <el-input
+            v-model="commentForm.commentContent"
+            placeholder="请输入批示意见"
+            type="textarea"
+            :rows="6"
+            maxlength="1000"
+            show-word-limit
+          />
+        </el-form-item>
+        <el-form-item>
+          <el-button
+            :disabled="formLoading"
+            type="primary"
+            @click="handleComment"
+          >
+            提交批示
+          </el-button>
+          <el-button @click="handleDialogCancel('comment')"> 取消 </el-button>
+        </el-form-item>
+      </el-form>
+    </div>
   </div>
   
   <!-- 详情页模式：保持原有 Popover -->
@@ -195,6 +228,57 @@
               {{ getButtonDisplayName(OperationButtonType.APPROVE) }}
             </el-button>
             <el-button @click="closePopover('approve', approveFormRef)"> 取消 </el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+    </el-popover>
+    
+    <!-- 【批示意见】按钮 -->
+    <el-popover
+      v-model:visible="popOverVisible.comment"
+      placement="top-end"
+      :width="420"
+      trigger="manual"
+      :virtual-triggering="!!commentVirtualRef"
+      :virtual-ref="commentVirtualRef"
+      :teleported="!!commentVirtualRef"
+      :popper-options="commentVirtualRef ? { strategy: 'fixed' } : undefined"
+      v-if="runningTask && isHandleTaskStatus()"
+    >
+      <template #reference>
+        <el-button plain type="primary" @click="openPopover('comment')" v-if="!commentVirtualRef">
+          <Icon icon="ep:edit" />&nbsp; 批示意见
+        </el-button>
+      </template>
+      <!-- 批示意见表单 -->
+      <div class="flex flex-col flex-1 pt-20px px-20px" v-loading="formLoading">
+        <el-form
+          label-position="top"
+          class="mb-auto"
+          ref="commentFormRef"
+          :model="commentForm"
+          :rules="commentFormRule"
+          label-width="100px"
+        >
+          <el-form-item label="批示意见" prop="commentContent">
+            <el-input
+              v-model="commentForm.commentContent"
+              placeholder="请输入批示意见"
+              type="textarea"
+              :rows="6"
+              maxlength="1000"
+              show-word-limit
+            />
+          </el-form-item>
+          <el-form-item>
+            <el-button
+              :disabled="formLoading"
+              type="primary"
+              @click="handleComment"
+            >
+              提交批示
+            </el-button>
+            <el-button @click="closePopover('comment', commentFormRef)"> 取消 </el-button>
           </el-form-item>
         </el-form>
       </div>
@@ -385,7 +469,6 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStoreWithOut } from '@/store/modules/user'
 import { useRouter } from 'vue-router'
 import { useMessage } from '@/hooks/web/useMessage'
-import { BpmTaskApi } from '@/api/bpm/task'
 import * as TaskApi from '@/api/bpm/task'
 import * as ProcessInstanceApi from '@/api/bpm/processInstance'
 import * as UserApi from '@/api/system/user'
@@ -402,6 +485,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import SignDialog from '@/views/bpm/processInstance/detail/SignDialog.vue'
 import ProcessInstanceTimeline from '@/views/bpm/processInstance/detail/ProcessInstanceTimeline.vue'
 import { isEmpty } from '@/utils/is'
+import * as PetitionApi from '@/api/petition'
 
 // 提取错误信息的通用函数
 const extractErrorMessage = (error: any): string => {
@@ -447,6 +531,7 @@ const formLoading = ref(false) // 表单加载中
 const popOverVisible = ref({
   approve: false,
   reject: false,
+  comment: false,
   transfer: false,
   delegate: false,
   addSign: false,
@@ -554,20 +639,6 @@ watch(isSupervisorReviewNode, () => {
   updateShowRejectTarget()
 })
 
-// 抄送表单
-const copyFormRef = ref<FormInstance>()
-const copyForm = reactive({
-  copyUserIds: [],
-  copyReason: ''
-})
-
-// 转办表单
-const transferFormRef = ref<FormInstance>()
-const transferForm = reactive({
-  assigneeUserId: undefined,
-  reason: ''
-})
-
 // 委派表单
 const delegateFormRef = ref<FormInstance>()
 const delegateBtnRef = ref<HTMLElement>() // 代管按钮的 DOM 引用
@@ -578,6 +649,20 @@ const delegateForm = reactive({
 const delegateFormRule = reactive<FormRules<typeof delegateForm>>({
   delegateUserId: [{ required: true, message: '接收人不能为空', trigger: 'change' }],
   reason: [{ required: false, message: '审批意见不能为空', trigger: 'blur' }] // 代管时理由改为可选
+})
+
+// 批示意见表单
+const commentFormRef = ref<FormInstance>()
+const commentVirtualRef = ref<HTMLElement | null>(null)
+const commentForm = reactive({
+  commentContent: ''
+})
+const commentFormRule = reactive<FormRules<typeof commentForm>>({
+  commentContent: [
+    { required: true, message: '批示意见不能为空', trigger: 'blur' },
+    { min: 1, message: '批示意见至少1个字符', trigger: 'blur' },
+    { max: 1000, message: '批示意见最多1000个字符', trigger: 'blur' }
+  ]
 })
 
 // ========== 代管状态判断 ==========
@@ -1962,6 +2047,36 @@ const getSupervisionNodeType = (): string => {
 
   // 其他节点（牵头单位、协办部门等）
   return 'other'
+}
+
+const handleComment = async () => {
+  try {
+    formLoading.value = true
+    await PetitionApi.addPetitionComment({
+      petitionId: Number(router.currentRoute.value.query.id),
+      userId: userStore.user.id,
+      note: commentForm.commentContent
+    })
+    ElMessage.success('批示意见提交成功')
+    commentForm.commentContent = ''
+    closePopover('comment', commentFormRef.value)
+    
+    // 触发全局刷新事件，供父组件监听
+    window.dispatchEvent(new CustomEvent('petition-comment-submitted', {
+      detail: {
+        petitionId: Number(router.currentRoute.value.query.id),
+        timestamp: Date.now()
+      }
+    }))
+    
+    emit('success')
+  } catch (error) {
+    console.error('提交批示意见失败:', error)
+    const errorMsg = extractErrorMessage(error) || '提交批示意见失败，请重试'
+    ElMessage.error(errorMsg)
+  } finally {
+    formLoading.value = false
+  }
 }
 
 // 监听流程实例ID变化，重置本地覆盖状态，避免跨实例串值
