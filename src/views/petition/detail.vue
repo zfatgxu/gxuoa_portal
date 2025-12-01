@@ -263,25 +263,13 @@
 
         <el-row>
           <el-col>
-            <el-form-item label=" ">
-              <el-upload
-                ref="uploadRef"
-                :http-request="(options) => customUpload(options, 'petition')"
-                :on-preview="previewFile"
-                :before-remove="beforeRemove"
-                :before-upload="beforeUpload"
-                multiple
-                v-model:file-list="petitionList"
-                accept=".jpg,.png,.pdf,.doc,.docx,.xls,.xlsx"
+            <el-form-item label="附件">
+              <upload-file-with-id
+                v-model="petitionList"
+                :file-type="['jpg', 'png', 'pdf', 'doc', 'docx', 'xls', 'xlsx']"
                 :disabled="!isEditing"
-              >
-                <el-button type="primary" :icon=Paperclip :disabled="!isEditing">上传附件</el-button>
-                <template #tip>
-                  <div>
-                    支持上传 doc、docx、pdf、xls、xlsx、jpg、jpeg、png、txt 格式文件，单个文件不超过20MB
-                  </div>
-                </template>
-              </el-upload>
+                @update:model-value="afterUpload"
+              />
             </el-form-item>
           </el-col>
         </el-row>
@@ -365,8 +353,6 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import * as DeptApi from '@/api/system/dept'
 import * as UserApi from '@/api/system/user'
 import * as PetitionApi from '@/api/petition'
-import { Paperclip } from '@element-plus/icons-vue'
-import { KKFileView } from '@/components/KKFileView'
 import type { UploadFile, UploadUserFile } from 'element-plus';
 import * as FileApi from '@/api/infra/file'
 import dayjs from 'dayjs'
@@ -393,131 +379,7 @@ const getPetitionId = () => {
   return Math.floor(Math.random() * 90) + 10;
 }
 
-const previewFile = (file: any) => {
-  if (file.url) {
-    // 使用KKFileView进行文件预览
-    KKFileView.preview(file.url, file.name)
-  } else {
-    ElMessage.warning('文件链接不存在，无法预览')
-  }
-}
-
-const petitionList = ref<UploadUserFile[]>([]);
-const petitionHandlingFileList = ref<UploadUserFile[]>([]);
-const petitionReplyFileList = ref<UploadUserFile[]>([]);
-
-const uploadedFileIds = ref<string[]>([]);
-const customUpload = async (options: any, fileListType: string) => {
-  const { file, onSuccess, onError } = options
-  
-  try {
-    // 创建 FormData
-    const formData = new FormData()
-    formData.append('file', file)
-    const result = await FileApi.updateFile(formData)
-    file.url = result.data
-    let index = -1
-
-    // 由于 upload 方法返回的是 Promise<T>，我们需要获取实际的响应数据
-    const response = await result
-    if (response.code === 0) {
-      // 如果上传成功，调用成功回调并传递响应数据 
-      onSuccess(response)
-      switch (fileListType) {
-        case 'petitionHandling':
-          index = petitionHandlingFileList.value.findIndex((item: any) => item.uid === file.uid)
-          if (index !== -1) {
-            petitionHandlingFileList.value[index].url = file.url
-          }
-          break
-        case 'petitionReply':
-          index = petitionReplyFileList.value.findIndex((item: any) => item.uid === file.uid)
-          if (index !== -1) {
-            petitionReplyFileList.value[index].url = file.url
-          }
-          break
-        case 'petition':
-          index = petitionList.value.findIndex((item: any) => item.uid === file.uid)
-          if (index !== -1) {
-            petitionList.value[index].url = file.url
-          }
-          break
-      }
-    } else {
-      // 如果上传失败，调用错误回调
-      const error = new Error(response.msg || '文件上传失败')
-      // 从文件列表中移除失败的文件
-      if (index !== -1) {
-        switch (fileListType) {
-          case 'petitionHandling':
-            petitionHandlingFileList.value.splice(index, 1)
-            break
-          case 'petitionReply':
-            petitionReplyFileList.value.splice(index, 1)
-            break
-          case 'petition':
-            petitionList.value.splice(index, 1)
-            break
-        }
-      }
-      onError(error)
-    }
-  } catch (error) {
-    console.error('文件上传失败:', error)
-    // 从文件列表中移除失败的文件
-    let index = -1
-    switch (fileListType) {
-      case 'petitionHandling':
-        index = petitionHandlingFileList.value.findIndex((item: any) => item.uid === file.uid)
-        break
-      case 'petitionReply':
-        index = petitionReplyFileList.value.findIndex((item: any) => item.uid === file.uid)
-        break
-      case 'petition':
-        index = petitionList.value.findIndex((item: any) => item.uid === file.uid)
-        break
-    }
-    if (index !== -1) {
-      switch (fileListType) {
-        case 'petitionHandling':
-          petitionHandlingFileList.value.splice(index, 1)
-          break
-        case 'petitionReply':
-          petitionReplyFileList.value.splice(index, 1)
-          break
-        case 'petition':
-          petitionList.value.splice(index, 1)
-          break
-      }
-    }
-    onError(error)
-  }
-}
-
-const beforeRemove = (file: UploadFile) => {
-  return ElMessageBox.confirm(`确定移除 ${file.name}？`).then(
-    () => {
-      // 从已上传文件ID列表中移除
-      const index = uploadedFileIds.value.findIndex((id: any) => id === file.uid);
-      if (index > -1) {
-        uploadedFileIds.value.splice(index, 1);
-      }
-      return true;
-    },
-    () => {
-      return false;
-    }
-  );
-};
-
-const beforeUpload = (file: UploadFile) => {
-  const fileSize = file?.size / 1024 / 1024;
-  if (fileSize > 20) {
-    ElMessage.error('文件大小超过20MB，无法上传');
-    return false;
-  }
-  return true;
-}
+const petitionList = ref<any[]>([]);
 
 // 格式化时间戳
 const formatTime = (timestamp: number | string) => {
@@ -542,7 +404,6 @@ const activeNames = ref(['leaderOpinions', 'petitionLeaderOpinions', 'petitionOf
 // 意见数据
 const leaderOpinions = ref([]) // 校领导意见
 const petitionLeaderOpinions = ref([]) // 信访办领导意见
-const petitionOfficeOpinions = ref([]) // 信访办意见
 const leadDeptOpinions = ref([]) // 牵头单位意见
 const assistDeptOpinions = ref([]) // 协办单位意见
 
@@ -567,6 +428,7 @@ const formData = reactive({
   deadline: '', //截止日期
   keywords: '', // 关键词
   petitionDept: [],
+  fileList: []
 })
 
 // 原始数据备份
@@ -604,7 +466,6 @@ const saveEdit = async () => {
       ...formData,
       id: Number(route.query.id) // 从路由参数获取信访ID
     }
-    console.log(saveData)
     await PetitionApi.updatePetition(saveData)
     ElMessage.success('保存成功')
     isEditing.value = false
@@ -665,7 +526,6 @@ const loadUserList = async () => {
   try {
     const result = await UserApi.getSimpleUserList()
     userList.value = result || []
-    console.log(userList.value)
     leaderOptions.value = userList.value.filter(user => {
       return user.deptNames.includes('校领导')
     })
@@ -683,7 +543,6 @@ const id = route.query.id
 
 const getDetail = () => {
   PetitionApi.getPetition(id).then(res => {
-    console.log(res)
     formData.name = res.name
     formData.petitionerType = res.petitionerType
     formData.petitionerInfo = res.petitionerInfo
@@ -704,7 +563,21 @@ const getDetail = () => {
     formData.leaderIds = res.leaderIds
     formData.petitionDept = res.petitionDept
     formData.keywords = res.keywords
-    
+    formData.fileList = res.fileList
+    // 填充文件列表数据
+    if (res.fileList && Array.isArray(res.fileList)) {
+      FileApi.getFileList(res.fileList).then(res => {
+        petitionList.value.push(...res.map(item => ({
+          name: item.name, 
+          url: item.url, 
+          id: item.id, 
+          createTime: item.createTime, 
+          size: item.size 
+        })))
+      })
+    } else {
+      petitionList.value = []
+    }
     // 加载意见数据
   })
   loadOpinions()
@@ -732,6 +605,11 @@ const loadOpinions = async () => {
 const handleCommentSubmitted = () => {
   getDetail()
   loadOpinions()
+}
+
+const afterUpload = (val: any) => {
+  formData.fileList = []
+  formData.fileList.push(...val.map((item: any) => item.id))
 }
 
 onMounted(async () => {
