@@ -338,90 +338,6 @@
         </el-form>
       </div>
     </el-popover>
-
-    <!-- 【终止督办】按钮 -->
-    <el-button 
-      v-if="shouldShowTerminateButton()" 
-      :loading="terminateLoading"
-      type="danger" 
-      @click="handleTerminateSupervision"
-    >
-      <Icon icon="ep:warning" />&nbsp; 终止督办
-    </el-button>
-
-
-    <!-- 【代管】按钮 -->
-    <el-button 
-      v-if="canDelegate" 
-      type="warning" 
-      ref="delegateBtnRef"
-      @click="openDelegateDialog"
-    >
-      <Icon icon="ep:user" />&nbsp; 代管
-    </el-button>
-
-    <!-- 【取消代管】按钮 -->
-    <el-button 
-      v-if="canCancelDelegate" 
-      type="info" 
-      @click="handleCancelDelegate"
-      :loading="formLoading"
-    >
-      <Icon icon="ep:refresh-left" />&nbsp; 取消代管
-    </el-button>
-
-    <!-- 代管弹窗 -->
-    <el-popover
-      v-model:visible="popOverVisible.delegate"
-      placement="top"
-      :width="420"
-      trigger="manual"
-      teleported
-      :virtual-triggering="true"
-      :virtual-ref="delegateBtnRef"
-      :popper-options="{ strategy: 'fixed' }"
-      popper-class="supervision-delegate-popper"
-      :hide-after="0"
-      :auto-close="0"
-      persistent
-    >
-      <div class="flex flex-col flex-1 pt-20px px-20px" v-loading="formLoading" @click.stop>
-        <el-form
-          label-position="top"
-          class="mb-auto"
-          ref="delegateFormRef"
-          :model="delegateForm"
-          :rules="delegateFormRule"
-          label-width="100px"
-        >
-          <el-form-item label="代管人员" prop="delegateUserId">
-            <el-select v-model="delegateForm.delegateUserId" clearable style="width: 100%" filterable :teleported="false" @click.stop>
-              <el-option
-                v-for="item in userOptions"
-                :key="item.id"
-                :label="item.nickname"
-                :value="item.id"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="代管理由" prop="reason">
-            <el-input
-              v-model="delegateForm.reason"
-              clearable
-              placeholder="请输入代管理由（可选）"
-              type="textarea"
-              :rows="3"
-            />
-          </el-form-item>
-          <el-form-item>
-            <el-button :disabled="formLoading" type="primary" @click="handleDelegate()">
-              确认代管
-            </el-button>
-            <el-button @click="closePopover('delegate', delegateFormRef)"> 取消 </el-button>
-          </el-form-item>
-        </el-form>
-      </div>
-    </el-popover>
   </div>
   <SignDialog ref="signRef" @success="handleSignFinish" />
 
@@ -467,7 +383,7 @@
 import { ref, reactive, computed, nextTick, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserStoreWithOut } from '@/store/modules/user'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useMessage } from '@/hooks/web/useMessage'
 import * as TaskApi from '@/api/bpm/task'
 import * as ProcessInstanceApi from '@/api/bpm/processInstance'
@@ -505,6 +421,7 @@ const extractErrorMessage = (error: any): string => {
 defineOptions({ name: 'SupervisionOperationButton' })
 
 const router = useRouter() // 路由
+const route = useRoute()
 const message = useMessage() // 消息弹窗
 const userStore = useUserStoreWithOut() // 用户store
 const emit = defineEmits(['success', 'dialog-cancel']) // 定义事件：操作成功、弹窗取消回调
@@ -552,14 +469,7 @@ const approveForm = ref<any>({}) // 审批通过时，额外的补充信息
 const approveFormFApi = ref<any>({}) // approveForms 的 fAPi
 const nodeTypeName = ref('审批') // 节点类型名称
 
-// ========== 终止督办 ==========
-const terminateLoading = ref(false) // 终止督办按钮加载状态
-
 // ========== 中止/恢复督办 ==========
-const suspendDialogVisible = ref(false) // 中止弹窗显示状态
-const resumeDialogVisible = ref(false) // 恢复弹窗显示状态
-const suspendLoading = ref(false) // 中止操作加载状态
-const resumeLoading = ref(false) // 恢复操作加载状态
 const localSupervisionStatus = ref<number | null>(null) // 本地覆盖状态，用于即时UI更新
 
 // 审批通过意见表单
@@ -684,57 +594,6 @@ const isDelegated = computed(() => {
   }
   
   return false
-})
-
-/** 判断是否可以发起代管 */
-const canDelegate = computed(() => {
-  if (!runningTask.value || !isHandleTaskStatus()) return false
-  
-  // 如果已经是代管状态，不能再次代管
-  if (isDelegated.value) return false
-  
-  // 检查当前用户是否是任务的办理人
-  const currentUserId = userStore.getUser.id
-  const assigneeUserId = runningTask.value.assigneeUser?.id
-  
-  return currentUserId === assigneeUserId
-})
-
-/** 判断是否可以取消代管 */
-const canCancelDelegate = computed(() => {
-  // 方法1：通过 delegatedTaskId 判断（优先）
-  if (props.delegatedTaskId) {
-    return true // 如果有 delegatedTaskId，说明当前用户是原办理人且任务被代管中
-  }
-  
-  // 方法2：通过 runningTask 判断（兜底）
-  if (!runningTask.value || !isDelegated.value) return false
-  
-  // 检查当前用户是否是原始办理人（ownerUser）
-  const currentUserId = userStore.getUser.id
-  const ownerUserId = runningTask.value.ownerUser?.id
-  
-  return currentUserId === ownerUserId
-})
-
-// ========== 中止/恢复按钮显示逻辑 ==========
-/** 统一获取当前督办状态 */
-const currentSupervisionStatus = computed(() => {
-  // 优先级：本地覆盖 > 督办详情组件 > 流程实例 > 运行任务
-  const status = localSupervisionStatus.value ??
-                 props.supervisionDetailRef?.getOrderDetailData?.()?.supervisionStatus ??
-                 props.processInstance?.supervisionStatus ??
-                 runningTask.value?.supervisionStatus
-  
-  // 统一转换为数字，避免字符串比较问题
-  return status != null ? Number(status) : null
-})
-
-// 减签表单
-const deleteSignFormRef = ref<FormInstance>()
-const deleteSignForm = reactive({
-  deleteSignTaskId: undefined,
-  reason: ''
 })
 
 /** 监听 approveFormFApis，实现它对应的 form-create 初始化后，隐藏掉对应的表单提交按钮 */
@@ -899,9 +758,7 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
 
     if (pass) {
       const nextAssigneesValid = validateNextAssignees()
-      if (!nextAssigneesValid) return
-      console.log('currentTaskKey =', currentTaskKey)
-      
+      if (!nextAssigneesValid) return      
       // 审批通过数据
       // 获取当前用户信息
       const userStore = useUserStoreWithOut()
@@ -947,10 +804,14 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
         // @ts-ignore
         data.variables = approveForm.value.value
       }
-
-
+      if (currentTaskKey === 'zr_review') {
+        console.log(1)
+        await PetitionApi.updatePetition({
+          id: route.query.id,
+          status: 1
+        })
+      }
       await TaskApi.approveTask(data)
-
       popOverVisible.value.approve = false
       nextAssigneesActivityNode.value = []
       message.success('审批通过')
@@ -985,302 +846,6 @@ const handleAudit = async (pass: boolean, formRef: FormInstance | undefined) => 
   }
 }
 
-/** 打开代管弹窗 */
-const openDelegateDialog = () => {
-  popOverVisible.value.delegate = true
-}
-
-/** 记录督办进度 */
-const logSupervisionProgress = async (content: string) => {
-  try {
-    const processInstanceId = runningTask.value?.processInstanceId || props.processInstance?.id
-    if (!processInstanceId) {
-      console.warn('无法获取流程实例ID，跳过进度记录')
-      return
-    }
-
-    await OrderApi.insertSupervisionOrderTaskNew({
-      processInstanceId: processInstanceId,
-      deptDetail: content
-    })
-  } catch (error) {
-    console.warn('记录督办进度失败:', error)
-    // 静默失败，不影响主流程
-  }
-}
-
-/** 处理代管 */
-const handleDelegate = async () => {
-  formLoading.value = true
-  try {
-    // 1.1 校验表单
-    if (!delegateFormRef.value) return
-    await delegateFormRef.value.validate()
-    
-    // 1.2 处理代管（使用委派接口）
-    const data = {
-      id: runningTask.value?.id,
-      reason: delegateForm.reason || '代管任务',
-      delegateUserId: delegateForm.delegateUserId
-    }
-
-    await TaskApi.delegateTask(data)
-    
-    // 1.3 记录代管进度
-    const operatorName = userStore.getUser.nickname || userStore.getUser.id
-    const delegateUser = props.userOptions.find(user => user.id === delegateForm.delegateUserId)
-    const delegateName = delegateUser?.nickname || delegateForm.delegateUserId
-    const reason = delegateForm.reason || '无'
-    const progressContent = `【代管】${operatorName} 将任务代管给 ${delegateName}。理由：${reason}`
-    
-    await logSupervisionProgress(progressContent)
-    
-    popOverVisible.value.delegate = false
-    delegateFormRef.value.resetFields()
-    message.success('代管成功')
-    // 2. 加载最新数据
-    reload()
-  } finally {
-    formLoading.value = false
-  }
-}
-
-/** 处理取消代管 */
-const handleCancelDelegate = async () => {
-  try {
-    // 二次确认
-    await ElMessageBox.confirm(
-      '确定要取消代管吗？任务将回到您的待办列表。',
-      '取消代管确认',
-      {
-        confirmButtonText: '确定取消',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-
-    formLoading.value = true
-
-    // 获取任务ID（优先使用 delegatedTaskId）
-    const taskId = props.delegatedTaskId || runningTask.value?.id
-    if (!taskId) {
-      message.error('无法获取任务信息，请刷新页面重试')
-      return
-    }
-
-    // 使用专用的撤回代管接口
-    const data = {
-      taskId: taskId,
-      reason: '取消代管'
-    }
-
-    await SupervisionTaskOperationApi.revokeTaskDelegation(data)
-    
-    // 记录取消代管进度
-    const operatorName = userStore.getUser.nickname || userStore.getUser.id
-    const reason = '取消代管'
-    const progressContent = `【取消代管】${operatorName} 撤回代管，任务回到原办理人。理由：${reason}`
-    
-    await logSupervisionProgress(progressContent)
-    
-    message.success('取消代管成功')
-    // 重新加载数据
-    reload()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('取消代管失败:', error)
-      const errorMsg = extractErrorMessage(error)
-      message.error(`取消代管失败：${errorMsg}`)
-    }
-  } finally {
-    formLoading.value = false
-  }
-}
-
-/** 处理再次提交 */
-const handleReCreate = async () => {
-  // 跳转发起流程界面
-  await router.push({
-    name: 'BpmProcessInstanceCreate',
-    query: { processInstanceId: props.processInstance?.id }
-  })
-}
-
-/** 获取减签人员标签 */
-const getDeleteSignUserLabel = (task: any): string => {
-  const deptName = task?.assigneeUser?.deptName || task?.ownerUser?.deptName
-  const nickname = task?.assigneeUser?.nickname || task?.ownerUser?.nickname
-  return `${nickname} ( 所属部门：${deptName} )`
-}
-/** 处理减签 */
-const handlerDeleteSign = async () => {
-  formLoading.value = true
-  try {
-    // 1.1 校验表单
-    if (!deleteSignFormRef.value) return
-    await deleteSignFormRef.value.validate()
-    // 1.2 提交减签
-    const data = {
-      id: deleteSignForm.deleteSignTaskId,
-      reason: deleteSignForm.reason
-    }
-    await TaskApi.signDeleteTask(data)
-    message.success('减签成功')
-    deleteSignFormRef.value.resetFields()
-    popOverVisible.value.deleteSign = false
-    // 2 加载最新数据
-    reload()
-  } finally {
-    formLoading.value = false
-  }
-}
-
-/** 判断是否显示终止督办按钮 */
-const shouldShowTerminateButton = (): boolean => {
-  try {
-    // 1. 必须是督办流程
-    if (!props.supervisionDetailRef) {
-      return false
-    }
-
-    // 2. 当前用户必须是督查办管理员
-    if (!checkRole(['dcb_gly'])) {
-      return false
-    }
-
-    // 3. 主流程必须未结束（检查 endTime 和 status）
-    const processInstance = props.processInstance
-    if (processInstance?.endTime) {
-      // 如果有结束时间，说明主流程已结束，不应显示终止按钮
-      return false
-    }
-    
-    // 检查流程状态是否为终态（已通过、已拒绝、已取消）
-    if (processInstance?.status === BpmProcessInstanceStatus.APPROVE ||
-        processInstance?.status === BpmProcessInstanceStatus.REJECT ||
-        processInstance?.status === BpmProcessInstanceStatus.CANCEL) {
-      return false
-    }
-
-    // 4. 督办单必须未终止（状态不为5）
-    const orderData = props.supervisionDetailRef.getOrderDetailData?.()
-    if (orderData?.status === 5) {
-      return false
-    }
-
-    // 5. 当前不能已有进行中的终止流程
-    // 优先使用 prop 传递的 terminateRunning 字段（正确的字段路径）
-    if (props.terminateRunning === true) {
-      return false
-    }
-    
-    // 兜底：检查时间线中是否已有运行中的终止节点（保持向后兼容）
-    if (processInstance?.activityNodes) {
-      const hasRunningTerminateNode = processInstance.activityNodes.some(node => 
-        node.status === 1 && // 运行中
-        node.name && node.name.includes('[终止]')
-      )
-      if (hasRunningTerminateNode) {
-        return false
-      }
-    }
-
-    return true
-  } catch (error) {
-    console.warn('[shouldShowTerminateButton] 判断终止按钮显示失败:', error)
-    return false
-  }
-}
-
-/** 处理终止督办 */
-const handleTerminateSupervision = async () => {
-  try {
-    // 二次确认
-    await ElMessageBox.confirm(
-      '确定要终止当前督办吗？终止后将无法恢复。',
-      '终止督办确认',
-      {
-        confirmButtonText: '确定终止',
-        cancelButtonText: '取消',
-        type: 'warning',
-        confirmButtonClass: 'el-button--danger'
-      }
-    )
-
-    terminateLoading.value = true
-
-    // 获取 orderId
-    let orderId: number | null = null
-    
-    // 优先从 businessKey 获取
-    if (props.processInstance?.businessKey) {
-      try {
-        orderId = parseInt(props.processInstance.businessKey, 10)
-      } catch (e) {
-        console.warn('解析 businessKey 失败:', e)
-      }
-    }
-    
-    // 兜底从督办详情获取
-    if (!orderId && props.supervisionDetailRef) {
-      const orderData = props.supervisionDetailRef.getOrderDetailData?.()
-      if (orderData?.id) {
-        orderId = orderData.id
-      }
-    }
-
-    if (!orderId) {
-      message.error('无法获取督办单ID，请刷新页面重试')
-      return
-    }
-
-    // 获取当前用户ID
-    const userStore = useUserStoreWithOut()
-    const currentUserId = userStore.getUser.id
-
-    // 调用终止流程发起接口
-    const variables = {
-      orderId: orderId,
-      applyUserId: currentUserId
-    }
-
-    await SupervisionProcessApi.createProcessInstanceByKey({
-      processDefinitionKey: 'supervision_terminate',
-      businessKey: String(orderId),
-      variables: variables
-    })
-
-    message.success('终止督办流程已发起，请等待审批')
-    
-    // 刷新页面数据
-    reload()
-    
-    // 轻量轮询确保终止节点立即出现（最多5次，每次400ms）
-    let pollCount = 0
-    const maxPolls = 5
-    const pollInterval = 400
-    
-    const poll = () => {
-      if (pollCount < maxPolls) {
-        setTimeout(() => {
-          reload()
-          pollCount++
-          poll()
-        }, pollInterval)
-      }
-    }
-    
-    poll()
-
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('终止督办失败:', error)
-      message.error('终止督办失败，请重试')
-    }
-  } finally {
-    terminateLoading.value = false
-  }
-}
 
 /** 任务是否为处理中状态 */
 const isHandleTaskStatus = () => {
@@ -1950,83 +1515,7 @@ const handleSignFinish = (url: string) => {
   approveSignFormRef.value.validate('change')
 }
 
-/** 重置中止弹窗 */
-const resetSuspendDialog = () => {
-  suspendDialogVisible.value = false
-}
 
-/** 确认中止 */
-const confirmSuspend = async () => {
-  try {
-    suspendLoading.value = true
-
-    // 获取督办单ID
-    const orderId = props.processInstance?.supervisionOrderId || 
-                   props.processInstance?.businessKey
-    if (!orderId) {
-      ElMessage.error('无法获取督办单ID')
-      return
-    }
-
-    // 调用中止接口
-    await OrderApi.suspendOrder(orderId)
-    
-    // 立即更新本地状态，避免刷新延迟期间按钮显示错误
-    localSupervisionStatus.value = 6
-    
-    ElMessage.success('已中止督办，只有主任/副主任/管理员可见')
-    
-    // 关闭弹窗并刷新状态
-    resetSuspendDialog()
-    emit('success')
-
-  } catch (error) {
-    console.error('中止督办失败:', error)
-    const errorMsg = extractErrorMessage(error) || '中止督办失败，请重试'
-    ElMessage.error(errorMsg)
-  } finally {
-    suspendLoading.value = false
-  }
-}
-
-/** 重置恢复弹窗 */
-const resetResumeDialog = () => {
-  resumeDialogVisible.value = false
-}
-
-/** 确认恢复 */
-const confirmResume = async () => {
-  try {
-    resumeLoading.value = true
-
-    // 获取督办单ID
-    const orderId = props.processInstance?.supervisionOrderId || 
-                   props.processInstance?.businessKey
-    if (!orderId) {
-      ElMessage.error('无法获取督办单信息')
-      return
-    }
-
-    // 调用恢复接口
-    await OrderApi.resumeOrder(orderId)
-    
-    // 立即更新本地状态，避免刷新延迟期间按钮显示错误
-    localSupervisionStatus.value = 1
-    
-    ElMessage.success('已恢复督办，相关人员现在可以看到此督办')
-    
-    // 关闭弹窗并刷新状态
-    resetResumeDialog()
-    emit('success')
-
-  } catch (error) {
-    console.error('恢复督办失败:', error)
-    const errorMsg = extractErrorMessage(error) || '恢复督办失败，请重试'
-    ElMessage.error(errorMsg)
-  } finally {
-    resumeLoading.value = false
-  }
-}
 
 /** 获取督办节点类型 */
 const getSupervisionNodeType = (): string => {

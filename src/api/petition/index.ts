@@ -1,6 +1,7 @@
 import request from '@/config/axios'
 
 export interface PetitionVO {
+  id: number; // id
   petitionNumber: string; // 信访编号
   name: string; // 信访人
   petitionerType: string | number; // 是否在校
