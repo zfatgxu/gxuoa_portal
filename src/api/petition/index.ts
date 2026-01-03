@@ -1,37 +1,25 @@
 import request from '@/config/axios'
 
 export interface PetitionVO {
-  id: number
-  petitionNo: string
-  title: string
-  content: string
-  visitorName: string
-  visitorPhone: string
-  visitorEmail: string
-  visitorAddress: string
-  visitorIdentity: string
-  sourceType: number
-  petitionType: number
-  categoryType: number
-  urgencyLevel: number
-  status: number
-  isPublic: boolean
-  isAnonymous: boolean
-  isNational: boolean
-  isIllegal: boolean
-  isFake: boolean
-  satisfaction: number
-  deptId: number
-  deptName: string
-  userId: number
-  userName: string
-  processInstanceId: string
-  receiveTime: Date
-  deadline: Date
-  completeTime: Date
-  remark: string
-  createTime: Date
-  attachments: string[]
+  id: number; // id
+  petitionNumber: string; // 信访编号
+  name: string; // 信访人
+  petitionerType: string | number; // 是否在校
+  petitionerInfo: string; // 其他信息
+  petitionerUnit: string; // 信访人单位
+  petitionChannel: string | number; // 信访渠道
+  purposeCategory: string | number; // 原因分类
+  urgencyLevel: string | number; // 紧急程度
+  contentCategory: string | number; // 内容分类
+  isRepeat: string | number; // 重复信访
+  leadDeptIds: number[]; // 牵头单位ID列表
+  assistDeptIds: number[]; // 协办单位ID列表
+  leaderIds: number[]; // 校领导ID列表
+  title: string; // 文件标题
+  content: string; // 具体内容
+  petitionDate: string; // 信访日期
+  deadline: string; // 截止日期
+  keywords: string; // 关键词
 }
 
 export interface PetitionPageReqVO extends PageParam {
@@ -65,31 +53,23 @@ export interface PetitionExportReqVO {
 }
 
 export interface PetitionHandleVO {
-  id: number
   petitionId: number
-  deptId: number
-  deptName: string
   userId: number
-  userName: string
-  handleType: number
-  handleResult: number
-  handleContent: string
-  handleTime: Date
-  isPublic: boolean
-  processInstanceId: string
-  taskId: string
-  remark: string
-  createTime: Date
+  note: string
+}
+
+export const getNumber = (channel: number) => {
+  return request.get({ url: `/petition/info/number?channel=${channel}`})
 }
 
 // 创建信访
 export const createPetition = (data: PetitionVO) => {
-  return request.post({ url: '/petition/create', data })
+  return request.post({ url: '/petition/info/create', data })
 }
 
 // 更新信访
 export const updatePetition = (data: PetitionVO) => {
-  return request.put({ url: '/petition/update', data })
+  return request.put({ url: '/petition/info/update', data })
 }
 
 // 删除信访
@@ -99,7 +79,7 @@ export const deletePetition = (id: number) => {
 
 // 获取信访
 export const getPetition = (id: number) => {
-  return request.get<PetitionVO>({ url: `/petition/get?id=${id}` })
+  return request.get<PetitionVO>({ url: `/petition/info/get?id=${id}` })
 }
 
 // 获取信访分页
@@ -130,6 +110,24 @@ export const cancelPetition = (id: number) => {
 // 获取流程详情
 export const getProcessDetail = (processInstanceId: string) => {
   return request.get({ url: `/bpm/process-instance/get?id=${processInstanceId}` })
+}
+
+// 添加批示
+export const addPetitionComment = (data: PetitionHandleVO) => {
+  return request.post({ url: '/petition/note/create', data })
+}
+
+// 获取批示详情
+export const getNoteDetail = (id: number) => {
+  return request.get({ url: `/petition/note/query?id=${id}` })
+}
+
+export const getStatCount = (req: any) => {
+  return request.get({ url: '/petition/stat/count', params: req })
+}
+
+export const getStatDetail = (type: string, year: number) => {
+  return request.get({ url: `/petition/stat/detail?type=${type}&year=${year}`})
 }
 
 // Mock数据

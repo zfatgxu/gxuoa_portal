@@ -5,7 +5,7 @@
       <span>当前位置：信访工作 >> 统计汇总</span>
     </div>
     
-    <!-- 用户信息和导出按钮 -->
+    <!-- 用户信息和导出按钮
     <div class="header-section">
       <div class="user-info" @click="seniorFilterVisible = true">
         <div class="w-8 h-8 rounded-md mr-2 flex items-center justify-center" style="background-color: #409EFF">
@@ -21,7 +21,7 @@
         <el-button type="default" :icon="Download" size="large" @click="exportExcel">导出Excel</el-button>
         <el-button type="default" :icon="Download" size="large" @click="exportImage">导出图片</el-button>
       </div>
-    </div>
+    </div> -->
     
     <!-- 统计卡片 -->
     <div class="stat-cards">
@@ -34,7 +34,7 @@
              </div>
              <div>
               <div class="card-title">总计</div>
-              <div class="card-value">16</div>
+              <div class="card-value">{{ monthlyStats.increase }}</div>
              </div>
             </div>
           </el-card>
@@ -47,7 +47,7 @@
              </div>
              <div>
               <div class="card-title">进行中</div>
-              <div class="card-value">8</div>
+              <div class="card-value">{{ monthlyStats.ongoing }}</div>
              </div>
             </div>
           </el-card>
@@ -60,7 +60,7 @@
              </div>
              <div>
               <div class="card-title">已完成</div>
-              <div class="card-value">10</div>
+              <div class="card-value">{{ monthlyStats.finished }}</div>
             </div>
             </div>
           </el-card>
@@ -73,7 +73,7 @@
              </div>
              <div>
               <div class="card-title">已超时</div>
-              <div class="card-value">7</div>
+              <div class="card-value">{{ monthlyStats.overdue }}</div>
              </div>
             </div>
           </el-card>
@@ -89,8 +89,12 @@
           <el-card class="chart-card">
             <div class="chart-header">
               <div class="chart-title">
-                <el-icon v-if="purposeChartType === 'line'"><ChartSpline /></el-icon>
-                <el-icon v-if="purposeChartType === 'pie'"><ChartPie /></el-icon>
+                <el-icon v-if="purposeChartType === 'line'">
+                  <ChartSpline />
+                </el-icon>
+                <el-icon v-if="purposeChartType === 'pie'">
+                  <ChartPie />
+                </el-icon>
                 <el-icon v-if="purposeChartType === 'table'"><Table /></el-icon>
                 信访目的分类
               </div>
@@ -98,8 +102,10 @@
                 <el-radio-group v-model="purposeChartType" size="small">
                   <el-radio-button label="line">折线图</el-radio-button>
                   <el-radio-button label="pie">饼状图</el-radio-button>
-                  <el-radio-button label="table">数据表</el-radio-button>
                 </el-radio-group>
+                <el-select v-model="purposeSelectedYear" placeholder="选择年份" size="small" class="ml-2" @change="getPurposeStat">
+                  <el-option v-for="year in yearOptions" :key="year" :label="year" :value="year" />
+                </el-select>
               </div>
             </div>
             <div class="chart-content">
@@ -110,14 +116,6 @@
               <!-- 饼状图 -->
               <div v-show="purposeChartType === 'pie'" class="chart-container">
                 <div ref="purposePieChart" class="echarts-container"></div>
-              </div>
-              <!-- 数据表 -->
-              <div v-show="purposeChartType === 'table'" class="table-container">
-                <el-table :data="purposeTableData" border style="width: 100%">
-                  <el-table-column prop="type" label="目的类型" />
-                  <el-table-column prop="count" label="数量" />
-                  <el-table-column prop="percentage" label="占比" />
-                </el-table>
               </div>
             </div>
           </el-card>
@@ -137,8 +135,10 @@
                 <el-radio-group v-model="contentChartType" size="small">
                   <el-radio-button label="line">折线图</el-radio-button>
                   <el-radio-button label="pie">饼状图</el-radio-button>
-                  <el-radio-button label="table">数据表</el-radio-button>
                 </el-radio-group>
+                <el-select v-model="contentSelectedYear" placeholder="选择年份" size="small" class="ml-2" @change="getContentStat">
+                  <el-option v-for="year in yearOptions" :key="year" :label="year" :value="year" />
+                </el-select>
               </div>
             </div>
             <div class="chart-content">
@@ -150,13 +150,39 @@
               <div v-show="contentChartType === 'pie'" class="chart-container">
                 <div ref="contentPieChart" class="echarts-container"></div>
               </div>
-              <!-- 数据表 -->
-              <div v-show="contentChartType === 'table'" class="table-container">
-                <el-table :data="contentTableData" border style="width: 100%">
-                  <el-table-column prop="type" label="内容类型" />
-                  <el-table-column prop="count" label="数量" />
-                  <el-table-column prop="percentage" label="占比" />
-                </el-table>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
+      <el-row :gutter="20">
+        <!-- 信访渠道 -->
+        <el-col :span="12">
+          <el-card class="chart-card">
+            <div class="chart-header">
+              <div class="chart-title">
+                <el-icon v-if="channelChartType === 'line'"><ChartSpline /></el-icon>
+                <el-icon v-if="channelChartType === 'pie'"><ChartPie /></el-icon>
+                <el-icon v-if="channelChartType === 'table'"><Table /></el-icon>
+                信访渠道
+              </div>
+              <div class="chart-tabs">
+                <el-radio-group v-model="channelChartType" size="small">
+                  <el-radio-button label="line">折线图</el-radio-button>
+                  <el-radio-button label="pie">饼状图</el-radio-button>
+                </el-radio-group>
+                <el-select v-model="channelSelectedYear" placeholder="选择年份" size="small" class="ml-2" @change="getChannelStat">
+                  <el-option v-for="year in yearOptions" :key="year" :label="year" :value="year" />
+                </el-select>
+              </div>
+            </div>
+            <div class="chart-content">
+              <!-- 折线图 -->
+              <div v-show="channelChartType === 'line'" class="chart-container">
+                <div ref="channelLineChart" class="echarts-container"></div>
+              </div>
+              <!-- 饼状图 -->
+              <div v-show="channelChartType === 'pie'" class="chart-container">
+                <div ref="channelPieChart" class="echarts-container"></div>
               </div>
             </div>
           </el-card>
@@ -164,64 +190,6 @@
       </el-row>
     </div>
     
-    <!-- 详细数据表格 -->
-    <div class="detail-data-section">
-      <el-card class="detail-card">
-        <div class="chart-header">
-          <div class="chart-title">
-            <el-icon><List /></el-icon>
-            详细数据
-          </div>
-        </div>
-        <div class="table-container">
-          <el-table :data="detailTableData" :stripe="true" :show-overflow-tooltip="true">
-            <el-table-column prop="id" align="center" label="序号" width="60"/>
-            <el-table-column prop="code" align="center" label="编号"/>
-            <el-table-column prop="priority" align="center" label="优先级" width="80">
-              <template #default="scope">
-                <el-tag :type="scope.row.priority === '一般' ? 'warning' : 'danger'" size="default" round>
-                  {{ scope.row.priority }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="category" align="center" label="分类">
-              <template #default="scope">
-                <el-tag :type="getTagType(scope.row.category)" size="default" effect="plain" round>
-                  {{ scope.row.category }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="content" align="center" label="信访内容" show-overflow-tooltip>
-                <template #default="scope">
-                    <span style="font-size: 10px;">{{ scope.row.content }}</span>
-                </template>
-            </el-table-column>
-            <el-table-column prop="person" align="center" label="信访人" />
-            <el-table-column prop="address" align="center" label="信访人地址" show-overflow-tooltip />
-            <el-table-column prop="status" align="center" label="当前状态">
-              <template #default="scope">
-                <el-tag :type="getStatusType(scope.row.status)" size="default" effect="plain" round>
-                  {{ scope.row.status }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="receiveDate" align="center" label="接收日期" />
-            <el-table-column prop="lastOperator" align="center" label="上一操作人" />
-            <el-table-column label="操作" align="center" fixed="right">
-              <template #default="scope">
-                <el-button type="primary" link @click="viewDetail(scope.row)">详情</el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-          <Pagination
-            :total=3
-            :page=1
-            :limit=6
-            @pagination="getList"
-          />
-        </div>
-      </el-card>
-    </div>
     <!-- 高级筛选弹框 -->
     <SeniorFilter
       v-model:visible="seniorFilterVisible"
@@ -231,26 +199,59 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, watch } from 'vue'
 import { CalendarRange, Timer, CircleCheck, Bell, Funnel, ChartSpline, ChartPie, Table, List } from 'lucide-vue-next'
 import { Download } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import { ElMessage } from 'element-plus'
 import SeniorFilter from '../components/seniorFilter.vue'
+import * as PetitionApi from '@/api/petition'
+
+// 定义月度统计数据类型
+interface MonthlyStatsData {
+  increase: number
+  ongoing: number
+  finished: number
+  overdue: number
+}
+
+const monthlyStats = ref<MonthlyStatsData>({
+  increase: 0,
+  ongoing: 0,
+  finished: 0,
+  overdue: 0
+})
+
+// 年份选择
+const currentYear = new Date().getFullYear()
+const yearOptions = ref<number[]>([])
+
+// 生成最近10年的年份列表
+for (let i = 0; i < 10; i++) {
+  yearOptions.value.push(currentYear - i)
+}
 
 // 图表类型
 const purposeChartType = ref('line')
 const contentChartType = ref('line')
+const channelChartType = ref('line')
+
+// 选择的年份
+const purposeSelectedYear = ref(currentYear)
+const contentSelectedYear = ref(currentYear)
+const channelSelectedYear = ref(currentYear)
 
 // 图表引用
 const purposeLineChart = ref()
 const purposePieChart = ref()
 const contentLineChart = ref()
 const contentPieChart = ref()
+const channelLineChart = ref()
+const channelPieChart = ref()
 
 // 表格数据
 const purposeTableData = ref([
-  { type: '政策咨询', count: 35, percentage: '30%' },
+  { type: '政策咨询', count: 34, percentage: '30%' },
   { type: '投诉举报', count: 32, percentage: '28%' },
   { type: '建议意见', count: 24, percentage: '24%' },
   { type: '求助申请', count: 20, percentage: '18%' }
@@ -262,49 +263,27 @@ const contentTableData = ref([
   { type: '学术工作', count: 24, percentage: '24%' }
 ])
 
-const detailTableData = ref([
-  {
-    id: 1,
-    code: '20220101',
-    priority: '一般',
-    category: '政策咨询',
-    content: '关于政策咨询的信访内容',
-    person: '张三',
-    address: '北京市朝阳区',
-    status: '已完成',
-    receiveDate: '2022-01-01',
-    lastOperator: '李四'
-  },
-  {
-    id: 2,
-    code: '20220102',
-    priority: '一般',
-    category: '投诉举报',
-    content: '关于投诉举报的信访内容',
-    person: '王五',
-    address: '上海市浦东新区',
-    status: '进行中',
-    receiveDate: '2022-01-02',
-    lastOperator: '赵六'
-  },
-  {
-    id: 3,
-    code: '20220102',
-    priority: '紧急',
-    category: '投诉举报',
-    content: '关于投诉举报的信访内容',
-    person: '王五',
-    address: '上海市浦东新区',
-    status: '进行中',
-    receiveDate: '2022-01-02',
-    lastOperator: '赵六'
-  }
+const channelTableData = ref([
+  { type: '来访', count: 45, percentage: '35%' },
+  { type: '来信', count: 32, percentage: '25%' },
+  { type: '网上信访', count: 28, percentage: '22%' },
+  { type: '电话信访', count: 23, percentage: '18%' }
 ])
+const purposeData = reactive({})
+const contentData = reactive({})
+const channelData = reactive({})
 
 // 初始化折线图
 const initLineChart = (chartRef, title, data) => {
   const chartDom = chartRef.value
   if (!chartDom) return
+  
+  // 检查数据是否存在且有效
+  if (!data || !data.series || !Array.isArray(data.series) || data.series.length === 0) {
+    const myChart = echarts.init(chartDom)
+    myChart.clear() // 清除图表内容
+    return
+  }
   
   const myChart = echarts.init(chartDom)
   const option = {
@@ -325,7 +304,7 @@ const initLineChart = (chartRef, title, data) => {
     xAxis: {
       type: 'category',
       boundaryGap: false,
-      data: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月']
+      data: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月']
     },
     yAxis: {
       type: 'value',
@@ -348,6 +327,13 @@ const initLineChart = (chartRef, title, data) => {
 const initPieChart = (chartRef, title, data) => {
   const chartDom = chartRef.value
   if (!chartDom) return
+  
+  // 检查数据是否存在且有效
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    const myChart = echarts.init(chartDom)
+    myChart.clear() // 清除图表内容
+    return
+  }
   
   const myChart = echarts.init(chartDom)
   const option = {
@@ -429,96 +415,6 @@ const handleSeniorFilterApply = (filters) => {
   ElMessage.success('筛选条件已应用')
 }
 
-// 筛选后的表格数据
-const filteredTableData = computed(() => {
-  if (!activeFilters.value || 
-      (activeFilters.value.dateRange[0] === null && 
-       activeFilters.value.dateRange[1] === null && 
-       activeFilters.value.petitionTypes.length === 0 &&
-       activeFilters.value.petitionPurposes.length === 0 &&
-       activeFilters.value.contentCategories.length === 0 &&
-       activeFilters.value.processingStatuses.length === 0 &&
-       activeFilters.value.priorityLevels.length === 0 &&
-       activeFilters.value.departments.length === 0 &&
-       activeFilters.value.petitionerTypes.length === 0)) {
-    return detailTableData.value
-  }
-
-  return detailTableData.value.filter(item => {
-    // 日期范围筛选
-    if (activeFilters.value.dateRange[0] && activeFilters.value.dateRange[1]) {
-      const itemDate = new Date(item.receiveDate)
-      const startDate = new Date(activeFilters.value.dateRange[0])
-      const endDate = new Date(activeFilters.value.dateRange[1])
-      
-      // 设置时间为当天的开始和结束，以便正确比较
-      startDate.setHours(0, 0, 0, 0)
-      endDate.setHours(23, 59, 59, 999)
-      
-      if (itemDate < startDate || itemDate > endDate) {
-        return false
-      }
-    }
-    
-    // 信访类型筛选
-    if (activeFilters.value.petitionTypes.length > 0) {
-      // 假设item.type包含信访类型信息
-      if (!activeFilters.value.petitionTypes.includes(item.type)) {
-        return false
-      }
-    }
-    
-    // 信访目的筛选
-    if (activeFilters.value.petitionPurposes.length > 0) {
-      // 假设item.purpose包含信访目的信息
-      if (!activeFilters.value.petitionPurposes.includes(item.purpose)) {
-        return false
-      }
-    }
-    
-    // 信访内容分类筛选
-    if (activeFilters.value.contentCategories.length > 0) {
-      // 假设item.category包含信访内容分类信息
-      if (!activeFilters.value.contentCategories.includes(item.category)) {
-        return false
-      }
-    }
-    
-    // 处理状态筛选
-    if (activeFilters.value.processingStatuses.length > 0) {
-      // 假设item.status包含处理状态信息
-      if (!activeFilters.value.processingStatuses.includes(item.status)) {
-        return false
-      }
-    }
-    
-    // 优先级筛选
-    if (activeFilters.value.priorityLevels.length > 0) {
-      // 假设item.priority包含优先级信息
-      if (!activeFilters.value.priorityLevels.includes(item.priority)) {
-        return false
-      }
-    }
-    
-    // 部门筛选
-    if (activeFilters.value.departments.length > 0) {
-      // 假设item.department包含部门信息
-      if (!activeFilters.value.departments.includes(item.department)) {
-        return false
-      }
-    }
-    
-    // 信访人类型筛选
-    if (activeFilters.value.petitionerTypes.length > 0) {
-      // 假设item.petitionerType包含信访人类型信息
-      if (!activeFilters.value.petitionerTypes.includes(item.petitionerType)) {
-        return false
-      }
-    }
-    
-    return true
-  })
-})
 // 导出PDF
 const exportPDF = () => {
   ElMessage.info('导出PDF功能开发中')
@@ -539,46 +435,11 @@ watch(purposeChartType, (newVal) => {
   if (newVal === 'line') {
     nextTick(() => {
       initLineChart(purposeLineChart, '信访目的分类', {
-        series: [
-          {
-            name: '政策咨询',
-            type: 'line',
-            data: [40, 45, 42, 38, 35, 32, 30, 32, 35, 38],
-            smooth: true,
-            lineStyle: { color: '#409EFF' }
-          },
-          {
-            name: '投诉举报',
-            type: 'line',
-            data: [25, 23, 28, 30, 35, 38, 35, 32, 30, 28],
-            smooth: true,
-            lineStyle: { color: '#67C23A' }
-          },
-          {
-            name: '建议意见',
-            type: 'line',
-            data: [20, 22, 25, 28, 24, 22, 24, 26, 24, 22],
-            smooth: true,
-            lineStyle: { color: '#E6A23C' }
-          },
-          {
-            name: '求助申请',
-            type: 'line',
-            data: [15, 18, 20, 18, 15, 18, 20, 22, 20, 18],
-            smooth: true,
-            lineStyle: { color: '#F56C6C' }
-          }
-        ]
-      })
-    })
+        series: purposeData.lineData
+  })})
   } else if (newVal === 'pie') {
     nextTick(() => {
-      initPieChart(purposePieChart, '信访目的分类', [
-        { value: 30, name: '政策咨询' },
-        { value: 28, name: '投诉举报' },
-        { value: 24, name: '建议意见' },
-        { value: 18, name: '求助申请' }
-      ])
+      initPieChart(purposePieChart, '信访目的分类', purposeData.pieData)
     })
   }
 })
@@ -587,106 +448,101 @@ watch(contentChartType, (newVal) => {
   if (newVal === 'line') {
     nextTick(() => {
       initLineChart(contentLineChart, '信访内容分类', {
-        series: [
-          {
-            name: '职务行为',
-            type: 'line',
-            data: [40, 45, 42, 38, 35, 32, 30, 32, 35, 38],
-            smooth: true,
-            lineStyle: { color: '#409EFF' }
-          },
-          {
-            name: '法律法规',
-            type: 'line',
-            data: [25, 23, 28, 30, 35, 38, 35, 32, 30, 28],
-            smooth: true,
-            lineStyle: { color: '#67C23A' }
-          },
-          {
-            name: '学术工作',
-            type: 'line',
-            data: [20, 22, 25, 28, 24, 22, 24, 26, 24, 22],
-            smooth: true,
-            lineStyle: { color: '#E6A23C' }
-          }
-        ]
+        series: contentData.lineData
       })
     })
   } else if (newVal === 'pie') {
     nextTick(() => {
-      initPieChart(contentPieChart, '信访内容分类', [
-        { value: 30, name: '职务行为' },
-        { value: 28, name: '法律法规' },
-        { value: 24, name: '学术工作' }
-      ])
+      initPieChart(contentPieChart, '信访内容分类', contentData.pieData)
     })
   }
 })
 
-onMounted(() => {
-  // 初始化图表
-  nextTick(() => {
-    // 初始化信访目的分类折线图
-    initLineChart(purposeLineChart, '信访目的分类', {
-      series: [
-        {
-          name: '政策咨询',
-          type: 'line',
-          data: [40, 45, 42, 38, 35, 32, 30, 32, 35, 38],
-          smooth: true,
-          lineStyle: { color: '#409EFF' }
-        },
-        {
-          name: '投诉举报',
-          type: 'line',
-          data: [25, 23, 28, 30, 35, 38, 35, 32, 30, 28],
-          smooth: true,
-          lineStyle: { color: '#67C23A' }
-        },
-        {
-          name: '建议意见',
-          type: 'line',
-          data: [20, 22, 25, 28, 24, 22, 24, 26, 24, 22],
-          smooth: true,
-          lineStyle: { color: '#E6A23C' }
-        },
-        {
-          name: '求助申请',
-          type: 'line',
-          data: [15, 18, 20, 18, 15, 18, 20, 22, 20, 18],
-          smooth: true,
-          lineStyle: { color: '#F56C6C' }
-        }
-      ]
+watch(channelChartType, (newVal) => {
+  if (newVal === 'line') {
+    nextTick(() => {
+      initLineChart(channelLineChart, '信访渠道', {
+        series: channelData.lineData
+      })
     })
+  } else if (newVal === 'pie') {
+    nextTick(() => {
+      initPieChart(channelPieChart, '信访渠道', channelData.pieData)
+    })
+  }
+})
+
+const getPurposeStat = async () => {
+  PetitionApi.getStatDetail('purpose', purposeSelectedYear.value)
+  .then(res => {
+    console.log(res)
+    purposeData.lineData = res.lineData
+    purposeData.pieData = res.pieData
     
-    // 初始化信访内容分类折线图
-    initLineChart(contentLineChart, '信访内容分类', {
-      series: [
-        {
-          name: '职务行为',
-          type: 'line',
-          data: [40, 45, 42, 38, 35, 32, 30, 32, 35, 38],
-          smooth: true,
-          lineStyle: { color: '#409EFF' }
-        },
-        {
-          name: '法律法规',
-          type: 'line',
-          data: [25, 23, 28, 30, 35, 38, 35, 32, 30, 28],
-          smooth: true,
-          lineStyle: { color: '#67C23A' }
-        },
-        {
-          name: '学术工作',
-          type: 'line',
-          data: [20, 22, 25, 28, 24, 22, 24, 26, 24, 22],
-          smooth: true,
-          lineStyle: { color: '#E6A23C' }
-        }
-      ]
-    })
+    // 检查当前图表类型并初始化对应的图表
+    if (purposeChartType.value === 'line') {
+      nextTick(() => {
+        initLineChart(purposeLineChart, '信访目的分类', {series: res.lineData})
+      })
+    } else if (purposeChartType.value === 'pie') {
+      nextTick(() => {
+        initPieChart(purposePieChart, '信访目的分类', res.pieData)
+      })
+    }
   })
+}
+
+const getContentStat = async () => {
+  PetitionApi.getStatDetail('category', contentSelectedYear.value)
+  .then(res => {
+    console.log(res)
+    contentData.lineData = res.lineData
+    contentData.pieData = res.pieData
+    
+    // 检查当前图表类型并初始化对应的图表
+    if (contentChartType.value === 'line') {
+      nextTick(() => {
+        initLineChart(contentLineChart, '信访内容分类', {series: res.lineData})
+      })
+    } else if (contentChartType.value === 'pie') {
+      nextTick(() => {
+        initPieChart(contentPieChart, '信访内容分类', res.pieData)
+      })
+    }
+  })
+}
+const getChannelStat = async () => {
+  PetitionApi.getStatDetail('channel', channelSelectedYear.value)
+  .then(res => {
+    console.log(res)
+    channelData.lineData = res.lineData
+    channelData.pieData = res.pieData
+    
+    // 检查当前图表类型并初始化对应的图表
+    if (channelChartType.value === 'line') {
+      nextTick(() => {
+        initLineChart(channelLineChart, '信访渠道', {series: res.lineData})
+      })
+    } else if (channelChartType.value === 'pie') {
+      nextTick(() => {
+        initPieChart(channelPieChart, '信访渠道', res.pieData)
+      })
+    }
+  })
+}
+
+const getData = async () => {
+  PetitionApi.getStatCount(reactive({isMonth: false}))
+  .then(res => {
+    monthlyStats.value = res
+  })
+  getPurposeStat()
+  getContentStat()
+  getChannelStat()
+}
+
+onMounted(() => {
+  getData();
 })
 
 const getTagType = (category) => {

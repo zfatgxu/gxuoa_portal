@@ -44,3 +44,11 @@ export const createFile = (data: any) => {
 export const updateFile = (data: any) => {
   return request.upload({ url: '/infra/file/upload', data })
 }
+
+export const updateFileWithId = (data: any) => {
+  return request.upload({ url: '/infra/file/upload-with-id', data })
+}
+
+export const getFileList = (ids: number[]) => {
+  return request.get({ url: '/infra/file/list', params: { ids: ids.join(',') } })
+}
