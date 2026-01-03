@@ -13,21 +13,21 @@
             <el-icon size="24"><Calendar color="blue"/></el-icon>
             <div class="flex flex-col items-center ml-4">
                 <span class="text-md text-gray-600">本月新增</span>
-                <span class="text-2xl font-bold text-blue-600">{{ monthlyStats.newTasks }}</span>
+                <span class="text-2xl font-bold text-blue-600">{{ monthlyStats.increase }}</span>
             </div>
         </div>
         <div class="flex items-center p-4 justify-center rounded-lg" style="border: 1px solid #e5e7eb;">
             <el-icon size="24"><Clock color="orange"/></el-icon>
             <div class="flex flex-col items-center ml-4">
                 <span class="text-sm text-gray-600">进行中</span>
-                <span class="text-2xl font-bold text-orange-600">{{ monthlyStats.inProgress }}</span>
+                <span class="text-2xl font-bold text-orange-600">{{ monthlyStats.ongoing }}</span>
             </div>
         </div>
         <div class="flex items-center p-4 justify-center rounded-lg" style="border: 1px solid #e5e7eb;">
             <el-icon size="24"><CheckCircle color="green"/></el-icon>
             <div class="flex flex-col items-center ml-4">
                 <span class="text-sm text-gray-600">已完成</span>
-                <span class="text-2xl font-bold text-green-600">{{ monthlyStats.completed }}</span>
+                <span class="text-2xl font-bold text-green-600">{{ monthlyStats.finished }}</span>
             </div>
         </div>
         <div class="flex items-center p-4 justify-center rounded-lg" style="border: 1px solid #e5e7eb;">
@@ -268,6 +268,8 @@ import { useRouter } from 'vue-router'
 import { ArrowRightBold, OfficeBuilding, Edit } from '@element-plus/icons-vue'
 import { InfoApi } from '@/api/petition/info/index'
 import { DICT_TYPE, getDictLabel, getIntDictOptions } from '@/utils/dict'
+import * as PetitionApi from '@/api/petition/index'
+import { finished } from 'stream'
 const { push } = useRouter()
 // 定义任务数据类型
 interface TaskData {
@@ -312,9 +314,9 @@ interface StatusStatsData {
 
 // 定义月度统计数据类型
 interface MonthlyStatsData {
-  newTasks: number
-  inProgress: number
-  completed: number
+  increase: number
+  ongoing: number
+  finished: number
   overdue: number
 }
 
@@ -335,8 +337,7 @@ const loading = ref<boolean>(false)
 // Static data
 const tabs = [
 { key: 'work', label: '待办事项' },
-{ key: 'special', label: '已办事项' },
-{ key: 'todo', label: '我的申请' }
+{ key: 'special', label: '已办事项' }
 ]
 
 const statuses: string[] = ['进行中', '已超时', '已结束']
@@ -346,9 +347,9 @@ const contentCategory = ref<number[]>([])
 const urgencyLevel = ref<string>('')
 
 const monthlyStats = ref<MonthlyStatsData>({
-  newTasks: 0,
-  inProgress: 0,
-  completed: 0,
+  increase: 0,
+  ongoing: 0,
+  finished: 0,
   overdue: 0
 })
 
@@ -469,8 +470,7 @@ const calculateOverdueInfo = (deadline) => {
 const fetchData = async () => {
   loading.value = true
   try {
-    // 先尝试调用API获取数据
-    const response = await InfoApi.getInfoPage({
+    const req = reactive({
       pageSize: pagination.value.pageSize, 
       pageNo: pagination.value.pageNo,
       purposeCategory: purposeCategory.value,
@@ -478,7 +478,13 @@ const fetchData = async () => {
       urgencyLevel: urgencyLevel.value,
       title: searchQuery.value
     })
-    console.log('API返回的数据:', response.list)
+    if (activeTab.value === 'work') {
+      req.status = 0
+    } else if (activeTab.value === 'special') {
+      req.status = 1
+    }
+    // 先尝试调用API获取数据
+    const response = await InfoApi.getInfoPage(req)
     
     if (response) {
       // 将API返回的数据转换为任务数据格式
@@ -557,6 +563,11 @@ const fetchData = async () => {
       // 如果API返回空数据，使用模拟数据
       useMockData()
     }
+    PetitionApi.getStatCount({isMonth: true}).then(res => {
+      if (res) {
+        monthlyStats.value = res
+      }
+    })
   } catch (error) {
     console.error('获取任务数据失败，使用模拟数据:', error)
     // API调用失败时使用模拟数据

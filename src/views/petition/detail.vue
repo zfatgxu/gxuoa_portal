@@ -260,7 +260,13 @@
             </el-form-item>
           </el-col>
         </el-row>
-
+        <el-row>
+          <el-col>
+            <el-form-item label="拟办意见:">
+              <el-input type="textarea" v-model="formData.draftComment" :autosize="{ minRows: 4 }" placeholder="请输入具体内容" clearable :readonly="!isEditing"/>
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-row>
           <el-col>
             <el-form-item label="附件">
@@ -428,7 +434,8 @@ const formData = reactive({
   deadline: '', //截止日期
   keywords: '', // 关键词
   petitionDept: [],
-  fileList: []
+  fileList: [],
+  draftComment: '', // 拟办意见
 })
 
 // 原始数据备份
@@ -564,6 +571,7 @@ const getDetail = () => {
     formData.petitionDept = res.petitionDept
     formData.keywords = res.keywords
     formData.fileList = res.fileList
+    formData.draftComment = res.draftComment
     // 填充文件列表数据
     if (res.fileList && Array.isArray(res.fileList)) {
       FileApi.getFileList(res.fileList).then(res => {

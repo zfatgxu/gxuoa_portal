@@ -247,7 +247,13 @@
             </el-form-item>
           </el-col>
         </el-row>
-
+        <el-row>
+          <el-col>
+            <el-form-item label="拟办意见:">
+              <el-input type="textarea" v-model="formData.draftComment" :autosize="{ minRows: 4 }" placeholder="请输入具体内容" clearable/>
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-row>
           <el-col>
             <el-form-item label="附件:">
@@ -269,7 +275,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed, onMounted } from 'vue'
+import { reactive, ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -281,24 +287,9 @@ import type { UploadFile, UploadUserFile } from 'element-plus';
 import { InfoApi } from '@/api/petition/info'
 import dayjs from 'dayjs'
 // 生成信访编号
-const generatePetitionNumber = () => {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  
-  // 生成4位随机序列号
-  const id = getPetitionId()
-  
-  // 格式: XF-年月日-序列号，例如 XF-20250808-1234
-  const petitionNumber = `XF-${year}${month}${day}-${id}`
-  
-  return petitionNumber
-}
-
-const getPetitionId = () => {
-  // 生成2位随机数，范围从10到99
-  return Math.floor(Math.random() * 90) + 10;
+const generatePetitionNumber = async () => {
+  const data = await PetitionApi.getNumber(formData.petitionChannel === ''? 0 : parseInt(formData.petitionChannel))
+  formData.petitionNumber = data
 }
 
 const petitionList = ref<UploadUserFile[]>([]);
@@ -325,6 +316,7 @@ const formData = reactive({
   petitionDate:'',
   deadline:'', //截止日期
   keywords: '', // 关键词
+  draftComment: '', // 拟办意见
 })
 
 // 表单验证规则
@@ -402,7 +394,7 @@ const fillFormWithSampleData = () => {
     formData.assistDeptIds = [219, 170]
     formData.leaderIds = [344]
     // 生成新的信访编号
-    formData.petitionNumber = generatePetitionNumber()
+    generatePetitionNumber()
     ElMessage.success('表单已一键填写完成！')
 }
 
@@ -474,7 +466,7 @@ const nextStep = () => {
             formData[key] = ''
           })
           // 重新生成信访编号
-          formData.petitionNumber = generatePetitionNumber()
+          generatePetitionNumber()
           // 清空附件列表
           petitionList.value = []
           // 清空协办单位
@@ -499,9 +491,18 @@ const afterUpload = (val: any) => {
 onMounted(async () => {
   await loadDeptList()
   await loadUserList()
-  formData.petitionNumber = generatePetitionNumber()
+  await generatePetitionNumber()
 })
-</script>
+
+// 监听信访渠道变化，重新生成信访编号
+watch(
+  () => formData.petitionChannel,
+  (newValue) => {
+    if (newValue) {
+      generatePetitionNumber()
+    }
+  }
+)</script>
 
 <style scoped>
 .document-form-container {
@@ -582,3 +583,7 @@ onMounted(async () => {
 }
 
 </style>
+
+
+
+

@@ -13,21 +13,21 @@
             <el-icon size="24"><Calendar color="blue"/></el-icon>
             <div class="flex flex-col items-center ml-4">
                 <span class="text-md text-gray-600">本月新增</span>
-                <span class="text-2xl font-bold text-blue-600">{{ monthlyStats.newTasks }}</span>
+                <span class="text-2xl font-bold text-blue-600">{{ monthlyStats.increase }}</span>
             </div>
         </div>
         <div class="flex items-center p-4 justify-center rounded-lg" style="border: 1px solid #e5e7eb;">
             <el-icon size="24"><Clock color="orange"/></el-icon>
             <div class="flex flex-col items-center ml-4">
                 <span class="text-sm text-gray-600">进行中</span>
-                <span class="text-2xl font-bold text-orange-600">{{ monthlyStats.inProgress }}</span>
+                <span class="text-2xl font-bold text-orange-600">{{ monthlyStats.ongoing }}</span>
             </div>
         </div>
         <div class="flex items-center p-4 justify-center rounded-lg" style="border: 1px solid #e5e7eb;">
             <el-icon size="24"><CheckCircle color="green"/></el-icon>
             <div class="flex flex-col items-center ml-4">
                 <span class="text-sm text-gray-600">已完成</span>
-                <span class="text-2xl font-bold text-green-600">{{ monthlyStats.completed }}</span>
+                <span class="text-2xl font-bold text-green-600">{{ monthlyStats.finished }}</span>
             </div>
         </div>
         <div class="flex items-center p-4 justify-center rounded-lg" style="border: 1px solid #e5e7eb;">
@@ -63,20 +63,28 @@
                 :suffix-icon="Search"
                 style="width: 60%;"
               />
-            <el-select v-model="selectedDepartment" placeholder="全部分类" clearable style="width: 30%;">
+            <el-select v-model="purposeCategory" placeholder="目的分类" clearable multiple style="width: 30%;">
             <el-option
-                v-for="dept in departments"
-                :key="dept"
-                :label="dept"
-                :value="dept"
+                v-for="dict in getIntDictOptions(DICT_TYPE.PURPOSE_CATEGORY)"
+                :key="dict.value"
+                :label="dict.label"
+                :value="dict.value"
             />
             </el-select>
-            <el-select v-model="selectedStatus" placeholder="全部状态" clearable style="width: 30%;">
+            <el-select v-model="contentCategory" placeholder="内容分类" clearable multiple style="width: 30%;">
             <el-option
-                v-for="status in statuses"
-                :key="status"
-                :label="status"
-                :value="status"
+                v-for="dict in getIntDictOptions(DICT_TYPE.CONTENT_CATEGORY)"
+                :key="dict.value"
+                :label="dict.label"
+                :value="dict.value"
+            />
+            </el-select>
+            <el-select v-model="urgencyLevel" placeholder="紧急程度" clearable style="width: 30%;">
+            <el-option
+                  v-for="dict in getIntDictOptions(DICT_TYPE.SUPERVISION_PRIORITY_TYPE)"
+                  :key="dict.value"
+                  :label="dict.label"
+                  :value="dict.value"
             />
             </el-select>
             <el-button :icon="Bell" @click="handleBellClick">一键提醒</el-button>
@@ -236,13 +244,12 @@ import {
   AlertTriangle
 } from 'lucide-vue-next'
 import { Loading } from '@element-plus/icons-vue'
-import { SupervisionIndexApi, SupervisionTaskApi } from '@/api/supervision/index'
 import { ElMessage } from 'element-plus'
-import { formatDate } from '@/utils/formatTime'
 import { useRouter } from 'vue-router'
 import { ArrowRightBold, OfficeBuilding, Edit } from '@element-plus/icons-vue'
 import { InfoApi } from '@/api/petition/info/index'
-import { DICT_TYPE, getDictLabel } from '@/utils/dict'
+import { DICT_TYPE, getDictLabel, getIntDictOptions } from '@/utils/dict'
+import * as PetitionApi from '@/api/petition/index'
 const { push } = useRouter()
 // 定义任务数据类型
 interface TaskData {
@@ -287,9 +294,9 @@ interface StatusStatsData {
 
 // 定义月度统计数据类型
 interface MonthlyStatsData {
-  newTasks: number
-  inProgress: number
-  completed: number
+  increase: number
+  ongoing: number
+  finished: number
   overdue: number
 }
 
@@ -303,8 +310,6 @@ interface PaginationData {
 // Reactive data
 const activeTab = ref<string>('work')
 const searchQuery = ref<string>('')
-const selectedDepartment = ref<string>('')
-const selectedStatus = ref<string>('')
 const detailDialogVisible = ref<boolean>(false)
 const selectedTask = ref<TaskData | null>(null)
 const loading = ref<boolean>(false)
@@ -318,24 +323,14 @@ const tabs = [
 
 const statuses: string[] = ['进行中', '已超时', '已结束']
 
-// 计算部门选项 - 从任务数据中提取部门名称
-const departments = computed(() => {
-  const deptSet = new Set<string>()
-  tasks.value.forEach(task => {
-    if (task.leadDepartment) {
-      deptSet.add(task.leadDepartment)
-    }
-    task.assistDepartments.forEach(dept => {
-      if (dept) deptSet.add(dept)
-    })
-  })
-  return Array.from(deptSet)
-})
+const purposeCategory = ref<number[]>([])
+const contentCategory = ref<number[]>([])
+const urgencyLevel = ref<string>('')
 
 const monthlyStats = ref<MonthlyStatsData>({
-  newTasks: 0,
-  inProgress: 0,
-  completed: 0,
+  increase: 0,
+  ongoing: 0,
+  finished: 0,
   overdue: 0
 })
 
@@ -392,116 +387,6 @@ const handleMoreClick = () => {
 // 处理提醒点击
 const handleBellClick = () => {
   ElMessage.info('提醒功能正在开发中')
-}
-
-// 处理流转点击
-const handleTransfer = (task: TaskData) => {
-  ElMessage.info('流转功能正在开发中')
-}
-
-// 解析协办部门（从API返回的coDeptNameMap中获取）
-const parseCoDepts = (coDeptNameMap: Record<string, string> | null | undefined): string[] => {
-  if (!coDeptNameMap) return []
-  return Object.values(coDeptNameMap)
-}
-
-// 根据任务状态获取截止时间颜色样式类
-const getDeadlineColorClass = (task: TaskData) => {
-  const status = task.status
-  if (status === '已超时') {
-    return 'text-red-600' // 红色
-  } else if (status === '已结束') {
-    return 'text-gray-900' // 黑色
-  } else if (status === '进行中') {
-    return 'text-orange-500' // 橙色
-  }
-  return 'text-gray-700' // 默认颜色
-}
-
-// 根据督办状态和截止时间计算显示状态
-const calculateDisplayStatus = (supervisionStatus: string, deadline: number | null): {
-  daysRemaining: number | null
-  isOverdue: boolean
-  overdueDays: number | null
-  status: string
-} => {
-  // 根据 supervisionStatus 判断基本状态
-  if (supervisionStatus === '办结文件' || supervisionStatus === '否决文件') {
-    return {
-      daysRemaining: null,
-      isOverdue: false,
-      overdueDays: null,
-      status: '已结束'
-    }
-  }
-
-  // 如果是"流程中"，需要进一步判断是否超时
-  if (supervisionStatus === '流程中') {
-    if (!deadline) {
-      return {
-        daysRemaining: null,
-        isOverdue: false,
-        overdueDays: null,
-        status: '进行中'
-      }
-    }
-
-    // 获取今天的日期（只保留年月日，忽略时分秒）
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    // 获取截止日期（只保留年月日，忽略时分秒）
-    const deadlineDate = new Date(deadline)
-    deadlineDate.setHours(0, 0, 0, 0)
-
-    // 计算天数差：正数表示还有剩余天数，负数表示已超时
-    const daysDiff = Math.floor((deadlineDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000))
-
-    if (daysDiff < 0) {
-      // 已超时
-      return {
-        daysRemaining: null,
-        isOverdue: true,
-        overdueDays: Math.abs(daysDiff),
-        status: '已超时'
-      }
-    } else if (daysDiff === 0) {
-      // 今天截止
-      return {
-        daysRemaining: 0,
-        isOverdue: false,
-        overdueDays: null,
-        status: '进行中'
-      }
-    } else {
-      // 还有剩余时间
-      return {
-        daysRemaining: daysDiff,
-        isOverdue: false,
-        overdueDays: null,
-        status: '进行中'
-      }
-    }
-  }
-
-  // 其他状态默认显示进行中
-  return {
-    daysRemaining: null,
-    isOverdue: false,
-    overdueDays: null,
-    status: '进行中'
-  }
-}
-
-// 获取优先级文本
-const getPriorityText = (priority: number | null | undefined): string => {
-  if (priority === null || priority === undefined) return '一般优先'
-  switch (priority) {
-    case 1: return '一般优先'
-    case 2: return '中优先级'
-    case 3: return '高优先级'
-    default: return '一般优先'
-  }
 }
 
 // 计算是否超时和超时天数
@@ -566,24 +451,22 @@ const calculateOverdueInfo = (deadline) => {
 const fetchData = async () => {
   loading.value = true
   try {
-    // 根据当前标签页设置status参数
-    let statusParam = undefined
-    if (activeTab.value === 'work') {
-      // 待办事项：status=0
-      statusParam = 0
-    } else if (activeTab.value === 'special') {
-      // 已办事项：status=1
-      statusParam = 1
-    }
-    
-    // 先尝试调用API获取数据
-    const response = await InfoApi.getInfoPage({
+    const req = reactive({
       pageSize: pagination.value.pageSize, 
       pageNo: pagination.value.pageNo,
-      status: statusParam,
+      purposeCategory: purposeCategory.value,
+      contentCategory: contentCategory.value,
+      urgencyLevel: urgencyLevel.value,
+      title: searchQuery.value,
       channel: 3
     })
-    console.log('API返回的数据:', response.list)
+    if (activeTab.value === 'work') {
+      req.status = 0
+    } else if (activeTab.value === 'special') {
+      req.status = 1
+    }
+    // 先尝试调用API获取数据
+    const response = await InfoApi.getInfoPage(req)
     
     if (response) {
       // 将API返回的数据转换为任务数据格式
@@ -652,7 +535,8 @@ const fetchData = async () => {
           status: overdueInfo.isOverdue ? '已超时' : '进行中',
           daysRemaining: overdueInfo.daysRemaining,
           isOverdue: overdueInfo.isOverdue,
-          overdueDays: overdueInfo.overdueDays
+          overdueDays: overdueInfo.overdueDays,
+          processInstanceId: item.processInstanceId || ''
         }
       })
       
@@ -661,6 +545,12 @@ const fetchData = async () => {
       // 如果API返回空数据，使用模拟数据
       useMockData()
     }
+    const countReq = reactive({channel: 3, isMonth: true})
+    PetitionApi.getStatCount(countReq).then(res => {
+      if (res) {
+        monthlyStats.value = res
+      }
+    })
   } catch (error) {
     console.error('获取任务数据失败，使用模拟数据:', error)
     // API调用失败时使用模拟数据
@@ -759,26 +649,43 @@ watch(activeTab, () => {
   fetchData()
 })
 
+watch([purposeCategory, contentCategory, urgencyLevel], () => {
+  pagination.value.pageNo = 1 // 重置到第一页
+  fetchData()
+})
+
+// 监听搜索关键词变化，自动更新列表
+watch(searchQuery, () => {
+  pagination.value.pageNo = 1 // 重置到第一页
+  fetchData()
+})
+
+// 添加防抖函数
+const debounce = (fn: Function, delay: number) => {
+  let timer: any = null
+  return function(...args: any[]) {
+    if (timer) clearTimeout(timer)
+    timer = setTimeout(() => {
+      fn.apply(this, args)
+    }, delay)
+  }
+}
+
+// 创建防抖搜索函数
+const debouncedSearch = debounce(() => {
+  pagination.value.pageNo = 1
+  fetchData()
+}, 300)
+
+// 修改搜索监听器
+watch(searchQuery, () => {
+  debouncedSearch()
+})
+
 // 页面加载时获取数据
 onMounted(() => {
   fetchData()
 })
-
-
-// const filteredTasks = computed(() => {
-//   return tasks.value.filter(task => {
-//     // 不需要再按type过滤，因为后端已经按类型返回了数据
-//     const matchesSearch = !searchQuery.value ||
-//       task.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-//       task.description.toLowerCase().includes(searchQuery.value.toLowerCase())
-//     const matchesDepartment = !selectedDepartment.value ||
-//       task.leadDepartment === selectedDepartment.value ||
-//       task.assistDepartments.includes(selectedDepartment.value)
-//     const matchesStatus = !selectedStatus.value || task.status === selectedStatus.value
-
-//     return matchesSearch && matchesDepartment && matchesStatus
-//   })
-// })
 
 // 计算当前标签页的总数量（用于分页显示）
 const currentTabTotal = computed(() => {
@@ -794,24 +701,6 @@ const openDetailDialog = (task: TaskData) => {
       taskId: task.processInstanceId || ''
     }
   })
-}
-
-// 处理审批按钮（参考部门界面实现）
-const handleAudit = (task: TaskData) => {
-  // 督办相关流程跳转到督办专用工作流详情页面
-  if (task.processInstanceId) {
-    push({
-      name: 'SupervisionWorkflowDetail',
-      params: {
-        id: task.processInstanceId
-      },
-      query: {
-        taskId: task.taskId || task.id
-      }
-    })
-  } else {
-    ElMessage.error('无法获取流程实例信息')
-  }
 }
 </script>
 

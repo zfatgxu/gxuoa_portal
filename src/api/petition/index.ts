@@ -58,6 +58,10 @@ export interface PetitionHandleVO {
   note: string
 }
 
+export const getNumber = (channel: number) => {
+  return request.get({ url: `/petition/info/number?channel=${channel}`})
+}
+
 // 创建信访
 export const createPetition = (data: PetitionVO) => {
   return request.post({ url: '/petition/info/create', data })
@@ -116,6 +120,14 @@ export const addPetitionComment = (data: PetitionHandleVO) => {
 // 获取批示详情
 export const getNoteDetail = (id: number) => {
   return request.get({ url: `/petition/note/query?id=${id}` })
+}
+
+export const getStatCount = (req: any) => {
+  return request.get({ url: '/petition/stat/count', params: req })
+}
+
+export const getStatDetail = (type: string, year: number) => {
+  return request.get({ url: `/petition/stat/detail?type=${type}&year=${year}`})
 }
 
 // Mock数据
